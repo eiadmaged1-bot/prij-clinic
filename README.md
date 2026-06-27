@@ -34,19 +34,13 @@ npm install
 Copy-Item .env.example .env
 ```
 
-3. Start PostgreSQL:
+3. Start PostgreSQL when working on database-backed features:
 
 ```powershell
 docker compose up -d postgres
 ```
 
-4. Generate Prisma client:
-
-```powershell
-npm run prisma:generate
-```
-
-5. Start the API:
+4. Start the API:
 
 ```powershell
 npm run dev:api
@@ -58,7 +52,9 @@ The health check will be available at:
 http://localhost:3001/health
 ```
 
-6. Start the web app:
+This scaffold health check does not require Prisma client generation or a database connection.
+
+5. Start the web app:
 
 ```powershell
 npm run dev:web
@@ -79,6 +75,11 @@ npm run dev:api
 npm run build
 npm run lint
 npm run typecheck
+```
+
+Future database-model commands, after the first Prisma model is added:
+
+```powershell
 npm run prisma:generate
 npm run prisma:migrate:dev
 ```
@@ -90,7 +91,8 @@ Implemented:
 - API health check: `GET /health` returns `{ "status": "ok" }`
 - Web placeholder page: `Prij Clinic MVP`
 - Local PostgreSQL Docker Compose service
-- Empty Prisma schema setup
+- Empty Prisma schema setup retained for future database models
+- Prisma service/module files retained for future use, but not initialized at API startup
 
 Not implemented yet:
 
