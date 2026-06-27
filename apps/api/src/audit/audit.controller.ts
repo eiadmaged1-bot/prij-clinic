@@ -1,6 +1,6 @@
 import { Controller, Get, Query, Req, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RequirePermissions } from "../rbac/require-permissions.decorator";
+import { Permissions } from "../rbac/require-permissions.decorator";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import type { RequestWithUser } from "../auth/auth.types";
 import { AuditService } from "./audit.service";
@@ -11,7 +11,7 @@ export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
   @Get()
-  @RequirePermissions("audit.read")
+  @Permissions("audit.read")
   async list(@Query("limit") limit: string | undefined, @Req() request: RequestWithUser) {
     await this.audit.record({
       actorUserId: request.user?.id,

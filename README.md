@@ -42,10 +42,12 @@ API_PORT=3001
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=your-local-dev-secret
 JWT_EXPIRES_IN=1h
-DEMO_OWNER_EMAIL=owner@example.test
-DEMO_OWNER_PASSWORD=your-local-demo-password
+DEMO_OWNER_EMAIL=owner@prij.local
+DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
+
+The demo owner account is for local development only. The seed hashes the password before storing it and does not create patient data.
 
 Start PostgreSQL:
 
@@ -62,7 +64,7 @@ npm run prisma:generate
 Apply local migrations:
 
 ```powershell
-npm run prisma:migrate:dev
+npm run prisma:migrate:dev -- --name auth_rbac_audit_foundation
 ```
 
 Seed non-clinical foundation data:
@@ -86,7 +88,9 @@ npm run dev:web
 Open:
 
 ```text
+http://localhost:3000
 http://localhost:3000/login
+http://localhost:3000/dashboard
 ```
 
 ## Current Endpoints
@@ -126,8 +130,8 @@ Login and save the Bearer token:
 
 ```powershell
 $body = @{
-  email = "owner@example.test"
-  password = $env:DEMO_OWNER_PASSWORD
+  email = "owner@prij.local"
+  password = "LocalDev123!"
 } | ConvertTo-Json
 
 $login = Invoke-RestMethod `
@@ -148,6 +152,13 @@ Invoke-RestMethod `
   -Method Get `
   -Uri "http://localhost:3001/auth/me" `
   -Headers $headers
+```
+
+Health check commands:
+
+```powershell
+Invoke-RestMethod "http://localhost:3001/health"
+Invoke-RestMethod "http://localhost:3001/health/db"
 ```
 
 Test admin users:

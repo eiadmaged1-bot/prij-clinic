@@ -69,7 +69,7 @@ export default function DashboardPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Prij Clinic</p>
-          <h1>Dashboard</h1>
+          <h1>Prij Clinic Dashboard</h1>
         </div>
         <button className="button secondary" onClick={logout} type="button">
           Logout

@@ -19,58 +19,140 @@ const roles = [
 ];
 
 const permissions = [
-  "users.read",
-  "users.manage",
-  "roles.read",
-  "roles.manage",
-  "permissions.read",
-  "audit.read",
-  "patients.read",
-  "patients.manage",
-  "appointments.read",
-  "appointments.manage",
-  "encounters.read",
-  "encounters.manage",
-  "prescriptions.read",
-  "prescriptions.manage",
-  "investigations.read",
-  "investigations.manage",
-  "reports.read",
-  "reports.manage",
+  "patient.read",
+  "patient.create",
+  "patient.update",
+  "patient.consent_read",
+  "patient.consent_manage",
+  "patient.consent_override",
+  "appointment.read",
+  "appointment.manage",
+  "appointment.cancel",
+  "appointment.no_show",
+  "queue.read",
+  "queue.manage",
+  "queue.status_update",
+  "vitals.create",
+  "prep_note.create",
+  "prep_note.read",
+  "encounter.read",
+  "encounter.create",
+  "encounter.update_own",
+  "encounter.sign",
+  "encounter.correct_signed",
+  "encounter.export",
+  "prescription.read",
+  "prescription.create",
+  "prescription.update",
+  "prescription.approve",
+  "prescription.cancel",
+  "prescription.export",
+  "investigation.read",
+  "investigation.create",
+  "investigation.update",
+  "investigation.cancel",
+  "investigation.review",
+  "report.read",
+  "report.upload",
+  "report.update",
+  "report.review",
+  "report.export",
+  "report.void",
+  "report.delete",
   "billing.read",
-  "billing.manage"
+  "billing.manage",
+  "payment.manage",
+  "billing.adjust",
+  "billing.void",
+  "billing.report",
+  "user.read",
+  "user.manage",
+  "role.read",
+  "role.manage",
+  "permission.read",
+  "clinic_settings.manage",
+  "branch.manage",
+  "audit.read",
+  "audit.export",
+  "backup.manage",
+  "restore_test.manage",
+  "backup.metadata_read",
+  "security.review",
+  "session.manage",
+  "config.read_safe"
 ];
 
 const rolePermissionKeys = {
   Owner: permissions,
   Admin: [
-    "users.read",
-    "users.manage",
-    "roles.read",
-    "roles.manage",
-    "permissions.read",
+    "user.read",
+    "user.manage",
+    "role.read",
+    "role.manage",
+    "permission.read",
+    "clinic_settings.manage",
+    "branch.manage",
     "audit.read"
   ],
   Doctor: [
-    "patients.read",
-    "appointments.read",
-    "encounters.read",
-    "encounters.manage",
-    "prescriptions.read",
-    "prescriptions.manage",
-    "investigations.read",
-    "investigations.manage",
-    "reports.read",
-    "reports.manage"
+    "patient.read",
+    "patient.consent_read",
+    "appointment.read",
+    "queue.read",
+    "prep_note.read",
+    "encounter.read",
+    "encounter.create",
+    "encounter.update_own",
+    "encounter.sign",
+    "encounter.correct_signed",
+    "prescription.read",
+    "prescription.create",
+    "prescription.update",
+    "prescription.approve",
+    "prescription.cancel",
+    "investigation.read",
+    "investigation.create",
+    "investigation.update",
+    "investigation.review",
+    "report.read",
+    "report.upload",
+    "report.review"
   ],
-  Nurse: ["patients.read", "appointments.read", "encounters.read", "reports.read"],
+  Nurse: [
+    "patient.read",
+    "appointment.read",
+    "queue.read",
+    "queue.status_update",
+    "vitals.create",
+    "prep_note.create",
+    "prep_note.read",
+    "encounter.read",
+    "report.read"
+  ],
   Receptionist: [
-    "patients.read",
-    "patients.manage",
-    "appointments.read",
-    "appointments.manage"
+    "patient.read",
+    "patient.create",
+    "patient.update",
+    "patient.consent_read",
+    "patient.consent_manage",
+    "appointment.read",
+    "appointment.manage",
+    "appointment.cancel",
+    "appointment.no_show",
+    "queue.read",
+    "queue.manage",
+    "queue.status_update",
+    "payment.manage"
   ],
-  Accountant: ["billing.read", "billing.manage", "patients.read"]
+  Accountant: [
+    "billing.read",
+    "billing.manage",
+    "payment.manage",
+    "billing.adjust",
+    "billing.void",
+    "billing.report",
+    "patient.read"
+  ]
 };
 
 function describePermission(key) {
@@ -168,9 +250,9 @@ async function main() {
     }
   }
 
-  if (process.env.SEED_DEMO_OWNER === "true") {
-    const email = process.env.DEMO_OWNER_EMAIL || "owner@example.test";
-    const password = process.env.DEMO_OWNER_PASSWORD;
+  if (process.env.SEED_DEMO_OWNER !== "false") {
+    const email = process.env.DEMO_OWNER_EMAIL || "owner@prij.local";
+    const password = process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
 
     if (!password) {
       throw new Error("DEMO_OWNER_PASSWORD is required when SEED_DEMO_OWNER=true.");

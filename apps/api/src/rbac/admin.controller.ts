@@ -4,7 +4,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { RequestWithUser } from "../auth/auth.types";
 import { UsersService } from "../users/users.service";
 import { PermissionsGuard } from "./permissions.guard";
-import { RequirePermissions } from "./require-permissions.decorator";
+import { Permissions } from "./require-permissions.decorator";
 import { RbacService } from "./rbac.service";
 
 @Controller("admin")
@@ -17,7 +17,7 @@ export class AdminController {
   ) {}
 
   @Get("users")
-  @RequirePermissions("users.read")
+  @Permissions("user.read")
   async usersList(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.users.read", "user");
 
@@ -25,7 +25,7 @@ export class AdminController {
   }
 
   @Get("roles")
-  @RequirePermissions("roles.read")
+  @Permissions("role.read")
   async rolesList(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.roles.read", "role");
 
@@ -33,7 +33,7 @@ export class AdminController {
   }
 
   @Get("permissions")
-  @RequirePermissions("permissions.read")
+  @Permissions("permission.read")
   async permissionsList(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.permissions.read", "permission");
 
