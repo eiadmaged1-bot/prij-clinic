@@ -31,6 +31,9 @@ model User {
   status        String
   passwordHash  String?
   branchId      String?    @db.Uuid
+  lastLoginAt   DateTime?  @db.Timestamptz(3)
+  failedLoginCount Int     @default(0)
+  lockedUntil   DateTime?  @db.Timestamptz(3)
   createdAt     DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
 
@@ -113,6 +116,9 @@ model AuditLog {
   ipAddress    String?  @db.Inet
   userAgent    String?
   branchId     String?  @db.Uuid
+  severity     String   @default("low")
+  reason       String?
+  requestId    String?
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
 
   actorUser    User?    @relation("AuditLogsActor", fields: [actorUserId], references: [id], onDelete: SetNull)
@@ -123,4 +129,5 @@ model AuditLog {
   @@index([resourceType, resourceId])
   @@index([branchId, createdAt])
   @@index([action])
+  @@index([severity, createdAt])
 }
