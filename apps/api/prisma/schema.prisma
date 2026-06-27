@@ -6,3 +6,121 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Branch {
+  id             String     @id @default(uuid()) @db.Uuid
+  name           String
+  code           String     @unique
+  addressSummary String?
+  phone          String?
+  status         String     @default("active")
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  users          User[]
+  userRoles      UserRole[]
+  auditLogs      AuditLog[]
+
+  @@index([status])
+}
+
+model User {
+  id            String     @id @default(uuid()) @db.Uuid
+  email         String     @unique
+  displayName   String
+  status        String
+  passwordHash  String?
+  branchId      String?    @db.Uuid
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
+
+  branch        Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  userRoles     UserRole[] @relation("UserRolesUser")
+  assignedRoles UserRole[] @relation("UserRolesCreatedBy")
+  roleGrants    RolePermission[] @relation("RolePermissionsCreatedBy")
+  auditLogs     AuditLog[] @relation("AuditLogsActor")
+
+  @@index([branchId])
+  @@index([status])
+}
+
+model Role {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @unique
+  description     String?
+  isSystemRole    Boolean          @default(false)
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @db.Uuid
+  key             String           @unique
+  description     String?
+  riskLevel       String           @default("medium")
+  createdAt       DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
+
+  rolePermissions RolePermission[]
+
+  @@index([riskLevel])
+}
+
+model UserRole {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  roleId          String   @db.Uuid
+  branchId        String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  createdByUserId String?  @db.Uuid
+
+  user            User     @relation("UserRolesUser", fields: [userId], references: [id], onDelete: Cascade)
+  role            Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  branch          Branch?  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  createdByUser   User?    @relation("UserRolesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, roleId, branchId])
+  @@index([branchId])
+  @@index([roleId])
+  @@index([createdByUserId])
+}
+
+model RolePermission {
+  roleId          String   @db.Uuid
+  permissionId    String   @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  createdByUserId String?  @db.Uuid
+
+  role            Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission      Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  createdByUser   User?      @relation("RolePermissionsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@index([createdByUserId])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid
+  action       String
+  resourceType String
+  resourceId   String?  @db.Uuid
+  metadataJson Json?
+  ipAddress    String?  @db.Inet
+  userAgent    String?
+  branchId     String?  @db.Uuid
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  actorUser    User?    @relation("AuditLogsActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  branch       Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([branchId, createdAt])
+  @@index([action])
+}

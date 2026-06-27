@@ -75,14 +75,25 @@ npm run dev:api
 npm run build
 npm run lint
 npm run typecheck
+npm run prisma:generate
+npm run prisma:migrate:dev
 ```
 
-Future database-model commands, after the first Prisma model is added:
+Run Prisma from the repository root through the workspace scripts:
 
 ```powershell
 npm run prisma:generate
 npm run prisma:migrate:dev
 ```
+
+The API workspace also exposes the same commands directly:
+
+```powershell
+npm run prisma:generate -w apps/api
+npm run prisma:migrate:dev -w apps/api
+```
+
+Use `prisma:generate` after schema changes. Use `prisma:migrate:dev` when PostgreSQL is running and you are ready to create/apply a local development migration.
 
 ## Current Scope
 
@@ -91,9 +102,9 @@ Implemented:
 - API health check: `GET /health` returns `{ "status": "ok" }`
 - Web placeholder page: `Prij Clinic MVP`
 - Local PostgreSQL Docker Compose service
-- Empty Prisma schema setup retained for future database models
+- First Prisma foundation models for branches, users, roles, permissions, RBAC joins, and audit logs
 - Prisma service/module files retained for future use, but not initialized at API startup
 
 Not implemented yet:
 
-- Auth, RBAC, patients, appointments, queue, encounters, prescriptions, investigations, reports, billing, backups, audit logs, or AI features.
+- Auth flows, patient records, appointments, queue, encounters, prescriptions, investigations, reports, billing, backups, or AI features.
