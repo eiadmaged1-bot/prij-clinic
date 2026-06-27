@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, join, parse, resolve } from "node:path";
 
 function loadEnvFile(filePath: string) {
   if (!existsSync(filePath)) {
@@ -38,8 +38,10 @@ function loadEnvFile(filePath: string) {
 }
 
 export function loadRootEnv() {
-  loadEnvFile(resolve(process.cwd(), ".env"));
-  loadEnvFile(resolve(process.cwd(), "apps/api/.env"));
+  const root = findRepoRoot();
+
+  loadEnvFile(resolve(root, ".env"));
+  loadEnvFile(resolve(root, "apps/api/.env"));
 }
 
 export function requireEnv(name: string) {
@@ -50,4 +52,21 @@ export function requireEnv(name: string) {
   }
 
   return value;
+}
+
+function findRepoRoot() {
+  for (const start of [process.cwd(), __dirname]) {
+    let current = resolve(start);
+    const root = parse(current).root;
+
+    while (current !== root) {
+      if (existsSync(join(current, "package.json")) && existsSync(join(current, "apps"))) {
+        return current;
+      }
+
+      current = dirname(current);
+    }
+  }
+
+  return process.cwd();
 }

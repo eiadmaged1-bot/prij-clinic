@@ -2,7 +2,9 @@
 
 Clinic Management System MVP scaffold for OB/GYN and women's health.
 
-Sprint 1 implements the Auth + RBAC + Audit foundation only. Patients, appointments, queue, encounters, prescriptions, investigations, reports, billing, and AI are intentionally not implemented yet.
+Sprint: Auth + RBAC + Audit Foundation.
+
+This sprint implements the authentication, RBAC, and audit foundation only. Patients, appointments, queue, encounters, prescriptions, investigations, reports, billing, and AI are intentionally not implemented yet.
 
 ## Safety Rules
 
@@ -47,7 +49,7 @@ DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
 
-The demo owner account is for local development only. The seed hashes the password before storing it and does not create patient data.
+The demo owner account and password are for local development only. The seed hashes the password before storing it and does not create patient data.
 
 Start PostgreSQL:
 
