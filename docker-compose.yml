@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: prij-clinic-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: prij_clinic_dev
+      POSTGRES_USER: prij_clinic_dev
+      POSTGRES_PASSWORD: prij_clinic_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prij_clinic_dev -d prij_clinic_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
