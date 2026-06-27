@@ -71,9 +71,23 @@ export default function DashboardPage() {
           <p className="eyebrow">Prij Clinic</p>
           <h1>Prij Clinic Dashboard</h1>
         </div>
-        <button className="button secondary" onClick={logout} type="button">
-          Logout
-        </button>
+        <nav className="nav-links" aria-label="MVP navigation">
+          <a className="button secondary" href="/patients">
+            Patients
+          </a>
+          <a className="button secondary" href="/appointments">
+            Appointments
+          </a>
+          <a className="button secondary" href="/calendar">
+            Calendar
+          </a>
+          <a className="button secondary" href="/queue">
+            Queue
+          </a>
+          <button className="button secondary" onClick={logout} type="button">
+            Logout
+          </button>
+        </nav>
       </header>
 
       <section className="panel">

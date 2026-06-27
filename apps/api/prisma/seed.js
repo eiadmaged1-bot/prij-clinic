@@ -22,11 +22,15 @@ const permissions = [
   "patient.read",
   "patient.create",
   "patient.update",
+  "patients.read",
+  "patients.manage",
   "patient.consent_read",
   "patient.consent_manage",
   "patient.consent_override",
   "appointment.read",
   "appointment.manage",
+  "appointments.read",
+  "appointments.manage",
   "appointment.cancel",
   "appointment.no_show",
   "queue.read",
@@ -96,8 +100,11 @@ const rolePermissionKeys = {
   ],
   Doctor: [
     "patient.read",
+    "patients.read",
+    "patients.manage",
     "patient.consent_read",
     "appointment.read",
+    "appointments.read",
     "queue.read",
     "prep_note.read",
     "encounter.read",
@@ -120,7 +127,9 @@ const rolePermissionKeys = {
   ],
   Nurse: [
     "patient.read",
+    "patients.read",
     "appointment.read",
+    "appointments.read",
     "queue.read",
     "queue.status_update",
     "vitals.create",
@@ -133,10 +142,14 @@ const rolePermissionKeys = {
     "patient.read",
     "patient.create",
     "patient.update",
+    "patients.read",
+    "patients.manage",
     "patient.consent_read",
     "patient.consent_manage",
     "appointment.read",
     "appointment.manage",
+    "appointments.read",
+    "appointments.manage",
     "appointment.cancel",
     "appointment.no_show",
     "queue.read",
@@ -250,6 +263,8 @@ async function main() {
     }
   }
 
+  let demoOwner = null;
+
   if (process.env.SEED_DEMO_OWNER !== "false") {
     const email = process.env.DEMO_OWNER_EMAIL || "owner@prij.local";
     const password = process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
@@ -288,6 +303,99 @@ async function main() {
         userId: owner.id,
         roleId: roleByName.get("Owner").id,
         branchId: mainBranch.id
+      }
+    });
+
+    demoOwner = owner;
+  }
+
+  const demoPatientA = await prisma.patient.upsert({
+    where: { medicalRecordNumber: "DEMO-MRN-001" },
+    update: {
+      firstName: "Demo",
+      lastName: "Patient A",
+      status: "active",
+      branchId: mainBranch.id,
+      notes: "Local demo registration record only."
+    },
+    create: {
+      medicalRecordNumber: "DEMO-MRN-001",
+      firstName: "Demo",
+      lastName: "Patient A",
+      status: "active",
+      branchId: mainBranch.id,
+      notes: "Local demo registration record only.",
+      createdByUserId: demoOwner?.id
+    }
+  });
+
+  await prisma.patient.upsert({
+    where: { medicalRecordNumber: "DEMO-MRN-002" },
+    update: {
+      firstName: "Demo",
+      lastName: "Patient B",
+      status: "active",
+      branchId: mainBranch.id,
+      notes: "Local demo registration record only."
+    },
+    create: {
+      medicalRecordNumber: "DEMO-MRN-002",
+      firstName: "Demo",
+      lastName: "Patient B",
+      status: "active",
+      branchId: mainBranch.id,
+      notes: "Local demo registration record only.",
+      createdByUserId: demoOwner?.id
+    }
+  });
+
+  const todayStart = new Date();
+  todayStart.setHours(10, 0, 0, 0);
+  const todayEnd = new Date(todayStart.getTime() + 30 * 60 * 1000);
+
+  let demoAppointment = await prisma.appointment.findFirst({
+    where: {
+      branchId: mainBranch.id,
+      patientId: demoPatientA.id,
+      startAt: todayStart
+    }
+  });
+
+  if (!demoAppointment) {
+    demoAppointment = await prisma.appointment.create({
+      data: {
+        branchId: mainBranch.id,
+        patientId: demoPatientA.id,
+        doctorId: demoOwner?.id,
+        startAt: todayStart,
+        endAt: todayEnd,
+        status: "booked",
+        appointmentType: "Demo visit",
+        source: "local_seed",
+        notes: "Local demo appointment only.",
+        createdByUserId: demoOwner?.id
+      }
+    });
+  }
+
+  const existingTicket = await prisma.queueTicket.findFirst({
+    where: {
+      branchId: mainBranch.id,
+      patientId: demoPatientA.id,
+      appointmentId: demoAppointment.id,
+      status: "waiting"
+    }
+  });
+
+  if (!existingTicket) {
+    await prisma.queueTicket.create({
+      data: {
+        branchId: mainBranch.id,
+        patientId: demoPatientA.id,
+        appointmentId: demoAppointment.id,
+        queueNumber: 1,
+        status: "waiting",
+        priority: "routine"
       }
     });
   }

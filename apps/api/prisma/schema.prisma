@@ -20,6 +20,9 @@ model Branch {
   users          User[]
   userRoles      UserRole[]
   auditLogs      AuditLog[]
+  patients       Patient[]
+  appointments   Appointment[]
+  queueTickets   QueueTicket[]
 
   @@index([status])
 }
@@ -42,8 +45,116 @@ model User {
   assignedRoles UserRole[] @relation("UserRolesCreatedBy")
   roleGrants    RolePermission[] @relation("RolePermissionsCreatedBy")
   auditLogs     AuditLog[] @relation("AuditLogsActor")
+  createdPatients Patient[] @relation("PatientsCreatedBy")
+  doctorAppointments Appointment[] @relation("AppointmentsDoctor")
+  createdAppointments Appointment[] @relation("AppointmentsCreatedBy")
 
   @@index([branchId])
+  @@index([status])
+}
+
+enum PatientStatus {
+  active
+  inactive
+  archived
+}
+
+enum AppointmentStatus {
+  booked
+  rescheduled
+  cancelled
+  completed
+  no_show
+}
+
+enum QueueTicketStatus {
+  waiting
+  called
+  completed
+  cancelled
+}
+
+enum QueuePriority {
+  routine
+  priority
+}
+
+model Patient {
+  id                  String        @id @default(uuid()) @db.Uuid
+  branchId            String?       @db.Uuid
+  medicalRecordNumber String        @unique
+  firstName           String
+  lastName            String
+  dateOfBirth         DateTime?     @db.Date
+  sex                 String?
+  phone               String?
+  email               String?
+  status              PatientStatus @default(active)
+  notes               String?
+  createdAt           DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
+  createdByUserId     String?       @db.Uuid
+
+  branch              Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdByUser       User?         @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  appointments         Appointment[]
+  queueTickets         QueueTicket[]
+
+  @@index([branchId])
+  @@index([status])
+  @@index([lastName, firstName])
+}
+
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  branchId        String            @db.Uuid
+  patientId       String            @db.Uuid
+  doctorId        String?           @db.Uuid
+  startAt         DateTime          @db.Timestamptz(3)
+  endAt           DateTime          @db.Timestamptz(3)
+  status          AppointmentStatus @default(booked)
+  appointmentType String?
+  source          String?
+  notes           String?
+  createdAt       DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime          @updatedAt @db.Timestamptz(3)
+  createdByUserId String?           @db.Uuid
+
+  branch          Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  doctor          User?             @relation("AppointmentsDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  createdByUser   User?             @relation("AppointmentsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  queueTickets    QueueTicket[]
+
+  @@index([branchId, startAt])
+  @@index([patientId, startAt])
+  @@index([doctorId, startAt])
+  @@index([status])
+}
+
+model QueueTicket {
+  id             String            @id @default(uuid()) @db.Uuid
+  branchId       String            @db.Uuid
+  patientId      String            @db.Uuid
+  appointmentId  String?           @db.Uuid
+  queueNumber    Int
+  status         QueueTicketStatus @default(waiting)
+  priority       QueuePriority     @default(routine)
+  checkedInAt    DateTime          @default(now()) @db.Timestamptz(3)
+  calledAt       DateTime?         @db.Timestamptz(3)
+  completedAt    DateTime?         @db.Timestamptz(3)
+  cancelledAt    DateTime?         @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime          @updatedAt @db.Timestamptz(3)
+
+  branch         Branch            @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient        Patient           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment    Appointment?      @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@unique([branchId, queueNumber, checkedInAt])
+  @@index([branchId, checkedInAt])
+  @@index([patientId])
+  @@index([appointmentId])
   @@index([status])
 }
 
