@@ -40,21 +40,42 @@ Copy-Item .env.example .env
 docker compose up -d postgres
 ```
 
-4. Start the API:
+4. Generate Prisma Client:
+
+```powershell
+npm run prisma:generate
+```
+
+5. Apply local development migrations:
+
+```powershell
+npm run prisma:migrate:dev
+```
+
+6. Seed foundation data only:
+
+```powershell
+npm run prisma:seed
+```
+
+The seed creates one demo branch, core roles, and core permissions only. It does not create patients, clinical records, billing records, reports, AI records, real users, passwords, or secrets.
+
+7. Start the API:
 
 ```powershell
 npm run dev:api
 ```
 
-The health check will be available at:
+Health checks will be available at:
 
 ```text
 http://localhost:3001/health
+http://localhost:3001/health/db
 ```
 
-This scaffold health check does not require Prisma client generation or a database connection.
+`GET /health` does not require a database connection. `GET /health/db` checks PostgreSQL connectivity and returns a safe non-sensitive unavailable response if the database cannot be reached.
 
-5. Start the web app:
+8. Start the web app:
 
 ```powershell
 npm run dev:web
@@ -77,6 +98,7 @@ npm run lint
 npm run typecheck
 npm run prisma:generate
 npm run prisma:migrate:dev
+npm run prisma:seed
 ```
 
 Run Prisma from the repository root through the workspace scripts:
@@ -84,6 +106,7 @@ Run Prisma from the repository root through the workspace scripts:
 ```powershell
 npm run prisma:generate
 npm run prisma:migrate:dev
+npm run prisma:seed
 ```
 
 The API workspace also exposes the same commands directly:
@@ -91,19 +114,22 @@ The API workspace also exposes the same commands directly:
 ```powershell
 npm run prisma:generate -w apps/api
 npm run prisma:migrate:dev -w apps/api
+npm run prisma:seed -w apps/api
 ```
 
-Use `prisma:generate` after schema changes. Use `prisma:migrate:dev` when PostgreSQL is running and you are ready to create/apply a local development migration.
+Use `prisma:generate` after schema changes. Use `prisma:migrate:dev` when PostgreSQL is running and you are ready to create/apply a local development migration. Use `prisma:seed` after migrations to load non-clinical foundation data.
 
 ## Current Scope
 
 Implemented:
 
 - API health check: `GET /health` returns `{ "status": "ok" }`
+- Database health check: `GET /health/db` checks PostgreSQL through Prisma without leaking connection details
 - Web placeholder page: `Prij Clinic MVP`
 - Local PostgreSQL Docker Compose service
 - First Prisma foundation models for branches, users, roles, permissions, RBAC joins, and audit logs
-- Prisma service/module files retained for future use, but not initialized at API startup
+- Prisma service/module enabled with lazy database connectivity
+- Foundation seed for one demo branch, core roles, and core permissions only
 
 Not implemented yet:
 
