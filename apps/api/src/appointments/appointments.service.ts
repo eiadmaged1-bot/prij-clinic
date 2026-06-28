@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma, type AppointmentStatus } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { assertCanReferencePatient, assertCanReferenceUserInBranch } from "../auth/reference-scope";
 import { branchScope, doctorScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateAppointmentDto } from "./dto";
@@ -14,13 +15,9 @@ export class AppointmentsService {
   ) {}
 
   async create(dto: CreateAppointmentDto, user: AuthUser) {
-    const patient = await this.prisma.patient.findUnique({ where: { id: dto.patientId } });
-
-    if (!patient) {
-      throw new BadRequestException("Patient not found.");
-    }
-
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const branchId = patient.branchId ?? (await this.resolveBranchId(user));
+    await assertCanReferenceUserInBranch(this.prisma, dto.doctorId, user, branchId);
     const startAt = new Date(dto.startAt);
     const endAt = new Date(dto.endAt);
 

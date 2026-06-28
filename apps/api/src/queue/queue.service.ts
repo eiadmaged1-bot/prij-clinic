@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { assertCanReferenceAppointment, assertCanReferencePatient } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto } from "./dto";
@@ -14,18 +15,15 @@ export class QueueService {
   ) {}
 
   async checkIn(dto: CheckInDto, user: AuthUser) {
-    const patient = await this.prisma.patient.findUnique({ where: { id: dto.patientId } });
-
-    if (!patient) {
-      throw new BadRequestException("Patient not found.");
-    }
-
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const branchId = patient.branchId ?? (await this.resolveBranchId(user));
 
     if (dto.appointmentId) {
-      const appointment = await this.prisma.appointment.findUnique({ where: { id: dto.appointmentId } });
+      const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, {
+        patientId: patient.id
+      });
 
-      if (!appointment || appointment.patientId !== patient.id || appointment.branchId !== branchId) {
+      if (!appointment || appointment.branchId !== branchId) {
         throw new BadRequestException("Appointment does not match the selected patient and branch.");
       }
     }

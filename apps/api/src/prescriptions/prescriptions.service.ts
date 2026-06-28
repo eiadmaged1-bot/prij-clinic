@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreatePrescriptionDto, PrescriptionItemDto, UpdatePrescriptionDto } from "./dto";
@@ -14,8 +15,11 @@ export class PrescriptionsService {
   ) {}
 
   async create(dto: CreatePrescriptionDto, user: AuthUser) {
-    await this.ensurePatient(dto.patientId);
-    await this.ensureEncounterMatches(dto.patientId, dto.encounterId);
+    await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
+      patientId: dto.patientId,
+      requireDoctorScope: true
+    });
 
     try {
       const prescription = await this.prisma.prescription.create({
@@ -144,19 +148,6 @@ export class PrescriptionsService {
     });
 
     return prescription;
-  }
-
-  private async ensurePatient(patientId: string) {
-    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) throw new BadRequestException("Patient not found.");
-  }
-
-  private async ensureEncounterMatches(patientId: string, encounterId?: string) {
-    if (!encounterId) return;
-    const encounter = await this.prisma.encounter.findUnique({ where: { id: encounterId } });
-    if (!encounter || encounter.patientId !== patientId) {
-      throw new BadRequestException("Encounter does not match the selected patient.");
-    }
   }
 
   private handlePrismaReferenceError(error: unknown): never {

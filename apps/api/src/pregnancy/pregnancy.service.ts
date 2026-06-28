@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { assertCanReferenceEncounter, assertCanReferencePatient, assertCanReferencePregnancy } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateObUltrasoundDto, CreatePregnancyDto, UpdateObUltrasoundDto, UpdatePregnancyDto } from "./dto";
@@ -14,7 +15,7 @@ export class PregnancyService {
   ) {}
 
   async createPregnancy(dto: CreatePregnancyDto, user: AuthUser) {
-    const patient = await this.ensurePatient(dto.patientId);
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
 
     try {
       const pregnancy = await this.prisma.pregnancy.create({
@@ -121,9 +122,12 @@ export class PregnancyService {
   }
 
   async createObUltrasound(dto: CreateObUltrasoundDto, user: AuthUser) {
-    const patient = await this.ensurePatient(dto.patientId);
-    await this.ensurePregnancyMatches(dto.patientId, dto.pregnancyId);
-    await this.ensureEncounterMatches(dto.patientId, dto.encounterId);
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: dto.patientId });
+    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
+      patientId: dto.patientId,
+      requireDoctorScope: true
+    });
 
     try {
       const performedAt = toDateTime(dto.performedAt);
@@ -215,9 +219,12 @@ export class PregnancyService {
       throw new BadRequestException("Reviewed OB ultrasound records require a correction workflow before edits.");
     }
 
-    await this.ensurePatient(existing.patientId);
-    await this.ensurePregnancyMatches(existing.patientId, dto.pregnancyId);
-    await this.ensureEncounterMatches(existing.patientId, dto.encounterId);
+    await assertCanReferencePatient(this.prisma, existing.patientId, user);
+    await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: existing.patientId });
+    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
+      patientId: existing.patientId,
+      requireDoctorScope: true
+    });
 
     const data: Prisma.ObUltrasoundUpdateInput = {};
     if (dto.status !== undefined) data.status = dto.status;
@@ -276,29 +283,6 @@ export class PregnancyService {
     });
 
     return ultrasound;
-  }
-
-  private async ensurePatient(patientId?: string) {
-    if (!patientId) return null;
-    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) throw new BadRequestException("Patient not found.");
-    return patient;
-  }
-
-  private async ensurePregnancyMatches(patientId?: string, pregnancyId?: string) {
-    if (!pregnancyId) return;
-    const pregnancy = await this.prisma.pregnancy.findUnique({ where: { id: pregnancyId } });
-    if (!patientId || !pregnancy || pregnancy.patientId !== patientId) {
-      throw new BadRequestException("Pregnancy record does not match the selected patient.");
-    }
-  }
-
-  private async ensureEncounterMatches(patientId?: string, encounterId?: string) {
-    if (!encounterId) return;
-    const encounter = await this.prisma.encounter.findUnique({ where: { id: encounterId } });
-    if (!patientId || !encounter || encounter.patientId !== patientId) {
-      throw new BadRequestException("Encounter does not match the selected patient.");
-    }
   }
 
   private handlePrismaReferenceError(error: unknown): never {

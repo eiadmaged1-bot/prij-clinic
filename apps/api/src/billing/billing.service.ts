@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { assertCanReferenceInvoice, assertCanReferencePatient, assertCanReferencePayment } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto } from "./dto";
@@ -18,7 +19,7 @@ export class BillingService {
       throw new BadRequestException("At least one invoice item is required.");
     }
 
-    const patient = await this.ensurePatient(dto.patientId);
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const totals = calculateTotals(dto.items, dto.discountAmount ?? 0, 0);
 
     try {
@@ -188,7 +189,7 @@ export class BillingService {
   }
 
   async createPayment(dto: CreatePaymentDto, user: AuthUser) {
-    const invoice = await this.getInvoice(dto.invoiceId, user);
+    const invoice = await assertCanReferenceInvoice(this.prisma, dto.invoiceId, user);
     if (["cancelled", "voided"].includes(invoice.status)) {
       throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
     }
@@ -242,10 +243,7 @@ export class BillingService {
   }
 
   async reversePayment(id: string, dto: ReversePaymentDto, user: AuthUser) {
-    const existing = await this.prisma.payment.findFirst({ where: { id, ...branchScope(user) }, include: paymentIncludes });
-    if (!existing) {
-      throw new NotFoundException("Payment not found.");
-    }
+    const existing = await assertCanReferencePayment(this.prisma, id, user);
     if (existing.status !== "recorded") {
       throw new BadRequestException("Only recorded payments can be reversed.");
     }
@@ -284,12 +282,6 @@ export class BillingService {
     });
 
     return payment;
-  }
-
-  private async ensurePatient(patientId: string) {
-    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
-    if (!patient) throw new BadRequestException("Patient not found.");
-    return patient;
   }
 
   private async nextInvoiceNumber() {
