@@ -13,12 +13,26 @@ async function main() {
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/control-center", reception), 403, "reception admin control center");
+  assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "reception appearance settings");
   record.pass("non-admin cannot access admin control center API");
 
   const control = await apiJson("GET", "/admin/control-center", admin);
   if (control.safety?.auditLogsCanBeDeleted !== false) throw new Error("admin control center did not mark audit logs protected.");
   if (control.safety?.signedClinicalRecordsHardDelete !== false) throw new Error("admin control center did not block signed hard delete.");
   record.pass("admin safety settings are explicit");
+
+  const currentAppearance = await apiJson("GET", "/admin/settings/appearance", admin);
+  if (!currentAppearance.defaultTheme) throw new Error("appearance settings did not return a default theme.");
+  const updatedAppearance = await apiJson("PATCH", "/admin/settings/appearance", admin, {
+    defaultTheme: "incision-portal",
+    allowUserThemeOverride: true
+  });
+  if (updatedAppearance.defaultTheme !== "incision-portal") throw new Error("appearance theme update did not persist.");
+  await apiJson("PATCH", "/admin/settings/appearance", admin, {
+    defaultTheme: currentAppearance.defaultTheme,
+    allowUserThemeOverride: currentAppearance.allowUserThemeOverride !== false
+  });
+  record.pass("admin can update audited appearance settings");
 
   const service = await apiJson("POST", "/admin/services", admin, {
     code: `DEMO-SVC-${Date.now()}`,
@@ -69,6 +83,8 @@ async function main() {
   if (!overrideAudit?.reason) throw new Error("admin override audit entry with reason was not found.");
   const serviceAudit = audit.find((entry) => entry.resourceId === service.id && entry.action === "service_item.updated");
   if (!serviceAudit) throw new Error("service update audit entry was not found.");
+  const appearanceAudit = audit.find((entry) => entry.action === "system_setting.appearance_updated");
+  if (!appearanceAudit) throw new Error("appearance update audit entry was not found.");
   record.pass("admin control actions create audit entries");
 }
 

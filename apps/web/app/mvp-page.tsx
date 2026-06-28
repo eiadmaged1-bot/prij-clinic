@@ -3,6 +3,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "./theme";
 
 type Field = {
   name: string;
@@ -67,12 +68,19 @@ const navGroups: NavGroup[] = [
   {
     title: "Safety/Admin",
     links: [
-      ["/admin", "Admin"],
       ["/consents", "Consents"],
-      ["/ai-drafts", "AI Drafts"]
+      ["/ai-drafts", "AI Draft Review"]
     ]
   }
 ];
+
+const adminNavGroup: NavGroup = {
+  title: "Admin",
+  links: [
+    ["/admin", "Control Center"],
+    ["/admin/appearance", "Appearance"]
+  ]
+};
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -88,8 +96,6 @@ const displayKeys = [
   "method",
   "amount",
   "draftType",
-  "modelProvider",
-  "modelName",
   "reviewStatus"
 ];
 
@@ -142,7 +148,7 @@ export function MvpPage({
       }
 
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        throw new Error("Could not load demo records.");
       }
 
       const data = (await response.json()) as Record<string, unknown>;
@@ -176,7 +182,7 @@ export function MvpPage({
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(text || `API returned ${response.status}`);
+        throw new Error(text ? "Could not save this demo record." : "Could not save this demo record.");
       }
 
       setFormState(Object.fromEntries(createFields.map((field) => [field.name, field.defaultValue ?? ""])));
@@ -216,7 +222,7 @@ export function MvpPage({
       <section className="content-grid">
         <div className="panel">
           <div className="section-heading">
-            <h2>{title} scope</h2>
+              <h2>{title} focus</h2>
             <span className="badge">V0.1</span>
           </div>
           <ul className="feature-list">
@@ -229,7 +235,7 @@ export function MvpPage({
         <div className="panel">
           <div className="section-heading">
             <div>
-              <h2>Local API data</h2>
+              <h2>Demo records</h2>
               <p className="muted">Status: {status}</p>
             </div>
             {endpoint ? (
@@ -239,7 +245,7 @@ export function MvpPage({
             ) : null}
           </div>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>This workflow is create-only in the current UI.</EmptyState>}
+          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>This workflow is create-only in the current interface.</EmptyState>}
         </div>
       </section>
 
@@ -280,9 +286,33 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [hasToken, setHasToken] = useState(false);
+  const [canOpenAdmin, setCanOpenAdmin] = useState(false);
+  const { theme } = useTheme();
 
   useEffect(() => {
-    setHasToken(Boolean(sessionStorage.getItem("prijClinicToken")));
+    const token = sessionStorage.getItem("prijClinicToken");
+    setHasToken(Boolean(token));
+    if (!token) {
+      setCanOpenAdmin(false);
+      return;
+    }
+
+    fetch(`${apiUrl}/auth/me`, {
+      credentials: "include",
+      headers: { authorization: `Bearer ${token}` }
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { user?: { roles?: string[]; permissions?: string[] } } | null) => {
+        const roles = data?.user?.roles ?? [];
+        const permissions = data?.user?.permissions ?? [];
+        setCanOpenAdmin(
+          roles.includes("Owner") ||
+            roles.includes("Admin") ||
+            roles.includes("Super Admin") ||
+            permissions.includes("clinic_settings.manage")
+        );
+      })
+      .catch(() => setCanOpenAdmin(false));
   }, []);
 
   async function logout() {
@@ -300,7 +330,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell theme-${theme}`}>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
@@ -308,7 +338,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>V0.1 controlled demo</span>
         </Link>
 
-        {navGroups.map((group) => (
+        {[...navGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
           <nav className="nav-group" key={group.title} aria-label={group.title}>
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label]) => (
@@ -354,8 +384,7 @@ export function SafetyAlert() {
       <div>
         <strong>Demo/local only - no real patient data.</strong>
         <p className="muted">
-          AI remains disabled/mock-only and cannot diagnose, prescribe, sign, update final records, or bypass RBAC, consent, audit, or
-          doctor approval.
+          AI remains disabled and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass review.
         </p>
       </div>
       <span className="badge danger">Not production-ready</span>
@@ -365,11 +394,11 @@ export function SafetyAlert() {
 
 function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: string }) {
   if (status === "Loading") {
-    return <div className="skeleton" aria-label="Loading local API data" />;
+    return <div className="skeleton" aria-label="Loading demo records" />;
   }
 
   if (rows.length === 0) {
-    return <EmptyState>No demo rows returned yet. Sign in and seed local demo data before workflow QA.</EmptyState>;
+    return <EmptyState>No demo records yet. Sign in and use the local demo data before workflow review.</EmptyState>;
   }
 
   return (

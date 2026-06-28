@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -163,6 +164,18 @@ export default function AdminPage() {
           <Metric label="AI mode" value={summary.summary.aiMode ?? "Disabled"} />
         </section>
       ) : null}
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>Appearance</h2>
+            <p className="muted">Switch between the premium workspace, portal cards, minimal view, compact operations, and dark mode.</p>
+          </div>
+          <Link className="button compact" href="/admin/appearance">
+            Open Appearance
+          </Link>
+        </div>
+      </section>
 
       <section className="dashboard-grid">
         <div className="panel">

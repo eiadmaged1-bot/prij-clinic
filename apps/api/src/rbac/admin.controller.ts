@@ -5,7 +5,7 @@ import type { RequestWithUser } from "../auth/auth.types";
 import { UsersService } from "../users/users.service";
 import { PermissionsGuard } from "./permissions.guard";
 import { Permissions } from "./require-permissions.decorator";
-import { AdminOverrideDto, CreateServiceItemDto, UpdateServiceItemDto } from "./admin.dto";
+import { AdminOverrideDto, AppearanceSettingsDto, CreateServiceItemDto, UpdateServiceItemDto } from "./admin.dto";
 import { RbacService } from "./rbac.service";
 
 @Controller("admin")
@@ -55,6 +55,20 @@ export class AdminController {
     await this.auditAdminRead(request, "admin.services.read", "service_item");
 
     return { services: await this.rbac.listServices() };
+  }
+
+  @Get("settings/appearance")
+  @Permissions("clinic_settings.manage")
+  async appearanceSettings(@Req() request: RequestWithUser) {
+    await this.auditAdminRead(request, "admin.appearance.read", "system_setting");
+
+    return this.rbac.getAppearanceSettings();
+  }
+
+  @Patch("settings/appearance")
+  @Permissions("clinic_settings.manage")
+  updateAppearanceSettings(@Body() dto: AppearanceSettingsDto, @Req() request: RequestWithUser) {
+    return this.rbac.updateAppearanceSettings(dto, request.user);
   }
 
   @Post("services")

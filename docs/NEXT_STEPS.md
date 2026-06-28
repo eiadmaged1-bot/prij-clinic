@@ -1,6 +1,6 @@
 # Next Steps
 
-The exact next recommended sprint after the V0.1 admin demo release is:
+The exact next recommended sprint after the V0.1 theme-switcher admin UI release is:
 
 ## Patient-Centered Workflow Actions
 
@@ -16,6 +16,8 @@ Goals:
 
 - Add role-by-role manual QA for the Admin Control Center.
 - Add browser-level checks for login, admin service price edit, patient creation, and patient file open.
+- Add visual regression screenshots for all themes across desktop and mobile.
+- Decide whether the saved default theme should apply before login or only after staff sign-in.
 - Add production policy design for admin correction workflows, retention, and audit tamper resistance.
 
 ## Security And Production-Readiness Hardening

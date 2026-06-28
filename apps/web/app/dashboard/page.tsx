@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../mvp-page";
+import { useTheme } from "../theme";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -46,8 +47,25 @@ const quickActions = [
   ["/ai-drafts", "AI Draft Placeholder", "Review disabled/mock-only AI draft boundaries."]
 ];
 
+const portalModules = [
+  ["/patients", "Operations", "Patients", "PT", "teal"],
+  ["/appointments", "Operations", "Appointments", "AP", "teal"],
+  ["/queue", "Operations", "Queue", "QU", "teal"],
+  ["/calendar", "Operations", "Calendar", "CA", "teal"],
+  ["/encounters", "Clinical", "Encounters", "EN", "navy"],
+  ["/prescriptions", "Clinical", "Prescriptions", "RX", "navy"],
+  ["/investigations", "Clinical", "Investigations", "IV", "navy"],
+  ["/reports", "Clinical", "Reports", "RP", "navy"],
+  ["/pregnancies", "OB/Pregnancy", "Pregnancy", "PG", "teal"],
+  ["/ultrasound", "OB/Pregnancy", "Ultrasound", "US", "teal"],
+  ["/billing", "Finance", "Billing", "BI", "navy"],
+  ["/consents", "Safety", "Consents", "CO", "gray"],
+  ["/ai-drafts", "Safety", "AI Draft Review", "AI", "gray"]
+];
+
 export default function DashboardPage() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [user, setUser] = useState<SafeUser | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState("");
@@ -106,6 +124,48 @@ export default function DashboardPage() {
           </a>
         </section>
       </main>
+    );
+  }
+
+  const canOpenAdmin =
+    user?.roles.includes("Owner") ||
+    user?.roles.includes("Admin") ||
+    user?.roles.includes("Super Admin") ||
+    user?.permissions.includes("clinic_settings.manage");
+
+  if (theme === "incision-portal") {
+    return (
+      <AppShell>
+        <section className="portal-header">
+          <div>
+            <p className="eyebrow">Prij Clinic</p>
+            <h1>Clinic Apps</h1>
+            <p className="muted">Choose a workflow. Each tile opens one focused clinic area.</p>
+          </div>
+          <div className="portal-tabs" role="tablist" aria-label="App views">
+            <button className="portal-tab active" type="button">My Apps</button>
+            <button className="portal-tab" type="button">All Apps</button>
+          </div>
+        </section>
+
+        <section className="portal-grid" aria-label="Clinic app launcher">
+          {[...portalModules, ...(canOpenAdmin ? [["/admin", "Admin", "Control Center", "AD", "gray"], ["/admin/appearance", "Admin", "Appearance", "TH", "gray"]] : [])].map(
+            ([href, category, label, icon, tone]) => (
+              <a className={`portal-card portal-${tone}`} href={href} key={href}>
+                <span className="portal-icon">{icon}</span>
+                <span className="portal-category">{category}</span>
+                <strong>{label}</strong>
+              </a>
+            )
+          )}
+        </section>
+
+        <section className="portal-status">
+          <span>No real patient data</span>
+          <span>AI disabled</span>
+          <span>Local demo only</span>
+        </section>
+      </AppShell>
     );
   }
 

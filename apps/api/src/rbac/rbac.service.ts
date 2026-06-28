@@ -3,7 +3,12 @@ import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
-import { AdminOverrideDto, CreateServiceItemDto, UpdateServiceItemDto } from "./admin.dto";
+import { AdminOverrideDto, AppearanceSettingsDto, CreateServiceItemDto, UpdateServiceItemDto } from "./admin.dto";
+
+const defaultAppearanceSettings = {
+  defaultTheme: "clinic-premium",
+  allowUserThemeOverride: true
+};
 
 @Injectable()
 export class RbacService {
@@ -73,6 +78,7 @@ export class RbacService {
         roles,
         permissions,
         services,
+        defaultTheme: (await this.getAppearanceSettings()).defaultTheme,
         aiMode: "Disabled local placeholder",
         paymentGateway: "Not connected",
         fileStorage: "Not enabled for real files"
@@ -89,6 +95,48 @@ export class RbacService {
 
   listServices() {
     return this.prisma.serviceItem.findMany({ orderBy: [{ active: "desc" }, { category: "asc" }, { name: "asc" }] });
+  }
+
+  async getAppearanceSettings() {
+    const setting = await this.prisma.systemSetting.findUnique({ where: { key: "appearance" } });
+    const value = setting?.valueJson;
+    if (isAppearanceSettings(value)) return value;
+    return defaultAppearanceSettings;
+  }
+
+  async updateAppearanceSettings(dto: AppearanceSettingsDto, user?: AuthUser) {
+    const next = {
+      defaultTheme: dto.defaultTheme,
+      allowUserThemeOverride: dto.allowUserThemeOverride
+    };
+
+    const setting = await this.prisma.systemSetting.upsert({
+      where: { key: "appearance" },
+      create: {
+        key: "appearance",
+        valueJson: next,
+        updatedByUserId: user?.id
+      },
+      update: {
+        valueJson: next,
+        updatedByUserId: user?.id
+      }
+    });
+
+    await this.audit.record({
+      actorUserId: user?.id,
+      action: "system_setting.appearance_updated",
+      resourceType: "system_setting",
+      resourceId: setting.id,
+      branchId: user?.branchId,
+      severity: "high",
+      metadataJson: {
+        defaultTheme: next.defaultTheme,
+        allowUserThemeOverride: next.allowUserThemeOverride
+      }
+    });
+
+    return next;
   }
 
   async createService(dto: CreateServiceItemDto, user?: AuthUser) {
@@ -242,4 +290,10 @@ function validateOverride(dto: AdminOverrideDto) {
 
 function money(value: number) {
   return new Prisma.Decimal(value).toDecimalPlaces(2);
+}
+
+function isAppearanceSettings(value: Prisma.JsonValue | null | undefined): value is typeof defaultAppearanceSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.defaultTheme === "string" && typeof candidate.allowUserThemeOverride === "boolean";
 }

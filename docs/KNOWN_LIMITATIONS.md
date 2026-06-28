@@ -42,6 +42,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Admin override actions are V0.1 repair tools only. They require a reason and audit event, but do not replace a full production correction/retention policy.
 - Audit logs cannot be deleted from the normal app UI, but database-level tamper resistance and retention enforcement remain future work.
 - Signed clinical record hard-delete routes are not exposed in the normal UI/API; production-grade correction/versioning still needs more policy work.
+- Appearance settings are admin-only and audited, but the V0.1 theme switcher is a demo UI foundation, not a full brand/design governance system.
+- The saved default theme is stored in the database, while individual browser theme choices are stored locally for quick demo switching.
 
 ## AI
 
@@ -58,6 +60,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - CI security integration does not run the Next.js web app, browser smoke checks, or full route-by-route RBAC matrices.
 - Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, referenced-record write denial paths, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition.
 - Admin control tests cover `eyad` login, service price updates, reason-required invoice void override, non-admin denial, audit entries, and absence of normal hard-delete routes for audit/clinical records.
+- Theme UI tests cover required theme registry entries, local admin demo credentials on the login page, Incision Portal dashboard labels, non-admin denial for appearance settings, admin theme changes, and major page availability.
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 

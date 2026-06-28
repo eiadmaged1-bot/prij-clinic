@@ -8,7 +8,7 @@ export default function PregnancyPage() {
       items={[
         "Pregnancy overview records linked to patient profiles",
         "Gravida, para, dates, risk label, and notes are stored as structured draft data",
-        "Pregnancy record changes are protected by RBAC and audit logging"
+        "Pregnancy record changes require authorized staff access and audit logging"
       ]}
       endpoint="/pregnancies"
       collectionKey="pregnancies"

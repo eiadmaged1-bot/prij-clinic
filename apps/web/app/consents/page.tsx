@@ -6,7 +6,7 @@ export default function ConsentsPage() {
       eyebrow="Consent and privacy"
       title="Consents"
       items={[
-        "Consent records require authentication, RBAC, patient scope checks, and audit logging",
+        "Consent records require staff sign-in, patient access checks, and audit logging",
         "V0.1 consent is a controlled foundation, not production legal consent enforcement",
         "Real clinic consent text, signatures, retention, and privacy review are future requirements"
       ]}

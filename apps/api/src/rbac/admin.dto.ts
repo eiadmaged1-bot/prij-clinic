@@ -61,3 +61,12 @@ export class AdminOverrideDto {
   @IsIn(["CONFIRM"])
   confirmation!: string;
 }
+
+export class AppearanceSettingsDto {
+  @IsString()
+  @IsIn(["clinic-premium", "incision-portal", "minimal-clean", "compact-operations", "dark-navy"])
+  defaultTheme!: string;
+
+  @IsBoolean()
+  allowUserThemeOverride!: boolean;
+}

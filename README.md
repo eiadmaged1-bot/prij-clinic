@@ -16,7 +16,7 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Create a New Patient File.
 - Open the patient file and work from that patient-scoped workspace.
 - Use module pages only for their focused workflow: appointments, queue, encounters, prescriptions, investigations, reports, pregnancy/ultrasound, billing, consents, and AI draft placeholders.
-- Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, and audit review.
+- Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, audit review, and appearance settings.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
@@ -127,10 +127,20 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 Admin demo flow:
 
 ```text
-Login as eyad -> Admin -> Service Catalog and Prices -> edit price or deactivate service -> review Audit Log Viewer
+Login as eyad -> Admin -> Service Catalog and Prices -> edit price or deactivate service -> Appearance -> choose theme -> review Audit Log Viewer
 ```
 
 Safe admin overrides are reason-required and audited. The app supports void/cancel/archive style corrections only; audit logs and signed clinical records cannot be deleted from the normal UI.
+
+Theme and appearance controls:
+
+1. Sign in as `eyad` / `eyad`.
+2. Open `Admin`.
+3. Open `Appearance`.
+4. Choose Clinic Premium, Incision Portal, Minimal Clean, Compact Operations, or Dark Navy.
+5. Use `Use here` for this browser, or `Set as default` to save the local demo default.
+
+The Admin and Appearance navigation is hidden for non-admin staff. The server also protects the appearance settings API with admin permissions, and setting changes are audited.
 
 Patient file creation:
 
@@ -211,6 +221,7 @@ npm run smoke:test
 npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:theme:ui
 npm run test:e2e:v01
 ```
 
@@ -281,6 +292,7 @@ npm run test:audit:assertions
 npm run test:ai:regression
 npm run test:security:expanded
 npm run test:admin:control
+npm run test:theme:ui
 ```
 
 Current hardening matrices:

@@ -467,6 +467,19 @@ async function main() {
     });
   }
 
+  await prisma.systemSetting.upsert({
+    where: { key: "appearance" },
+    update: {},
+    create: {
+      key: "appearance",
+      valueJson: {
+        defaultTheme: "clinic-premium",
+        allowUserThemeOverride: true
+      },
+      updatedByUserId: demoOwner?.id
+    }
+  });
+
   const demoPatientA = await prisma.patient.upsert({
     where: { medicalRecordNumber: "DEMO-MRN-001" },
     update: {

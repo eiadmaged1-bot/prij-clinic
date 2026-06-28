@@ -63,8 +63,8 @@ export default function LoginPage() {
             Local V0.1 demo workspace for clinic workflow QA. Do not use real clinic credentials or real patient data.
           </p>
           <div className="workflow-band">
-            <span>RBAC protected</span>
-            <span>Audit-aware</span>
+            <span>Staff protected</span>
+            <span>Audit logged</span>
             <span>AI disabled</span>
           </div>
         </div>

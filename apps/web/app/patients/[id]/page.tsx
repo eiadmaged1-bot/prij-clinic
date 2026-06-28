@@ -38,7 +38,7 @@ const tabs: RelatedConfig[] = [
   { key: "encounters", label: "Encounters", endpoint: "/encounters", collectionKey: "encounters", actionLabel: "Create encounter", actionHref: "/encounters", empty: "No encounters found for this patient." },
   { key: "prescriptions", label: "Prescriptions", endpoint: "/prescriptions", collectionKey: "prescriptions", actionLabel: "Create prescription", actionHref: "/prescriptions", empty: "No prescriptions found for this patient." },
   { key: "investigations", label: "Investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", actionLabel: "Create order", actionHref: "/investigations", empty: "No investigation orders found for this patient." },
-  { key: "reports", label: "Reports", endpoint: "/reports", collectionKey: "reports", actionLabel: "Create report metadata", actionHref: "/reports", empty: "No report metadata found for this patient." },
+  { key: "reports", label: "Reports", endpoint: "/reports", collectionKey: "reports", actionLabel: "Create report", actionHref: "/reports", empty: "No reports found for this patient." },
   { key: "ob", label: "Pregnancy/Ultrasound", endpoint: "/pregnancies", collectionKey: "pregnancies", actionLabel: "Open OB workflow", actionHref: "/pregnancies", empty: "No pregnancy record found for this patient." },
   { key: "billing", label: "Billing", endpoint: "/billing/invoices", collectionKey: "invoices", actionLabel: "Create invoice", actionHref: "/billing", empty: "No invoices found for this patient." },
   { key: "consents", label: "Consents", endpoint: "/consents", collectionKey: "consentRecords", actionLabel: "Record consent", actionHref: "/consents", empty: "No consent record found for this patient." },

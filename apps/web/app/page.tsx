@@ -4,7 +4,7 @@ const modules = [
   ["/appointments", "Appointments", "Scheduling and calendar foundations"],
   ["/queue", "Queue", "Check-in and front desk flow"],
   ["/encounters", "Encounters", "Doctor-authored clinical drafts"],
-  ["/reports", "Reports", "Report metadata and review status"],
+  ["/reports", "Reports", "Report records and review status"],
   ["/pregnancies", "Pregnancy", "Pregnancy episode records"],
   ["/ultrasound", "OB ultrasound", "Measurements without automatic diagnosis"],
   ["/billing", "Billing", "Invoices and payment records without gateway data"],

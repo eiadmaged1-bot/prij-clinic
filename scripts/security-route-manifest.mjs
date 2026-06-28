@@ -15,6 +15,9 @@ const routeDefinitions = [
   { method: "GET", path: "/admin/users", category: "admin", requiredPermission: "user.read", allowedAs: "owner", denyAs: "accountant" },
   { method: "GET", path: "/admin/roles", category: "admin", requiredPermission: "role.read", allowedAs: "owner", denyAs: "accountant" },
   { method: "GET", path: "/admin/permissions", category: "admin", requiredPermission: "permission.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/admin/control-center", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception" },
+  { method: "GET", path: "/admin/settings/appearance", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception" },
+  { method: "PATCH", path: "/admin/settings/appearance", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception", fixtureBody: "appearance" },
   { method: "GET", path: "/audit", category: "audit", requiredPermission: "audit.read", allowedAs: "owner", denyAs: "reception" },
   { method: "POST", path: "/patients", category: "patients", requiredPermission: "patient.create", allowedAs: "owner", denyAs: "nurse", fixtureBody: "patient" },
   { method: "GET", path: "/patients", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient lists." },
@@ -251,6 +254,7 @@ export function bodyFor(kind, ids) {
     invoicePatch: { notes: "Demo invoice update only." },
     payment: { invoiceId: ids.invoiceId, method: "cash", amount: 10, referenceNote: "Demo cash payment only." },
     reversePayment: { reason: "Demo reversal authorization check only." },
+    appearance: { defaultTheme: "clinic-premium", allowUserThemeOverride: true },
     aiDraft: {
       draftType: "encounter_summary",
       patientId: ids.patientId,

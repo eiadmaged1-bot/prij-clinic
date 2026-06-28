@@ -55,6 +55,7 @@ The `/login` page displays the local admin demo credentials and has a `Use Admin
 - `/login` staff demo login.
 - `/dashboard` focused operational overview and patient-file entry point.
 - `/admin` local Admin Control Center for settings, users/roles overview, service prices, safe overrides, system status, and audit review.
+- `/admin/appearance` admin-only theme switcher and appearance settings.
 - `/patients` patient file list and search.
 - `/patients/new` creates a demo-safe patient file and opens it after save.
 - `/patients/:id` patient file workspace with patient-scoped tabs.
@@ -83,9 +84,24 @@ The `/login` page displays the local admin demo credentials and has a `Use Admin
 3. Review Users and Roles.
 4. Add or edit a service under Service Catalog and Prices.
 5. Deactivate or reactivate demo services as needed.
-6. Review Audit Log Viewer after changes.
+6. Open Appearance to choose the visual theme.
+7. Review Audit Log Viewer after changes.
 
 Admin override actions require a reason and confirmation. They void, cancel, or archive records rather than silently deleting clinical or audit history. Audit logs cannot be deleted from the normal UI.
+
+## Theme Switcher
+
+Admin users can change the local demo appearance from `Admin -> Appearance`.
+
+Available themes:
+
+- Clinic Premium: sidebar-based clinical workspace.
+- Incision Portal: white app-launcher card layout with My Apps and All Apps tabs.
+- Minimal Clean: quieter white/slate interface.
+- Compact Operations: denser layout for reception and admin work.
+- Dark Navy: dark professional mode.
+
+Use `Use here` to change only the current browser. Use `Set as default` to save the local demo default and create an audit entry. Non-admin staff do not see the Admin or Appearance navigation, and the server rejects non-admin appearance settings requests.
 
 ## Create A Patient File
 
@@ -109,6 +125,7 @@ npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
 npm run test:admin:control
+npm run test:theme:ui
 npm run test:e2e:v01
 ```
 

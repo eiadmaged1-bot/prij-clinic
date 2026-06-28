@@ -8,7 +8,7 @@ export default function AiDraftsPage() {
       items={[
         "External AI access is disabled in the MVP and no provider keys are stored in code",
         "AI draft placeholders are labeled as draft-only and require doctor review",
-        "AI draft review updates only the draft artifact and cannot sign records, prescribe, diagnose, or bypass RBAC"
+        "AI draft review cannot sign records, prescribe, diagnose, or bypass doctor approval"
       ]}
       endpoint="/ai-drafts"
       collectionKey="aiDrafts"

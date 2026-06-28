@@ -72,6 +72,7 @@ model User {
   requestedAiDrafts AiDraft[] @relation("AiDraftsRequestedBy")
   reviewedAiDrafts AiDraft[] @relation("AiDraftsReviewedBy")
   capturedConsentRecords ConsentRecord[] @relation("ConsentRecordsCapturedBy")
+  updatedSystemSettings SystemSetting[] @relation("SystemSettingsUpdatedBy")
 
   @@index([branchId])
   @@index([status])
@@ -631,6 +632,19 @@ model ServiceItem {
 
   @@index([category])
   @@index([active])
+}
+
+model SystemSetting {
+  id              String   @id @default(uuid()) @db.Uuid
+  key             String   @unique
+  valueJson       Json
+  updatedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  updatedBy       User?    @relation("SystemSettingsUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([updatedByUserId])
 }
 
 model AiDraft {
