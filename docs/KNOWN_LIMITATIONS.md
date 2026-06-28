@@ -9,7 +9,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
 - No backup job, encrypted backup storage, or restore-test automation is implemented yet.
 - Local backup/restore helper scripts exist, but no production backup job, encrypted backup storage, off-site backup, or formal restore-test automation is implemented yet.
-- No secure report file/object storage is implemented. Current report records store metadata/reference text only, and the file storage security plan remains documentation.
+- No secure report file/object storage endpoint is implemented. Current report records store metadata/reference text only, uploads remain ignored and undocumented for real PHI use, and the file storage security plan remains documentation.
 - Audit logs are application append-only, but database-level tamper resistance and retention controls are not implemented.
 
 ## RBAC

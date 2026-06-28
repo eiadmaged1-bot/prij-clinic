@@ -11,6 +11,23 @@ Do not commit real reports, scans, images, DICOM files, PDFs, or patient documen
 - Local development storage, if later enabled, must be treated as temporary and demo-only.
 - Report attachments must be authorized by patient, branch, role, and explicit report permissions.
 - AI/OCR must treat every file as untrusted input.
+- The current `/reports` API stores metadata and optional reference text only; it does not accept multipart upload bodies.
+- No public file URL, direct filesystem path, external object storage provider, OCR, or AI file processing is implemented.
+
+## Safe Future Local Foundation
+
+If file uploads are enabled in a later sprint, start with a local/dev-only foundation:
+
+- Store files under ignored `uploads/`.
+- Generate opaque storage keys; never return raw local paths.
+- Require JWT and `report.upload` for upload.
+- Require JWT and `report.read` or explicit export/download permission for access.
+- Re-check patient, branch, report, and consent scope before every upload/view/download.
+- Enforce a strict allowlist such as PDF only at first.
+- Enforce conservative size limits.
+- Write audit metadata for upload, view/download, replacement, void, and failed authorization.
+- Keep uploaded demo files out of git, logs, audit payloads, AI prompts, and test fixtures.
+- Disable OCR/AI processing for uploaded files.
 
 ## Production Requirements
 
@@ -27,6 +44,8 @@ Before accepting real report attachments, production storage must include:
 - No permanent public URLs.
 - Backup and restore policy for file storage separate from the database.
 - Retention and deletion policy reviewed for the clinic context.
+- Monitoring for unusual download/export volume.
+- Operational runbooks for quarantine, removal, and incident review.
 
 ## Authorization
 
@@ -49,8 +68,10 @@ Report file access must never bypass the application. Every download or preview 
 ## Out Of Scope For V0.1
 
 - Real PHI file uploads.
+- Multipart upload endpoints.
 - External object storage provider wiring.
 - Public file URLs.
+- Raw local path exposure.
 - DICOM/PACS integration.
 - OCR processing.
 - AI interpretation of report files or fetal images.
