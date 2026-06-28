@@ -13,7 +13,7 @@ export class QueueController {
   constructor(private readonly queue: QueueService) {}
 
   @Post("check-in")
-  @Permissions("queue.status_update")
+  @Permissions("queue.manage")
   checkIn(@Body() dto: CheckInDto, @CurrentUser() user: AuthUser) {
     return this.queue.checkIn(dto, user);
   }
@@ -37,7 +37,7 @@ export class QueueController {
   }
 
   @Patch(":id/cancel")
-  @Permissions("queue.manage")
+  @Permissions("queue.status_update")
   cancel(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.queue.cancel(id, user);
   }
