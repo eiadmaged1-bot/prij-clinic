@@ -33,6 +33,8 @@ npm run test:audit
 npm run test:ai-safety
 npm run test:security
 npm run test:e2e:v01
+npm run test:consent:privacy
+npm run test:error:safety
 ```
 
 `npm run test:security` runs all security scripts after the live API and web apps are available.
@@ -75,6 +77,8 @@ The local demo password follows the README pattern and defaults to `LocalDev123!
 - `scripts/route-authorization-test.mjs`: checks anonymous denial, owner access, and representative denied-role behavior across implemented routes.
 - `scripts/referenced-scope-test.mjs`: checks seeded branch scope behavior and verifies out-of-branch referenced-record create attempts fail safely for appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
 - `scripts/audit-assertion-test.mjs`: checks representative audit events for patient, appointment, queue, encounter, prescription, investigation, report, pregnancy, OB ultrasound, invoice, payment, consent, and AI draft actions, and confirms audit output does not expose bearer tokens or credential material.
+- `scripts/consent-privacy-test.mjs`: checks consent routes require auth, demo consent create/read works, lower-role access is denied, out-of-branch patient references fail safely, and consent audit metadata avoids credential material.
+- `scripts/error-safety-test.mjs`: checks representative error responses do not expose stack traces, database URLs, JWT secret names/values, bearer tokens, password hashes, or password-like input.
 - `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only, routes require auth, lower-role review is denied, prompt-like input is not executed, no final-record AI routes exist, no external provider access is recorded, and AI cannot sign, insert, diagnose, or prescribe.
 - `scripts/security-test-expanded.mjs`: runs the expanded Node security test set.
 - `scripts/security-test-all.mjs`: canonical expanded aggregate runner used by `npm run test:security:expanded`.
@@ -110,6 +114,7 @@ It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disable
 - Some routes are intentionally broad authenticated routes and emit WARN rather than FAIL for missing denied-role cases: `/auth/me`, `/auth/logout`, scoped patient reads, appointment reads, calendar reads, and queue reads.
 - Referenced-record create/write scope is hardened for implemented MVP routes, but patient-to-doctor assignment and exhaustive future state-transition policy remain incomplete.
 - Consent records are covered as a V0.1 foundation, but production legal consent text, signature capture, override workflow, and full consent enforcement are not implemented.
+- Error-safety checks cover representative API errors only; production log aggregation and alerting remain future work.
 - Patient-to-doctor assignment is not modeled yet.
 - Local backup scripts are operational helpers only, not production backup certification.
 - Audit tamper-resistance, retention, and export controls are not production-grade.

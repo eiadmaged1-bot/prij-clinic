@@ -1,8 +1,8 @@
-# V0.1 Pilot Release Notes
+# V0.1 Release-Candidate Notes
 
 Date: 2026-06-28
 
-Prij Clinic V0.1 is a local/private pilot foundation for demo and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
+Prij Clinic V0.1 is a local/private release-candidate foundation for demo, staging QA, and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 ## Completed Pilot Workflow
 
@@ -19,7 +19,11 @@ Login -> dashboard -> patient registration -> consent foundation -> appointment 
 - Patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent record foundation.
 - Disabled/mock-only AI draft placeholders.
-- Local backup/restore helper scripts.
+- Local backup/restore helper scripts with checksum and non-destructive backup verification.
+- Environment separation examples for local, CI, staging, and production placeholders.
+- Safe error response foundation and logging/incident response docs.
+- Secure file-storage design foundation; real PHI uploads remain disabled.
+- Example API/web Dockerfiles and staging/production compose templates.
 - CI and PostgreSQL-backed security integration workflow.
 - V0.1 E2E demo workflow test.
 
@@ -45,6 +49,9 @@ npm run smoke:test
 npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:consent:privacy
+npm run test:error:safety
+npm run backup:verify -- -BackupFile backups/prij-clinic-local-YYYYMMDD-HHMMSS.sql
 npm run test:e2e:v01
 ```
 
@@ -52,8 +59,8 @@ npm run test:e2e:v01
 
 - Patient-to-doctor assignment is not modeled; doctor patient reads remain branch-scoped outside doctor-owned records.
 - Lower-role positive-path coverage is representative and not exhaustive for every state transition.
-- Consent enforcement is partial and not production legal workflow.
+- Consent foundation has auth/RBAC, scope, audit, and tests, but full production legal workflow and blocking enforcement remain incomplete.
 - File storage is documented but not implemented for real PHI files.
-- Backup scripts are local helpers, not production backup infrastructure.
+- Backup scripts are local helpers with verification, not production backup infrastructure.
 - Audit logs are application append-only but not tamper-resistant.
 - MFA, monitoring, legal review, production deployment, and operational runbooks remain future work.

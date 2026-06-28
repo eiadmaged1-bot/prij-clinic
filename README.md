@@ -1,10 +1,10 @@
 # Prij Clinic
 
-Clinic Management System V0.1 pilot scaffold for OB/GYN and women's health.
+Clinic Management System V0.1 release-candidate foundation for OB/GYN and women's health.
 
-Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup verification, environment separation, safe error responses, deployment examples, and CI/security tests.
 
-V0.1 is a local/private demo foundation. It is not production-ready and is not a medical device.
+V0.1 is a local/private release-candidate foundation for controlled demo and staging QA. It is not production-ready and is not a medical device.
 
 ## Safety Rules
 
@@ -47,6 +47,17 @@ DEMO_OWNER_EMAIL=owner@prij.local
 DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
+
+Tracked environment templates:
+
+```text
+.env.example
+.env.ci.example
+.env.staging.example
+.env.production.example
+```
+
+Real environment files stay ignored. Production values must come from a secret manager or deployment platform.
 
 Demo accounts are local-only and use the default password `LocalDev123!` unless overridden:
 
@@ -223,6 +234,8 @@ Expanded route-level checks:
 npm run test:routes:auth
 npm run test:scope:records
 npm run test:audit:assertions
+npm run test:consent:privacy
+npm run test:error:safety
 npm run test:ai:regression
 npm run test:security:expanded
 ```
@@ -250,9 +263,21 @@ This creates demo-only records for the V0.1 workflow and verifies representative
 
 ```powershell
 npm run backup:local
+npm run backup:verify -- -BackupFile backups/prij-clinic-local-YYYYMMDD-HHMMSS.sql
 ```
 
 Backups are written under ignored `backups/`. Restore is guarded and documented in `docs/BACKUP_RESTORE.md`; do not run restore unless explicitly intended for a local/dev database.
+
+## Release Readiness Docs
+
+- `docs/CONSENT_PRIVACY.md`
+- `docs/FILE_STORAGE_SECURITY.md`
+- `docs/BACKUP_RESTORE.md`
+- `docs/ENVIRONMENT_STRATEGY.md`
+- `docs/DEPLOYMENT_READINESS.md`
+- `docs/STAGING_DEPLOYMENT.md`
+- `docs/LOGGING_MONITORING.md`
+- `docs/INCIDENT_RESPONSE.md`
 
 Authenticated smoke checks use the local demo owner:
 

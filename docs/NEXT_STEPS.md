@@ -1,20 +1,20 @@
 # Next Steps
 
-The exact next recommended sprint after V0.1 is:
+The exact next recommended sprint after V0.1 production-readiness foundation is:
 
-## Production Security Readiness Hardening
+## Staging Demo And Pilot QA
 
 Goals:
 
-- Add patient-to-doctor assignment or an explicit access model for doctor patient reads.
-- Add exhaustive lower-role positive-path matrices for every route and state transition, beyond current representative denied-role coverage.
-- Add production-grade audit retention, tamper-resistance, export review, and alerting controls.
-- Add production consent enforcement design before enforcing real consent rules.
-- Add secure PHI file storage implementation with encryption, access control, malware scanning, audit logging, and expiring links.
-- Add production backup encryption, restore proof, runbooks, monitoring, MFA, and legal/privacy review.
-- Keep AI disabled/mock-only until consent, provider privacy, RBAC, audit, and doctor-review controls are complete.
+- Stand up a staging/demo environment using synthetic data only.
+- Run CI, security integration, expanded security, consent/privacy, error-safety, and V0.1 E2E tests against staging.
+- Perform a backup verification and documented restore rehearsal in a non-production database.
+- Pilot QA the full clinic workflow with no real patient data.
+- Record usability issues and security gaps without adding clinical automation.
+- Keep AI disabled/mock-only.
+- Confirm logs contain no PHI, passwords, tokens, report contents, or payment secrets.
 
-Completed in the referenced-record hardening sprint:
+Completed before this sprint:
 
 - Centralized referenced-record scope helpers for patient, user, appointment, queue ticket, encounter, investigation order, pregnancy, invoice, payment, and AI draft references.
 - Branch/doctor-scope checks on safe create/update/status/review paths for appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
@@ -23,7 +23,17 @@ Completed in the referenced-record hardening sprint:
 - Expanded audit assertions for representative write/status/sign/review/payment/consent actions.
 - Expanded AI regression checks for auth, mock-only behavior, prompt-like input handling, final-record route absence, and no external-provider audit flags.
 
-Do not start production deployment until patient assignment/access policy, consent enforcement, audit retention/tamper-resistance, backup/restore proof, monitoring, MFA, legal review, and secure PHI file storage are stronger.
+Completed in the production-readiness foundation sprint:
+
+- Local/CI/staging/production environment examples.
+- Runtime environment validation.
+- Backup checksum and non-destructive verification.
+- Consent/privacy documentation and tests.
+- Secure file-storage design foundation with upload implementation deferred.
+- Safe error responses, logging/monitoring docs, and incident response foundation.
+- Example API/web Dockerfiles and staging/production compose templates.
+
+Do not start production deployment until patient assignment/access policy, production consent enforcement, audit retention/tamper-resistance, backup/restore proof, monitoring, MFA, legal review, and secure PHI file storage are complete.
 
 ## Later Hardening
 
