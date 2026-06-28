@@ -46,44 +46,61 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page">
-      <form className="panel login-panel" onSubmit={submit}>
-        <div>
+    <main className="page centered">
+      <section className="login-shell">
+        <div className="login-brand">
           <p className="eyebrow">Staff access</p>
-          <h1>Login</h1>
-          <p className="muted">Local demo owner access only. Do not use real clinic credentials.</p>
+          <h1>Prij Clinic</h1>
+          <p className="muted">
+            Local V0.1 demo workspace for clinic workflow QA. Do not use real clinic credentials or real patient data.
+          </p>
+          <div className="workflow-band">
+            <span>RBAC protected</span>
+            <span>Audit-aware</span>
+            <span>AI disabled</span>
+          </div>
         </div>
 
-        <label>
-          Email
-          <input
-            autoComplete="username"
-            name="email"
-            onChange={(event) => setEmail(event.target.value)}
-            required
-            type="email"
-            value={email}
-          />
-        </label>
+        <form className="login-panel" onSubmit={submit}>
+          <div>
+            <p className="eyebrow">Demo login</p>
+            <h2>Sign in</h2>
+            <p className="muted">Use seeded demo staff credentials only. External AI and payment services are not enabled.</p>
+          </div>
 
-        <label>
-          Password
-          <input
-            autoComplete="current-password"
-            name="password"
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            type="password"
-            value={password}
-          />
-        </label>
+          <label>
+            Email
+            <input
+              autoComplete="username"
+              name="email"
+              onChange={(event) => setEmail(event.target.value)}
+              required
+              type="email"
+              value={email}
+            />
+          </label>
 
-        {error ? <p className="form-error">{error}</p> : null}
+          <label>
+            Password
+            <input
+              autoComplete="current-password"
+              name="password"
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              type="password"
+              value={password}
+            />
+          </label>
 
-        <button className="button" disabled={isSubmitting} type="submit">
-          {isSubmitting ? "Signing in" : "Sign in"}
-        </button>
-      </form>
+          {error ? <p className="form-error">{error}</p> : null}
+
+          <button className="button" disabled={isSubmitting} type="submit">
+            {isSubmitting ? "Signing in" : "Sign in"}
+          </button>
+
+          <p className="empty-state">Demo/local only - no real patient data, credentials, payment details, or report files.</p>
+        </form>
+      </section>
     </main>
   );
 }

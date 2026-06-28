@@ -220,8 +220,21 @@ let createdDraftId = null;
 
 await runStep("AI draft creation is mock-only and demo-safe", async () => {
   const patientsBody = await authedJson("/patients");
-  const patient = firstArray(patientsBody, "patients").find((item) => item.medicalRecordNumber === "DEMO-MRN-001");
-  assert(patient?.id, "seeded Demo Patient A was not available");
+  let patient = firstArray(patientsBody, "patients").find((item) => item.medicalRecordNumber === "DEMO-MRN-001");
+  if (!patient) {
+    patient = await authedJson("/patients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        medicalRecordNumber: `DEMO-CI-AI-${Date.now()}`,
+        firstName: "Demo",
+        lastName: "CiAi",
+        notes: "Fake local CI security patient for AI draft safety only."
+      })
+    });
+    warn("Seeded Demo Patient A was outside the API list window; created fake local CI AI patient.");
+  }
+  assert(patient?.id, "demo patient was not available for AI draft safety");
 
   const draft = await authedJson("/ai-drafts", {
     method: "POST",

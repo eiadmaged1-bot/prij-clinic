@@ -6,6 +6,17 @@ Current foundation includes auth, RBAC, audit logs, patients, consent records, a
 
 V0.1 is a local/private demo foundation. It is not production-ready and is not a medical device.
 
+## V0.1 Premium Demo UI
+
+The web app now uses a modern clinic SaaS shell for controlled demos:
+
+- Premium app layout with left sidebar navigation, grouped modules, top safety context, and responsive cards.
+- Dashboard command center with operational cards, workflow shortcuts, session context, and safety badges.
+- Polished module pages for registration, appointments, queue, clinical records, reports, pregnancy, OB ultrasound, billing, consents, and AI draft placeholders.
+- Demo-safe forms, empty states, loading skeletons, status badges, workflow links, and clear warnings.
+
+Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
+
 ## Safety Rules
 
 - Do not use real patient data in development, tests, screenshots, seeds, or docs.
@@ -63,8 +74,7 @@ Seed data uses only demo records such as `Demo Patient A`.
 ## Development
 
 ```powershell
-npm run dev:api
-npm run dev:web
+npm run dev
 ```
 
 Open:
@@ -84,6 +94,7 @@ http://localhost:3000/reports
 http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
 http://localhost:3000/billing
+http://localhost:3000/consents
 http://localhost:3000/ai-drafts
 ```
 

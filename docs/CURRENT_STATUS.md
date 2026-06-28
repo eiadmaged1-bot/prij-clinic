@@ -2,9 +2,9 @@
 
 Date: 2026-06-28
 
-Branch: `release/v0.1-pilot`
+Branch: `ui/v0.1-premium-clinic-experience`
 
-Target tag: `v0.1-pilot-complete`
+Target tag: `v0.1-premium-ui-demo`
 
 ## Status Summary
 
@@ -19,7 +19,8 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent records: V0.1 structured consent foundation with audit metadata. Production legal text, signature capture, overrides, and full enforcement remain incomplete.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
-- V0.1 demo UI: usable local pages for login, dashboard, patients, appointments/calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
+- V0.1 premium demo UI: modern responsive shell, grouped sidebar navigation, dashboard workflow cards, polished module pages, demo-safe forms, status badges, loading/empty states, and clear local-only safety warnings.
+- V0.1 demo pages: home, login, dashboard, patients, new patient, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
 - V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
 - Backup/restore foundation: local-only backup script, guarded restore script, and backup/restore docs.
 - Deployment readiness docs: environment strategy, CI env example, deployment requirements, and production blockers documented.
@@ -53,11 +54,17 @@ npm run build
 Then start API and web:
 
 ```powershell
-npm run dev:api
-npm run dev:web
+npm run dev
 npm run smoke:test
 npm run test:security
 ```
+
+## UI Safety State
+
+- The app shell shows demo/local warnings and AI disabled/mock-only status.
+- Forms and page copy instruct users not to enter real patient, payment, report, credential, or secret data.
+- AI draft UI remains disabled/mock-only and doctor-review-only.
+- OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.
 
 API-only security integration check:
 

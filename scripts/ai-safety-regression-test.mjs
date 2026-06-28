@@ -15,8 +15,17 @@ async function main() {
   if (summary.safety?.clinicalDraftsRequireDoctorReview !== true) throw new Error("Dashboard did not require doctor review.");
   record.pass("dashboard safety flags remain disabled and doctor-review-only");
 
-  const patient = ((await apiJson("GET", "/patients", owner)).patients ?? []).find((item) => item.medicalRecordNumber === "DEMO-MRN-001");
-  if (!patient) throw new Error("Demo patient unavailable for AI regression.");
+  const patients = (await apiJson("GET", "/patients", owner)).patients ?? [];
+  let patient = patients.find((item) => item.medicalRecordNumber === "DEMO-MRN-001");
+  if (!patient) {
+    patient = await apiJson("POST", "/patients", owner, {
+      medicalRecordNumber: `DEMO-AI-REGRESSION-${Date.now()}`,
+      firstName: "Demo",
+      lastName: "AIRegression",
+      notes: "Fake local demo patient for AI safety regression only."
+    });
+    record.warn("seed demo patient was unavailable; created fake local AI regression patient");
+  }
 
   const draft = await apiJson("POST", "/ai-drafts", owner, {
     draftType: "encounter_summary",

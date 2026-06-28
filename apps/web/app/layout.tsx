@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Prij Clinic MVP",
-  description: "Prij Clinic developer scaffold"
+  title: "Prij Clinic V0.1",
+  description: "Prij Clinic controlled local demo"
 };
 
 export default function RootLayout({
