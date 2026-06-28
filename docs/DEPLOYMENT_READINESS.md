@@ -16,6 +16,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Environment examples with placeholders only.
 - Runtime environment validation for required variables, disabled AI settings, and production-safe JWT/HTTPS checks.
 - Example API/web Dockerfiles and staging/production compose templates with placeholders only.
+- Staging runbook and manual-only staging deployment placeholder workflow.
 
 ## Not Ready For Production
 
@@ -66,6 +67,8 @@ These files are scaffolding for later staging and deployment review:
 - `docker-compose.staging.example.yml`
 - `docker-compose.prod.example.yml`
 - `docs/STAGING_DEPLOYMENT.md`
+- `docs/STAGING_RUNBOOK.md`
+- `.github/workflows/staging-deploy-placeholder.yml`
 
 They do not contain real secrets and do not approve production use.
 

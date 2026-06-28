@@ -52,6 +52,8 @@ Before staging:
 - Configure PHI-safe logging and monitoring.
 - Use private upload storage with authorization and audit controls before any file testing.
 
+Operational staging steps live in `docs/STAGING_RUNBOOK.md`. The tracked GitHub Actions staging workflow is a manual placeholder only and does not deploy.
+
 ## Production
 
 Production is not approved for V0.1. `.env.production.example` is a readiness checklist only, not a deployment approval.

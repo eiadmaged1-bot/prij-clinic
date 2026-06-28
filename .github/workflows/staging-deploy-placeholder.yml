@@ -1,0 +1,32 @@
+name: Staging Deploy Placeholder
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: "Branch, tag, or commit to validate for staging"
+        required: true
+        default: "release/v0.1-staging-demo"
+
+jobs:
+  staging-readiness:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref }}
+
+      - name: Confirm manual-only placeholder
+        run: |
+          echo "This workflow is a staging deployment placeholder only."
+          echo "It does not deploy, does not contain secrets, and must not be connected to production."
+          echo "Required future secrets/config: STAGING_DATABASE_URL, STAGING_JWT_SECRET, STAGING_APP_URL, STAGING_API_URL, STAGING_CORS_ORIGIN."
+
+      - name: Validate tracked staging docs exist
+        run: |
+          test -f .env.staging.example
+          test -f docs/STAGING_RUNBOOK.md
+          test -f docs/STAGING_DEPLOYMENT.md
+          test -f docs/PILOT_QA_CHECKLIST.md

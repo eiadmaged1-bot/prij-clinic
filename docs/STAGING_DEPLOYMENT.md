@@ -31,6 +31,8 @@ Staging should prove deployment mechanics with synthetic data only:
 - `docker-compose.staging.example.yml`
 - `apps/api/Dockerfile`
 - `apps/web/Dockerfile`
+- `docs/STAGING_RUNBOOK.md`
+- `.github/workflows/staging-deploy-placeholder.yml`
 
 ## Staging Checklist
 
@@ -42,6 +44,8 @@ Staging should prove deployment mechanics with synthetic data only:
 6. Run `npm run test:security:expanded`.
 7. Run backup verification with a staging-safe backup artifact.
 8. Confirm logs do not include PHI, passwords, tokens, report contents, or payment secrets.
+
+See `docs/STAGING_RUNBOOK.md` for the deployment sequence, rollback plan, post-deploy checks, and approval gates.
 
 ## Production Blockers
 
