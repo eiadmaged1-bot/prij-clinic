@@ -15,6 +15,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Local backup/restore helper scripts.
 - Environment examples with placeholders only.
 - Runtime environment validation for required variables, disabled AI settings, and production-safe JWT/HTTPS checks.
+- Example API/web Dockerfiles and staging/production compose templates with placeholders only.
 
 ## Not Ready For Production
 
@@ -55,6 +56,18 @@ npm run start:web
 ```
 
 These commands assume dependencies are installed and required environment variables are configured outside source control.
+
+## Example Container Assets
+
+These files are scaffolding for later staging and deployment review:
+
+- `apps/api/Dockerfile`
+- `apps/web/Dockerfile`
+- `docker-compose.staging.example.yml`
+- `docker-compose.prod.example.yml`
+- `docs/STAGING_DEPLOYMENT.md`
+
+They do not contain real secrets and do not approve production use.
 
 ## Environment Files
 
