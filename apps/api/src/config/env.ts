@@ -77,11 +77,17 @@ export function validateRuntimeEnv() {
       "replace-with-local-development-secret",
       "ci-placeholder-secret",
       "change-me",
-      "placeholder"
+      "placeholder",
+      "SECRET_MANAGER_LONG_RANDOM_JWT_SECRET",
+      "STAGING_SECRET_MANAGER_VALUE"
     ]);
 
-    if (unsafeSecrets.has(secret) || secret.length < 32) {
+    if (unsafeSecrets.has(secret) || secret.startsWith("SECRET_MANAGER_") || secret.length < 32) {
       throw new Error("JWT_SECRET is not production-safe.");
+    }
+
+    if ((process.env.DATABASE_URL ?? "").startsWith("SECRET_MANAGER_")) {
+      throw new Error("DATABASE_URL is not production-safe.");
     }
 
     if (!process.env.APP_URL?.startsWith("https://")) {
