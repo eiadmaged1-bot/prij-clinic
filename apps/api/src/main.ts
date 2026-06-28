@@ -1,6 +1,7 @@
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
+import { SafeExceptionFilter } from "./common/safe-exception.filter";
 import { loadRootEnv, validateRuntimeEnv } from "./config/env";
 
 async function bootstrap() {
@@ -18,6 +19,7 @@ async function bootstrap() {
       whitelist: true
     })
   );
+  app.useGlobalFilters(new SafeExceptionFilter());
 
   app.enableCors({
     origin: webOrigin,

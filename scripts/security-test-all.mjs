@@ -6,6 +6,7 @@ const steps = [
   "test:scope:records",
   "test:audit:assertions",
   "test:consent:privacy",
+  "test:error:safety",
   "test:ai:regression"
 ];
 
