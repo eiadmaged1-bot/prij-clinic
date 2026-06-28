@@ -131,7 +131,15 @@ npm run typecheck
 npm run build
 ```
 
-CI does not start Docker, run migrations, or seed the database yet.
+Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
+
+That workflow starts a PostgreSQL 16 service container, applies existing Prisma migrations with `npm run prisma:migrate:deploy`, seeds demo-only data, starts the API, and runs:
+
+```text
+npm run test:security:ci
+```
+
+The CI security runner is API-only. It does not start the Next.js web app, does not use real patient data, does not call external AI providers, and does not certify production readiness.
 
 ## Smoke Test
 
@@ -164,6 +172,14 @@ npm run test:security
 ```
 
 These are local demo safety checks for RBAC, branch scope, audit metadata, and disabled/mock AI behavior. They are not production security certification tests and must not be run with real patient data.
+
+For the CI-compatible API-only security integration runner, start the API after seeding and run:
+
+```powershell
+npm run test:security:ci
+```
+
+The runner uses `API_URL` when set, otherwise `http://localhost:3001`. It uses seeded demo credentials only and expects AI to remain disabled/mock-only.
 
 See `docs/SECURITY_TESTING.md`.
 

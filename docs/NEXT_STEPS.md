@@ -2,17 +2,16 @@
 
 The exact next recommended sprint is:
 
-## Expand Security Tests Into CI-Ready Integration Tests
+## Expand Route-Level Authorization Coverage
 
 Goals:
 
-- Convert local PowerShell security smoke tests into framework-backed integration tests.
 - Add route-by-route RBAC allow/deny coverage for every controller action.
 - Add branch and doctor scope fixtures for create/update referenced-record checks.
 - Add audit assertions for every sensitive read and write/status/sign/review/payment action.
 - Add negative AI safety tests proving AI draft routes cannot update final clinical records.
 
-Do not start production hardening until this expanded test suite is complete.
+The current CI security workflow covers representative API integration paths only. Do not start production hardening until route-level authorization, scope, and audit coverage is broader.
 
 ## Later Hardening
 

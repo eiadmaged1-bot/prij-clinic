@@ -2,7 +2,7 @@
 
 Date: 2026-06-28
 
-Branch: `security/rbac-scope-enforcement`
+Branch: `ci/security-integration-tests`
 
 Baseline tag: `mvp-foundation-complete`
 
@@ -19,8 +19,10 @@ The MVP foundation is a locally runnable demo and review foundation. It is not p
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
 - CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
+- Security integration CI: GitHub Actions can run database-backed API security integration tests with PostgreSQL, existing Prisma migrations, demo seed data, and disabled/mock-only AI settings.
 - Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
 - Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled/mock safety.
+- CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI draft safety.
 
 ## Safety State
 
@@ -49,6 +51,12 @@ npm run dev:api
 npm run dev:web
 npm run smoke:test
 npm run test:security
+```
+
+API-only security integration check:
+
+```powershell
+npm run test:security:ci
 ```
 
 ## Commit Safety

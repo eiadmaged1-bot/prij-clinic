@@ -1,0 +1,87 @@
+name: Security Integration Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - "security/**"
+      - "tests/**"
+      - "ci/**"
+      - "auto/**"
+
+jobs:
+  security-integration:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: prij_clinic_ci
+          POSTGRES_USER: prij_clinic_ci
+          POSTGRES_PASSWORD: prij_clinic_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_ci -d prij_clinic_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://prij_clinic_ci:prij_clinic_ci_password@localhost:5432/prij_clinic_ci
+      JWT_SECRET: ci-placeholder-secret
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      API_PORT: "3001"
+      API_URL: http://localhost:3001
+      NODE_ENV: test
+      DEMO_TEST_PASSWORD: LocalDev123!
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed demo data
+        run: npm run prisma:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Start API
+        run: |
+          npm run start -w apps/api > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Wait for API health
+        run: |
+          for i in {1..45}; do
+            if curl -fsS "$API_URL/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat api.log
+          exit 1
+
+      - name: Run security integration tests
+        run: npm run test:security:ci

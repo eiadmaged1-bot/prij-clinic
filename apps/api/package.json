@@ -9,6 +9,7 @@
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "node scripts/prisma.cjs generate",
+    "prisma:migrate:deploy": "node scripts/prisma.cjs migrate deploy",
     "prisma:migrate:dev": "node scripts/prisma.cjs migrate dev",
     "prisma:seed": "node scripts/prisma.cjs db seed"
   },

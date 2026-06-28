@@ -21,8 +21,10 @@
     "test:audit": "powershell -ExecutionPolicy Bypass -File scripts/audit-test.ps1",
     "test:ai-safety": "powershell -ExecutionPolicy Bypass -File scripts/ai-safety-test.ps1",
     "test:security": "powershell -ExecutionPolicy Bypass -File scripts/security-test-all.ps1",
+    "test:security:ci": "node scripts/security-integration-test.mjs",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:repair": "powershell -ExecutionPolicy Bypass -File scripts/prisma-repair-client.ps1",
+    "prisma:migrate:deploy": "npm run prisma:migrate:deploy -w apps/api",
     "prisma:migrate:local": "powershell -ExecutionPolicy Bypass -File scripts/prisma-migrate-local.ps1",
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
     "prisma:seed": "npm run prisma:seed -w apps/api"
