@@ -6,14 +6,16 @@ Current foundation includes auth, RBAC, audit logs, patients, consent records, a
 
 V0.1 is a local/private demo foundation. It is not production-ready and is not a medical device.
 
-## V0.1 Premium Demo UI
+## V0.1 Focused Clinic Workflow
 
-The web app now uses a modern clinic SaaS shell for controlled demos:
+The web app is now organized around the clinic workflow the pilot needs:
 
-- Premium app layout with grouped sidebar navigation, top safety context, status badges, responsive cards, and workflow shortcuts.
-- Dashboard command center for appointments, queue, patients, billing, pregnancy/OB, and AI safety status.
-- Polished pages for registration, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI draft placeholders.
-- Demo-safe forms, empty states, loading skeletons, hover/focus states, and clear "Demo/local only - no real patient data" warnings.
+- Login with seeded demo credentials.
+- Open Dashboard for a short operational overview.
+- Open Patients.
+- Create a New Patient File.
+- Open the patient file and work from that patient-scoped workspace.
+- Use module pages only for their focused workflow: appointments, queue, encounters, prescriptions, investigations, reports, pregnancy/ultrasound, billing, consents, and AI draft placeholders.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
@@ -59,14 +61,14 @@ DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
 
-Demo accounts are local-only and use the default password `LocalDev123!` unless overridden:
+Demo accounts are local-only and use the default password `LocalDev123!` unless overridden. The login page also shows the Demo Owner credentials and includes a "Use demo login" button.
 
 ```text
-demo.owner@prij.local
-demo.doctor@prij.local
-demo.reception@prij.local
-demo.accountant@prij.local
-demo.nurse@prij.local
+Demo Owner:        demo.owner@prij.local       / LocalDev123!
+Demo Doctor:       demo.doctor@prij.local      / LocalDev123!
+Demo Reception:    demo.reception@prij.local   / LocalDev123!
+Demo Accountant:   demo.accountant@prij.local  / LocalDev123!
+Demo Nurse:        demo.nurse@prij.local       / LocalDev123!
 ```
 
 Seed data uses only demo records such as `Demo Patient A`.
@@ -90,6 +92,7 @@ http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
 http://localhost:3000/patients
+http://localhost:3000/patients/new
 http://localhost:3000/appointments
 http://localhost:3000/calendar
 http://localhost:3000/queue
@@ -107,8 +110,18 @@ http://localhost:3000/ai-drafts
 Recommended demo flow:
 
 ```text
-Login -> dashboard -> patient -> appointment -> queue -> encounter -> prescription -> investigation -> pregnancy/ultrasound/report -> billing -> consent -> AI draft placeholder
+Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file -> patient file tabs -> appointment -> queue -> encounter -> prescription -> investigation -> pregnancy/ultrasound/report -> billing -> consent -> AI draft placeholder
 ```
+
+Patient file creation:
+
+1. Start the app with `npm run dev`.
+2. Open `http://localhost:3000/login`.
+3. Click `Use demo login`, then sign in.
+4. Open `Patients`.
+5. Click `New Patient File`.
+6. Use fake/demo details only and click `Save and open patient file`.
+7. Continue work from `/patients/:id`, where each tab is scoped to that patient where current APIs support it.
 
 ## Current Endpoints
 

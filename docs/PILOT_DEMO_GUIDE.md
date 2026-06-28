@@ -27,21 +27,25 @@ npm run dev:stop
 Use seeded local demo staff accounts only. The default local password is `LocalDev123!` unless overridden in local `.env`.
 
 ```text
-demo.owner@prij.local
-demo.doctor@prij.local
-demo.reception@prij.local
-demo.accountant@prij.local
-demo.nurse@prij.local
+Demo Owner:        demo.owner@prij.local       / LocalDev123!
+Demo Doctor:       demo.doctor@prij.local      / LocalDev123!
+Demo Reception:    demo.reception@prij.local   / LocalDev123!
+Demo Accountant:   demo.accountant@prij.local  / LocalDev123!
+Demo Nurse:        demo.nurse@prij.local       / LocalDev123!
 ```
 
 Do not use real clinic credentials.
+
+The `/login` page displays the Demo Owner credentials and has a `Use demo login` button.
 
 ## UI Tour
 
 - `/` premium demo landing page.
 - `/login` staff demo login.
-- `/dashboard` command center with workflow shortcuts and safety status.
-- `/patients` and `/patients/new` registration workflow.
+- `/dashboard` focused operational overview and patient-file entry point.
+- `/patients` patient file list and search.
+- `/patients/new` creates a demo-safe patient file and opens it after save.
+- `/patients/:id` patient file workspace with patient-scoped tabs.
 - `/appointments`, `/calendar`, and `/queue` scheduling and front-desk workflow.
 - `/encounters`, `/prescriptions`, `/investigations`, and `/reports` clinical workflow pages.
 - `/pregnancies` and `/ultrasound` OB workflow pages.
@@ -53,14 +57,24 @@ Do not use real clinic credentials.
 
 1. Sign in with a seeded demo user.
 2. Open Dashboard and review the safety warnings.
-3. Create or locate a fake demo patient.
-4. Schedule a demo appointment.
-5. Check in the patient through Queue.
-6. Open Encounters and create a demo-only doctor-authored draft.
-7. Review prescriptions, investigations, reports, pregnancy, and OB ultrasound pages.
-8. Review Billing without entering real payment data.
-9. Record only fake/demo consent data if needed.
-10. Open AI Drafts and confirm AI remains disabled/mock-only and doctor-review-only.
+3. Open Patients.
+4. Click New Patient File.
+5. Enter fake/demo demographics only and save.
+6. Continue from the patient file page.
+7. Use patient file tabs to move through appointment, queue, encounter, prescription, investigation, report/OB ultrasound, billing, consent, and AI draft placeholder review.
+8. Use module pages only for focused module work; they intentionally do not show unrelated dashboard content.
+
+## Create A Patient File
+
+1. Go to `Patients`.
+2. Click `New Patient File`.
+3. Keep or regenerate the demo MRN.
+4. Enter fake first and last names.
+5. Optionally add fake/demo sex, DOB, phone, email, and notes.
+6. Click `Save and open patient file`.
+7. The app redirects to `/patients/:id`.
+
+Do not enter real patient names, phone numbers, addresses, clinical histories, insurance data, report files, or payment details.
 
 ## Verification Commands
 
@@ -86,6 +100,7 @@ npm run test:e2e:v01
 ## Demo Limitations
 
 - UI forms are intentionally basic and demo-safe.
+- Patient-file tabs filter by `patientId` where the current APIs expose enough data; otherwise they show clean empty states.
 - Consent is a foundation only, not production legal consent enforcement.
 - File storage for real PHI is not implemented.
 - Production monitoring, MFA, legal review, and backup restore proof remain future work.
