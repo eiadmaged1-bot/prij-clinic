@@ -60,6 +60,10 @@ Open:
 http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
+http://localhost:3000/patients
+http://localhost:3000/appointments
+http://localhost:3000/queue
+http://localhost:3000/encounters
 http://localhost:3000/reports
 http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
@@ -134,7 +138,7 @@ CI does not start Docker, run migrations, or seed the database yet.
 Start the API and web app, then run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+npm run smoke:test
 ```
 
 The smoke test covers health, DB connectivity, login, anonymous rejection for a protected route, representative protected endpoints from each implemented module, AI disabled/mock metadata, and the core web pages.
@@ -144,6 +148,8 @@ To run API-only checks:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1 -SkipWeb
 ```
+
+The actual implemented OB ultrasound endpoint is `GET /ob-ultrasounds`; the actual implemented AI draft endpoint is `GET /ai-drafts`.
 
 Authenticated smoke checks use the local demo owner:
 
@@ -180,3 +186,12 @@ npm run prisma:seed
 ```
 
 Stop immediately if Prisma asks to reset the database or if a command would delete data or migrations.
+
+## Status Documents
+
+- `docs/CURRENT_STATUS.md`
+- `docs/API_ENDPOINTS.md`
+- `docs/RBAC_MATRIX.md`
+- `docs/RBAC_AUDIT_REVIEW.md`
+- `docs/KNOWN_LIMITATIONS.md`
+- `docs/NEXT_STEPS.md`

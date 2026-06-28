@@ -2,25 +2,36 @@
 
 Date: 2026-06-28
 
-Branch: `hardening/mvp-foundation-review`
+Branch: `security/rbac-scope-enforcement`
 
 Baseline tag: `mvp-foundation-complete`
 
-## Review Scope
+## Status Summary
 
-This is a hardening and review sprint only. No new product features, clinical modules, database schema changes, migrations, or external AI integrations are included in this sprint.
+The MVP foundation is a locally runnable demo and review foundation. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Implemented Foundation
 
 - Auth: local staff login, JWT cookie/bearer support, account lockout after repeated failures, logout audit.
-- RBAC: role and permission seed foundation, server-side permission guards on protected controllers.
-- Audit: append-only audit log table and audit hooks for implemented create/update/status/review/payment actions.
-- MVP workflow modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, dashboard.
+- RBAC: seeded roles and permissions with server-side permission guards on protected controllers.
+- Scope filtering: branch scope for non-owner/non-admin reads where supported; doctor scope for doctor-owned records where relevant.
+- Audit: append-only audit table and metadata-only audit hooks for implemented create/update/status/sign/review/payment and sensitive read actions.
+- MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
+- CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
+- Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
 
-## Verification Summary
+## Safety State
 
-Required command sequence for this branch:
+- Seed data uses demo-only records such as `Demo Patient A` and `Demo Patient B`.
+- No real AI API calls or provider SDK usage are implemented.
+- AI draft artifacts are marked `disabled_mock` / `no_external_ai`.
+- AI draft review cannot update final clinical records.
+- OB ultrasound fields do not calculate diagnoses or trigger fetal-image analysis.
+
+## Local Verification
+
+Recommended full local sequence:
 
 ```powershell
 npm run dev:stop
@@ -30,28 +41,22 @@ npm run typecheck
 npm run build
 ```
 
-Smoke-test command:
+Then start API and web:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+npm run dev:api
+npm run dev:web
+npm run smoke:test
 ```
 
-The smoke test checks health, database connectivity, login, anonymous denial for a protected route, representative protected endpoints from every module, AI disabled/mock metadata, and core web pages.
-
-## Safety State
-
-- Seed data uses demo-only records: `Demo Patient A`, `Demo Patient B`, local demo report, local demo billing, and local disabled AI draft placeholder.
-- No committed real patient data was found in the reviewed seed/docs.
-- No committed external AI API calls or provider SDK usage was found.
-- AI draft artifacts are marked `disabled_mock` / `no_external_ai`.
-- AI draft review updates only the AI draft artifact and records audit metadata with `insertedIntoClinicalRecord: false`.
-- OB ultrasound fields are stored as clinical record data only. The current code does not calculate diagnoses such as FGR or trigger automatic fetal-image analysis.
-
-## Working Tree Rules
+## Commit Safety
 
 Before commit, ensure these are not staged:
 
 - `.env`
 - `apps/api/.env`
-- `apps/web/tsconfig.tsbuildinfo`
-- Any other `*.tsbuildinfo`
+- Any `*.tsbuildinfo`
+- Logs
+- Uploads
+- Local database files
+- Secrets, API keys, tokens, or patient data

@@ -2,6 +2,8 @@
 
 Base URL in local development: `http://localhost:3001`
 
+The MVP API is a local demo foundation. It is not production-ready and must not be used with real patient data, real payment data, report files containing PHI, or real AI provider access.
+
 ## Public Endpoints
 
 | Method | Path | Purpose |
@@ -10,59 +12,51 @@ Base URL in local development: `http://localhost:3001`
 | `GET` | `/health/db` | Database connectivity check. |
 | `POST` | `/auth/login` | Staff login. Audits success and failure. |
 
-## Auth Endpoints
+## Protected Endpoints
 
-| Method | Path | Permission | Notes |
-| --- | --- | --- | --- |
-| `GET` | `/auth/me` | JWT required | Returns current safe user, roles, and permissions. |
-| `POST` | `/auth/logout` | JWT required | Clears cookie and audits logout. |
-
-## Admin And Audit
+All endpoints below require JWT authentication. Permission names match the implemented controller guards.
 
 | Method | Path | Permission |
 | --- | --- | --- |
+| `GET` | `/auth/me` | Authenticated user |
+| `POST` | `/auth/logout` | Authenticated user |
 | `GET` | `/admin/users` | `user.read` |
 | `GET` | `/admin/roles` | `role.read` |
 | `GET` | `/admin/permissions` | `permission.read` |
 | `GET` | `/audit` | `audit.read` |
-
-## Workflow Endpoints
-
-| Method | Path | Permission |
-| --- | --- | --- |
-| `POST` | `/patients` | `patients.manage` |
-| `GET` | `/patients` | `patients.read` |
-| `GET` | `/patients/:id` | `patients.read` |
-| `PATCH` | `/patients/:id` | `patients.manage` |
-| `POST` | `/appointments` | `appointments.manage` |
-| `GET` | `/appointments` | `appointments.read` |
-| `GET` | `/appointments/calendar` | `appointments.read` |
-| `GET` | `/appointments/:id` | `appointments.read` |
-| `PATCH` | `/appointments/:id/status` | `appointments.manage` |
+| `POST` | `/patients` | `patient.create` |
+| `GET` | `/patients` | `patient.read` |
+| `GET` | `/patients/:id` | `patient.read` |
+| `PATCH` | `/patients/:id` | `patient.update` |
+| `POST` | `/appointments` | `appointment.manage` |
+| `GET` | `/appointments` | `appointment.read` |
+| `GET` | `/appointments/calendar` | `appointment.read` |
+| `GET` | `/appointments/:id` | `appointment.read` |
+| `PATCH` | `/appointments/:id/status` | `appointment.manage` |
 | `POST` | `/queue/check-in` | `queue.manage` |
 | `GET` | `/queue/today` | `queue.read` |
-| `PATCH` | `/queue/:id/call` | `queue.manage` |
-| `PATCH` | `/queue/:id/complete` | `queue.manage` |
-| `PATCH` | `/queue/:id/cancel` | `queue.manage` |
-| `POST` | `/encounters` | `encounters.manage` |
-| `GET` | `/encounters` | `encounters.read` |
-| `GET` | `/encounters/:id` | `encounters.read` |
-| `PATCH` | `/encounters/:id` | `encounters.manage` |
-| `PATCH` | `/encounters/:id/sign` | `encounters.manage` |
-| `POST` | `/prescriptions` | `prescriptions.manage` |
-| `GET` | `/prescriptions` | `prescriptions.read` |
-| `GET` | `/prescriptions/:id` | `prescriptions.read` |
-| `PATCH` | `/prescriptions/:id` | `prescriptions.manage` |
-| `PATCH` | `/prescriptions/:id/sign` | `prescriptions.manage` |
-| `POST` | `/investigations/orders` | `investigations.manage` |
-| `GET` | `/investigations/orders` | `investigations.read` |
-| `GET` | `/investigations/orders/:id` | `investigations.read` |
-| `PATCH` | `/investigations/orders/:id/status` | `investigations.manage` |
-| `POST` | `/reports` | `reports.manage` |
-| `GET` | `/reports` | `reports.read` |
-| `GET` | `/reports/:id` | `reports.read` |
-| `PATCH` | `/reports/:id` | `reports.manage` |
-| `PATCH` | `/reports/:id/review` | `reports.manage` |
+| `PATCH` | `/queue/:id/call` | `queue.status_update` |
+| `PATCH` | `/queue/:id/complete` | `queue.status_update` |
+| `PATCH` | `/queue/:id/cancel` | `queue.status_update` |
+| `POST` | `/encounters` | `encounter.create` |
+| `GET` | `/encounters` | `encounter.read` |
+| `GET` | `/encounters/:id` | `encounter.read` |
+| `PATCH` | `/encounters/:id` | `encounter.update_own` |
+| `PATCH` | `/encounters/:id/sign` | `encounter.sign` |
+| `POST` | `/prescriptions` | `prescription.create` |
+| `GET` | `/prescriptions` | `prescription.read` |
+| `GET` | `/prescriptions/:id` | `prescription.read` |
+| `PATCH` | `/prescriptions/:id` | `prescription.update` |
+| `PATCH` | `/prescriptions/:id/sign` | `prescription.approve` |
+| `POST` | `/investigations/orders` | `investigation.create` |
+| `GET` | `/investigations/orders` | `investigation.read` |
+| `GET` | `/investigations/orders/:id` | `investigation.read` |
+| `PATCH` | `/investigations/orders/:id/status` | `investigation.update` |
+| `POST` | `/reports` | `report.upload` |
+| `GET` | `/reports` | `report.read` |
+| `GET` | `/reports/:id` | `report.read` |
+| `PATCH` | `/reports/:id` | `report.update` |
+| `PATCH` | `/reports/:id/review` | `report.review` |
 | `POST` | `/pregnancies` | `pregnancy.manage` |
 | `GET` | `/pregnancies` | `pregnancy.read` |
 | `GET` | `/pregnancies/:id` | `pregnancy.read` |
@@ -81,14 +75,14 @@ Base URL in local development: `http://localhost:3001`
 | `GET` | `/billing/payments` | `billing.read` |
 | `POST` | `/billing/payments/:id/reverse` | `billing.void` |
 | `GET` | `/dashboard/summary` | `dashboard.read` |
+| `POST` | `/ai-drafts` | `ai_draft.request` |
+| `GET` | `/ai-drafts` | `ai_draft.read` |
+| `GET` | `/ai-drafts/:id` | `ai_draft.read` |
+| `PATCH` | `/ai-drafts/:id/review` | `ai_draft.review` |
 
-## AI Draft Placeholder Endpoints
+## Safety Notes
 
-| Method | Path | Permission | Safety Boundary |
-| --- | --- | --- | --- |
-| `POST` | `/ai-drafts` | `ai_draft.request` | Creates disabled/mock placeholder text only. |
-| `GET` | `/ai-drafts` | `ai_draft.read` | Lists draft artifacts. |
-| `GET` | `/ai-drafts/:id` | `ai_draft.read` | Returns a draft artifact. |
-| `PATCH` | `/ai-drafts/:id/review` | `ai_draft.review` | Updates draft review status only. Does not update clinical records. |
-
-AI draft responses must remain marked with `modelProvider: disabled_mock` and `modelName: no_external_ai` until a separate approved AI integration sprint.
+- The actual implemented OB ultrasound API route is `/ob-ultrasounds`.
+- The actual implemented AI draft API route is `/ai-drafts`.
+- AI draft responses must remain marked with `modelProvider: disabled_mock` and `modelName: no_external_ai`.
+- AI draft review updates only the AI draft artifact and audit metadata; it does not update final clinical records.

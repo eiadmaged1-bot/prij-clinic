@@ -45,3 +45,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 - Current verification relies on typecheck, build, Prisma repair/seed, and smoke checks.
 - Focused automated tests for RBAC denial paths, audit log creation, billing rollups, and AI draft state transitions are still needed.
+- GitHub Actions currently runs install, Prisma client generation, typecheck, and build only. It does not run migrations, seed, browser smoke tests, or database-backed integration tests.
