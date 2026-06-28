@@ -1,18 +1,19 @@
 # Next Steps
 
-The exact next recommended sprint after V0.1 production-readiness foundation is:
+The exact next recommended sprint after V0.1 staging demo release candidate is:
 
-## Staging Demo And Pilot QA
+## V0.2 Access Model And Production Security Design
 
 Goals:
 
-- Stand up a staging/demo environment using synthetic data only.
-- Run CI, security integration, expanded security, consent/privacy, error-safety, and V0.1 E2E tests against staging.
-- Perform a backup verification and documented restore rehearsal in a non-production database.
-- Pilot QA the full clinic workflow with no real patient data.
-- Record usability issues and security gaps without adding clinical automation.
-- Keep AI disabled/mock-only.
-- Confirm logs contain no PHI, passwords, tokens, report contents, or payment secrets.
+- Add explicit patient-to-doctor assignment or a documented clinical access policy.
+- Convert representative lower-role positive paths into fuller role-by-role route/state-transition tests.
+- Design production consent enforcement with legal/privacy review before blocking real workflows.
+- Design secure PHI file storage implementation with encryption, authorization, audit, malware scanning, and expiring access.
+- Define production backup encryption, restore proof, retention, ownership, and runbooks.
+- Add MFA/session hardening design and implementation plan.
+- Define audit retention, tamper-resistance, export, and alerting requirements.
+- Keep AI disabled/mock-only until a separate consent, provider privacy, RBAC, audit, and doctor-review design is approved.
 
 Completed before this sprint:
 
@@ -32,6 +33,14 @@ Completed in the production-readiness foundation sprint:
 - Secure file-storage design foundation with upload implementation deferred.
 - Safe error responses, logging/monitoring docs, and incident response foundation.
 - Example API/web Dockerfiles and staging/production compose templates.
+
+Completed in the staging demo release-candidate sprint:
+
+- UI polish for landing, login, dashboard, module pages, consent page, workflow links, and demo warnings.
+- Pilot QA checklist and role-based manual test plan.
+- Local/dev-only `npm run demo:reset` idempotent reseed wrapper.
+- Staging runbook and manual-only staging deployment placeholder.
+- Pilot demo guide and updated release-candidate documentation.
 
 Do not start production deployment until patient assignment/access policy, production consent enforcement, audit retention/tamper-resistance, backup/restore proof, monitoring, MFA, legal review, and secure PHI file storage are complete.
 

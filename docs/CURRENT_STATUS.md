@@ -2,13 +2,13 @@
 
 Date: 2026-06-28
 
-Branch: `release/v0.1-production-readiness`
+Branch: `release/v0.1-staging-demo`
 
-Target tag: `v0.1-production-readiness`
+Target tag: `v0.1-staging-demo-ready`
 
 ## Status Summary
 
-The V0.1 release-candidate foundation is a locally runnable, GitHub-backed, CI-tested demo/staging foundation. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+The V0.1 staging/demo release candidate is a locally runnable, GitHub-backed, CI-tested demo/staging foundation. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Implemented Foundation
 
@@ -19,10 +19,11 @@ The V0.1 release-candidate foundation is a locally runnable, GitHub-backed, CI-t
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent records: V0.1 structured consent foundation with auth/RBAC, branch-scoped patient references, audit metadata, and consent/privacy tests. Production legal text, signature capture, overrides, and full workflow blocking remain incomplete.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
-- V0.1 demo UI: usable local pages for login, dashboard, patients, appointments/calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
+- V0.1 demo UI: usable local pages for login, dashboard, patients, consents, appointments/calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
 - V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
 - Backup/restore foundation: local-only backup script with SHA256 sidecars, non-destructive backup verifier, guarded restore script, and backup/restore docs.
 - Deployment readiness docs: environment strategy, local/CI/staging/production env examples, Docker/compose examples, staging guide, deployment requirements, and production blockers documented.
+- Pilot QA package: role-by-role checklist, pilot demo guide, staging runbook, and manual-only staging deployment placeholder.
 - Safe error/logging foundation: runtime env validation, safe error responses, error-safety test, logging/monitoring docs, and incident response foundation.
 - CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
 - Security integration CI: GitHub Actions can run database-backed API security integration tests with PostgreSQL, existing Prisma migrations, demo seed data, and disabled/mock-only AI settings.
@@ -48,6 +49,7 @@ Recommended full local sequence:
 npm run dev:stop
 npm run prisma:repair
 npm run prisma:seed
+npm run demo:reset
 npm run typecheck
 npm run build
 ```

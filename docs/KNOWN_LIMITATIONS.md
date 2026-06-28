@@ -48,6 +48,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Focused local security scripts now cover representative RBAC denial paths, branch scope behavior, referenced-record write denial paths, audit log creation, and AI draft safety. Exhaustive automated tests for every billing rollup edge case and future state transition are still needed.
 - GitHub Actions has a database-backed API security integration workflow, including expanded route-security coverage, but it remains API-focused rather than full browser E2E production testing.
 - CI security integration does not run the Next.js web app, browser smoke checks, or full route-by-route RBAC matrices.
+- Manual browser QA is guided by `docs/PILOT_QA_CHECKLIST.md`, but it is not a substitute for production browser E2E automation.
 - Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, referenced-record write denial paths, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition.
 - Consent/privacy and error-safety tests cover representative behavior only.
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
@@ -56,4 +57,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Deployment
 
 - V0.1 is local/private pilot software only.
-- Staging/demo deployment is scaffolded with example files only. Production deployment, staging QA, secrets management, monitoring, HTTPS policy, MFA, secure file storage implementation, backup encryption, restore proof, and legal/privacy review remain future work.
+- Staging/demo deployment is scaffolded with example files, runbooks, and a manual-only placeholder workflow. Production deployment, secrets management, monitoring, HTTPS policy hardening, MFA, secure file storage implementation, backup encryption, restore proof, and legal/privacy review remain future work.

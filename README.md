@@ -2,7 +2,7 @@
 
 Clinic Management System V0.1 release-candidate foundation for OB/GYN and women's health.
 
-Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup verification, environment separation, safe error responses, deployment examples, and CI/security tests.
+Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup verification, environment separation, safe error responses, staging/demo runbooks, role QA checklists, deployment examples, and CI/security tests.
 
 V0.1 is a local/private release-candidate foundation for controlled demo and staging QA. It is not production-ready and is not a medical device.
 
@@ -71,6 +71,14 @@ demo.nurse@prij.local
 
 Seed data uses only demo records such as `Demo Patient A`.
 
+Repeatable local demo setup:
+
+```powershell
+npm run demo:reset
+```
+
+`demo:reset` is local/dev only. It stops local dev ports, repairs Prisma Client, and reruns the idempotent seed. It does not delete data, reset the database, remove migrations, or run `docker compose down -v`.
+
 ## Development
 
 ```powershell
@@ -85,6 +93,7 @@ http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
 http://localhost:3000/patients
+http://localhost:3000/consents
 http://localhost:3000/appointments
 http://localhost:3000/calendar
 http://localhost:3000/queue
@@ -259,6 +268,23 @@ npm run test:e2e:v01
 
 This creates demo-only records for the V0.1 workflow and verifies representative audit metadata. It does not use real patient data, real clinical histories, real payment data, real report files, or external AI calls.
 
+## Staging Demo
+
+Use `docs/STAGING_RUNBOOK.md` and `.env.staging.example` for controlled staging setup. Staging must use secret-managed values, HTTPS, staging-only PostgreSQL, backups before deployment, and synthetic data only.
+
+Staging deploy sequence:
+
+```powershell
+npm run prisma:migrate:deploy
+npm run prisma:seed
+npm run smoke:test
+npm run test:security:ci
+npm run test:security:expanded
+npm run test:e2e:v01
+```
+
+The tracked `Staging Deploy Placeholder` GitHub workflow is manual-only and does not deploy.
+
 ## Local Backup
 
 ```powershell
@@ -270,12 +296,16 @@ Backups are written under ignored `backups/`. Restore is guarded and documented 
 
 ## Release Readiness Docs
 
+- `docs/PILOT_DEMO_GUIDE.md`
+- `docs/PILOT_QA_CHECKLIST.md`
+- `docs/ROLE_BASED_TEST_PLAN.md`
 - `docs/CONSENT_PRIVACY.md`
 - `docs/FILE_STORAGE_SECURITY.md`
 - `docs/BACKUP_RESTORE.md`
 - `docs/ENVIRONMENT_STRATEGY.md`
 - `docs/DEPLOYMENT_READINESS.md`
 - `docs/STAGING_DEPLOYMENT.md`
+- `docs/STAGING_RUNBOOK.md`
 - `docs/LOGGING_MONITORING.md`
 - `docs/INCIDENT_RESPONSE.md`
 
@@ -324,6 +354,9 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/RBAC_AUDIT_REVIEW.md`
 - `docs/KNOWN_LIMITATIONS.md`
 - `docs/NEXT_STEPS.md`
+- `docs/PILOT_DEMO_GUIDE.md`
+- `docs/PILOT_QA_CHECKLIST.md`
+- `docs/ROLE_BASED_TEST_PLAN.md`
 - `docs/BACKUP_RESTORE.md`
 - `docs/FILE_STORAGE_SECURITY.md`
 - `docs/DEPLOYMENT_READINESS.md`
