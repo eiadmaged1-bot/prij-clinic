@@ -233,12 +233,25 @@ async function main() {
   const mainBranch = await prisma.branch.upsert({
     where: { code: "main" },
     update: {
-      name: "Main Branch",
+      name: "Demo Branch A",
       status: "active"
     },
     create: {
-      name: "Main Branch",
+      name: "Demo Branch A",
       code: "main",
+      status: "active"
+    }
+  });
+
+  const branchB = await prisma.branch.upsert({
+    where: { code: "demo-b" },
+    update: {
+      name: "Demo Branch B",
+      status: "active"
+    },
+    create: {
+      name: "Demo Branch B",
+      code: "demo-b",
       status: "active"
     }
   });
@@ -349,6 +362,53 @@ async function main() {
     demoOwner = owner;
   }
 
+  const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
+  const demoUsers = [
+    ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
+    ["demo.doctor@prij.local", "Demo Doctor User", "Doctor", mainBranch.id],
+    ["demo.reception@prij.local", "Demo Reception User", "Receptionist", mainBranch.id],
+    ["demo.accountant@prij.local", "Demo Accountant User", "Accountant", mainBranch.id],
+    ["demo.nurse@prij.local", "Demo Nurse User", "Nurse", branchB.id]
+  ];
+
+  for (const [email, displayName, roleName, branchId] of demoUsers) {
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {
+        displayName,
+        status: "active",
+        branchId,
+        passwordHash: await hashPassword(demoPassword),
+        failedLoginCount: 0,
+        lockedUntil: null
+      },
+      create: {
+        email,
+        displayName,
+        status: "active",
+        branchId,
+        passwordHash: await hashPassword(demoPassword)
+      }
+    });
+
+    await prisma.userRole.upsert({
+      where: {
+        userId_roleId_branchId: {
+          userId: user.id,
+          roleId: roleByName.get(roleName).id,
+          branchId
+        }
+      },
+      update: {},
+      create: {
+        userId: user.id,
+        roleId: roleByName.get(roleName).id,
+        branchId,
+        createdByUserId: demoOwner?.id
+      }
+    });
+  }
+
   const demoPatientA = await prisma.patient.upsert({
     where: { medicalRecordNumber: "DEMO-MRN-001" },
     update: {
@@ -375,7 +435,7 @@ async function main() {
       firstName: "Demo",
       lastName: "Patient B",
       status: "active",
-      branchId: mainBranch.id,
+      branchId: branchB.id,
       notes: "Local demo registration record only."
     },
     create: {
@@ -383,7 +443,7 @@ async function main() {
       firstName: "Demo",
       lastName: "Patient B",
       status: "active",
-      branchId: mainBranch.id,
+      branchId: branchB.id,
       notes: "Local demo registration record only.",
       createdByUserId: demoOwner?.id
     }

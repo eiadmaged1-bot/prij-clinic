@@ -2,16 +2,17 @@
 
 The exact next recommended sprint is:
 
-## Automated RBAC, Scope, And Audit Tests
+## Expand Security Tests Into CI-Ready Integration Tests
 
 Goals:
 
-- Add focused API tests for anonymous denial, permission denial, owner success, branch-scope filtering, and doctor-scope filtering.
-- Add audit assertions for sensitive reads and write/status/sign/review/payment actions.
+- Convert local PowerShell security smoke tests into framework-backed integration tests.
+- Add route-by-route RBAC allow/deny coverage for every controller action.
+- Add branch and doctor scope fixtures for create/update referenced-record checks.
+- Add audit assertions for every sensitive read and write/status/sign/review/payment action.
 - Add negative AI safety tests proving AI draft routes cannot update final clinical records.
-- Add smoke-test coverage for representative forbidden requests with valid users that lack specific permissions.
 
-Do not start production hardening until this test sprint is complete.
+Do not start production hardening until this expanded test suite is complete.
 
 ## Later Hardening
 

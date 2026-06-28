@@ -77,3 +77,15 @@ Audit metadata is intentionally limited to IDs, actions, statuses, counts, categ
 - OB ultrasound records store structured measurements and findings only.
 - The implementation does not calculate diagnoses, fetal growth restriction, risk scores, or clinical conclusions from fetal data.
 - No fetal-image AI or diagnostic automation is implemented.
+
+## Automated Security Checks
+
+Local scripts now cover representative RBAC, scope, audit, and AI safety behavior:
+
+- `npm run test:rbac`
+- `npm run test:scope`
+- `npm run test:audit`
+- `npm run test:ai-safety`
+- `npm run test:security`
+
+These scripts require a seeded local database and running API/web apps. They are intentionally local security smoke tests and are not exhaustive production security tests.

@@ -20,6 +20,7 @@ The MVP foundation is a locally runnable demo and review foundation. It is not p
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
 - CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
 - Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
+- Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled/mock safety.
 
 ## Safety State
 
@@ -47,6 +48,7 @@ Then start API and web:
 npm run dev:api
 npm run dev:web
 npm run smoke:test
+npm run test:security
 ```
 
 ## Commit Safety

@@ -151,6 +151,22 @@ powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1 -SkipWeb
 
 The actual implemented OB ultrasound endpoint is `GET /ob-ultrasounds`; the actual implemented AI draft endpoint is `GET /ai-drafts`.
 
+## Security Tests
+
+After `npm run prisma:seed` and with the API/web apps running locally:
+
+```powershell
+npm run test:rbac
+npm run test:scope
+npm run test:audit
+npm run test:ai-safety
+npm run test:security
+```
+
+These are local demo safety checks for RBAC, branch scope, audit metadata, and disabled/mock AI behavior. They are not production security certification tests and must not be run with real patient data.
+
+See `docs/SECURITY_TESTING.md`.
+
 Authenticated smoke checks use the local demo owner:
 
 ```powershell
