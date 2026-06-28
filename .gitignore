@@ -52,3 +52,4 @@ Thumbs.db
 .turbo/
 .pytest_cache/
 __pycache__/
+*.tsbuildinfo
