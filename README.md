@@ -1,8 +1,10 @@
 # Prij Clinic
 
-Clinic Management System MVP scaffold for OB/GYN and women's health.
+Clinic Management System V0.1 pilot scaffold for OB/GYN and women's health.
 
-Current foundation includes auth, RBAC, audit logs, patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, and disabled AI draft placeholders.
+Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+
+V0.1 is a local/private demo foundation. It is not production-ready and is not a medical device.
 
 ## Safety Rules
 
@@ -12,6 +14,7 @@ Current foundation includes auth, RBAC, audit logs, patients, appointments, queu
 - AI cannot diagnose, prescribe, sign records, approve clinical records, override RBAC, or bypass doctor approval.
 - Clinical output must remain doctor-authored or doctor-reviewed before use.
 - Clinical writes, billing changes, report review, and AI draft review placeholders are audit logged.
+- OB ultrasound records do not automatically diagnose FGR or any other condition.
 
 ## Stack
 
@@ -45,7 +48,17 @@ DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
 
-The demo owner account is for local development only. Seed data uses only demo records such as `Demo Patient A`.
+Demo accounts are local-only and use the default password `LocalDev123!` unless overridden:
+
+```text
+demo.owner@prij.local
+demo.doctor@prij.local
+demo.reception@prij.local
+demo.accountant@prij.local
+demo.nurse@prij.local
+```
+
+Seed data uses only demo records such as `Demo Patient A`.
 
 ## Development
 
@@ -62,8 +75,11 @@ http://localhost:3000/login
 http://localhost:3000/dashboard
 http://localhost:3000/patients
 http://localhost:3000/appointments
+http://localhost:3000/calendar
 http://localhost:3000/queue
 http://localhost:3000/encounters
+http://localhost:3000/prescriptions
+http://localhost:3000/investigations
 http://localhost:3000/reports
 http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
@@ -96,6 +112,8 @@ MVP workflows:
 
 ```text
 GET  /patients
+GET  /consents?patientId=:id
+POST /consents
 GET  /appointments
 GET  /appointments/calendar
 GET  /queue/today
@@ -129,6 +147,16 @@ npm ci
 npm run prisma:generate
 npm run typecheck
 npm run build
+```
+
+Full local V0.1 check, after starting API and web:
+
+```powershell
+npm run smoke:test
+npm run test:security
+npm run test:security:ci
+npm run test:security:expanded
+npm run test:e2e:v01
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
@@ -201,6 +229,24 @@ npm run test:security:expanded
 
 See `docs/SECURITY_TESTING.md`.
 
+## V0.1 Workflow Test
+
+With the API running against seeded local data:
+
+```powershell
+npm run test:e2e:v01
+```
+
+This creates demo-only records for the V0.1 workflow and verifies representative audit metadata. It does not use real patient data, real clinical histories, real payment data, real report files, or external AI calls.
+
+## Local Backup
+
+```powershell
+npm run backup:local
+```
+
+Backups are written under ignored `backups/`. Restore is guarded and documented in `docs/BACKUP_RESTORE.md`; do not run restore unless explicitly intended for a local/dev database.
+
 Authenticated smoke checks use the local demo owner:
 
 ```powershell
@@ -240,8 +286,13 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 ## Status Documents
 
 - `docs/CURRENT_STATUS.md`
+- `docs/V0_1_RELEASE_NOTES.md`
 - `docs/API_ENDPOINTS.md`
 - `docs/RBAC_MATRIX.md`
 - `docs/RBAC_AUDIT_REVIEW.md`
 - `docs/KNOWN_LIMITATIONS.md`
 - `docs/NEXT_STEPS.md`
+- `docs/BACKUP_RESTORE.md`
+- `docs/FILE_STORAGE_SECURITY.md`
+- `docs/DEPLOYMENT_READINESS.md`
+- `docs/ENVIRONMENT_STRATEGY.md`

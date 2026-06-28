@@ -2,13 +2,13 @@
 
 Date: 2026-06-28
 
-Branch: `ci/security-integration-tests`
+Branch: `release/v0.1-pilot`
 
-Baseline tag: `mvp-foundation-complete`
+Target tag: `v0.1-pilot-complete`
 
 ## Status Summary
 
-The MVP foundation is a locally runnable demo and review foundation. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo foundation. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Implemented Foundation
 
@@ -17,7 +17,12 @@ The MVP foundation is a locally runnable demo and review foundation. It is not p
 - Scope filtering: branch scope for non-owner/non-admin reads where supported; doctor scope for doctor-owned records where relevant.
 - Audit: append-only audit table and metadata-only audit hooks for implemented create/update/status/sign/review/payment and sensitive read actions.
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
+- Consent records: V0.1 structured consent foundation with audit metadata. Production legal text, signature capture, overrides, and full enforcement remain incomplete.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
+- V0.1 demo UI: usable local pages for login, dashboard, patients, appointments/calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
+- V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
+- Backup/restore foundation: local-only backup script, guarded restore script, and backup/restore docs.
+- Deployment readiness docs: environment strategy, CI env example, deployment requirements, and production blockers documented.
 - CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
 - Security integration CI: GitHub Actions can run database-backed API security integration tests with PostgreSQL, existing Prisma migrations, demo seed data, and disabled/mock-only AI settings.
 - Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
@@ -59,6 +64,7 @@ API-only security integration check:
 ```powershell
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:e2e:v01
 ```
 
 ## Commit Safety

@@ -10,6 +10,7 @@ Reviewed controllers:
 - `AdminController`
 - `AuditController`
 - `PatientsController`
+- `ConsentsController`
 - `AppointmentsController`
 - `QueueController`
 - `EncountersController`
@@ -30,7 +31,7 @@ Findings:
 
 ## RBAC Status
 
-- Granular permissions are enforced for patients, appointments, queue status changes, encounters, prescriptions, investigations, reports, billing, dashboard, and AI drafts.
+- Granular permissions are enforced for patients, consent records, appointments, queue status changes, encounters, prescriptions, investigations, reports, billing, dashboard, and AI drafts.
 - Pregnancy and OB ultrasound use the current MVP permission names `pregnancy.read`, `pregnancy.manage`, `ob_ultrasound.read`, and `ob_ultrasound.manage`.
 - Owner/Admin local demo access remains broad so the seeded local owner can run smoke tests and review the foundation.
 - Non-owner/non-admin reads are branch-scoped where the current data model supports it.
@@ -43,6 +44,7 @@ Implemented audit hooks include:
 - Auth: login success, login failure, logout.
 - Admin/audit reads: admin list reads and audit log reads.
 - Patients: create, list read, detail read, update.
+- Consent records: create and list read.
 - Appointments: create, status update.
 - Queue: check-in, call, complete, cancel.
 - Encounters: create, list read, detail read, update, sign.
@@ -59,6 +61,7 @@ Audit metadata is intentionally limited to IDs, actions, statuses, counts, categ
 ## Remaining Gaps
 
 - Create endpoints still need deeper validation that referenced patient, doctor, appointment, encounter, report, pregnancy, and invoice IDs are in the actor's allowed branch/scope.
+- Consent enforcement is a V0.1 foundation only; production legal text, signature capture, overrides, and full workflow blocking are not implemented.
 - Patient-to-doctor assignment is not modeled yet, so patient reads are branch-scoped but not assigned-doctor scoped.
 - Void/cancel/correction workflows are incomplete for several clinical and billing resources.
 - Audit logs are append-only through application code but do not yet have database-level tamper resistance, retention policy, or export review controls.

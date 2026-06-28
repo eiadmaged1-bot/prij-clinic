@@ -32,6 +32,7 @@ npm run test:scope
 npm run test:audit
 npm run test:ai-safety
 npm run test:security
+npm run test:e2e:v01
 ```
 
 `npm run test:security` runs all security scripts after the live API and web apps are available.
@@ -77,6 +78,7 @@ The local demo password follows the README pattern and defaults to `LocalDev123!
 - `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only and cannot sign, insert, diagnose, or prescribe.
 - `scripts/security-test-expanded.mjs`: runs the expanded Node security test set.
 - `scripts/security-test-all.mjs`: canonical expanded aggregate runner used by `npm run test:security:expanded`.
+- `scripts/e2e-v01-workflow-test.mjs`: demo-only V0.1 workflow test that creates fake patient, consent, appointment, queue, encounter, prescription, investigation, pregnancy, OB ultrasound, report, invoice, payment, and disabled/mock AI draft records.
 
 ## CI Status
 
@@ -97,6 +99,7 @@ npm run build
 npm run start -w apps/api
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:e2e:v01
 ```
 
 It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disabled with `AI_FEATURES_ENABLED=false` and `AI_PROVIDER=disabled`.
@@ -107,6 +110,8 @@ It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disable
 - CI integration coverage is API-only and does not run browser checks or the Next.js web app.
 - Some routes are intentionally broad authenticated routes and emit WARN rather than FAIL for missing denied-role cases: `/auth/me`, `/auth/logout`, scoped patient reads, appointment reads, calendar reads, and queue reads.
 - Create/update referenced-record scope validation is still incomplete in the MVP.
+- Consent records are covered as a V0.1 foundation, but production legal consent text, signature capture, override workflow, and full consent enforcement are not implemented.
 - Patient-to-doctor assignment is not modeled yet.
+- Local backup scripts are operational helpers only, not production backup certification.
 - Audit tamper-resistance, retention, and export controls are not production-grade.
 - AI remains disabled/mock-only. No external AI calls are allowed or tested.
