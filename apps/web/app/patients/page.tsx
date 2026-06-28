@@ -10,6 +10,8 @@ export default function PatientsPage() {
         "Server-side RBAC required for API access",
         "No real patient data in development"
       ]}
+      endpoint="/patients"
+      collectionKey="patients"
     />
   );
 }

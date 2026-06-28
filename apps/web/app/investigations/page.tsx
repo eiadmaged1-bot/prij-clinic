@@ -10,6 +10,8 @@ export default function InvestigationsPage() {
         "Lifecycle status tracking with audit events",
         "Priority is operational only, not emergency triage"
       ]}
+      endpoint="/investigations/orders"
+      collectionKey="investigationOrders"
     />
   );
 }

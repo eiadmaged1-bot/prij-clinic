@@ -10,6 +10,8 @@ export default function BillingPage() {
         "Payment records store method, amount, date, and reference notes without card numbers or payment secrets",
         "Invoice and payment changes are protected by billing permissions and audit logs"
       ]}
+      endpoint="/billing/invoices"
+      collectionKey="invoices"
     />
   );
 }

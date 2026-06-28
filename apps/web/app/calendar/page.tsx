@@ -10,6 +10,8 @@ export default function CalendarPage() {
         "Doctor filtering is available through the API",
         "No clinical decisions are automated"
       ]}
+      endpoint={`/appointments/calendar?date=${new Date().toISOString().slice(0, 10)}`}
+      collectionKey="appointments"
     />
   );
 }

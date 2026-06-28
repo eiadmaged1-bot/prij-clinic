@@ -10,6 +10,19 @@ export default function ObUltrasoundsPage() {
         "No diagnostic fetal-image AI or automatic clinical conclusions",
         "Doctor review status and audit logging are part of the foundation"
       ]}
+      endpoint="/ob-ultrasounds"
+      collectionKey="obUltrasounds"
+      createEndpoint="/ob-ultrasounds"
+      createNote="Demo measurements only. The system must not automatically diagnose FGR or any other condition."
+      createFields={[
+        { name: "patientId", label: "Patient ID", required: true },
+        { name: "pregnancyId", label: "Pregnancy ID" },
+        { name: "encounterId", label: "Encounter ID" },
+        { name: "gestationalAgeWeeks", label: "GA weeks", type: "number" },
+        { name: "gestationalAgeDays", label: "GA days", type: "number" },
+        { name: "fetalHeartRateBpm", label: "FHR bpm", type: "number" },
+        { name: "impressionText", label: "Draft note", defaultValue: "Demo OB ultrasound note only. Doctor review required." }
+      ]}
     />
   );
 }

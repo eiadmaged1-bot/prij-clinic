@@ -10,6 +10,8 @@ export default function PrescriptionsPage() {
         "No autonomous prescribing or AI prescribing",
         "Signing is explicit and audit logged"
       ]}
+      endpoint="/prescriptions"
+      collectionKey="prescriptions"
     />
   );
 }

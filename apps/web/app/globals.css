@@ -70,6 +70,16 @@ input {
   padding: 0.8rem 0.9rem;
 }
 
+textarea,
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--foreground);
+  font: inherit;
+  padding: 0.8rem 0.9rem;
+}
+
 button {
   font: inherit;
 }
@@ -213,6 +223,71 @@ button {
   margin: 1.25rem 0 0;
 }
 
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 1rem;
+}
+
+.workflow-band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.workflow-band span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 0.7rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.compact {
+  min-height: 2.2rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.form-grid .button {
+  align-self: end;
+}
+
+.data-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.data-row {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 1rem;
+}
+
+.data-row dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+}
+
 .feature-list {
   display: grid;
   gap: 0.75rem;
@@ -253,6 +328,12 @@ dd {
   }
 
   .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .content-grid,
+  .form-grid,
+  .data-row dl {
     grid-template-columns: 1fr;
   }
 

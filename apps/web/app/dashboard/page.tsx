@@ -106,6 +106,9 @@ export default function DashboardPage() {
           <a className="button secondary" href="/patients">
             Patients
           </a>
+          <a className="button secondary" href="/patients/new">
+            New Patient
+          </a>
           <a className="button secondary" href="/appointments">
             Appointments
           </a>
@@ -114,6 +117,24 @@ export default function DashboardPage() {
           </a>
           <a className="button secondary" href="/queue">
             Queue
+          </a>
+          <a className="button secondary" href="/encounters">
+            Encounters
+          </a>
+          <a className="button secondary" href="/prescriptions">
+            Prescriptions
+          </a>
+          <a className="button secondary" href="/investigations">
+            Investigations
+          </a>
+          <a className="button secondary" href="/reports">
+            Reports
+          </a>
+          <a className="button secondary" href="/pregnancies">
+            Pregnancy
+          </a>
+          <a className="button secondary" href="/ultrasound">
+            OB Ultrasound
           </a>
           <a className="button secondary" href="/billing">
             Billing
