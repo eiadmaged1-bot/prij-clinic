@@ -23,6 +23,9 @@ model Branch {
   patients       Patient[]
   appointments   Appointment[]
   queueTickets   QueueTicket[]
+  reports        Report[]
+  pregnancies    Pregnancy[]
+  obUltrasounds  ObUltrasound[]
 
   @@index([status])
 }
@@ -52,6 +55,11 @@ model User {
   signedEncounters Encounter[] @relation("EncountersSignedBy")
   doctorPrescriptions Prescription[] @relation("PrescriptionsDoctor")
   doctorInvestigationOrders InvestigationOrder[] @relation("InvestigationOrdersDoctor")
+  uploadedReports Report[] @relation("ReportsUploadedBy")
+  reviewedReports Report[] @relation("ReportsReviewedBy")
+  createdPregnancies Pregnancy[] @relation("PregnanciesCreatedBy")
+  createdObUltrasounds ObUltrasound[] @relation("ObUltrasoundsCreatedBy")
+  reviewedObUltrasounds ObUltrasound[] @relation("ObUltrasoundsReviewedBy")
 
   @@index([branchId])
   @@index([status])
@@ -106,6 +114,9 @@ model Patient {
   encounters           Encounter[]
   prescriptions        Prescription[]
   investigationOrders  InvestigationOrder[]
+  reports              Report[]
+  pregnancies          Pregnancy[]
+  obUltrasounds        ObUltrasound[]
 
   @@index([branchId])
   @@index([status])
@@ -228,6 +239,8 @@ model Encounter {
   signedByUser    User?           @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
   prescriptions   Prescription[]
   investigationOrders InvestigationOrder[]
+  reports         Report[]
+  obUltrasounds   ObUltrasound[]
 
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
@@ -287,6 +300,7 @@ model InvestigationOrder {
   encounter       Encounter?               @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   doctor          User                     @relation("InvestigationOrdersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
   items           InvestigationOrderItem[]
+  reports         Report[]
 
   @@index([patientId, createdAt])
   @@index([encounterId])
@@ -306,6 +320,129 @@ model InvestigationOrderItem {
 
   @@index([orderId])
   @@index([category])
+  @@index([status])
+}
+
+enum ReportStatus {
+  uploaded
+  review_pending
+  reviewed
+  voided
+}
+
+enum ReportCategory {
+  laboratory
+  radiology
+  ultrasound
+  pathology
+  cytology
+  external
+  other
+}
+
+enum PregnancyStatus {
+  active
+  completed
+  loss
+  unknown
+}
+
+enum ObUltrasoundStatus {
+  draft
+  reviewed
+  voided
+}
+
+model Report {
+  id                   String              @id @default(uuid()) @db.Uuid
+  branchId             String?             @db.Uuid
+  patientId            String              @db.Uuid
+  encounterId          String?             @db.Uuid
+  investigationOrderId String?             @db.Uuid
+  category             ReportCategory
+  status               ReportStatus        @default(uploaded)
+  title                String
+  source               String?
+  fileReference        String?
+  resultSummary        String?
+  uploadedByUserId     String?             @db.Uuid
+  reviewedByUserId     String?             @db.Uuid
+  reviewedAt           DateTime?           @db.Timestamptz(3)
+  createdAt            DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @updatedAt @db.Timestamptz(3)
+
+  branch               Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient              Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter            Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  investigationOrder   InvestigationOrder? @relation(fields: [investigationOrderId], references: [id], onDelete: SetNull)
+  uploadedByUser       User?               @relation("ReportsUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser       User?               @relation("ReportsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([investigationOrderId])
+  @@index([category])
+  @@index([status])
+}
+
+model Pregnancy {
+  id                   String          @id @default(uuid()) @db.Uuid
+  branchId             String?         @db.Uuid
+  patientId            String          @db.Uuid
+  status               PregnancyStatus @default(active)
+  gravida              Int?
+  para                 Int?
+  lmpDate              DateTime?       @db.Date
+  estimatedDueDate     DateTime?       @db.Date
+  riskLevel            String?
+  notes                String?
+  createdByUserId      String?         @db.Uuid
+  createdAt            DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime        @updatedAt @db.Timestamptz(3)
+
+  branch               Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient              Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdByUser        User?           @relation("PregnanciesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  obUltrasounds        ObUltrasound[]
+
+  @@index([branchId])
+  @@index([patientId, createdAt])
+  @@index([status])
+}
+
+model ObUltrasound {
+  id                    String              @id @default(uuid()) @db.Uuid
+  branchId              String?             @db.Uuid
+  patientId             String              @db.Uuid
+  pregnancyId           String?             @db.Uuid
+  encounterId           String?             @db.Uuid
+  status                ObUltrasoundStatus  @default(draft)
+  performedAt           DateTime            @default(now()) @db.Timestamptz(3)
+  gestationalAgeWeeks   Int?
+  gestationalAgeDays    Int?
+  fetalHeartRateBpm     Int?
+  presentation          String?
+  placenta              String?
+  amnioticFluid         String?
+  impressionText        String?
+  createdByUserId       String?             @db.Uuid
+  reviewedByUserId      String?             @db.Uuid
+  reviewedAt            DateTime?           @db.Timestamptz(3)
+  createdAt             DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime            @updatedAt @db.Timestamptz(3)
+
+  branch                Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient               Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  pregnancy             Pregnancy?          @relation(fields: [pregnancyId], references: [id], onDelete: SetNull)
+  encounter             Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  createdByUser         User?               @relation("ObUltrasoundsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser        User?               @relation("ObUltrasoundsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([patientId, performedAt])
+  @@index([pregnancyId])
+  @@index([encounterId])
   @@index([status])
 }
 

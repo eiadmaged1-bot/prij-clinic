@@ -69,6 +69,12 @@ const permissions = [
   "report.export",
   "report.void",
   "report.delete",
+  "reports.read",
+  "reports.manage",
+  "pregnancy.read",
+  "pregnancy.manage",
+  "ob_ultrasound.read",
+  "ob_ultrasound.manage",
   "billing.read",
   "billing.manage",
   "payment.manage",
@@ -135,7 +141,13 @@ const rolePermissionKeys = {
     "investigations.manage",
     "report.read",
     "report.upload",
-    "report.review"
+    "report.review",
+    "reports.read",
+    "reports.manage",
+    "pregnancy.read",
+    "pregnancy.manage",
+    "ob_ultrasound.read",
+    "ob_ultrasound.manage"
   ],
   Nurse: [
     "patient.read",
@@ -149,7 +161,10 @@ const rolePermissionKeys = {
     "prep_note.read",
     "encounter.read",
     "encounters.read",
-    "report.read"
+    "report.read",
+    "reports.read",
+    "pregnancy.read",
+    "ob_ultrasound.read"
   ],
   Receptionist: [
     "patient.read",
@@ -409,6 +424,76 @@ async function main() {
         queueNumber: 1,
         status: "waiting",
         priority: "routine"
+      }
+    });
+  }
+
+  const demoReport = await prisma.report.findFirst({
+    where: {
+      patientId: demoPatientA.id,
+      title: "Demo ultrasound report placeholder"
+    }
+  });
+
+  if (!demoReport) {
+    await prisma.report.create({
+      data: {
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        category: "ultrasound",
+        status: "review_pending",
+        title: "Demo ultrasound report placeholder",
+        source: "local_seed",
+        resultSummary: "Local demo report summary only. Doctor review required.",
+        uploadedByUserId: demoOwner?.id
+      }
+    });
+  }
+
+  let demoPregnancy = await prisma.pregnancy.findFirst({
+    where: {
+      patientId: demoPatientA.id,
+      status: "active"
+    }
+  });
+
+  if (!demoPregnancy) {
+    demoPregnancy = await prisma.pregnancy.create({
+      data: {
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        status: "active",
+        gravida: 1,
+        para: 0,
+        riskLevel: "routine",
+        notes: "Local demo pregnancy overview only.",
+        createdByUserId: demoOwner?.id
+      }
+    });
+  }
+
+  const demoUltrasound = await prisma.obUltrasound.findFirst({
+    where: {
+      patientId: demoPatientA.id,
+      pregnancyId: demoPregnancy.id
+    }
+  });
+
+  if (!demoUltrasound) {
+    await prisma.obUltrasound.create({
+      data: {
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        pregnancyId: demoPregnancy.id,
+        status: "draft",
+        gestationalAgeWeeks: 12,
+        gestationalAgeDays: 2,
+        fetalHeartRateBpm: 150,
+        presentation: "Demo placeholder",
+        placenta: "Demo placeholder",
+        amnioticFluid: "Demo placeholder",
+        impressionText: "Draft local demo OB ultrasound note. Doctor review required.",
+        createdByUserId: demoOwner?.id
       }
     });
   }

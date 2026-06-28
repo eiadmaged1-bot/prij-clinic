@@ -13,7 +13,10 @@ const links = [
   ["/queue", "Queue"],
   ["/encounters", "Encounters"],
   ["/prescriptions", "Prescriptions"],
-  ["/investigations", "Investigations"]
+  ["/investigations", "Investigations"],
+  ["/reports", "Reports"],
+  ["/pregnancies", "Pregnancy"],
+  ["/ultrasound", "OB Ultrasounds"]
 ];
 
 export function MvpPage({ title, eyebrow, items }: MvpPageProps) {

@@ -39,7 +39,7 @@ uploads/
 storage/
 private/
 patient-data/
-reports/
+/reports/
 
 # OS and editor files
 .DS_Store

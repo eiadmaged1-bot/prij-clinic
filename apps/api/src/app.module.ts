@@ -6,10 +6,12 @@ import { EncountersModule } from "./encounters/encounters.module";
 import { HealthModule } from "./health/health.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
 import { PatientsModule } from "./patients/patients.module";
+import { PregnancyModule } from "./pregnancy/pregnancy.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PrescriptionsModule } from "./prescriptions/prescriptions.module";
 import { QueueModule } from "./queue/queue.module";
 import { RbacModule } from "./rbac/rbac.module";
+import { ReportsModule } from "./reports/reports.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -25,7 +27,9 @@ import { UsersModule } from "./users/users.module";
     QueueModule,
     EncountersModule,
     PrescriptionsModule,
-    InvestigationsModule
+    InvestigationsModule,
+    ReportsModule,
+    PregnancyModule
   ]
 })
 export class AppModule {}

@@ -1,0 +1,290 @@
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { AuditService } from "../audit/audit.service";
+import type { AuthUser } from "../auth/auth.types";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateObUltrasoundDto, CreatePregnancyDto, UpdateObUltrasoundDto, UpdatePregnancyDto } from "./dto";
+
+@Injectable()
+export class PregnancyService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService
+  ) {}
+
+  async createPregnancy(dto: CreatePregnancyDto, user: AuthUser) {
+    const patient = await this.ensurePatient(dto.patientId);
+
+    try {
+      const pregnancy = await this.prisma.pregnancy.create({
+        data: {
+          patientId: dto.patientId,
+          branchId: patient?.branchId,
+          status: dto.status ?? "active",
+          gravida: dto.gravida,
+          para: dto.para,
+          lmpDate: toDate(dto.lmpDate),
+          estimatedDueDate: toDate(dto.estimatedDueDate),
+          riskLevel: clean(dto.riskLevel),
+          notes: clean(dto.notes),
+          createdByUserId: user.id
+        },
+        include: pregnancyIncludes
+      });
+
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "pregnancy.created",
+        resourceType: "pregnancy",
+        resourceId: pregnancy.id,
+        severity: "high",
+        metadataJson: { patientId: pregnancy.patientId, status: pregnancy.status }
+      });
+
+      return pregnancy;
+    } catch (error) {
+      this.handlePrismaReferenceError(error);
+    }
+  }
+
+  listPregnancies() {
+    return this.prisma.pregnancy.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: pregnancyIncludes
+    });
+  }
+
+  async getPregnancy(id: string) {
+    const pregnancy = await this.prisma.pregnancy.findUnique({
+      where: { id },
+      include: pregnancyIncludes
+    });
+
+    if (!pregnancy) {
+      throw new NotFoundException("Pregnancy record not found.");
+    }
+
+    return pregnancy;
+  }
+
+  async updatePregnancy(id: string, dto: UpdatePregnancyDto, user: AuthUser) {
+    const existing = await this.getPregnancy(id);
+    const data: Prisma.PregnancyUpdateInput = {};
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.gravida !== undefined) data.gravida = dto.gravida;
+    if (dto.para !== undefined) data.para = dto.para;
+    if (dto.lmpDate !== undefined) data.lmpDate = toDate(dto.lmpDate);
+    if (dto.estimatedDueDate !== undefined) data.estimatedDueDate = toDate(dto.estimatedDueDate);
+    if (dto.riskLevel !== undefined) data.riskLevel = clean(dto.riskLevel);
+    if (dto.notes !== undefined) data.notes = clean(dto.notes);
+
+    const pregnancy = await this.prisma.pregnancy.update({
+      where: { id },
+      data,
+      include: pregnancyIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy.updated",
+      resourceType: "pregnancy",
+      resourceId: pregnancy.id,
+      severity: "high",
+      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: pregnancy.status }
+    });
+
+    return pregnancy;
+  }
+
+  async createObUltrasound(dto: CreateObUltrasoundDto, user: AuthUser) {
+    const patient = await this.ensurePatient(dto.patientId);
+    await this.ensurePregnancyMatches(dto.patientId, dto.pregnancyId);
+    await this.ensureEncounterMatches(dto.patientId, dto.encounterId);
+
+    try {
+      const performedAt = toDateTime(dto.performedAt);
+      if (dto.performedAt !== undefined && !performedAt) {
+        throw new BadRequestException("Invalid performedAt.");
+      }
+
+      const ultrasound = await this.prisma.obUltrasound.create({
+        data: {
+          patientId: dto.patientId,
+          branchId: patient?.branchId,
+          pregnancyId: dto.pregnancyId ?? null,
+          encounterId: dto.encounterId ?? null,
+          performedAt: performedAt ?? new Date(),
+          gestationalAgeWeeks: dto.gestationalAgeWeeks,
+          gestationalAgeDays: dto.gestationalAgeDays,
+          fetalHeartRateBpm: dto.fetalHeartRateBpm,
+          presentation: clean(dto.presentation),
+          placenta: clean(dto.placenta),
+          amnioticFluid: clean(dto.amnioticFluid),
+          impressionText: clean(dto.impressionText),
+          createdByUserId: user.id
+        },
+        include: obUltrasoundIncludes
+      });
+
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "ob_ultrasound.created",
+        resourceType: "ob_ultrasound",
+        resourceId: ultrasound.id,
+        severity: "high",
+        metadataJson: { patientId: ultrasound.patientId, pregnancyId: ultrasound.pregnancyId }
+      });
+
+      return ultrasound;
+    } catch (error) {
+      this.handlePrismaReferenceError(error);
+    }
+  }
+
+  listObUltrasounds() {
+    return this.prisma.obUltrasound.findMany({
+      orderBy: { performedAt: "desc" },
+      take: 100,
+      include: obUltrasoundIncludes
+    });
+  }
+
+  async getObUltrasound(id: string) {
+    const ultrasound = await this.prisma.obUltrasound.findUnique({
+      where: { id },
+      include: obUltrasoundIncludes
+    });
+
+    if (!ultrasound) {
+      throw new NotFoundException("OB ultrasound record not found.");
+    }
+
+    return ultrasound;
+  }
+
+  async updateObUltrasound(id: string, dto: UpdateObUltrasoundDto, user: AuthUser) {
+    const existing = await this.getObUltrasound(id);
+
+    if (existing.status === "reviewed" && dto.status !== "voided") {
+      throw new BadRequestException("Reviewed OB ultrasound records require a correction workflow before edits.");
+    }
+
+    await this.ensurePatient(existing.patientId);
+    await this.ensurePregnancyMatches(existing.patientId, dto.pregnancyId);
+    await this.ensureEncounterMatches(existing.patientId, dto.encounterId);
+
+    const data: Prisma.ObUltrasoundUpdateInput = {};
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.performedAt !== undefined) {
+      const performedAt = toDateTime(dto.performedAt);
+      if (!performedAt) {
+        throw new BadRequestException("Invalid performedAt.");
+      }
+      data.performedAt = performedAt;
+    }
+    if (dto.gestationalAgeWeeks !== undefined) data.gestationalAgeWeeks = dto.gestationalAgeWeeks;
+    if (dto.gestationalAgeDays !== undefined) data.gestationalAgeDays = dto.gestationalAgeDays;
+    if (dto.fetalHeartRateBpm !== undefined) data.fetalHeartRateBpm = dto.fetalHeartRateBpm;
+    if (dto.presentation !== undefined) data.presentation = clean(dto.presentation);
+    if (dto.placenta !== undefined) data.placenta = clean(dto.placenta);
+    if (dto.amnioticFluid !== undefined) data.amnioticFluid = clean(dto.amnioticFluid);
+    if (dto.impressionText !== undefined) data.impressionText = clean(dto.impressionText);
+
+    const ultrasound = await this.prisma.obUltrasound.update({
+      where: { id },
+      data,
+      include: obUltrasoundIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ob_ultrasound.updated",
+      resourceType: "ob_ultrasound",
+      resourceId: ultrasound.id,
+      severity: "high",
+      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: ultrasound.status }
+    });
+
+    return ultrasound;
+  }
+
+  async reviewObUltrasound(id: string, user: AuthUser) {
+    const existing = await this.getObUltrasound(id);
+    if (existing.status === "voided") {
+      throw new BadRequestException("Voided OB ultrasound records cannot be reviewed.");
+    }
+
+    const ultrasound = await this.prisma.obUltrasound.update({
+      where: { id },
+      data: { status: "reviewed", reviewedAt: new Date(), reviewedByUserId: user.id },
+      include: obUltrasoundIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ob_ultrasound.reviewed",
+      resourceType: "ob_ultrasound",
+      resourceId: ultrasound.id,
+      severity: "high",
+      metadataJson: { patientId: ultrasound.patientId, fromStatus: existing.status }
+    });
+
+    return ultrasound;
+  }
+
+  private async ensurePatient(patientId?: string) {
+    if (!patientId) return null;
+    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
+    if (!patient) throw new BadRequestException("Patient not found.");
+    return patient;
+  }
+
+  private async ensurePregnancyMatches(patientId?: string, pregnancyId?: string) {
+    if (!pregnancyId) return;
+    const pregnancy = await this.prisma.pregnancy.findUnique({ where: { id: pregnancyId } });
+    if (!patientId || !pregnancy || pregnancy.patientId !== patientId) {
+      throw new BadRequestException("Pregnancy record does not match the selected patient.");
+    }
+  }
+
+  private async ensureEncounterMatches(patientId?: string, encounterId?: string) {
+    if (!encounterId) return;
+    const encounter = await this.prisma.encounter.findUnique({ where: { id: encounterId } });
+    if (!patientId || !encounter || encounter.patientId !== patientId) {
+      throw new BadRequestException("Encounter does not match the selected patient.");
+    }
+  }
+
+  private handlePrismaReferenceError(error: unknown): never {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new BadRequestException("Referenced patient, pregnancy, encounter, or user was not found.");
+    }
+    throw error;
+  }
+}
+
+const pregnancyIncludes = {
+  patient: true,
+  obUltrasounds: true
+} satisfies Prisma.PregnancyInclude;
+
+const obUltrasoundIncludes = {
+  patient: true,
+  pregnancy: true,
+  encounter: true
+} satisfies Prisma.ObUltrasoundInclude;
+
+function clean(value?: string) {
+  return value?.trim() || null;
+}
+
+function toDate(value?: string) {
+  return value ? new Date(`${value}T00:00:00.000Z`) : null;
+}
+
+function toDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
