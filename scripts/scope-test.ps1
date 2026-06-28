@@ -99,7 +99,7 @@ if (@($ownerAppointments.appointments).Count -gt 0) {
   Write-Warn "No owner-visible appointments were available for doctor-scope count comparison."
 }
 
-Write-Warn "Create/update referenced-record scope validation is still documented as a known MVP limitation."
+Write-Warn "Legacy PowerShell scope smoke is representative; expanded referenced-record write checks run in npm run test:scope:records."
 Write-Warn "Patient-to-doctor assignment is not modeled, so patient reads are branch-scoped rather than assigned-doctor scoped."
 
 Write-Host "SCOPE PASS with $WarningCount warning(s)"
