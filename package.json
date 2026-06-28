@@ -26,7 +26,7 @@
     "test:scope:records": "node scripts/referenced-scope-test.mjs",
     "test:audit:assertions": "node scripts/audit-assertion-test.mjs",
     "test:ai:regression": "node scripts/ai-safety-regression-test.mjs",
-    "test:security:expanded": "node scripts/security-test-expanded.mjs",
+    "test:security:expanded": "node scripts/security-test-all.mjs",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:repair": "powershell -ExecutionPolicy Bypass -File scripts/prisma-repair-client.ps1",
     "prisma:migrate:deploy": "npm run prisma:migrate:deploy -w apps/api",

@@ -1,17 +1,17 @@
 # Next Steps
 
-The exact next recommended sprint is:
+The exact next recommended sprint after route-level security coverage is:
 
-## Expand Route-Level Authorization Coverage
+## Harden Referenced-Record Scope And Lower-Role Matrices
 
 Goals:
 
-- Add route-by-route RBAC allow/deny coverage for every controller action.
-- Add branch and doctor scope fixtures for create/update referenced-record checks.
-- Add audit assertions for every sensitive read and write/status/sign/review/payment action.
-- Add negative AI safety tests proving AI draft routes cannot update final clinical records.
+- Add full create/update referenced-record branch validation for patient, doctor, appointment, encounter, report, pregnancy, invoice, and AI draft references.
+- Add lower-role allowed-path matrices for every route, not only owner positive checks and representative denied-role checks.
+- Add audit assertions for every sensitive read and every write/status/sign/review/payment action.
+- Keep AI disabled/mock-only until consent, provider privacy, RBAC, audit, and doctor-review controls are complete.
 
-The current CI security workflow covers representative API integration paths only. Do not start production hardening until route-level authorization, scope, and audit coverage is broader.
+Do not start production hardening until referenced-record scope and lower-role matrices are broader.
 
 ## Later Hardening
 

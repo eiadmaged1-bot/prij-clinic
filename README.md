@@ -141,6 +141,14 @@ npm run test:security:ci
 
 The CI security runner is API-only. It does not start the Next.js web app, does not use real patient data, does not call external AI providers, and does not certify production readiness.
 
+The same workflow also runs the expanded route-level security suite:
+
+```text
+npm run test:security:expanded
+```
+
+That suite uses `scripts/security-route-manifest.mjs` as the executable route inventory for protected API routes, including expected owner access, anonymous denial, representative denied-role checks, scope expectations, audit expectations, and documented warnings.
+
 ## Smoke Test
 
 Start the API and web app, then run:
@@ -180,6 +188,16 @@ npm run test:security:ci
 ```
 
 The runner uses `API_URL` when set, otherwise `http://localhost:3001`. It uses seeded demo credentials only and expects AI to remain disabled/mock-only.
+
+Expanded route-level checks:
+
+```powershell
+npm run test:routes:auth
+npm run test:scope:records
+npm run test:audit:assertions
+npm run test:ai:regression
+npm run test:security:expanded
+```
 
 See `docs/SECURITY_TESTING.md`.
 

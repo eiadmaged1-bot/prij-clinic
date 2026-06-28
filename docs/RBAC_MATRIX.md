@@ -103,3 +103,40 @@ The V0.1 pilot branch adds Node-based route-level security tests:
 - `npm run test:security:expanded`
 
 These tests cover every implemented protected API route with anonymous denial and owner access checks. Denied-role checks are included where a route has a clear lower-role denial case. Broad authenticated routes such as `/auth/me`, staff patient reads, and queue reads are documented warnings.
+
+## Route Manifest Fields
+
+The executable route inventory in `scripts/security-route-manifest.mjs` records the following for each protected route:
+
+- Method and path.
+- Whether authentication is required.
+- Required permission.
+- Allowed demo user, currently the seeded owner for full-route coverage.
+- Denied demo user where a lower-role denial is meaningful.
+- Expected status without token.
+- Expected status with owner.
+- Expected status with denied user.
+- Safe demo-only request body for POST/PATCH checks.
+- Scope expectation.
+- Audit expectation.
+- Current limitation or note.
+
+Representative denied-role mappings used by the expanded runner:
+
+| Route category | Allowed demo user | Denied demo user | Scope expectation | Audit expectation |
+| --- | --- | --- | --- | --- |
+| Auth broad routes | Owner | Warn only | Authenticated staff only | Login/logout audited where implemented |
+| Admin users/roles/permissions | Owner | Accountant | Permission-scoped admin read | Admin read audit |
+| Audit | Owner | Receptionist | Permission-scoped audit read | Audit read audit |
+| Patients | Owner | Nurse for create/update; read routes warn | Branch-scoped reads for non-owner users | Patient create/read/update audit |
+| Appointments | Owner | Nurse for manage routes; read routes warn | Branch and doctor scope where modeled | Create/status audit |
+| Queue | Owner | Doctor for manage/status routes; read route warns | Branch-scoped queue records | Check-in/status audit |
+| Encounters | Owner | Receptionist | Branch and doctor scope where modeled | Create/read/update/sign audit |
+| Prescriptions | Owner | Receptionist | Branch and doctor scope where modeled | Create/read/update/sign audit |
+| Investigations | Owner | Accountant | Branch and doctor scope where modeled | Create/status audit |
+| Reports | Owner | Accountant | Branch-scoped report metadata | Create/read/update/review audit |
+| Pregnancy | Owner | Accountant | Branch-scoped through patient/branch | Create/read/update audit |
+| OB ultrasound | Owner | Accountant | Branch-scoped through patient/branch | Create/read/update/review audit |
+| Billing | Owner | Doctor | Branch-scoped invoices/payments | Invoice/payment audit |
+| Dashboard | Owner | Doctor | Branch-scoped aggregate counts | No detailed record audit expected |
+| AI drafts | Owner | Nurse | Branch-scoped drafts | Placeholder create/read/review audit; no clinical insertion |

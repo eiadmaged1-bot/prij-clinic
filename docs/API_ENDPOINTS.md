@@ -96,3 +96,5 @@ npm run test:routes:auth
 ```
 
 The expanded test suite checks anonymous rejection, owner access, and representative denied-role behavior for protected route categories. Some authenticated read routes are intentionally broad across staff roles and are reported as documented warnings rather than failures.
+
+For every protected route, the manifest records method, path, required permission, allowed and denied demo users, expected statuses, scope expectation, audit expectation, and current limitations. The route inventory is executable so documentation and tests stay aligned.

@@ -99,3 +99,5 @@ Expanded V0.1 route-level checks are also available:
 - `npm run test:security:expanded`: aggregate runner for expanded checks.
 
 The expanded tests are V0.1 pilot safety tests, not production certification.
+
+The expanded route authorization runner now prints a route table showing permission, anonymous status, owner status, and denied-role status for each manifest entry. WARN entries are expected only when the route is explicitly broad for authenticated staff or the missing scope model is already documented.

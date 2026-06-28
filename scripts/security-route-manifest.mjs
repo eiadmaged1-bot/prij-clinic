@@ -9,69 +9,86 @@ export const demoUsers = {
   nurse: "demo.nurse@prij.local"
 };
 
-export const routeManifest = [
-  { method: "GET", path: "/auth/me", category: "auth", denyAs: null },
-  { method: "POST", path: "/auth/logout", category: "auth", denyAs: null },
-  { method: "GET", path: "/admin/users", category: "admin", denyAs: "accountant" },
-  { method: "GET", path: "/admin/roles", category: "admin", denyAs: "accountant" },
-  { method: "GET", path: "/admin/permissions", category: "admin", denyAs: "accountant" },
-  { method: "GET", path: "/audit", category: "audit", denyAs: "reception" },
-  { method: "POST", path: "/patients", category: "patients", fixtureBody: "patient", denyAs: "nurse" },
-  { method: "GET", path: "/patients", category: "patients", denyAs: null },
-  { method: "GET", path: "/patients/:patientId", category: "patients", denyAs: null },
-  { method: "PATCH", path: "/patients/:patientId", category: "patients", fixtureBody: "patientPatch", denyAs: "nurse" },
-  { method: "POST", path: "/appointments", category: "appointments", fixtureBody: "appointment", denyAs: "nurse" },
-  { method: "GET", path: "/appointments", category: "appointments", denyAs: null },
-  { method: "GET", path: "/appointments/calendar?date=:today", category: "appointments", denyAs: null },
-  { method: "GET", path: "/appointments/:appointmentId", category: "appointments", denyAs: null },
-  { method: "PATCH", path: "/appointments/:appointmentId/status", category: "appointments", fixtureBody: "appointmentStatus", denyAs: "nurse" },
-  { method: "POST", path: "/queue/check-in", category: "queue", fixtureBody: "queue", denyAs: "doctor" },
-  { method: "GET", path: "/queue/today", category: "queue", denyAs: null },
-  { method: "PATCH", path: "/queue/:queueTicketId/call", category: "queue", denyAs: "doctor" },
-  { method: "PATCH", path: "/queue/:queueTicketId/complete", category: "queue", denyAs: "doctor" },
-  { method: "PATCH", path: "/queue/:queueTicketId/cancel", category: "queue", denyAs: "doctor" },
-  { method: "POST", path: "/encounters", category: "encounters", fixtureBody: "encounter", denyAs: "reception" },
-  { method: "GET", path: "/encounters", category: "encounters", denyAs: "reception" },
-  { method: "GET", path: "/encounters/:encounterId", category: "encounters", denyAs: "reception" },
-  { method: "PATCH", path: "/encounters/:encounterId", category: "encounters", fixtureBody: "encounterPatch", denyAs: "reception" },
-  { method: "PATCH", path: "/encounters/:encounterId/sign", category: "encounters", denyAs: "reception" },
-  { method: "POST", path: "/prescriptions", category: "prescriptions", fixtureBody: "prescription", denyAs: "reception" },
-  { method: "GET", path: "/prescriptions", category: "prescriptions", denyAs: "reception" },
-  { method: "GET", path: "/prescriptions/:prescriptionId", category: "prescriptions", denyAs: "reception" },
-  { method: "PATCH", path: "/prescriptions/:prescriptionId", category: "prescriptions", fixtureBody: "prescriptionPatch", denyAs: "reception" },
-  { method: "PATCH", path: "/prescriptions/:prescriptionId/sign", category: "prescriptions", denyAs: "reception" },
-  { method: "POST", path: "/investigations/orders", category: "investigations", fixtureBody: "investigation", denyAs: "accountant" },
-  { method: "GET", path: "/investigations/orders", category: "investigations", denyAs: "accountant" },
-  { method: "GET", path: "/investigations/orders/:investigationOrderId", category: "investigations", denyAs: "accountant" },
-  { method: "PATCH", path: "/investigations/orders/:investigationOrderId/status", category: "investigations", fixtureBody: "investigationStatus", denyAs: "accountant" },
-  { method: "POST", path: "/reports", category: "reports", fixtureBody: "report", denyAs: "accountant" },
-  { method: "GET", path: "/reports", category: "reports", denyAs: "accountant" },
-  { method: "GET", path: "/reports/:reportId", category: "reports", denyAs: "accountant" },
-  { method: "PATCH", path: "/reports/:reportId", category: "reports", fixtureBody: "reportPatch", denyAs: "accountant" },
-  { method: "PATCH", path: "/reports/:reportId/review", category: "reports", denyAs: "accountant" },
-  { method: "POST", path: "/pregnancies", category: "pregnancies", fixtureBody: "pregnancy", denyAs: "accountant" },
-  { method: "GET", path: "/pregnancies", category: "pregnancies", denyAs: "accountant" },
-  { method: "GET", path: "/pregnancies/:pregnancyId", category: "pregnancies", denyAs: "accountant" },
-  { method: "PATCH", path: "/pregnancies/:pregnancyId", category: "pregnancies", fixtureBody: "pregnancyPatch", denyAs: "accountant" },
-  { method: "POST", path: "/ob-ultrasounds", category: "ob-ultrasound", fixtureBody: "obUltrasound", denyAs: "accountant" },
-  { method: "GET", path: "/ob-ultrasounds", category: "ob-ultrasound", denyAs: "accountant" },
-  { method: "GET", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", denyAs: "accountant" },
-  { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", fixtureBody: "obUltrasoundPatch", denyAs: "accountant" },
-  { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId/review", category: "ob-ultrasound", denyAs: "accountant" },
-  { method: "POST", path: "/billing/invoices", category: "billing", fixtureBody: "invoice", denyAs: "doctor" },
-  { method: "GET", path: "/billing/invoices", category: "billing", denyAs: "doctor" },
-  { method: "GET", path: "/billing/invoices/:invoiceId", category: "billing", denyAs: "doctor" },
-  { method: "PATCH", path: "/billing/invoices/:invoiceId", category: "billing", fixtureBody: "invoicePatch", denyAs: "doctor" },
-  { method: "POST", path: "/billing/invoices/:draftInvoiceId/issue", category: "billing", denyAs: "doctor" },
-  { method: "POST", path: "/billing/payments", category: "billing", fixtureBody: "payment", denyAs: "doctor" },
-  { method: "GET", path: "/billing/payments", category: "billing", denyAs: "doctor" },
-  { method: "POST", path: "/billing/payments/:paymentId/reverse", category: "billing", fixtureBody: "reversePayment", denyAs: "doctor" },
-  { method: "GET", path: "/dashboard/summary", category: "dashboard", denyAs: "doctor" },
-  { method: "POST", path: "/ai-drafts", category: "ai-drafts", fixtureBody: "aiDraft", denyAs: "nurse" },
-  { method: "GET", path: "/ai-drafts", category: "ai-drafts", denyAs: "nurse" },
-  { method: "GET", path: "/ai-drafts/:aiDraftId", category: "ai-drafts", denyAs: "nurse" },
-  { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", fixtureBody: "aiReview", denyAs: "nurse" }
+const routeDefinitions = [
+  { method: "GET", path: "/auth/me", category: "auth", requiredPermission: "authenticated", allowedAs: "owner", denyAs: null, notes: "Broad authenticated route." },
+  { method: "POST", path: "/auth/logout", category: "auth", requiredPermission: "authenticated", allowedAs: "owner", denyAs: null, notes: "Broad authenticated route; logout is audited." },
+  { method: "GET", path: "/admin/users", category: "admin", requiredPermission: "user.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/admin/roles", category: "admin", requiredPermission: "role.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/admin/permissions", category: "admin", requiredPermission: "permission.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/audit", category: "audit", requiredPermission: "audit.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "POST", path: "/patients", category: "patients", requiredPermission: "patient.create", allowedAs: "owner", denyAs: "nurse", fixtureBody: "patient" },
+  { method: "GET", path: "/patients", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient lists." },
+  { method: "GET", path: "/patients/:patientId", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient detail." },
+  { method: "PATCH", path: "/patients/:patientId", category: "patients", requiredPermission: "patient.update", allowedAs: "owner", denyAs: "nurse", fixtureBody: "patientPatch" },
+  { method: "POST", path: "/appointments", category: "appointments", requiredPermission: "appointment.manage", allowedAs: "owner", denyAs: "nurse", fixtureBody: "appointment", notes: "Referenced-record create scope remains a known limitation." },
+  { method: "GET", path: "/appointments", category: "appointments", requiredPermission: "appointment.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped appointment lists." },
+  { method: "GET", path: "/appointments/calendar?date=:today", category: "appointments", requiredPermission: "appointment.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped calendar data." },
+  { method: "GET", path: "/appointments/:appointmentId", category: "appointments", requiredPermission: "appointment.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped appointment detail." },
+  { method: "PATCH", path: "/appointments/:appointmentId/status", category: "appointments", requiredPermission: "appointment.manage", allowedAs: "owner", denyAs: "nurse", fixtureBody: "appointmentStatus" },
+  { method: "POST", path: "/queue/check-in", category: "queue", requiredPermission: "queue.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "queue", notes: "Referenced-record create scope remains a known limitation." },
+  { method: "GET", path: "/queue/today", category: "queue", requiredPermission: "queue.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped queue data." },
+  { method: "PATCH", path: "/queue/:queueTicketId/call", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/queue/:queueTicketId/complete", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/queue/:queueTicketId/cancel", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
+  { method: "POST", path: "/encounters", category: "encounters", requiredPermission: "encounter.create", allowedAs: "owner", denyAs: "reception", fixtureBody: "encounter", notes: "Referenced-record create scope remains a known limitation." },
+  { method: "GET", path: "/encounters", category: "encounters", requiredPermission: "encounter.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "GET", path: "/encounters/:encounterId", category: "encounters", requiredPermission: "encounter.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "PATCH", path: "/encounters/:encounterId", category: "encounters", requiredPermission: "encounter.update_own", allowedAs: "owner", denyAs: "reception", fixtureBody: "encounterPatch" },
+  { method: "PATCH", path: "/encounters/:encounterId/sign", category: "encounters", requiredPermission: "encounter.sign", allowedAs: "owner", denyAs: "reception", notes: "Uses safe demo encounter only." },
+  { method: "POST", path: "/prescriptions", category: "prescriptions", requiredPermission: "prescription.create", allowedAs: "owner", denyAs: "reception", fixtureBody: "prescription", notes: "Uses demo medication placeholder only." },
+  { method: "GET", path: "/prescriptions", category: "prescriptions", requiredPermission: "prescription.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "GET", path: "/prescriptions/:prescriptionId", category: "prescriptions", requiredPermission: "prescription.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "PATCH", path: "/prescriptions/:prescriptionId", category: "prescriptions", requiredPermission: "prescription.update", allowedAs: "owner", denyAs: "reception", fixtureBody: "prescriptionPatch" },
+  { method: "PATCH", path: "/prescriptions/:prescriptionId/sign", category: "prescriptions", requiredPermission: "prescription.approve", allowedAs: "owner", denyAs: "reception", notes: "Uses safe demo prescription only; no autonomous prescribing." },
+  { method: "POST", path: "/investigations/orders", category: "investigations", requiredPermission: "investigation.create", allowedAs: "owner", denyAs: "accountant", fixtureBody: "investigation" },
+  { method: "GET", path: "/investigations/orders", category: "investigations", requiredPermission: "investigation.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/investigations/orders/:investigationOrderId", category: "investigations", requiredPermission: "investigation.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "PATCH", path: "/investigations/orders/:investigationOrderId/status", category: "investigations", requiredPermission: "investigation.update", allowedAs: "owner", denyAs: "accountant", fixtureBody: "investigationStatus" },
+  { method: "POST", path: "/reports", category: "reports", requiredPermission: "report.upload", allowedAs: "owner", denyAs: "accountant", fixtureBody: "report", notes: "Metadata only; no file upload." },
+  { method: "GET", path: "/reports", category: "reports", requiredPermission: "report.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/reports/:reportId", category: "reports", requiredPermission: "report.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "PATCH", path: "/reports/:reportId", category: "reports", requiredPermission: "report.update", allowedAs: "owner", denyAs: "accountant", fixtureBody: "reportPatch" },
+  { method: "PATCH", path: "/reports/:reportId/review", category: "reports", requiredPermission: "report.review", allowedAs: "owner", denyAs: "accountant" },
+  { method: "POST", path: "/pregnancies", category: "pregnancies", requiredPermission: "pregnancy.manage", allowedAs: "owner", denyAs: "accountant", fixtureBody: "pregnancy" },
+  { method: "GET", path: "/pregnancies", category: "pregnancies", requiredPermission: "pregnancy.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/pregnancies/:pregnancyId", category: "pregnancies", requiredPermission: "pregnancy.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "PATCH", path: "/pregnancies/:pregnancyId", category: "pregnancies", requiredPermission: "pregnancy.manage", allowedAs: "owner", denyAs: "accountant", fixtureBody: "pregnancyPatch" },
+  { method: "POST", path: "/ob-ultrasounds", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.manage", allowedAs: "owner", denyAs: "accountant", fixtureBody: "obUltrasound", notes: "No diagnostic automation." },
+  { method: "GET", path: "/ob-ultrasounds", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.manage", allowedAs: "owner", denyAs: "accountant", fixtureBody: "obUltrasoundPatch" },
+  { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId/review", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.manage", allowedAs: "owner", denyAs: "accountant", notes: "No FGR or other automatic diagnosis." },
+  { method: "POST", path: "/billing/invoices", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "invoice", notes: "No payment gateway." },
+  { method: "GET", path: "/billing/invoices", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "GET", path: "/billing/invoices/:invoiceId", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/billing/invoices/:invoiceId", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "invoicePatch" },
+  { method: "POST", path: "/billing/invoices/:draftInvoiceId/issue", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor" },
+  { method: "POST", path: "/billing/payments", category: "billing", requiredPermission: "payment.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "payment", notes: "Cash demo payment only; no card data." },
+  { method: "GET", path: "/billing/payments", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "POST", path: "/billing/payments/:paymentId/reverse", category: "billing", requiredPermission: "billing.void", allowedAs: "owner", denyAs: "doctor", fixtureBody: "reversePayment" },
+  { method: "GET", path: "/dashboard/summary", category: "dashboard", requiredPermission: "dashboard.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "POST", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.request", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiDraft", notes: "Disabled/mock-only placeholder." },
+  { method: "GET", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.read", allowedAs: "owner", denyAs: "nurse" },
+  { method: "GET", path: "/ai-drafts/:aiDraftId", category: "ai-drafts", requiredPermission: "ai_draft.read", allowedAs: "owner", denyAs: "nurse" },
+  { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", requiredPermission: "ai_draft.review", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiReview", notes: "Review updates only AI draft artifact." }
 ];
+
+export const routeManifest = routeDefinitions.map((route) => ({
+  name: `${route.method} ${route.path}`,
+  requiresAuth: true,
+  allowedLoginRole: route.allowedAs,
+  allowedDemoUser: demoUsers[route.allowedAs],
+  deniedLoginRole: route.denyAs,
+  deniedDemoUser: route.denyAs ? demoUsers[route.denyAs] : null,
+  expectedStatusWithOwner: [200, 201],
+  expectedStatusWithoutToken: [401],
+  expectedStatusWithDeniedUser: route.denyAs ? [403, 404] : null,
+  scopeExpectation: scopeExpectationFor(route.category),
+  auditExpectation: auditExpectationFor(route),
+  currentLimitation: route.notes?.includes("known limitation") || route.notes?.includes("Broad") ? route.notes : null,
+  notes: route.notes ?? "",
+  ...route
+}));
 
 export async function waitForApi(timeoutMs = Number(process.env.API_WAIT_TIMEOUT_MS || 90_000)) {
   const deadline = Date.now() + timeoutMs;
@@ -293,6 +310,25 @@ export function makeRecorder(prefix) {
       return { pass, warn, fail };
     }
   };
+}
+
+function scopeExpectationFor(category) {
+  if (["admin", "audit", "auth"].includes(category)) return "Authenticated/permission-scoped route; no patient branch scope.";
+  if (["appointments", "encounters", "prescriptions", "investigations"].includes(category)) {
+    return "Branch-scoped where modeled; doctor-owned reads are doctor-scoped where doctorId exists.";
+  }
+  if (["patients", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard"].includes(category)) {
+    return "Branch-scoped for non-owner/non-admin users where branchId or patient branch is available.";
+  }
+  return "Scope expectation documented in controller/service tests.";
+}
+
+function auditExpectationFor(route) {
+  if (route.method === "GET" && ["auth", "appointments", "queue"].includes(route.category)) {
+    return "Read audit is not expected for this broad operational read in V0.1.";
+  }
+  if (route.method === "GET") return "Sensitive/admin read audit expected where implemented.";
+  return "Mutation/status/review action audit expected where implemented.";
 }
 
 function formatBody(body) {

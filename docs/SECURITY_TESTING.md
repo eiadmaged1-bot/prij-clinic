@@ -70,12 +70,13 @@ The local demo password follows the README pattern and defaults to `LocalDev123!
 - `scripts/ai-safety-test.ps1`: verifies AI is disabled/mock-only, AI draft metadata stays disabled, lower-role review is denied, no sign/insert AI routes exist, and AI review audit metadata records no clinical insertion.
 - `scripts/security-test-all.ps1`: runs smoke, RBAC, scope, audit, and AI safety scripts.
 - `scripts/security-integration-test.mjs`: verifies CI-friendly API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI safety boundaries.
-- `scripts/security-route-manifest.mjs`: documents implemented protected API routes for expanded route-level checks.
+- `scripts/security-route-manifest.mjs`: executable route inventory for implemented protected API routes. Each case includes name, method, path, auth requirement, permission, allowed demo user, denied demo user where applicable, expected statuses, safe demo body, scope expectation, audit expectation, and notes/limitations.
 - `scripts/route-authorization-test.mjs`: checks anonymous denial, owner access, and representative denied-role behavior across implemented routes.
 - `scripts/referenced-scope-test.mjs`: checks seeded branch scope behavior and reports documented V0.1 scope warnings.
 - `scripts/audit-assertion-test.mjs`: checks representative audit events and confirms audit output does not expose bearer tokens.
 - `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only and cannot sign, insert, diagnose, or prescribe.
 - `scripts/security-test-expanded.mjs`: runs the expanded Node security test set.
+- `scripts/security-test-all.mjs`: canonical expanded aggregate runner used by `npm run test:security:expanded`.
 
 ## CI Status
 
@@ -95,6 +96,7 @@ npm run typecheck
 npm run build
 npm run start -w apps/api
 npm run test:security:ci
+npm run test:security:expanded
 ```
 
 It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disabled with `AI_FEATURES_ENABLED=false` and `AI_PROVIDER=disabled`.
@@ -103,6 +105,7 @@ It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disable
 
 - These scripts are deterministic smoke tests, not exhaustive authorization tests.
 - CI integration coverage is API-only and does not run browser checks or the Next.js web app.
+- Some routes are intentionally broad authenticated routes and emit WARN rather than FAIL for missing denied-role cases: `/auth/me`, `/auth/logout`, scoped patient reads, appointment reads, calendar reads, and queue reads.
 - Create/update referenced-record scope validation is still incomplete in the MVP.
 - Patient-to-doctor assignment is not modeled yet.
 - Audit tamper-resistance, retention, and export controls are not production-grade.

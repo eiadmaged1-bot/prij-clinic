@@ -48,3 +48,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - GitHub Actions has a database-backed API security integration workflow, but coverage is still representative rather than exhaustive.
 - CI security integration does not run the Next.js web app, browser smoke checks, or full route-by-route RBAC matrices.
 - Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition or referenced-record write path.
+- Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route.

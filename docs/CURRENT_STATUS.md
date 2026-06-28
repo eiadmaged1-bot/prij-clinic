@@ -23,6 +23,7 @@ The MVP foundation is a locally runnable demo and review foundation. It is not p
 - Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
 - Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled/mock safety.
 - CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI draft safety.
+- Expanded route security tests: `npm run test:security:expanded` covers the executable route manifest, representative denied-role checks, branch scope assertions, audit assertions, and AI safety regression.
 
 ## Safety State
 
@@ -57,6 +58,7 @@ API-only security integration check:
 
 ```powershell
 npm run test:security:ci
+npm run test:security:expanded
 ```
 
 ## Commit Safety

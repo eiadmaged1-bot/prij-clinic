@@ -85,3 +85,6 @@ jobs:
 
       - name: Run security integration tests
         run: npm run test:security:ci
+
+      - name: Run expanded route security tests
+        run: npm run test:security:expanded
