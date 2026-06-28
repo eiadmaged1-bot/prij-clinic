@@ -18,7 +18,8 @@ export class DashboardService {
       activePregnancies,
       draftUltrasounds,
       openInvoices,
-      paymentTotals
+      paymentTotals,
+      pendingAiDrafts
     ] = await Promise.all([
       this.prisma.appointment.count({ where: { startAt: { gte: today, lt: tomorrow } } }),
       this.prisma.queueTicket.count({ where: { status: "waiting" } }),
@@ -29,7 +30,8 @@ export class DashboardService {
       this.prisma.payment.aggregate({
         where: { status: "recorded", paidAt: { gte: today, lt: tomorrow } },
         _sum: { amount: true }
-      })
+      }),
+      this.prisma.aiDraft.count({ where: { status: "pending_doctor_review" } })
     ]);
 
     return {
@@ -46,7 +48,8 @@ export class DashboardService {
       },
       safety: {
         aiEnabled: false,
-        clinicalDraftsRequireDoctorReview: true
+        clinicalDraftsRequireDoctorReview: true,
+        pendingAiDrafts
       }
     };
   }

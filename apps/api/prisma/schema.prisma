@@ -28,6 +28,7 @@ model Branch {
   obUltrasounds  ObUltrasound[]
   invoices       Invoice[]
   payments       Payment[]
+  aiDrafts       AiDraft[]
 
   @@index([status])
 }
@@ -67,6 +68,8 @@ model User {
   voidedInvoices Invoice[] @relation("InvoicesVoidedBy")
   recordedPayments Payment[] @relation("PaymentsRecordedBy")
   reversedPayments Payment[] @relation("PaymentsReversedBy")
+  requestedAiDrafts AiDraft[] @relation("AiDraftsRequestedBy")
+  reviewedAiDrafts AiDraft[] @relation("AiDraftsReviewedBy")
 
   @@index([branchId])
   @@index([status])
@@ -126,6 +129,7 @@ model Patient {
   obUltrasounds        ObUltrasound[]
   invoices             Invoice[]
   payments             Payment[]
+  aiDrafts             AiDraft[]
 
   @@index([branchId])
   @@index([status])
@@ -250,6 +254,7 @@ model Encounter {
   investigationOrders InvestigationOrder[]
   reports         Report[]
   obUltrasounds   ObUltrasound[]
+  aiDrafts        AiDraft[]
 
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
@@ -384,6 +389,24 @@ enum PaymentStatus {
   recorded
   reversed
   voided
+}
+
+enum AiDraftStatus {
+  draft
+  pending_doctor_review
+  doctor_edited
+  approved
+  rejected
+  expired
+  voided
+}
+
+enum AiDraftType {
+  encounter_summary
+  patient_instruction
+  report_summary
+  follow_up_message
+  administrative_message
 }
 
 model Report {
@@ -555,6 +578,39 @@ model Payment {
   @@index([branchId, paidAt])
   @@index([patientId, paidAt])
   @@index([invoiceId])
+  @@index([status])
+}
+
+model AiDraft {
+  id                 String        @id @default(uuid()) @db.Uuid
+  branchId           String?       @db.Uuid
+  patientId          String?       @db.Uuid
+  encounterId        String?       @db.Uuid
+  draftType          AiDraftType
+  status             AiDraftStatus @default(pending_doctor_review)
+  inputSourceSummary String?
+  generatedText      String
+  modelProvider      String        @default("disabled_mock")
+  modelName          String        @default("no_external_ai")
+  promptVersion      String        @default("placeholder_v1")
+  requestedByUserId  String?       @db.Uuid
+  reviewedByUserId   String?       @db.Uuid
+  reviewNote         String?
+  reviewedAt         DateTime?     @db.Timestamptz(3)
+  expiresAt          DateTime?     @db.Timestamptz(3)
+  createdAt          DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime      @updatedAt @db.Timestamptz(3)
+
+  branch             Branch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient            Patient?      @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  encounter          Encounter?    @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  requestedByUser    User?         @relation("AiDraftsRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser     User?         @relation("AiDraftsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([branchId, createdAt])
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([draftType])
   @@index([status])
 }
 

@@ -30,6 +30,7 @@ type DashboardSummary = {
   safety: {
     aiEnabled: boolean;
     clinicalDraftsRequireDoctorReview: boolean;
+    pendingAiDrafts: number;
   };
 };
 
@@ -188,6 +189,10 @@ export default function DashboardPage() {
             <div>
               <dt>AI status</dt>
               <dd>{summary.safety.aiEnabled ? "Enabled" : "Disabled"}</dd>
+            </div>
+            <div>
+              <dt>Pending AI drafts</dt>
+              <dd>{summary.safety.pendingAiDrafts}</dd>
             </div>
           </dl>
         ) : (

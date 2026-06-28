@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AiDraftsModule } from "./ai-drafts/ai-drafts.module";
 import { AuditModule } from "./audit/audit.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { AuthModule } from "./auth/auth.module";
@@ -33,7 +34,8 @@ import { UsersModule } from "./users/users.module";
     ReportsModule,
     PregnancyModule,
     BillingModule,
-    DashboardModule
+    DashboardModule,
+    AiDraftsModule
   ]
 })
 export class AppModule {}

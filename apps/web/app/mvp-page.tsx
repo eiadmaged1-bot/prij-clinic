@@ -17,7 +17,8 @@ const links = [
   ["/reports", "Reports"],
   ["/pregnancies", "Pregnancy"],
   ["/ultrasound", "OB Ultrasounds"],
-  ["/billing", "Billing"]
+  ["/billing", "Billing"],
+  ["/ai-drafts", "AI Drafts"]
 ];
 
 export function MvpPage({ title, eyebrow, items }: MvpPageProps) {

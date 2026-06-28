@@ -82,6 +82,11 @@ const permissions = [
   "billing.void",
   "billing.report",
   "dashboard.read",
+  "ai_draft.request",
+  "ai_draft.read",
+  "ai_draft.review",
+  "ai_draft.approve",
+  "ai_draft.reject",
   "user.read",
   "user.manage",
   "role.read",
@@ -148,7 +153,12 @@ const rolePermissionKeys = {
     "pregnancy.read",
     "pregnancy.manage",
     "ob_ultrasound.read",
-    "ob_ultrasound.manage"
+    "ob_ultrasound.manage",
+    "ai_draft.request",
+    "ai_draft.read",
+    "ai_draft.review",
+    "ai_draft.approve",
+    "ai_draft.reject"
   ],
   Nurse: [
     "patient.read",
@@ -555,6 +565,31 @@ async function main() {
         amount: "200.00",
         referenceNote: "Local demo cash payment only.",
         recordedByUserId: demoOwner?.id
+      }
+    });
+  }
+
+  const existingAiDraft = await prisma.aiDraft.findFirst({
+    where: {
+      patientId: demoPatientA.id,
+      draftType: "encounter_summary",
+      modelProvider: "disabled_mock"
+    }
+  });
+
+  if (!existingAiDraft) {
+    await prisma.aiDraft.create({
+      data: {
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        draftType: "encounter_summary",
+        status: "pending_doctor_review",
+        inputSourceSummary: "Local demo placeholder only. No external AI request was made.",
+        generatedText: "AI draft placeholder only. External AI access is disabled. Doctor review is required before any future AI-assisted text could be used.",
+        modelProvider: "disabled_mock",
+        modelName: "no_external_ai",
+        promptVersion: "placeholder_v1",
+        requestedByUserId: demoOwner?.id
       }
     });
   }

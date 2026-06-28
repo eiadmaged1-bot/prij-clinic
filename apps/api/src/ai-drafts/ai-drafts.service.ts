@@ -1,0 +1,135 @@
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { AiDraftStatus, Prisma } from "@prisma/client";
+import { AuditService } from "../audit/audit.service";
+import type { AuthUser } from "../auth/auth.types";
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateAiDraftDto, ReviewAiDraftDto } from "./dto";
+
+@Injectable()
+export class AiDraftsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService
+  ) {}
+
+  async create(dto: CreateAiDraftDto, user: AuthUser) {
+    const patient = await this.ensurePatient(dto.patientId);
+    await this.ensureEncounterMatches(dto.patientId, dto.encounterId);
+
+    const draft = await this.prisma.aiDraft.create({
+      data: {
+        branchId: patient?.branchId ?? user.branchId,
+        patientId: dto.patientId ?? null,
+        encounterId: dto.encounterId ?? null,
+        draftType: dto.draftType,
+        status: "pending_doctor_review",
+        inputSourceSummary: clean(dto.inputSourceSummary),
+        generatedText: placeholderText(dto.draftType),
+        requestedByUserId: user.id
+      },
+      include: aiDraftIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ai_draft.placeholder_created",
+      resourceType: "ai_draft",
+      resourceId: draft.id,
+      branchId: draft.branchId,
+      severity: "high",
+      metadataJson: {
+        draftType: draft.draftType,
+        status: draft.status,
+        modelProvider: draft.modelProvider,
+        externalAiAccess: false
+      }
+    });
+
+    return draft;
+  }
+
+  list() {
+    return this.prisma.aiDraft.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: aiDraftIncludes
+    });
+  }
+
+  async get(id: string) {
+    const draft = await this.prisma.aiDraft.findUnique({ where: { id }, include: aiDraftIncludes });
+    if (!draft) {
+      throw new NotFoundException("AI draft placeholder not found.");
+    }
+
+    return draft;
+  }
+
+  async review(id: string, dto: ReviewAiDraftDto, user: AuthUser) {
+    const existing = await this.get(id);
+    const allowed: AiDraftStatus[] = ["approved", "rejected", "doctor_edited", "expired", "voided"];
+    if (!allowed.includes(dto.status)) {
+      throw new BadRequestException("Review status must be approved, rejected, doctor_edited, expired, or voided.");
+    }
+
+    const draft = await this.prisma.aiDraft.update({
+      where: { id },
+      data: {
+        status: dto.status,
+        reviewNote: clean(dto.reviewNote),
+        reviewedAt: new Date(),
+        reviewedByUserId: user.id
+      },
+      include: aiDraftIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: `ai_draft.${dto.status}`,
+      resourceType: "ai_draft",
+      resourceId: draft.id,
+      branchId: draft.branchId,
+      severity: "high",
+      metadataJson: {
+        fromStatus: existing.status,
+        toStatus: draft.status,
+        insertedIntoClinicalRecord: false
+      }
+    });
+
+    return draft;
+  }
+
+  private async ensurePatient(patientId?: string) {
+    if (!patientId) return null;
+    const patient = await this.prisma.patient.findUnique({ where: { id: patientId } });
+    if (!patient) throw new BadRequestException("Patient not found.");
+    return patient;
+  }
+
+  private async ensureEncounterMatches(patientId?: string, encounterId?: string) {
+    if (!encounterId) return;
+    const encounter = await this.prisma.encounter.findUnique({ where: { id: encounterId } });
+    if (!encounter || (patientId && encounter.patientId !== patientId)) {
+      throw new BadRequestException("Encounter does not match the selected patient.");
+    }
+  }
+}
+
+const aiDraftIncludes = {
+  patient: true,
+  encounter: true
+} satisfies Prisma.AiDraftInclude;
+
+function clean(value?: string) {
+  return value?.trim() || null;
+}
+
+function placeholderText(draftType: string) {
+  return [
+    `AI draft placeholder for ${draftType}.`,
+    "External AI access is disabled in this MVP.",
+    "This is not a diagnosis, prescription, signed record, final interpretation, or patient instruction.",
+    "Any future AI output must remain draft-only until reviewed and approved by an authorized doctor."
+  ].join(" ");
+}
