@@ -1,22 +1,38 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-const commands = [
-  ["run", "dev:api"],
-  ["run", "dev:web"]
-];
+const isWindows = process.platform === "win32";
+const commands = ["dev:api", "dev:web"];
+let stopping = false;
 
-const children = commands.map((args) =>
-  spawn(npmCommand, args, {
-    stdio: "inherit",
-    shell: false
-  })
-);
+function spawnDev(script) {
+  if (isWindows) {
+    return spawn("cmd.exe", ["/d", "/s", "/c", `npm run ${script}`], {
+      stdio: "inherit",
+      windowsHide: false
+    });
+  }
+
+  return spawn("npm", ["run", script], {
+    stdio: "inherit"
+  });
+}
+
+const children = commands.map(spawnDev);
 
 const stop = () => {
+  if (stopping) return;
+  stopping = true;
+
   for (const child of children) {
     if (!child.killed) {
-      child.kill("SIGTERM");
+      if (isWindows && child.pid) {
+        spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+          stdio: "ignore",
+          windowsHide: true
+        });
+      } else {
+        child.kill("SIGTERM");
+      }
     }
   }
 };
@@ -31,8 +47,25 @@ process.on("SIGTERM", () => {
   process.exit(143);
 });
 
+process.on("SIGBREAK", () => {
+  stop();
+  process.exit(131);
+});
+
+process.on("exit", () => {
+  stop();
+});
+
 for (const child of children) {
+  child.on("error", (error) => {
+    console.error(error);
+    stop();
+    process.exit(1);
+  });
+
   child.on("exit", (code) => {
+    if (stopping) return;
+
     if (code && code !== 0) {
       stop();
       process.exit(code);
