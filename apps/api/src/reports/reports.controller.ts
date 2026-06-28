@@ -13,31 +13,31 @@ export class ReportsController {
   constructor(private readonly reports: ReportsService) {}
 
   @Post()
-  @Permissions("reports.manage")
+  @Permissions("report.upload")
   create(@Body() dto: CreateReportDto, @CurrentUser() user: AuthUser) {
     return this.reports.create(dto, user);
   }
 
   @Get()
-  @Permissions("reports.read")
-  async list() {
-    return { reports: await this.reports.list() };
+  @Permissions("report.read")
+  async list(@CurrentUser() user: AuthUser) {
+    return { reports: await this.reports.list(user) };
   }
 
   @Get(":id")
-  @Permissions("reports.read")
-  get(@Param("id") id: string) {
-    return this.reports.get(id);
+  @Permissions("report.read")
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.reports.get(id, user);
   }
 
   @Patch(":id")
-  @Permissions("reports.manage")
+  @Permissions("report.update")
   update(@Param("id") id: string, @Body() dto: UpdateReportDto, @CurrentUser() user: AuthUser) {
     return this.reports.update(id, dto, user);
   }
 
   @Patch(":id/review")
-  @Permissions("reports.manage")
+  @Permissions("report.review")
   review(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.reports.review(id, user);
   }

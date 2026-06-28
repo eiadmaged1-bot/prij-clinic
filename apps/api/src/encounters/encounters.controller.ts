@@ -13,31 +13,31 @@ export class EncountersController {
   constructor(private readonly encounters: EncountersService) {}
 
   @Post()
-  @Permissions("encounters.manage")
+  @Permissions("encounter.create")
   create(@Body() dto: CreateEncounterDto, @CurrentUser() user: AuthUser) {
     return this.encounters.create(dto, user);
   }
 
   @Get()
-  @Permissions("encounters.read")
-  async list() {
-    return { encounters: await this.encounters.list() };
+  @Permissions("encounter.read")
+  async list(@CurrentUser() user: AuthUser) {
+    return { encounters: await this.encounters.list(user) };
   }
 
   @Get(":id")
-  @Permissions("encounters.read")
-  get(@Param("id") id: string) {
-    return this.encounters.get(id);
+  @Permissions("encounter.read")
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.encounters.get(id, user);
   }
 
   @Patch(":id")
-  @Permissions("encounters.manage")
+  @Permissions("encounter.update_own")
   update(@Param("id") id: string, @Body() dto: UpdateEncounterDto, @CurrentUser() user: AuthUser) {
     return this.encounters.update(id, dto, user);
   }
 
   @Patch(":id/sign")
-  @Permissions("encounters.manage")
+  @Permissions("encounter.sign")
   sign(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.encounters.sign(id, user);
   }

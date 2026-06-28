@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto } from "./dto";
 
@@ -72,17 +73,29 @@ export class BillingService {
     }
   }
 
-  listInvoices() {
-    return this.prisma.invoice.findMany({
+  async listInvoices(user: AuthUser) {
+    const invoices = await this.prisma.invoice.findMany({
+      where: branchScope(user),
       orderBy: { createdAt: "desc" },
       take: 100,
       include: invoiceIncludes
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "invoice.list_read",
+      resourceType: "invoice",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: invoices.length }
+    });
+
+    return invoices;
   }
 
-  async getInvoice(id: string) {
-    const invoice = await this.prisma.invoice.findUnique({
-      where: { id },
+  async getInvoice(id: string, user: AuthUser) {
+    const invoice = await this.prisma.invoice.findFirst({
+      where: { id, ...branchScope(user) },
       include: invoiceIncludes
     });
 
@@ -90,11 +103,21 @@ export class BillingService {
       throw new NotFoundException("Invoice not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "invoice.read",
+      resourceType: "invoice",
+      resourceId: invoice.id,
+      branchId: invoice.branchId,
+      severity: "medium",
+      metadataJson: { status: invoice.status }
+    });
+
     return invoice;
   }
 
   async updateInvoice(id: string, dto: UpdateInvoiceDto, user: AuthUser) {
-    const existing = await this.getInvoice(id);
+    const existing = await this.getInvoice(id, user);
     if (existing.status === "voided") {
       throw new BadRequestException("Voided invoices cannot be edited.");
     }
@@ -140,7 +163,7 @@ export class BillingService {
   }
 
   async issueInvoice(id: string, user: AuthUser) {
-    const existing = await this.getInvoice(id);
+    const existing = await this.getInvoice(id, user);
     if (existing.status !== "draft") {
       throw new BadRequestException("Only draft invoices can be issued.");
     }
@@ -165,7 +188,7 @@ export class BillingService {
   }
 
   async createPayment(dto: CreatePaymentDto, user: AuthUser) {
-    const invoice = await this.getInvoice(dto.invoiceId);
+    const invoice = await this.getInvoice(dto.invoiceId, user);
     if (["cancelled", "voided"].includes(invoice.status)) {
       throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
     }
@@ -209,8 +232,9 @@ export class BillingService {
     return payment;
   }
 
-  listPayments() {
+  listPayments(user: AuthUser) {
     return this.prisma.payment.findMany({
+      where: branchScope(user),
       orderBy: { paidAt: "desc" },
       take: 100,
       include: paymentIncludes
@@ -218,7 +242,7 @@ export class BillingService {
   }
 
   async reversePayment(id: string, dto: ReversePaymentDto, user: AuthUser) {
-    const existing = await this.prisma.payment.findUnique({ where: { id }, include: paymentIncludes });
+    const existing = await this.prisma.payment.findFirst({ where: { id, ...branchScope(user) }, include: paymentIncludes });
     if (!existing) {
       throw new NotFoundException("Payment not found.");
     }

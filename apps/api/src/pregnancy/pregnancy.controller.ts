@@ -20,14 +20,14 @@ export class PregnancyController {
 
   @Get("pregnancies")
   @Permissions("pregnancy.read")
-  async listPregnancies() {
-    return { pregnancies: await this.pregnancy.listPregnancies() };
+  async listPregnancies(@CurrentUser() user: AuthUser) {
+    return { pregnancies: await this.pregnancy.listPregnancies(user) };
   }
 
   @Get("pregnancies/:id")
   @Permissions("pregnancy.read")
-  getPregnancy(@Param("id") id: string) {
-    return this.pregnancy.getPregnancy(id);
+  getPregnancy(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.getPregnancy(id, user);
   }
 
   @Patch("pregnancies/:id")
@@ -44,14 +44,14 @@ export class PregnancyController {
 
   @Get("ob-ultrasounds")
   @Permissions("ob_ultrasound.read")
-  async listObUltrasounds() {
-    return { obUltrasounds: await this.pregnancy.listObUltrasounds() };
+  async listObUltrasounds(@CurrentUser() user: AuthUser) {
+    return { obUltrasounds: await this.pregnancy.listObUltrasounds(user) };
   }
 
   @Get("ob-ultrasounds/:id")
   @Permissions("ob_ultrasound.read")
-  getObUltrasound(@Param("id") id: string) {
-    return this.pregnancy.getObUltrasound(id);
+  getObUltrasound(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.getObUltrasound(id, user);
   }
 
   @Patch("ob-ultrasounds/:id")

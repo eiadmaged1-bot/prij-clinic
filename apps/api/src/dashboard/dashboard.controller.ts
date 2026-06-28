@@ -1,4 +1,6 @@
 import { Controller, Get, UseGuards } from "@nestjs/common";
+import { CurrentUser } from "../auth/current-user.decorator";
+import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
@@ -11,7 +13,7 @@ export class DashboardController {
 
   @Get("summary")
   @Permissions("dashboard.read")
-  summary() {
-    return this.dashboard.summary();
+  summary(@CurrentUser() user: AuthUser) {
+    return this.dashboard.summary(user);
   }
 }

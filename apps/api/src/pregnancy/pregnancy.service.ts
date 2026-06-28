@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateObUltrasoundDto, CreatePregnancyDto, UpdateObUltrasoundDto, UpdatePregnancyDto } from "./dto";
 
@@ -47,17 +48,29 @@ export class PregnancyService {
     }
   }
 
-  listPregnancies() {
-    return this.prisma.pregnancy.findMany({
+  async listPregnancies(user: AuthUser) {
+    const pregnancies = await this.prisma.pregnancy.findMany({
+      where: branchScope(user),
       orderBy: { createdAt: "desc" },
       take: 100,
       include: pregnancyIncludes
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy.list_read",
+      resourceType: "pregnancy",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: pregnancies.length }
+    });
+
+    return pregnancies;
   }
 
-  async getPregnancy(id: string) {
-    const pregnancy = await this.prisma.pregnancy.findUnique({
-      where: { id },
+  async getPregnancy(id: string, user: AuthUser) {
+    const pregnancy = await this.prisma.pregnancy.findFirst({
+      where: { id, ...branchScope(user) },
       include: pregnancyIncludes
     });
 
@@ -65,11 +78,21 @@ export class PregnancyService {
       throw new NotFoundException("Pregnancy record not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy.read",
+      resourceType: "pregnancy",
+      resourceId: pregnancy.id,
+      branchId: pregnancy.branchId,
+      severity: "medium",
+      metadataJson: { status: pregnancy.status }
+    });
+
     return pregnancy;
   }
 
   async updatePregnancy(id: string, dto: UpdatePregnancyDto, user: AuthUser) {
-    const existing = await this.getPregnancy(id);
+    const existing = await this.getPregnancy(id, user);
     const data: Prisma.PregnancyUpdateInput = {};
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.gravida !== undefined) data.gravida = dto.gravida;
@@ -142,17 +165,29 @@ export class PregnancyService {
     }
   }
 
-  listObUltrasounds() {
-    return this.prisma.obUltrasound.findMany({
+  async listObUltrasounds(user: AuthUser) {
+    const obUltrasounds = await this.prisma.obUltrasound.findMany({
+      where: branchScope(user),
       orderBy: { performedAt: "desc" },
       take: 100,
       include: obUltrasoundIncludes
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ob_ultrasound.list_read",
+      resourceType: "ob_ultrasound",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: obUltrasounds.length }
+    });
+
+    return obUltrasounds;
   }
 
-  async getObUltrasound(id: string) {
-    const ultrasound = await this.prisma.obUltrasound.findUnique({
-      where: { id },
+  async getObUltrasound(id: string, user: AuthUser) {
+    const ultrasound = await this.prisma.obUltrasound.findFirst({
+      where: { id, ...branchScope(user) },
       include: obUltrasoundIncludes
     });
 
@@ -160,11 +195,21 @@ export class PregnancyService {
       throw new NotFoundException("OB ultrasound record not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ob_ultrasound.read",
+      resourceType: "ob_ultrasound",
+      resourceId: ultrasound.id,
+      branchId: ultrasound.branchId,
+      severity: "medium",
+      metadataJson: { status: ultrasound.status, pregnancyId: ultrasound.pregnancyId }
+    });
+
     return ultrasound;
   }
 
   async updateObUltrasound(id: string, dto: UpdateObUltrasoundDto, user: AuthUser) {
-    const existing = await this.getObUltrasound(id);
+    const existing = await this.getObUltrasound(id, user);
 
     if (existing.status === "reviewed" && dto.status !== "voided") {
       throw new BadRequestException("Reviewed OB ultrasound records require a correction workflow before edits.");
@@ -210,7 +255,7 @@ export class PregnancyService {
   }
 
   async reviewObUltrasound(id: string, user: AuthUser) {
-    const existing = await this.getObUltrasound(id);
+    const existing = await this.getObUltrasound(id, user);
     if (existing.status === "voided") {
       throw new BadRequestException("Voided OB ultrasound records cannot be reviewed.");
     }

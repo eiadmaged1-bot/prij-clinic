@@ -4,8 +4,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Security And Privacy
 
-- Branch, clinic, patient, and doctor scoping are incomplete.
-- Sensitive read audit coverage is incomplete.
+- Branch, clinic, patient, and doctor scoping are improved for read paths but still incomplete for every write/reference path.
+- Sensitive read audit coverage now exists for core sensitive MVP reads, but export/download and future timeline reads still need policy-specific coverage.
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
 - No backup job, encrypted backup storage, or restore-test automation is implemented yet.
 - No secure report file/object storage is implemented. Current report records store metadata/reference text only.
@@ -13,10 +13,11 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## RBAC
 
-- Several controllers use coarse MVP permissions such as `*.manage`.
-- More granular seeded permissions exist but are not consistently enforced yet.
+- Several controllers still use coarse MVP permissions where granular permission names do not exist yet, such as `pregnancy.manage` and `ob_ultrasound.manage`.
+- Granular seeded permissions are now enforced for patients, appointments, queue status updates, encounters, prescriptions, investigations, and reports.
 - Production role design needs explicit clinical, billing, admin, audit, and system-owner separation.
 - UI navigation is not an authorization boundary; server-side guards are the source of truth.
+- Patient-to-doctor assignment is not modeled, so doctor access is not yet limited to assigned patients outside doctor-owned records.
 
 ## Clinical Workflow
 

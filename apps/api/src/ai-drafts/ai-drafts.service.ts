@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { AiDraftStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateAiDraftDto, ReviewAiDraftDto } from "./dto";
 
@@ -48,25 +49,47 @@ export class AiDraftsService {
     return draft;
   }
 
-  list() {
-    return this.prisma.aiDraft.findMany({
+  async list(user: AuthUser) {
+    const drafts = await this.prisma.aiDraft.findMany({
+      where: branchScope(user),
       orderBy: { createdAt: "desc" },
       take: 100,
       include: aiDraftIncludes
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ai_draft.list_read",
+      resourceType: "ai_draft",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: drafts.length, externalAiAccess: false }
+    });
+
+    return drafts;
   }
 
-  async get(id: string) {
-    const draft = await this.prisma.aiDraft.findUnique({ where: { id }, include: aiDraftIncludes });
+  async get(id: string, user: AuthUser) {
+    const draft = await this.prisma.aiDraft.findFirst({ where: { id, ...branchScope(user) }, include: aiDraftIncludes });
     if (!draft) {
       throw new NotFoundException("AI draft placeholder not found.");
     }
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "ai_draft.read",
+      resourceType: "ai_draft",
+      resourceId: draft.id,
+      branchId: draft.branchId,
+      severity: "medium",
+      metadataJson: { draftType: draft.draftType, status: draft.status, externalAiAccess: false }
+    });
 
     return draft;
   }
 
   async review(id: string, dto: ReviewAiDraftDto, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
     const allowed: AiDraftStatus[] = ["approved", "rejected", "doctor_edited", "expired", "voided"];
     if (!allowed.includes(dto.status)) {
       throw new BadRequestException("Review status must be approved, rejected, doctor_edited, expired, or voided.");

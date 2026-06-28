@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateEncounterDto, UpdateEncounterDto } from "./dto";
 
@@ -45,17 +46,29 @@ export class EncountersService {
     }
   }
 
-  list() {
-    return this.prisma.encounter.findMany({
+  async list(user: AuthUser) {
+    const encounters = await this.prisma.encounter.findMany({
+      where: { ...patientBranchScope(user), ...doctorScope(user) },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { patient: true, appointment: true }
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "encounter.list_read",
+      resourceType: "encounter",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: encounters.length }
+    });
+
+    return encounters;
   }
 
-  async get(id: string) {
-    const encounter = await this.prisma.encounter.findUnique({
-      where: { id },
+  async get(id: string, user: AuthUser) {
+    const encounter = await this.prisma.encounter.findFirst({
+      where: { id, ...patientBranchScope(user), ...doctorScope(user) },
       include: { patient: true, appointment: true }
     });
 
@@ -63,11 +76,20 @@ export class EncountersService {
       throw new NotFoundException("Encounter not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "encounter.read",
+      resourceType: "encounter",
+      resourceId: encounter.id,
+      branchId: encounter.patient.branchId,
+      severity: "medium"
+    });
+
     return encounter;
   }
 
   async update(id: string, dto: UpdateEncounterDto, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
 
     if (existing.status === "signed") {
       throw new BadRequestException("Signed encounters cannot be edited. TODO: add correction/version workflow.");
@@ -96,7 +118,7 @@ export class EncountersService {
   }
 
   async sign(id: string, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
 
     if (existing.status === "signed") {
       throw new BadRequestException("Encounter is already signed.");

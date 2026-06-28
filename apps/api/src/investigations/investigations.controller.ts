@@ -13,25 +13,25 @@ export class InvestigationsController {
   constructor(private readonly investigations: InvestigationsService) {}
 
   @Post("orders")
-  @Permissions("investigations.manage")
+  @Permissions("investigation.create")
   createOrder(@Body() dto: CreateInvestigationOrderDto, @CurrentUser() user: AuthUser) {
     return this.investigations.createOrder(dto, user);
   }
 
   @Get("orders")
-  @Permissions("investigations.read")
-  async listOrders() {
-    return { investigationOrders: await this.investigations.listOrders() };
+  @Permissions("investigation.read")
+  async listOrders(@CurrentUser() user: AuthUser) {
+    return { investigationOrders: await this.investigations.listOrders(user) };
   }
 
   @Get("orders/:id")
-  @Permissions("investigations.read")
-  getOrder(@Param("id") id: string) {
-    return this.investigations.getOrder(id);
+  @Permissions("investigation.read")
+  getOrder(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.getOrder(id, user);
   }
 
   @Patch("orders/:id/status")
-  @Permissions("investigations.manage")
+  @Permissions("investigation.update")
   updateOrderStatus(
     @Param("id") id: string,
     @Body() dto: UpdateInvestigationOrderStatusDto,

@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { InvestigationOrderStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateInvestigationOrderDto, InvestigationOrderItemDto } from "./dto";
 
@@ -44,17 +45,18 @@ export class InvestigationsService {
     }
   }
 
-  listOrders() {
+  listOrders(user: AuthUser) {
     return this.prisma.investigationOrder.findMany({
+      where: { ...patientBranchScope(user), ...doctorScope(user) },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { items: true, patient: true, encounter: true }
     });
   }
 
-  async getOrder(id: string) {
-    const order = await this.prisma.investigationOrder.findUnique({
-      where: { id },
+  async getOrder(id: string, user: AuthUser) {
+    const order = await this.prisma.investigationOrder.findFirst({
+      where: { id, ...patientBranchScope(user), ...doctorScope(user) },
       include: { items: true, patient: true, encounter: true }
     });
 
@@ -66,7 +68,7 @@ export class InvestigationsService {
   }
 
   async updateOrderStatus(id: string, status: InvestigationOrderStatus, user: AuthUser) {
-    const existing = await this.getOrder(id);
+    const existing = await this.getOrder(id, user);
     const order = await this.prisma.investigationOrder.update({
       where: { id },
       data: {

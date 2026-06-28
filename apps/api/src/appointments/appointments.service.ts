@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma, type AppointmentStatus } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope, doctorScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateAppointmentDto } from "./dto";
 
@@ -67,17 +68,18 @@ export class AppointmentsService {
     }
   }
 
-  list() {
+  list(user: AuthUser) {
     return this.prisma.appointment.findMany({
+      where: { ...branchScope(user), ...doctorScope(user) },
       orderBy: { startAt: "desc" },
       take: 100,
       include: { patient: true }
     });
   }
 
-  async get(id: string) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id },
+  async get(id: string, user: AuthUser) {
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { id, ...branchScope(user), ...doctorScope(user) },
       include: { patient: true }
     });
 
@@ -89,7 +91,7 @@ export class AppointmentsService {
   }
 
   async updateStatus(id: string, status: AppointmentStatus, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
     const appointment = await this.prisma.appointment.update({
       where: { id },
       data: { status },
@@ -109,7 +111,7 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async calendar(date: string, doctorId?: string) {
+  async calendar(date: string, user: AuthUser, doctorId?: string) {
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new BadRequestException("Calendar date must use YYYY-MM-DD.");
     }
@@ -125,7 +127,9 @@ export class AppointmentsService {
     return this.prisma.appointment.findMany({
       where: {
         startAt: { gte: start, lt: end },
-        ...(doctorId ? { doctorId } : {})
+        ...branchScope(user),
+        ...doctorScope(user),
+        ...(doctorId && !doctorScope(user).doctorId ? { doctorId } : {})
       },
       orderBy: { startAt: "asc" },
       include: { patient: true }

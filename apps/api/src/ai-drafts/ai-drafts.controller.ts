@@ -20,14 +20,14 @@ export class AiDraftsController {
 
   @Get()
   @Permissions("ai_draft.read")
-  async list() {
-    return { aiDrafts: await this.aiDrafts.list() };
+  async list(@CurrentUser() user: AuthUser) {
+    return { aiDrafts: await this.aiDrafts.list(user) };
   }
 
   @Get(":id")
   @Permissions("ai_draft.read")
-  get(@Param("id") id: string) {
-    return this.aiDrafts.get(id);
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.aiDrafts.get(id, user);
   }
 
   @Patch(":id/review")

@@ -20,14 +20,14 @@ export class BillingController {
 
   @Get("invoices")
   @Permissions("billing.read")
-  async listInvoices() {
-    return { invoices: await this.billing.listInvoices() };
+  async listInvoices(@CurrentUser() user: AuthUser) {
+    return { invoices: await this.billing.listInvoices(user) };
   }
 
   @Get("invoices/:id")
   @Permissions("billing.read")
-  getInvoice(@Param("id") id: string) {
-    return this.billing.getInvoice(id);
+  getInvoice(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.billing.getInvoice(id, user);
   }
 
   @Patch("invoices/:id")
@@ -50,8 +50,8 @@ export class BillingController {
 
   @Get("payments")
   @Permissions("billing.read")
-  async listPayments() {
-    return { payments: await this.billing.listPayments() };
+  async listPayments(@CurrentUser() user: AuthUser) {
+    return { payments: await this.billing.listPayments(user) };
   }
 
   @Post("payments/:id/reverse")

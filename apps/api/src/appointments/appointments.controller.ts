@@ -13,31 +13,31 @@ export class AppointmentsController {
   constructor(private readonly appointments: AppointmentsService) {}
 
   @Post()
-  @Permissions("appointments.manage")
+  @Permissions("appointment.manage")
   create(@Body() dto: CreateAppointmentDto, @CurrentUser() user: AuthUser) {
     return this.appointments.create(dto, user);
   }
 
   @Get()
-  @Permissions("appointments.read")
-  async list() {
-    return { appointments: await this.appointments.list() };
+  @Permissions("appointment.read")
+  async list(@CurrentUser() user: AuthUser) {
+    return { appointments: await this.appointments.list(user) };
   }
 
   @Get("calendar")
-  @Permissions("appointments.read")
-  async calendar(@Query("date") date: string, @Query("doctorId") doctorId?: string) {
-    return { appointments: await this.appointments.calendar(date, doctorId) };
+  @Permissions("appointment.read")
+  async calendar(@Query("date") date: string, @CurrentUser() user: AuthUser, @Query("doctorId") doctorId?: string) {
+    return { appointments: await this.appointments.calendar(date, user, doctorId) };
   }
 
   @Get(":id")
-  @Permissions("appointments.read")
-  get(@Param("id") id: string) {
-    return this.appointments.get(id);
+  @Permissions("appointment.read")
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.appointments.get(id, user);
   }
 
   @Patch(":id/status")
-  @Permissions("appointments.manage")
+  @Permissions("appointment.manage")
   updateStatus(
     @Param("id") id: string,
     @Body() dto: UpdateAppointmentStatusDto,

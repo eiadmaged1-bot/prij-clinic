@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreatePrescriptionDto, PrescriptionItemDto, UpdatePrescriptionDto } from "./dto";
 
@@ -43,17 +44,29 @@ export class PrescriptionsService {
     }
   }
 
-  list() {
-    return this.prisma.prescription.findMany({
+  async list(user: AuthUser) {
+    const prescriptions = await this.prisma.prescription.findMany({
+      where: { ...patientBranchScope(user), ...doctorScope(user) },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { items: true, patient: true, encounter: true }
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "prescription.list_read",
+      resourceType: "prescription",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: prescriptions.length }
+    });
+
+    return prescriptions;
   }
 
-  async get(id: string) {
-    const prescription = await this.prisma.prescription.findUnique({
-      where: { id },
+  async get(id: string, user: AuthUser) {
+    const prescription = await this.prisma.prescription.findFirst({
+      where: { id, ...patientBranchScope(user), ...doctorScope(user) },
       include: { items: true, patient: true, encounter: true }
     });
 
@@ -61,11 +74,20 @@ export class PrescriptionsService {
       throw new NotFoundException("Prescription not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "prescription.read",
+      resourceType: "prescription",
+      resourceId: prescription.id,
+      branchId: prescription.patient.branchId,
+      severity: "medium"
+    });
+
     return prescription;
   }
 
   async update(id: string, dto: UpdatePrescriptionDto, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
 
     if (existing.status === "signed") {
       throw new BadRequestException("Signed prescriptions cannot be edited.");
@@ -100,7 +122,7 @@ export class PrescriptionsService {
   }
 
   async sign(id: string, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
 
     if (existing.status === "signed") {
       throw new BadRequestException("Prescription is already signed.");

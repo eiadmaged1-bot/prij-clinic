@@ -13,25 +13,25 @@ export class PatientsController {
   constructor(private readonly patients: PatientsService) {}
 
   @Post()
-  @Permissions("patients.manage")
+  @Permissions("patient.create")
   create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthUser) {
     return this.patients.create(dto, user);
   }
 
   @Get()
-  @Permissions("patients.read")
-  async list() {
-    return { patients: await this.patients.list() };
+  @Permissions("patient.read")
+  async list(@CurrentUser() user: AuthUser) {
+    return { patients: await this.patients.list(user) };
   }
 
   @Get(":id")
-  @Permissions("patients.read")
-  get(@Param("id") id: string) {
-    return this.patients.get(id);
+  @Permissions("patient.read")
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.get(id, user);
   }
 
   @Patch(":id")
-  @Permissions("patients.manage")
+  @Permissions("patient.update")
   update(@Param("id") id: string, @Body() dto: UpdatePatientDto, @CurrentUser() user: AuthUser) {
     return this.patients.update(id, dto, user);
   }

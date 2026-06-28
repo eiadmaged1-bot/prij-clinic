@@ -13,25 +13,25 @@ export class QueueController {
   constructor(private readonly queue: QueueService) {}
 
   @Post("check-in")
-  @Permissions("queue.manage")
+  @Permissions("queue.status_update")
   checkIn(@Body() dto: CheckInDto, @CurrentUser() user: AuthUser) {
     return this.queue.checkIn(dto, user);
   }
 
   @Get("today")
   @Permissions("queue.read")
-  async today() {
-    return { queueTickets: await this.queue.today() };
+  async today(@CurrentUser() user: AuthUser) {
+    return { queueTickets: await this.queue.today(user) };
   }
 
   @Patch(":id/call")
-  @Permissions("queue.manage")
+  @Permissions("queue.status_update")
   call(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.queue.call(id, user);
   }
 
   @Patch(":id/complete")
-  @Permissions("queue.manage")
+  @Permissions("queue.status_update")
   complete(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.queue.complete(id, user);
   }

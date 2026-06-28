@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto } from "./dto";
 
@@ -64,11 +65,11 @@ export class QueueService {
     return ticket;
   }
 
-  today() {
+  today(user: AuthUser) {
     const { start, end } = todayBounds();
 
     return this.prisma.queueTicket.findMany({
-      where: { checkedInAt: { gte: start, lt: end } },
+      where: { checkedInAt: { gte: start, lt: end }, ...branchScope(user) },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
@@ -101,7 +102,7 @@ export class QueueService {
     action: string,
     data: { status: "called" | "completed" | "cancelled"; calledAt?: Date; completedAt?: Date; cancelledAt?: Date }
   ) {
-    const existing = await this.prisma.queueTicket.findUnique({ where: { id } });
+    const existing = await this.prisma.queueTicket.findFirst({ where: { id, ...branchScope(user) } });
 
     if (!existing) {
       throw new NotFoundException("Queue ticket not found.");

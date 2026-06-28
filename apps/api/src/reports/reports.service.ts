@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateReportDto, UpdateReportDto } from "./dto";
 
@@ -49,17 +50,29 @@ export class ReportsService {
     }
   }
 
-  list() {
-    return this.prisma.report.findMany({
+  async list(user: AuthUser) {
+    const reports = await this.prisma.report.findMany({
+      where: branchScope(user),
       orderBy: { createdAt: "desc" },
       take: 100,
       include: reportIncludes
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "report.list_read",
+      resourceType: "report",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: reports.length }
+    });
+
+    return reports;
   }
 
-  async get(id: string) {
-    const report = await this.prisma.report.findUnique({
-      where: { id },
+  async get(id: string, user: AuthUser) {
+    const report = await this.prisma.report.findFirst({
+      where: { id, ...branchScope(user) },
       include: reportIncludes
     });
 
@@ -67,11 +80,21 @@ export class ReportsService {
       throw new NotFoundException("Report not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "report.read",
+      resourceType: "report",
+      resourceId: report.id,
+      branchId: report.branchId,
+      severity: "medium",
+      metadataJson: { category: report.category, status: report.status }
+    });
+
     return report;
   }
 
   async update(id: string, dto: UpdateReportDto, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
 
     if (existing.status === "reviewed" && dto.status !== "voided") {
       throw new BadRequestException("Reviewed reports require a correction workflow before edits.");
@@ -104,7 +127,7 @@ export class ReportsService {
   }
 
   async review(id: string, user: AuthUser) {
-    const existing = await this.get(id);
+    const existing = await this.get(id, user);
     if (existing.status === "voided") {
       throw new BadRequestException("Voided reports cannot be reviewed.");
     }

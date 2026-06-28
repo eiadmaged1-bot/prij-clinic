@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
+import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreatePatientDto, UpdatePatientDto } from "./dto";
 
@@ -51,25 +52,46 @@ export class PatientsService {
     }
   }
 
-  list() {
-    return this.prisma.patient.findMany({
+  async list(user: AuthUser) {
+    const patients = await this.prisma.patient.findMany({
+      where: branchScope(user),
       orderBy: [{ createdAt: "desc" }],
       take: 100
     });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient.list_read",
+      resourceType: "patient",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: patients.length }
+    });
+
+    return patients;
   }
 
-  async get(id: string) {
-    const patient = await this.prisma.patient.findUnique({ where: { id } });
+  async get(id: string, user: AuthUser) {
+    const patient = await this.prisma.patient.findFirst({ where: { id, ...branchScope(user) } });
 
     if (!patient) {
       throw new NotFoundException("Patient not found.");
     }
 
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient.read",
+      resourceType: "patient",
+      resourceId: patient.id,
+      branchId: patient.branchId,
+      severity: "medium"
+    });
+
     return patient;
   }
 
   async update(id: string, dto: UpdatePatientDto, user: AuthUser) {
-    await this.get(id);
+    await this.get(id, user);
     const data: Prisma.PatientUpdateInput = {};
     const changedFields = Object.keys(dto);
 
