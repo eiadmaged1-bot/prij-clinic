@@ -116,6 +116,19 @@ npm run typecheck
 npm run build
 ```
 
+## CI
+
+GitHub Actions runs basic CI on `push` and `pull_request` using Node.js 22:
+
+```text
+npm ci
+npm run prisma:generate
+npm run typecheck
+npm run build
+```
+
+CI does not start Docker, run migrations, or seed the database yet.
+
 ## Smoke Test
 
 Start the API and web app, then run:
