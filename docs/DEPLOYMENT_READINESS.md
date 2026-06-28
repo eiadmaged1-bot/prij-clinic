@@ -14,6 +14,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Lower-role role matrix documentation and representative denial tests.
 - Local backup/restore helper scripts.
 - Environment examples with placeholders only.
+- File upload limits, monitoring placeholders, backup roots, and consent/privacy mode placeholders in all tracked env examples.
 - Runtime environment validation for required variables, disabled AI settings, and production-safe JWT/HTTPS checks.
 - Example API/web Dockerfiles and staging/production compose templates with placeholders only.
 - Staging runbook and manual-only staging deployment placeholder workflow.

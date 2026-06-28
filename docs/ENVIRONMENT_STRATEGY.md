@@ -34,6 +34,9 @@ Required CI safety settings:
 - `NODE_ENV=test`
 - Placeholder `JWT_SECRET`
 - Demo-only seed data
+- File upload limits and allowed MIME types remain placeholders because real uploads are not enabled.
+- `MONITORING_DSN=disabled`
+- `CONSENT_PRIVACY_MODE=demo_foundation`
 
 See `.env.ci.example` and `.github/workflows/security-integration.yml`.
 
@@ -51,6 +54,7 @@ Before staging:
 - Use synthetic/demo data only until legal/privacy review is complete.
 - Configure PHI-safe logging and monitoring.
 - Use private upload storage with authorization and audit controls before any file testing.
+- Keep `FILE_UPLOAD_MAX_BYTES`, `FILE_UPLOAD_ALLOWED_TYPES`, `MONITORING_DSN`, and `CONSENT_PRIVACY_MODE` explicit in the staging environment.
 
 Operational staging steps live in `docs/STAGING_RUNBOOK.md`. The tracked GitHub Actions staging workflow is a manual placeholder only and does not deploy.
 
@@ -82,5 +86,6 @@ The API validates required runtime variables at startup:
 - `AI_FEATURES_ENABLED` must not be `true`.
 - `AI_PROVIDER` must be unset or `disabled`.
 - `APP_ENV=production` requires an HTTPS `APP_URL` and a non-placeholder JWT secret.
+- `APP_ENV=production` rejects `SECRET_MANAGER_*` placeholder strings for `JWT_SECRET` and `DATABASE_URL`.
 
 Validation errors name missing or unsafe variable names only. They must not print secret values.
