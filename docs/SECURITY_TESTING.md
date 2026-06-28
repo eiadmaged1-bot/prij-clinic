@@ -73,9 +73,9 @@ The local demo password follows the README pattern and defaults to `LocalDev123!
 - `scripts/security-integration-test.mjs`: verifies CI-friendly API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI safety boundaries.
 - `scripts/security-route-manifest.mjs`: executable route inventory for implemented protected API routes. Each case includes name, method, path, auth requirement, permission, allowed demo user, denied demo user where applicable, expected statuses, safe demo body, scope expectation, audit expectation, and notes/limitations.
 - `scripts/route-authorization-test.mjs`: checks anonymous denial, owner access, and representative denied-role behavior across implemented routes.
-- `scripts/referenced-scope-test.mjs`: checks seeded branch scope behavior and reports documented V0.1 scope warnings.
-- `scripts/audit-assertion-test.mjs`: checks representative audit events and confirms audit output does not expose bearer tokens.
-- `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only and cannot sign, insert, diagnose, or prescribe.
+- `scripts/referenced-scope-test.mjs`: checks seeded branch scope behavior and verifies out-of-branch referenced-record create attempts fail safely for appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
+- `scripts/audit-assertion-test.mjs`: checks representative audit events for patient, appointment, queue, encounter, prescription, investigation, report, pregnancy, OB ultrasound, invoice, payment, consent, and AI draft actions, and confirms audit output does not expose bearer tokens or credential material.
+- `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only, routes require auth, lower-role review is denied, prompt-like input is not executed, no final-record AI routes exist, no external provider access is recorded, and AI cannot sign, insert, diagnose, or prescribe.
 - `scripts/security-test-expanded.mjs`: runs the expanded Node security test set.
 - `scripts/security-test-all.mjs`: canonical expanded aggregate runner used by `npm run test:security:expanded`.
 - `scripts/e2e-v01-workflow-test.mjs`: demo-only V0.1 workflow test that creates fake patient, consent, appointment, queue, encounter, prescription, investigation, pregnancy, OB ultrasound, report, invoice, payment, and disabled/mock AI draft records.
@@ -99,19 +99,26 @@ npm run build
 npm run start -w apps/api
 npm run test:security:ci
 npm run test:security:expanded
-npm run test:e2e:v01
 ```
 
 It uses PostgreSQL 16 in a GitHub Actions service container and keeps AI disabled with `AI_FEATURES_ENABLED=false` and `AI_PROVIDER=disabled`.
 
 ## Known Limits
 
-- These scripts are deterministic smoke tests, not exhaustive authorization tests.
+- These scripts are deterministic security smoke/integration tests, not production authorization certification.
 - CI integration coverage is API-only and does not run browser checks or the Next.js web app.
 - Some routes are intentionally broad authenticated routes and emit WARN rather than FAIL for missing denied-role cases: `/auth/me`, `/auth/logout`, scoped patient reads, appointment reads, calendar reads, and queue reads.
-- Create/update referenced-record scope validation is still incomplete in the MVP.
+- Referenced-record create/write scope is hardened for implemented MVP routes, but patient-to-doctor assignment and exhaustive future state-transition policy remain incomplete.
 - Consent records are covered as a V0.1 foundation, but production legal consent text, signature capture, override workflow, and full consent enforcement are not implemented.
 - Patient-to-doctor assignment is not modeled yet.
 - Local backup scripts are operational helpers only, not production backup certification.
 - Audit tamper-resistance, retention, and export controls are not production-grade.
 - AI remains disabled/mock-only. No external AI calls are allowed or tested.
+
+## Security Matrices
+
+- Route inventory: `docs/API_ENDPOINTS.md` and `scripts/security-route-manifest.mjs`.
+- RBAC route matrix: `docs/RBAC_MATRIX.md`.
+- Lower-role permission matrix: `docs/ROLE_PERMISSION_MATRIX.md`.
+- Referenced-record scope matrix: `docs/REFERENCED_RECORD_SCOPE_MATRIX.md`.
+- Audit review: `docs/RBAC_AUDIT_REVIEW.md`.

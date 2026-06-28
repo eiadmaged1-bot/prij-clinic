@@ -2,9 +2,9 @@
 
 Date: 2026-06-28
 
-Branch: `release/v0.1-pilot`
+Branch: `security/referenced-record-scope-matrix`
 
-Target tag: `v0.1-pilot-complete`
+Target tag: `referenced-scope-hardening-complete`
 
 ## Status Summary
 
@@ -14,7 +14,7 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 
 - Auth: local staff login, JWT cookie/bearer support, account lockout after repeated failures, logout audit.
 - RBAC: seeded roles and permissions with server-side permission guards on protected controllers.
-- Scope filtering: branch scope for non-owner/non-admin reads where supported; doctor scope for doctor-owned records where relevant.
+- Scope filtering: branch scope for non-owner/non-admin reads and referenced-record writes where supported; doctor scope for doctor-owned records where relevant.
 - Audit: append-only audit table and metadata-only audit hooks for implemented create/update/status/sign/review/payment and sensitive read actions.
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent records: V0.1 structured consent foundation with audit metadata. Production legal text, signature capture, overrides, and full enforcement remain incomplete.
@@ -28,7 +28,8 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
 - Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled/mock safety.
 - CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI draft safety.
-- Expanded route security tests: `npm run test:security:expanded` covers the executable route manifest, representative denied-role checks, branch scope assertions, audit assertions, and AI safety regression.
+- Expanded route security tests: `npm run test:security:expanded` covers the executable route manifest, representative denied-role checks, out-of-branch referenced-record write denial assertions, audit assertions, and AI safety regression.
+- Role permission matrix: `docs/ROLE_PERMISSION_MATRIX.md` documents seeded Owner/Admin/Doctor/Nurse/Receptionist/Accountant behavior and lower-role denial expectations.
 
 ## Safety State
 

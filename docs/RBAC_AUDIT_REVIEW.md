@@ -34,7 +34,7 @@ Findings:
 - Granular permissions are enforced for patients, consent records, appointments, queue status changes, encounters, prescriptions, investigations, reports, billing, dashboard, and AI drafts.
 - Pregnancy and OB ultrasound use the current MVP permission names `pregnancy.read`, `pregnancy.manage`, `ob_ultrasound.read`, and `ob_ultrasound.manage`.
 - Owner/Admin local demo access remains broad so the seeded local owner can run smoke tests and review the foundation.
-- Non-owner/non-admin reads are branch-scoped where the current data model supports it.
+- Non-owner/non-admin reads and referenced-record writes are branch-scoped where the current data model supports it.
 - Doctor-owned records are doctor-scoped for appointments, encounters, prescriptions, and investigation orders.
 
 ## Audit Coverage
@@ -60,7 +60,7 @@ Audit metadata is intentionally limited to IDs, actions, statuses, counts, categ
 
 ## Remaining Gaps
 
-- Create endpoints still need deeper validation that referenced patient, doctor, appointment, encounter, report, pregnancy, and invoice IDs are in the actor's allowed branch/scope.
+- Referenced-record create/update/status/review paths now validate patient, doctor/user, appointment, encounter, investigation order, pregnancy, invoice, payment, and AI draft scope where those IDs are accepted by implemented MVP routes.
 - Consent enforcement is a V0.1 foundation only; production legal text, signature capture, overrides, and full workflow blocking are not implemented.
 - Patient-to-doctor assignment is not modeled yet, so patient reads are branch-scoped but not assigned-doctor scoped.
 - Void/cancel/correction workflows are incomplete for several clinical and billing resources.
@@ -96,9 +96,9 @@ These scripts require a seeded local database and running API/web apps. They are
 Expanded V0.1 route-level checks are also available:
 
 - `npm run test:routes:auth`: route manifest coverage for anonymous denial, owner allow, and representative denied-role checks.
-- `npm run test:scope:records`: seeded branch scope assertions plus documented warnings for referenced-record and doctor-assignment gaps.
-- `npm run test:audit:assertions`: audit event assertions for representative writes/status/review actions and token minimization.
-- `npm run test:ai:regression`: disabled/mock-only AI regression checks, including no sign/insert/diagnose/prescribe routes.
+- `npm run test:scope:records`: seeded branch scope assertions, plus out-of-branch referenced-record write denial checks and the documented doctor-assignment warning.
+- `npm run test:audit:assertions`: audit event assertions for representative writes/status/sign/review/payment/consent actions plus token and credential minimization.
+- `npm run test:ai:regression`: disabled/mock-only AI regression checks, including auth requirements, lower-role denial, prompt-like input handling, no external provider access, and no sign/insert/diagnose/prescribe routes.
 - `npm run test:security:expanded`: aggregate runner for expanded checks.
 
 The expanded tests are V0.1 pilot safety tests, not production certification.

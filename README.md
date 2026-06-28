@@ -227,6 +227,13 @@ npm run test:ai:regression
 npm run test:security:expanded
 ```
 
+Current hardening matrices:
+
+- `docs/RBAC_MATRIX.md`
+- `docs/ROLE_PERMISSION_MATRIX.md`
+- `docs/REFERENCED_RECORD_SCOPE_MATRIX.md`
+- `docs/RBAC_AUDIT_REVIEW.md`
+
 See `docs/SECURITY_TESTING.md`.
 
 ## V0.1 Workflow Test

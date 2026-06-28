@@ -4,7 +4,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Security And Privacy
 
-- Branch, clinic, patient, and doctor scoping are improved for read paths but still incomplete for every write/reference path.
+- Branch, clinic, patient, and doctor scoping now cover representative read paths and referenced-record write paths for implemented MVP modules, but production-grade policy for every future state transition is still incomplete.
 - Sensitive read audit coverage now exists for core sensitive MVP reads, but export/download and future timeline reads still need policy-specific coverage.
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
 - No backup job, encrypted backup storage, or restore-test automation is implemented yet.
@@ -45,11 +45,11 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Testing
 
 - Current verification relies on typecheck, build, Prisma repair/seed, and smoke checks.
-- Focused local security scripts now cover representative RBAC denial paths, branch scope behavior, audit log creation, and AI draft safety. Exhaustive automated tests for every route, billing rollup edge case, and state transition are still needed.
+- Focused local security scripts now cover representative RBAC denial paths, branch scope behavior, referenced-record write denial paths, audit log creation, and AI draft safety. Exhaustive automated tests for every billing rollup edge case and future state transition are still needed.
 - GitHub Actions has a database-backed API security integration workflow, including expanded route-security coverage, but it remains API-focused rather than full browser E2E production testing.
 - CI security integration does not run the Next.js web app, browser smoke checks, or full route-by-route RBAC matrices.
-- Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition or referenced-record write path.
-- Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route.
+- Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, referenced-record write denial paths, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition.
+- Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 
 ## Deployment

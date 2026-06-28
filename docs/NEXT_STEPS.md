@@ -2,18 +2,28 @@
 
 The exact next recommended sprint after V0.1 is:
 
-## Harden Referenced-Record Scope And Lower-Role Permission Matrices
+## Production Security Readiness Hardening
 
 Goals:
 
-- Add full create/update referenced-record branch validation for patient, consent, doctor, appointment, encounter, report, pregnancy, invoice, payment, and AI draft references.
-- Add lower-role allowed-path matrices for every route, not only owner positive checks and representative denied-role checks.
-- Add audit assertions for every sensitive read and every write/status/sign/review/payment/consent action.
 - Add patient-to-doctor assignment or an explicit access model for doctor patient reads.
-- Add production-grade consent workflow design before enforcing real consent rules.
+- Add exhaustive lower-role positive-path matrices for every route and state transition, beyond current representative denied-role coverage.
+- Add production-grade audit retention, tamper-resistance, export review, and alerting controls.
+- Add production consent enforcement design before enforcing real consent rules.
+- Add secure PHI file storage implementation with encryption, access control, malware scanning, audit logging, and expiring links.
+- Add production backup encryption, restore proof, runbooks, monitoring, MFA, and legal/privacy review.
 - Keep AI disabled/mock-only until consent, provider privacy, RBAC, audit, and doctor-review controls are complete.
 
-Do not start production deployment until referenced-record scope, lower-role matrices, consent enforcement design, backup/restore proof, and secure file storage implementation are stronger.
+Completed in the referenced-record hardening sprint:
+
+- Centralized referenced-record scope helpers for patient, user, appointment, queue ticket, encounter, investigation order, pregnancy, invoice, payment, and AI draft references.
+- Branch/doctor-scope checks on safe create/update/status/review paths for appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, and AI drafts.
+- Lower-role matrix documentation for seeded demo roles.
+- Expanded referenced-record write-denial tests.
+- Expanded audit assertions for representative write/status/sign/review/payment/consent actions.
+- Expanded AI regression checks for auth, mock-only behavior, prompt-like input handling, final-record route absence, and no external-provider audit flags.
+
+Do not start production deployment until patient assignment/access policy, consent enforcement, audit retention/tamper-resistance, backup/restore proof, monitoring, MFA, legal review, and secure PHI file storage are stronger.
 
 ## Later Hardening
 

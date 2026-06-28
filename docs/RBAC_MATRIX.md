@@ -28,27 +28,27 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 | `PATCH` | `/patients/:id` | JWT | `patient.update` | Owner, Receptionist | Branch-scoped lookup before update. |
 | `POST` | `/consents` | JWT | `patient.consent_manage` | Owner, Receptionist | V0.1 consent foundation only; branch-scoped through patient lookup and audited. |
 | `GET` | `/consents?patientId=:id` | JWT | `patient.consent_read` | Owner, Doctor, Receptionist | V0.1 consent read; branch-scoped through patient lookup and audited. |
-| `POST` | `/appointments` | JWT | `appointment.manage` | Owner, Receptionist | TODO: fully enforce branch scope for referenced patient/doctor. |
+| `POST` | `/appointments` | JWT | `appointment.manage` | Owner, Receptionist | Referenced patient and optional doctor branch scope are validated. |
 | `GET` | `/appointments` | JWT | `appointment.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped; doctors see own doctorId records. |
 | `GET` | `/appointments/calendar` | JWT | `appointment.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped; doctors see own doctorId records. |
 | `GET` | `/appointments/:id` | JWT | `appointment.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped; doctors see own doctorId records. |
 | `PATCH` | `/appointments/:id/status` | JWT | `appointment.manage` | Owner, Receptionist | Branch-scoped lookup before status update. |
-| `POST` | `/queue/check-in` | JWT | `queue.manage` | Owner, Receptionist | TODO: fully enforce branch scope for patient lookup. |
+| `POST` | `/queue/check-in` | JWT | `queue.manage` | Owner, Receptionist | Referenced patient and optional appointment scope are validated. |
 | `GET` | `/queue/today` | JWT | `queue.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped for non-owner/non-admin users. |
 | `PATCH` | `/queue/:id/call` | JWT | `queue.status_update` | Owner, Nurse, Receptionist | Branch-scoped for non-owner/non-admin users. |
 | `PATCH` | `/queue/:id/complete` | JWT | `queue.status_update` | Owner, Nurse, Receptionist | Branch-scoped for non-owner/non-admin users. |
 | `PATCH` | `/queue/:id/cancel` | JWT | `queue.status_update` | Owner, Nurse, Receptionist | Branch-scoped for non-owner/non-admin users. |
-| `POST` | `/encounters` | JWT | `encounter.create` | Owner, Doctor | TODO: fully enforce branch scope for referenced patient. |
+| `POST` | `/encounters` | JWT | `encounter.create` | Owner, Doctor | Referenced patient and optional appointment scope are validated. |
 | `GET` | `/encounters` | JWT | `encounter.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. Sensitive read audit. |
 | `GET` | `/encounters/:id` | JWT | `encounter.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. Sensitive read audit. |
 | `PATCH` | `/encounters/:id` | JWT | `encounter.update_own` | Owner, Doctor | Branch/doctor scoped lookup before update. |
 | `PATCH` | `/encounters/:id/sign` | JWT | `encounter.sign` | Owner, Doctor | Branch/doctor scoped lookup before sign. |
-| `POST` | `/prescriptions` | JWT | `prescription.create` | Owner, Doctor | TODO: fully enforce branch scope for referenced patient. |
+| `POST` | `/prescriptions` | JWT | `prescription.create` | Owner, Doctor | Referenced patient and optional encounter scope are validated. |
 | `GET` | `/prescriptions` | JWT | `prescription.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. Sensitive read audit. |
 | `GET` | `/prescriptions/:id` | JWT | `prescription.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. Sensitive read audit. |
 | `PATCH` | `/prescriptions/:id` | JWT | `prescription.update` | Owner, Doctor | Branch/doctor scoped lookup before update. |
 | `PATCH` | `/prescriptions/:id/sign` | JWT | `prescription.approve` | Owner, Doctor | Existing route name is `sign`; permission reflects doctor approval. |
-| `POST` | `/investigations/orders` | JWT | `investigation.create` | Owner, Doctor | TODO: fully enforce branch scope for referenced patient. |
+| `POST` | `/investigations/orders` | JWT | `investigation.create` | Owner, Doctor | Referenced patient and optional encounter scope are validated. |
 | `GET` | `/investigations/orders` | JWT | `investigation.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. |
 | `GET` | `/investigations/orders/:id` | JWT | `investigation.read` | Owner, Doctor, Nurse limited | Branch-scoped; doctors see own doctorId records. |
 | `PATCH` | `/investigations/orders/:id/status` | JWT | `investigation.update` | Owner, Doctor, Nurse limited | Branch/doctor scoped lookup before status update. |
@@ -57,7 +57,7 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 | `GET` | `/reports/:id` | JWT | `report.read` | Owner, Doctor, Nurse limited | Branch-scoped for non-owner/non-admin users. Sensitive read audit. |
 | `PATCH` | `/reports/:id` | JWT | `report.update` | Owner, Doctor | Branch-scoped lookup before update. |
 | `PATCH` | `/reports/:id/review` | JWT | `report.review` | Owner, Doctor | Branch-scoped lookup before review. |
-| `POST` | `/pregnancies` | JWT | `pregnancy.manage` | Owner, Doctor | TODO: fully enforce branch scope for referenced patient. |
+| `POST` | `/pregnancies` | JWT | `pregnancy.manage` | Owner, Doctor | Referenced patient scope is validated. |
 | `GET` | `/pregnancies` | JWT | `pregnancy.read` | Owner, Doctor, Nurse limited | Branch-scoped. Sensitive read audit. |
 | `GET` | `/pregnancies/:id` | JWT | `pregnancy.read` | Owner, Doctor, Nurse limited | Branch-scoped. Sensitive read audit. |
 | `PATCH` | `/pregnancies/:id` | JWT | `pregnancy.manage` | Owner, Doctor | Branch-scoped lookup before update. |
@@ -66,7 +66,7 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 | `GET` | `/ob-ultrasounds/:id` | JWT | `ob_ultrasound.read` | Owner, Doctor, Nurse limited | Branch-scoped. Sensitive read audit. |
 | `PATCH` | `/ob-ultrasounds/:id` | JWT | `ob_ultrasound.manage` | Owner, Doctor | Branch-scoped lookup before update. |
 | `PATCH` | `/ob-ultrasounds/:id/review` | JWT | `ob_ultrasound.manage` | Owner, Doctor | Branch-scoped lookup before review. |
-| `POST` | `/billing/invoices` | JWT | `billing.manage` | Owner, Accountant | TODO: fully enforce branch scope for referenced patient. |
+| `POST` | `/billing/invoices` | JWT | `billing.manage` | Owner, Accountant | Referenced patient scope is validated. |
 | `GET` | `/billing/invoices` | JWT | `billing.read` | Owner, Accountant | Branch-scoped. Sensitive read audit. |
 | `GET` | `/billing/invoices/:id` | JWT | `billing.read` | Owner, Accountant | Branch-scoped. Sensitive read audit. |
 | `PATCH` | `/billing/invoices/:id` | JWT | `billing.manage` | Owner, Accountant | Branch-scoped lookup before update. |
@@ -89,7 +89,7 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 
 ## Current Scope Limitations
 
-- Create endpoints still need fuller branch validation for all referenced records.
+- Create/update/status/review endpoints now use shared referenced-record scope checks where implemented.
 - Patient-to-doctor assignment is not modeled yet, so patient reads are branch-scoped but not doctor-assignment scoped.
 - Receptionist and nurse read scopes are branch-based only.
 - AI routes are disabled/mock-only; future AI approval/insertion workflows are intentionally not implemented.

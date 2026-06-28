@@ -14,8 +14,8 @@ Login -> dashboard -> patient registration -> consent foundation -> appointment 
 
 - Auth, demo login, JWT bearer/cookie support.
 - Server-side RBAC and route-level security tests.
-- Branch-scoped demo records where implemented.
-- Audit logging for representative sensitive reads and writes.
+- Branch-scoped demo records and referenced-record write scope checks where implemented.
+- Audit logging and expanded audit assertions for representative sensitive reads, writes, status changes, sign/review actions, payments, consents, and AI draft review.
 - Patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent record foundation.
 - Disabled/mock-only AI draft placeholders.
@@ -50,7 +50,8 @@ npm run test:e2e:v01
 
 ## Remaining Limits
 
-- Referenced-record create/update scope checks are still incomplete.
+- Patient-to-doctor assignment is not modeled; doctor patient reads remain branch-scoped outside doctor-owned records.
+- Lower-role positive-path coverage is representative and not exhaustive for every state transition.
 - Consent enforcement is partial and not production legal workflow.
 - File storage is documented but not implemented for real PHI files.
 - Backup scripts are local helpers, not production backup infrastructure.

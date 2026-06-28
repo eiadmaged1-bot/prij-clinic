@@ -10,6 +10,8 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Typecheck and build in CI.
 - PostgreSQL-backed security integration workflow.
 - Demo-only workflow and security tests.
+- Referenced-record write scope hardening for implemented MVP routes.
+- Lower-role role matrix documentation and representative denial tests.
 - Local backup/restore helper scripts.
 - Environment examples with placeholders only.
 
@@ -29,8 +31,10 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 
 ## Required Before Deployment
 
-- Harden referenced-record scope checks for all create/update paths.
-- Complete lower-role permission matrix tests.
+- Add patient-to-doctor assignment or an explicit clinical access model.
+- Complete exhaustive lower-role positive-path and state-transition tests.
+- Add production audit retention, tamper-resistance, review, and alerting controls.
+- Add production consent enforcement after legal/privacy review.
 - Add production session and secret management.
 - Add secure file storage design implementation.
 - Define backup retention, encryption, access, and restore ownership.
