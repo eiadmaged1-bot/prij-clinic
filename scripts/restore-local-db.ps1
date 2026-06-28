@@ -20,6 +20,28 @@ if ($ConfirmRestore -ne "LOCAL_RESTORE") {
 }
 
 $resolvedBackup = Resolve-Path -LiteralPath $BackupFile -ErrorAction Stop
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$backupRoot = Resolve-Path -LiteralPath (Join-Path $repoRoot "backups") -ErrorAction SilentlyContinue
+$resolvedBackupText = $resolvedBackup.Path
+
+if ($resolvedBackupText -notmatch 'prij-clinic-local-\d{8}-\d{6}\.sql$') {
+  throw "Backup file name is not an expected local backup name: prij-clinic-local-YYYYMMDD-HHMMSS.sql"
+}
+
+if ($backupRoot -and -not $resolvedBackupText.StartsWith($backupRoot.Path, [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw "Refusing to restore a backup outside the local backups directory."
+}
+
+$checksumPath = "$resolvedBackupText.sha256"
+if (Test-Path -LiteralPath $checksumPath) {
+  $expectedHash = (Get-Content -LiteralPath $checksumPath -Raw).Trim()
+  $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $resolvedBackupText).Hash
+  if ($expectedHash -ne $actualHash) {
+    throw "Backup checksum verification failed."
+  }
+} else {
+  Write-Host "WARNING: No checksum sidecar found. Continuing only because explicit LOCAL_RESTORE confirmation was provided."
+}
 
 Write-Host "WARNING: This will apply SQL from the backup file to the local development database."
 Write-Host "It does not delete Docker volumes and must never be used against production data."

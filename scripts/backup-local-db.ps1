@@ -12,6 +12,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $backupDir = Join-Path $repoRoot $OutputDirectory
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $backupPath = Join-Path $backupDir "prij-clinic-local-$timestamp.sql"
+$checksumPath = "$backupPath.sha256"
 
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
 
@@ -40,7 +41,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $dump | Set-Content -LiteralPath $backupPath -Encoding utf8
+$hash = Get-FileHash -Algorithm SHA256 -LiteralPath $backupPath
+$hash.Hash | Set-Content -LiteralPath $checksumPath -Encoding ascii
 
 Write-Host "Local database backup created:"
 Write-Host $backupPath
+Write-Host "SHA256 checksum:"
+Write-Host $hash.Hash
+Write-Host "Checksum file:"
+Write-Host $checksumPath
 Write-Host "Backups are ignored by git. Do not commit backup files."
