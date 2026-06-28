@@ -37,6 +37,14 @@ type PortalSideItem = {
   badge?: string;
 };
 
+type PatientSearchResult = {
+  id: string;
+  medicalRecordNumber?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string | null;
+};
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const navGroups: NavGroup[] = [
@@ -178,7 +186,7 @@ export function MvpPage({
       setStatus("Loaded");
     } catch (loadError) {
       setRows([]);
-      setStatus("API unavailable");
+      setStatus("Service unavailable");
       setError(loadError instanceof Error ? loadError.message : "Unable to reach local API.");
     }
   }
@@ -308,6 +316,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [hasToken, setHasToken] = useState(false);
   const [canOpenAdmin, setCanOpenAdmin] = useState(false);
+  const [patientQuery, setPatientQuery] = useState("");
+  const [patientResults, setPatientResults] = useState<PatientSearchResult[]>([]);
+  const [searchStatus, setSearchStatus] = useState("");
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -335,6 +346,45 @@ export function AppShell({ children }: { children: ReactNode }) {
       })
       .catch(() => setCanOpenAdmin(false));
   }, []);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const query = patientQuery.trim().toLowerCase();
+    if (!token || query.length < 2) {
+      setPatientResults([]);
+      setSearchStatus("");
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      setSearchStatus("Searching");
+      fetch(`${apiUrl}/patients`, {
+        credentials: "include",
+        headers: { authorization: `Bearer ${token}` }
+      })
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data: { patients?: PatientSearchResult[] } | null) => {
+          const patients = data?.patients ?? [];
+          const matches = patients
+            .filter((patient) =>
+              [patient.medicalRecordNumber, patient.firstName, patient.lastName, patient.phone]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(query)
+            )
+            .slice(0, 6);
+          setPatientResults(matches);
+          setSearchStatus(matches.length ? "Ready" : "No matches");
+        })
+        .catch(() => {
+          setPatientResults([]);
+          setSearchStatus("Unavailable");
+        });
+    }, 250);
+
+    return () => window.clearTimeout(handle);
+  }, [patientQuery]);
 
   async function logout() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -403,7 +453,30 @@ export function AppShell({ children }: { children: ReactNode }) {
           {theme === "medicolize-portal" ? (
             <label className="portal-search" aria-label="Search patient files">
               <span>Search</span>
-              <input placeholder="Find patient file or appointment" />
+              <input
+                onChange={(event) => setPatientQuery(event.target.value)}
+                placeholder="Find patient by name, MRN, or phone"
+                value={patientQuery}
+              />
+              {patientQuery.trim().length >= 2 ? (
+                <div className="search-results" role="listbox">
+                  {patientResults.map((patient) => (
+                    <button
+                      key={patient.id}
+                      onClick={() => {
+                        setPatientQuery("");
+                        setPatientResults([]);
+                        router.push(`/patients/${patient.id}`);
+                      }}
+                      type="button"
+                    >
+                      <strong>{patient.firstName} {patient.lastName}</strong>
+                      <span>{patient.medicalRecordNumber}</span>
+                    </button>
+                  ))}
+                  {patientResults.length === 0 ? <p>{searchStatus === "Searching" ? "Searching patient files" : "No patient file found"}</p> : null}
+                </div>
+              ) : null}
             </label>
           ) : null}
           <div className="topbar-actions">

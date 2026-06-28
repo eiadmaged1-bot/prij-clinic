@@ -124,6 +124,14 @@ Recommended demo flow:
 Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file -> patient file tabs -> appointment -> queue -> encounter -> prescription -> investigation -> pregnancy/ultrasound/report -> billing -> consent -> AI draft placeholder
 ```
 
+Operational patient-file flow:
+
+```text
+Login -> Patients -> Open patient file -> New Appointment -> Check In -> Start Visit -> Sign Visit -> Add Prescription -> Order Lab/Radiology -> Create Report -> Create Pregnancy Episode -> Record Antenatal Visit -> Create Ultrasound Draft -> Create Invoice -> Record Payment -> Add Consent -> Timeline
+```
+
+The patient file carries the current `patientId` automatically for supported quick actions, so staff do not repeatedly select the same patient during the demo workflow.
+
 Admin demo flow:
 
 ```text
@@ -222,6 +230,8 @@ npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
 npm run test:theme:ui
+npm run test:operational:mvp
+npm run test:visual:qa
 npm run test:e2e:v01
 ```
 
@@ -313,6 +323,17 @@ npm run test:e2e:v01
 ```
 
 This creates demo-only records for the V0.1 workflow and verifies representative audit metadata. It does not use real patient data, real clinical histories, real payment data, real report files, or external AI calls.
+
+## Operational MVP Checks
+
+With the API and web running locally:
+
+```powershell
+npm run test:operational:mvp
+npm run test:visual:qa
+```
+
+The operational test verifies patient-centered appointment, queue, visit note, prescription, investigation, report, OB/GYN recording, invoice, payment, consent, AI placeholder, audit, service-price, and override-safety behavior. The visual QA sweep checks page availability, theme switching, hidden admin access, patient search presence, patient quick actions, timeline presence, and obvious developer-text leakage.
 
 ## Local Backup
 

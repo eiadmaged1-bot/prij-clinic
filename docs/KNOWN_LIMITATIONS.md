@@ -33,6 +33,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 - Invoice/payment flows are foundational only.
 - Service catalog and price editing now exist for local demo configuration, but invoices do not yet automatically pull service prices into invoice items.
+- Patient file quick actions are operational for the demo, but they are concise MVP forms and do not yet include full scheduling conflict checks, full amendment/correction UX, printable prescriptions, or full service-catalog invoice selection for every billing role.
+- Patient timeline is currently aggregated in the web app from available patient-linked records. A backend patient timeline endpoint remains a future hardening item.
 - Refunds, invoice void reason workflow, discount approval workflow, and payment gateway integrations are not implemented.
 - Payment records must remain metadata-only and must not store card numbers, CVV, payment tokens, or gateway secrets.
 
@@ -64,6 +66,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Theme UI tests cover required theme registry entries, local admin demo credentials on the login page, Clinic Portal and Incision Portal dashboard labels, non-admin denial for appearance settings, admin theme changes, and major page availability.
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
+- `npm run test:visual:qa` is a lightweight page/theme sweep. It does not replace human screenshot review, accessibility testing, or device-lab QA.
 
 ## Deployment
 

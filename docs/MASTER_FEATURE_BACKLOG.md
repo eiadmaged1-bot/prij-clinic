@@ -7,6 +7,9 @@ This backlog is planning only. V0.1 remains a local/private demo and must not be
 ## MVP
 
 - Patient files, registration, search, and patient-centered workspace.
+- Patient-centered quick actions for appointment, queue, visit note, prescription, investigation, report, pregnancy, antenatal note, ultrasound draft, invoice, payment, consent, note, attachment placeholder, and disabled/mock AI placeholder.
+- Patient timeline assembled from available patient-linked records.
+- Global patient search by name, MRN, and phone.
 - Appointments, calendar, queue, and check-in.
 - Encounters, prescriptions, investigations, reports, pregnancy, and ultrasound records.
 - Billing invoices and payment records without a real payment gateway.
@@ -16,9 +19,9 @@ This backlog is planning only. V0.1 remains a local/private demo and must not be
 
 ## V1
 
-- Patient-file-native actions for booking, queue check-in, encounter creation, orders, reports, billing, and consent.
+- Fuller patient-file workflow screens for booking, queue check-in, encounter creation, orders, reports, billing, and consent.
 - Role-specific dashboards for owner, receptionist, doctor, nurse, and accountant.
-- Patient timeline with filtered clinical, billing, consent, and operational events.
+- Backend patient timeline endpoint with filtered clinical, billing, consent, and operational events.
 - Service catalog integration into invoice line creation.
 - Consent workflow improvements with policy-specific consent types and review states.
 - Browser-level QA and visual regression screenshots for all themes.

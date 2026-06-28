@@ -2,9 +2,9 @@
 
 Date: 2026-06-28
 
-Branch: `ui/medicolize-style-owner-portal`
+Branch: `leap/mvp-operational-clinic-core`
 
-Target tag: `v0.1-medicolize-style-owner-portal`
+Target tag: `v0.1-operational-clinic-core`
 
 ## Status Summary
 
@@ -34,6 +34,8 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI draft safety.
 - Expanded route security tests: `npm run test:security:expanded` covers the executable route manifest, representative denied-role checks, out-of-branch referenced-record write denial assertions, audit assertions, and AI safety regression.
 - Role permission matrix: `docs/ROLE_PERMISSION_MATRIX.md` documents seeded Owner/Admin/Doctor/Nurse/Receptionist/Accountant behavior and lower-role denial expectations.
+- Operational MVP leap: `/patients/:id` now includes patient-centered quick actions, a patient timeline, and role-aware workflow actions for reception, doctor, reporting, OB/GYN, finance, consent, notes, attachment placeholders, and disabled/mock AI placeholders.
+- Visual QA sweep: `npm run test:visual:qa` checks route availability, theme switching, hidden admin access, patient search presence, patient actions, timeline presence, and obvious developer-text leakage.
 
 ## Safety State
 
@@ -70,6 +72,8 @@ npm run test:security:ci
 npm run test:security:expanded
 npm run test:admin:control
 npm run test:theme:ui
+npm run test:operational:mvp
+npm run test:visual:qa
 npm run test:e2e:v01
 ```
 
@@ -93,6 +97,7 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 - Incision Portal theme still provides a white app-launcher dashboard with My Apps and All Apps tabs and large workflow tiles.
 - Forms and page copy instruct users not to enter real patient, payment, report, credential, or secret data.
 - AI draft UI remains disabled/mock-only and doctor-review-only.
+- Patient file quick actions carry the current patient automatically and return users to the patient workflow context through refreshable patient-scoped tabs and timeline.
 - OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.
 
 ## Commit Safety

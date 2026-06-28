@@ -1,16 +1,16 @@
 # Next Steps
 
-The exact next recommended sprint after the V0.1 Medicolize-inspired owner portal release is:
+The exact next recommended sprint after the operational clinic MVP leap is:
 
-## Patient-Centered Workflow Actions
+## MVP Release Candidate Polish + OB/GYN Depth Expansion
 
 Goals:
 
-- Add patient-file-native actions for appointment booking, queue check-in, encounter creation, prescription placeholder, investigation order, report metadata, billing, consent, and AI placeholder.
-- Remove the need to copy internal patient references between module forms.
-- Keep all actions server-authorized and audit logged.
-- Keep all demo data fake/local only.
-- Keep AI disabled/mock-only and doctor-review-only.
+- Polish the patient-file action forms into fuller workflow screens where needed.
+- Add deeper OB/GYN recording flows without diagnostic automation.
+- Add a backend patient timeline endpoint with permission-filtered aggregation.
+- Add service catalog selection to billing forms for permitted billing roles.
+- Add browser screenshot QA across all themes and mobile/desktop breakpoints.
 
 ## Admin Hardening Follow-Up
 

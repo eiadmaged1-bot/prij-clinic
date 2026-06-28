@@ -18,6 +18,10 @@ The latest owner-portal UI sprint also supports:
 
 Login as local admin -> Appearance -> choose Original Premium, Clinic Portal, Incision Portal, Minimal Clean, or Compact Operations -> open owner portal dashboard -> create/open patient file.
 
+The operational MVP leap also supports:
+
+Login -> patient file -> patient-centered quick actions -> appointment -> queue check-in -> visit note -> prescription -> investigation -> report -> pregnancy/antenatal/ultrasound recording -> invoice/payment -> consent -> timeline/audit review.
+
 ## Included Modules
 
 - Auth, demo login, JWT bearer/cookie support.
@@ -28,6 +32,9 @@ Login as local admin -> Appearance -> choose Original Premium, Clinic Portal, In
 - Admin Control Center with local demo admin login, service catalog/pricing, users/roles overview, safety settings, audit viewer, and reason-required override endpoints.
 - Admin Appearance Settings with protected/audited theme changes.
 - Clinic Portal theme with left sidebar, top patient search, owner dashboard cards, and patient-centered workspace tabs.
+- Patient-centered quick actions from the patient file for reception, doctor, reporting, OB/GYN, finance, consent, notes, attachment placeholders, and disabled/mock AI placeholders.
+- Patient timeline aggregation in the patient file from available patient-linked records.
+- Global patient search behavior in the Clinic Portal topbar.
 - Consent record foundation.
 - Disabled/mock-only AI draft placeholders.
 - Local backup/restore helper scripts.
@@ -60,6 +67,8 @@ npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
 npm run test:admin:control
+npm run test:operational:mvp
+npm run test:visual:qa
 npm run test:e2e:v01
 ```
 
@@ -72,4 +81,6 @@ npm run test:e2e:v01
 - Backup scripts are local helpers, not production backup infrastructure.
 - Audit logs are application append-only but not tamper-resistant.
 - Service catalog prices are editable from Admin, but invoice line items are not yet automatically generated from the catalog.
+- Patient timeline aggregation is currently web-side and should become a backend endpoint before production.
+- Patient quick-action forms are MVP demo forms, not full production workflow screens.
 - MFA, monitoring, legal review, production deployment, and operational runbooks remain future work.
