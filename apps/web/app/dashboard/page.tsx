@@ -99,7 +99,7 @@ export default function DashboardPage() {
     <main className="dashboard">
       <header className="topbar">
         <div>
-          <p className="eyebrow">MVP demo foundation</p>
+          <p className="eyebrow">V0.1 staging demo</p>
           <h1>Prij Clinic Dashboard</h1>
         </div>
         <nav className="nav-links" aria-label="MVP navigation">
@@ -108,6 +108,9 @@ export default function DashboardPage() {
           </a>
           <a className="button secondary" href="/patients/new">
             New Patient
+          </a>
+          <a className="button secondary" href="/consents">
+            Consents
           </a>
           <a className="button secondary" href="/appointments">
             Appointments
@@ -149,7 +152,28 @@ export default function DashboardPage() {
       </header>
 
       <section className="notice">
-        Local demo only. AI is disabled/mock-only and cannot diagnose, prescribe, sign, or update final clinical records.
+        Controlled staging/demo only. Use synthetic data only. AI is disabled/mock-only and cannot diagnose, prescribe,
+        sign, update final clinical records, bypass RBAC, or bypass doctor approval.
+      </section>
+
+      <section className="workflow-band" aria-label="Demo workflow">
+        {[
+          ["/patients/new", "Register patient"],
+          ["/consents", "Record consent"],
+          ["/appointments", "Schedule"],
+          ["/queue", "Check in"],
+          ["/encounters", "Encounter"],
+          ["/prescriptions", "Prescription"],
+          ["/investigations", "Order"],
+          ["/reports", "Report"],
+          ["/ultrasound", "OB ultrasound"],
+          ["/billing", "Billing"],
+          ["/ai-drafts", "AI placeholder"]
+        ].map(([href, label]) => (
+          <a key={href} href={href}>
+            {label}
+          </a>
+        ))}
       </section>
 
       <section className="panel">

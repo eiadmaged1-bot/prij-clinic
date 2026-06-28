@@ -15,6 +15,7 @@ type MvpPageProps = {
   title: string;
   eyebrow: string;
   items: string[];
+  nextSteps?: Array<[string, string]>;
   endpoint?: string;
   collectionKey?: string;
   createEndpoint?: string;
@@ -28,6 +29,7 @@ const links = [
   ["/dashboard", "Dashboard"],
   ["/patients", "Patients"],
   ["/patients/new", "New Patient"],
+  ["/consents", "Consents"],
   ["/appointments", "Appointments"],
   ["/calendar", "Calendar"],
   ["/queue", "Queue"],
@@ -54,15 +56,32 @@ const displayKeys = [
   "totalAmount",
   "method",
   "amount",
+  "consentType",
+  "capturedAt",
   "draftType",
   "modelProvider",
   "modelName"
+];
+
+const defaultWorkflowLinks: Array<[string, string]> = [
+  ["/patients/new", "Register patient"],
+  ["/consents", "Record consent"],
+  ["/appointments", "Schedule appointment"],
+  ["/queue", "Check in queue"],
+  ["/encounters", "Open encounter"],
+  ["/prescriptions", "Prescription review"],
+  ["/investigations", "Investigation order"],
+  ["/reports", "Report review"],
+  ["/ultrasound", "OB ultrasound"],
+  ["/billing", "Invoice/payment"],
+  ["/ai-drafts", "AI draft placeholder"]
 ];
 
 export function MvpPage({
   title,
   eyebrow,
   items,
+  nextSteps = defaultWorkflowLinks,
   endpoint,
   collectionKey,
   createEndpoint,
@@ -168,15 +187,23 @@ export function MvpPage({
       </header>
 
       <section className="notice">
-        V0.1 local/private pilot only. Use demo data only. Do not enter real patient, payment, report, credential, or secret data.
+        V0.1 staging/demo only. Use synthetic demo data only. AI is disabled/mock-only and cannot diagnose,
+        prescribe, sign, or update final clinical records.
       </section>
 
-      <section className="workflow-band" aria-label="End-to-end workflow">
-        {["Login", "Patient", "Appointment", "Queue", "Encounter", "Rx", "Orders", "OB/Report", "Billing", "Audit", "AI draft"].map(
-          (step) => (
-            <span key={step}>{step}</span>
-          )
-        )}
+      <section className="safety-grid" aria-label="Demo safety boundaries">
+        <span>No real patient data</span>
+        <span>No real PHI files</span>
+        <span>No real payment gateway</span>
+        <span>No external AI provider</span>
+      </section>
+
+      <section className="workflow-band" aria-label="End-to-end workflow links">
+        {nextSteps.map(([href, label]) => (
+          <a key={href} href={href}>
+            {label}
+          </a>
+        ))}
       </section>
 
       <section className="content-grid">
@@ -201,6 +228,11 @@ export function MvpPage({
           <p className="muted">Status: {status}</p>
           {error ? <p className="form-error">{error}</p> : null}
           {endpoint ? <DataList rows={rows} /> : <p className="empty-state">No API list is configured for this page.</p>}
+          {status === "Login required" ? (
+            <p className="empty-state">
+              Sign in with a seeded demo staff account before loading protected local API data.
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -230,7 +262,8 @@ export function MvpPage({
       ) : null}
 
       <section className="empty-state">
-        Production workflows, file uploads, real payment gateways, diagnostic automation, and external AI calls are intentionally not enabled.
+        Staging/demo QA should follow the workflow links above and the role checklist in docs. Production workflows,
+        file uploads, real payment gateways, diagnostic automation, and external AI calls are intentionally not enabled.
       </section>
     </main>
   );
@@ -238,7 +271,11 @@ export function MvpPage({
 
 function DataList({ rows }: { rows: Record<string, unknown>[] }) {
   if (rows.length === 0) {
-    return <p className="empty-state">No demo rows returned yet.</p>;
+    return (
+      <p className="empty-state">
+        No demo rows returned yet. Use the safe demo form where available, or run the seed command to restore demo fixtures.
+      </p>
+    );
   }
 
   return (

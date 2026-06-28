@@ -94,6 +94,10 @@ button {
   box-shadow: 0 16px 40px rgb(31 41 51 / 8%);
 }
 
+.wide-shell {
+  width: min(100%, 58rem);
+}
+
 .shell {
   display: grid;
   gap: 1.5rem;
@@ -235,14 +239,39 @@ button {
   gap: 0.5rem;
 }
 
-.workflow-band span {
+.workflow-band span,
+.workflow-band a {
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   background: #ffffff;
   color: var(--muted);
   font-size: 0.85rem;
   font-weight: 700;
   padding: 0.45rem 0.7rem;
+}
+
+.workflow-band a:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+}
+
+.safety-grid,
+.demo-account-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.safety-grid span,
+.demo-account-list span {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--foreground);
+  font-size: 0.86rem;
+  font-weight: 700;
+  min-height: 2.4rem;
+  padding: 0.6rem 0.7rem;
 }
 
 .section-heading {
@@ -333,7 +362,9 @@ dd {
 
   .content-grid,
   .form-grid,
-  .data-row dl {
+  .data-row dl,
+  .safety-grid,
+  .demo-account-list {
     grid-template-columns: 1fr;
   }
 

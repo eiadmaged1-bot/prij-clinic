@@ -49,9 +49,17 @@ export default function LoginPage() {
     <main className="page">
       <form className="panel login-panel" onSubmit={submit}>
         <div>
-          <p className="eyebrow">Staff access</p>
+          <p className="eyebrow">V0.1 staging demo access</p>
           <h1>Login</h1>
-          <p className="muted">Local demo owner access only. Do not use real clinic credentials.</p>
+          <p className="muted">
+            Use seeded demo staff accounts only. Do not use real clinic credentials, patient details, or secrets.
+          </p>
+        </div>
+
+        <div className="demo-account-list" aria-label="Seeded demo roles">
+          {["Owner", "Admin", "Doctor", "Nurse", "Receptionist", "Accountant"].map((role) => (
+            <span key={role}>{role}</span>
+          ))}
         </div>
 
         <label>
