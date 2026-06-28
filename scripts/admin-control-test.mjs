@@ -24,10 +24,10 @@ async function main() {
   const currentAppearance = await apiJson("GET", "/admin/settings/appearance", admin);
   if (!currentAppearance.defaultTheme) throw new Error("appearance settings did not return a default theme.");
   const updatedAppearance = await apiJson("PATCH", "/admin/settings/appearance", admin, {
-    defaultTheme: "incision-portal",
+    defaultTheme: "medicolize-portal",
     allowUserThemeOverride: true
   });
-  if (updatedAppearance.defaultTheme !== "incision-portal") throw new Error("appearance theme update did not persist.");
+  if (updatedAppearance.defaultTheme !== "medicolize-portal") throw new Error("appearance theme update did not persist.");
   await apiJson("PATCH", "/admin/settings/appearance", admin, {
     defaultTheme: currentAppearance.defaultTheme,
     allowUserThemeOverride: currentAppearance.allowUserThemeOverride !== false

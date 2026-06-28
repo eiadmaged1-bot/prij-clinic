@@ -74,6 +74,31 @@
   --radius-lg: 20px;
 }
 
+:root[data-theme="medicolize-portal"] {
+  --background: #f5f7fb;
+  --background-soft: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f7f8fc;
+  --surface-strong: #f0fbfa;
+  --border: #e4e8f0;
+  --border-strong: #c6d0dd;
+  --foreground: #111827;
+  --muted: #6b7280;
+  --muted-strong: #364152;
+  --navy: #23143f;
+  --navy-soft: #321d56;
+  --accent: #14b8a6;
+  --accent-dark: #6d46c5;
+  --accent-soft: #edf7f5;
+  --cyan: #22c7b8;
+  --shadow-sm: 0 8px 22px rgb(17 24 39 / 7%);
+  --shadow-md: 0 18px 44px rgb(17 24 39 / 12%);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --density-space: 0.85rem;
+}
+
 :root[data-theme="compact-operations"] {
   --background: #eef3f5;
   --background-soft: #f8fbfc;
@@ -913,6 +938,198 @@ td span {
   background: #ffffff;
 }
 
+.theme-medicolize-portal.app-shell {
+  grid-template-columns: 16.5rem minmax(0, 1fr);
+  background: var(--background);
+}
+
+.theme-medicolize-portal .sidebar {
+  gap: 1rem;
+  border-right: 0;
+  background: linear-gradient(180deg, #23143f 0%, #341c58 100%);
+  box-shadow: 8px 0 28px rgb(35 20 63 / 12%);
+  padding: 1rem;
+}
+
+.theme-medicolize-portal .brand {
+  border-bottom: 1px solid rgb(255 255 255 / 12%);
+  padding-bottom: 1rem;
+}
+
+.theme-medicolize-portal .brand-mark {
+  border-radius: 14px;
+  background: #ffffff;
+  color: #6d46c5;
+}
+
+.portal-side-nav {
+  gap: 0.35rem;
+}
+
+.theme-medicolize-portal .nav-item {
+  justify-content: flex-start;
+  gap: 0.7rem;
+  min-height: 2.65rem;
+  border-radius: 12px;
+  color: #efe8ff;
+  padding: 0.55rem 0.65rem;
+}
+
+.theme-medicolize-portal .nav-item:hover,
+.theme-medicolize-portal .nav-item.active {
+  border-color: rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 13%);
+}
+
+.theme-medicolize-portal .nav-item.disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.nav-icon {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 13%);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.side-badge {
+  margin-left: auto;
+  border-radius: 999px;
+  background: rgb(20 184 166 / 18%);
+  color: #b9fff5;
+  font-size: 0.68rem;
+  font-weight: 850;
+  padding: 0.18rem 0.45rem;
+}
+
+.theme-medicolize-portal .app-main {
+  padding: 1rem 1.25rem 1.5rem;
+}
+
+.theme-medicolize-portal .topbar {
+  min-height: 4.2rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  padding: 0.8rem 1rem;
+}
+
+.portal-search {
+  display: grid;
+  width: min(100%, 28rem);
+  gap: 0.25rem;
+}
+
+.portal-search span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.owner-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 1rem;
+}
+
+.owner-hero > div,
+.owner-search-card,
+.owner-module-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+}
+
+.owner-hero h1 {
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.owner-search-card {
+  display: grid;
+  gap: 0.8rem;
+  align-content: center;
+}
+
+.owner-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.owner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.owner-tab {
+  min-height: 2.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-weight: 850;
+  padding: 0.45rem 0.85rem;
+}
+
+.owner-tab.active {
+  border-color: rgb(109 70 197 / 22%);
+  background: #f3efff;
+  color: #5b32b2;
+}
+
+.owner-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.85rem;
+}
+
+.owner-module-card {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 9.5rem;
+  align-content: start;
+  border-top: 4px solid var(--accent);
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.owner-module-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.theme-medicolize-portal .patient-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #ffffff;
+  box-shadow: var(--shadow-sm);
+  padding: 0.55rem;
+}
+
+.theme-medicolize-portal .tab-button {
+  border-radius: 10px;
+}
+
 .theme-incision-portal .sidebar {
   position: static;
   flex-direction: row;
@@ -1141,6 +1358,19 @@ td span {
 .theme-preview-incision-portal .theme-preview-window span {
   border: 2px solid #18a8a4;
   border-radius: 1rem;
+}
+
+.theme-preview-medicolize-portal .theme-preview-window {
+  grid-template-columns: 0.65fr 1fr 1fr;
+  background: #f5f7fb;
+}
+
+.theme-preview-medicolize-portal .theme-preview-window span:first-child {
+  background: #23143f;
+}
+
+.theme-preview-medicolize-portal .theme-preview-window span:not(:first-child) {
+  border-top: 3px solid #14b8a6;
 }
 
 .theme-preview-dark-navy .theme-preview-window {

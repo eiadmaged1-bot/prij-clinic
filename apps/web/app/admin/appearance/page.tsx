@@ -172,7 +172,7 @@ export default function AppearancePage() {
             <h2>Default appearance</h2>
             <p className="muted">Saved changes affect the shared local demo setting and write an audit entry.</p>
           </div>
-          <span className="badge accent">{themes.find((appTheme) => appTheme.id === settings.defaultTheme)?.name ?? "Clinic Premium"}</span>
+          <span className="badge accent">{themes.find((appTheme) => appTheme.id === settings.defaultTheme)?.name ?? "Original Premium"}</span>
         </div>
         <label className="toggle-row">
           <input

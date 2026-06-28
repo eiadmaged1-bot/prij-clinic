@@ -2,9 +2,9 @@
 
 Date: 2026-06-28
 
-Branch: `ui/theme-switcher-admin-portal`
+Branch: `ui/medicolize-style-owner-portal`
 
-Target tag: `v0.1-theme-switcher-admin-ui`
+Target tag: `v0.1-medicolize-style-owner-portal`
 
 ## Status Summary
 
@@ -21,7 +21,7 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
 - V0.1 focused clinic UI: login displays demo credentials, patients has a clear patient-file list, new patient creates a real demo file through `POST /patients`, and `/patients/:id` is the focused patient workspace.
 - V0.1 Admin Control Center: local admin login `eyad` / `eyad`, users/roles overview, service catalog and price editing, system safety status, audit viewer, and reason-required override endpoints.
-- Theme system: Clinic Premium, Incision Portal, Minimal Clean, Compact Operations, and Dark Navy appearances.
+- Theme system: Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations appearances.
 - Admin Appearance Settings: admin-only appearance page and protected settings API for local demo default theme changes with audit entries.
 - V0.1 module pages: home, login, dashboard, admin, patients, new patient, patient file, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
 - V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
@@ -89,7 +89,8 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 - Admin can edit local demo service prices and deactivate/reactivate services from the UI.
 - Admin override endpoints require a reason and confirmation, create audit entries, and do not provide hard-delete routes for audit logs or signed clinical records.
 - Admin and Appearance navigation is hidden from non-admin users, and backend admin settings routes reject non-admin access.
-- Incision Portal theme provides a white app-launcher dashboard with My Apps and All Apps tabs and large workflow tiles.
+- Clinic Portal theme provides an owner-focused left-sidebar dashboard with patient search, compact badges, owner cards, and hidden owner tools.
+- Incision Portal theme still provides a white app-launcher dashboard with My Apps and All Apps tabs and large workflow tiles.
 - Forms and page copy instruct users not to enter real patient, payment, report, credential, or secret data.
 - AI draft UI remains disabled/mock-only and doctor-review-only.
 - OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.

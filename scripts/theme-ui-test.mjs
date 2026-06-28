@@ -8,7 +8,7 @@ async function main() {
   await waitForApi();
 
   const themeSource = await readFile("apps/web/app/theme.tsx", "utf8");
-  for (const theme of ["clinic-premium", "incision-portal", "minimal-clean", "compact-operations", "dark-navy"]) {
+  for (const theme of ["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]) {
     if (!themeSource.includes(`"${theme}"`)) throw new Error(`Theme ${theme} is missing from registry.`);
   }
   record.pass("theme registry includes required appearances");
@@ -20,10 +20,10 @@ async function main() {
   record.pass("login page renders local demo admin credentials");
 
   const dashboardSource = await readFile("apps/web/app/dashboard/page.tsx", "utf8");
-  for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "AI Draft Review"]) {
+  for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "AI Draft Review", "Owner portal", "Clinic Command"]) {
     if (!dashboardSource.includes(label)) throw new Error(`Portal dashboard label missing: ${label}`);
   }
-  record.pass("Incision portal dashboard cards are implemented");
+  record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
   const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
   const admin = adminLogin.token;
@@ -36,10 +36,10 @@ async function main() {
   const appearance = await apiJson("GET", "/admin/settings/appearance", admin);
   if (!appearance.defaultTheme) throw new Error("Appearance settings did not return a default theme.");
   const changed = await apiJson("PATCH", "/admin/settings/appearance", admin, {
-    defaultTheme: "incision-portal",
+    defaultTheme: "medicolize-portal",
     allowUserThemeOverride: true
   });
-  if (changed.defaultTheme !== "incision-portal") throw new Error("Theme change did not persist.");
+  if (changed.defaultTheme !== "medicolize-portal") throw new Error("Theme change did not persist.");
   await apiJson("PATCH", "/admin/settings/appearance", admin, {
     defaultTheme: appearance.defaultTheme,
     allowUserThemeOverride: appearance.allowUserThemeOverride !== false

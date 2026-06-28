@@ -142,12 +142,12 @@ export default function AdminPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">Admin</p>
-            <h1>Control Center</h1>
+            <p className="eyebrow">Owner tools</p>
+            <h1>Owner Control Center</h1>
           </div>
           <span className="badge warning">Local demo only</span>
         </div>
-        <p className="muted">Manage demo settings, staff visibility, service prices, and safe override workflows without editing code.</p>
+        <p className="muted">Manage demo settings, staff visibility, service prices, themes, safety controls, and audit review from the app.</p>
       </section>
 
       <SafetyAlert />
@@ -169,12 +169,28 @@ export default function AdminPage() {
         <div className="section-heading">
           <div>
             <h2>Appearance</h2>
-            <p className="muted">Switch between the premium workspace, portal cards, minimal view, compact operations, and dark mode.</p>
+            <p className="muted">Switch between Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations.</p>
           </div>
           <Link className="button compact" href="/admin/appearance">
             Open Appearance
           </Link>
         </div>
+      </section>
+
+      <section className="module-grid">
+        {[
+          ["Clinic Profile", "Clinic name, branch identity, and contact details are planned for a guarded settings flow."],
+          ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
+          ["Billing Settings", "Service catalog prices are active now. Taxes, discounts, and gateways remain future work."],
+          ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
+          ["Feature Flags", "AI stays disabled/mock-only. Future flags must remain audited and owner-controlled."],
+          ["Safety Settings", "Audit logs cannot be deleted and signed records cannot be silently hard-deleted."]
+        ].map(([label, description]) => (
+          <article className="module-card" key={label}>
+            <strong>{label}</strong>
+            <span className="muted">{description}</span>
+          </article>
+        ))}
       </section>
 
       <section className="dashboard-grid">

@@ -10,6 +10,8 @@ const defaultAppearanceSettings = {
   allowUserThemeOverride: true
 };
 
+const allowedAppearanceThemes = new Set(["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
+
 @Injectable()
 export class RbacService {
   constructor(
@@ -295,5 +297,9 @@ function money(value: number) {
 function isAppearanceSettings(value: Prisma.JsonValue | null | undefined): value is typeof defaultAppearanceSettings {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.defaultTheme === "string" && typeof candidate.allowUserThemeOverride === "boolean";
+  return (
+    typeof candidate.defaultTheme === "string" &&
+    allowedAppearanceThemes.has(candidate.defaultTheme) &&
+    typeof candidate.allowUserThemeOverride === "boolean"
+  );
 }

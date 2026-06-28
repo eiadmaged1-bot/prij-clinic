@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
@@ -38,7 +39,7 @@ type DashboardSummary = {
 
 const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "AI review"];
 
-const quickActions = [
+const quickActions: Array<[string, string, string]> = [
   ["/patients/new", "New Patient", "Start demo registration with fake identifiers only."],
   ["/appointments", "New Appointment", "Schedule a safe local visit."],
   ["/queue", "Queue Check-in", "Move a demo patient into today's queue."],
@@ -47,7 +48,7 @@ const quickActions = [
   ["/ai-drafts", "AI Draft Placeholder", "Review disabled/mock-only AI draft boundaries."]
 ];
 
-const portalModules = [
+const portalModules: Array<[string, string, string, string, string]> = [
   ["/patients", "Operations", "Patients", "PT", "teal"],
   ["/appointments", "Operations", "Appointments", "AP", "teal"],
   ["/queue", "Operations", "Queue", "QU", "teal"],
@@ -149,13 +150,21 @@ export default function DashboardPage() {
         </section>
 
         <section className="portal-grid" aria-label="Clinic app launcher">
-          {[...portalModules, ...(canOpenAdmin ? [["/admin", "Admin", "Control Center", "AD", "gray"], ["/admin/appearance", "Admin", "Appearance", "TH", "gray"]] : [])].map(
+          {[
+            ...portalModules,
+            ...(canOpenAdmin
+              ? ([
+                  ["/admin", "Admin", "Control Center", "AD", "gray"],
+                  ["/admin/appearance", "Admin", "Appearance", "TH", "gray"]
+                ] as Array<[string, string, string, string, string]>)
+              : [])
+          ].map(
             ([href, category, label, icon, tone]) => (
-              <a className={`portal-card portal-${tone}`} href={href} key={href}>
+              <Link className={`portal-card portal-${tone}`} href={href} key={href}>
                 <span className="portal-icon">{icon}</span>
                 <span className="portal-category">{category}</span>
                 <strong>{label}</strong>
-              </a>
+              </Link>
             )
           )}
         </section>
@@ -164,6 +173,57 @@ export default function DashboardPage() {
           <span>No real patient data</span>
           <span>AI disabled</span>
           <span>Local demo only</span>
+        </section>
+      </AppShell>
+    );
+  }
+
+  if (theme === "medicolize-portal") {
+    return (
+      <AppShell>
+        <section className="owner-hero">
+          <div>
+            <p className="eyebrow">Owner portal</p>
+            <h1>Clinic Command</h1>
+            <p className="muted">Search, open patient files, review today&apos;s flow, and manage owner tools from one clean workspace.</p>
+          </div>
+          <div className="owner-search-card">
+            <label>
+              Patient search
+              <input placeholder="Name, MRN, phone, or appointment" />
+            </label>
+            <Link className="button" href="/patients/new">New Patient File</Link>
+          </div>
+        </section>
+
+        <section className="owner-stats">
+          <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
+          <Metric label="Waiting queue" value={summary?.operational.waitingQueue ?? "-"} />
+          <Metric label="Pending reports" value={summary?.operational.pendingReports ?? "-"} />
+          <Metric label="Open invoices" value={summary?.billing.openInvoices ?? "-"} />
+        </section>
+
+        <section className="owner-tabs" aria-label="Clinic module tabs">
+          {["Today", "Patients", "Clinical", "Finance", "Safety"].map((tab) => (
+            <button className={tab === "Today" ? "owner-tab active" : "owner-tab"} key={tab} type="button">{tab}</button>
+          ))}
+        </section>
+
+        <section className="owner-card-grid">
+          {([
+            ["/patients", "Patient Files", "Open patient records and create new files.", "Patients"],
+            ["/calendar", "Calendar", "Review schedule and daily bookings.", "Ops"],
+            ["/queue", "Queue", "Manage waiting patients and check-in.", "Ops"],
+            ["/investigations", "Lab Orders", "Track demo investigation orders.", "Clinical"],
+            ["/billing", "Finance", "Open invoices and payment records.", "Finance"],
+            ["/admin", "Owner Control", "Settings, prices, users, themes, and audit review.", "Owner"]
+          ] as Array<[string, string, string, string]>).filter(([href]) => href !== "/admin" || canOpenAdmin).map(([href, title, description, badge]) => (
+            <Link className="owner-module-card" href={href} key={href}>
+              <span className="badge accent">{badge}</span>
+              <strong>{title}</strong>
+              <p className="muted">{description}</p>
+            </Link>
+          ))}
         </section>
       </AppShell>
     );

@@ -95,11 +95,11 @@ Admin users can change the local demo appearance from `Admin -> Appearance`.
 
 Available themes:
 
-- Clinic Premium: sidebar-based clinical workspace.
+- Original Premium: sidebar-based clinical workspace.
+- Clinic Portal: owner-focused portal with dark sidebar, search top bar, compact badges, and patient-centered navigation.
 - Incision Portal: white app-launcher card layout with My Apps and All Apps tabs.
 - Minimal Clean: quieter white/slate interface.
 - Compact Operations: denser layout for reception and admin work.
-- Dark Navy: dark professional mode.
 
 Use `Use here` to change only the current browser. Use `Set as default` to save the local demo default and create an audit entry. Non-admin staff do not see the Admin or Appearance navigation, and the server rejects non-admin appearance settings requests.
 

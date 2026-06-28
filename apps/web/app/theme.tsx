@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
-export type AppThemeId = "clinic-premium" | "incision-portal" | "minimal-clean" | "compact-operations" | "dark-navy";
+export type AppThemeId = "clinic-premium" | "medicolize-portal" | "incision-portal" | "minimal-clean" | "compact-operations";
 
 export type AppTheme = {
   id: AppThemeId;
@@ -14,9 +14,15 @@ export type AppTheme = {
 export const themes: AppTheme[] = [
   {
     id: "clinic-premium",
-    name: "Clinic Premium",
+    name: "Original Premium",
     description: "Modern clinical workspace with sidebar navigation and calm teal accents.",
     tone: "Premium clinic"
+  },
+  {
+    id: "medicolize-portal",
+    name: "Clinic Portal",
+    description: "Owner-focused operating portal with a dark sidebar, search top bar, compact badges, and patient-centered navigation.",
+    tone: "Owner portal"
   },
   {
     id: "incision-portal",
@@ -35,12 +41,6 @@ export const themes: AppTheme[] = [
     name: "Compact Operations",
     description: "Denser spacing for reception, queue, billing, and admin work.",
     tone: "Dense operations"
-  },
-  {
-    id: "dark-navy",
-    name: "Dark Navy",
-    description: "Professional dark mode for low-light review sessions.",
-    tone: "Dark mode"
   }
 ];
 

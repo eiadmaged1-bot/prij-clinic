@@ -1,6 +1,6 @@
 # Next Steps
 
-The exact next recommended sprint after the V0.1 theme-switcher admin UI release is:
+The exact next recommended sprint after the V0.1 Medicolize-inspired owner portal release is:
 
 ## Patient-Centered Workflow Actions
 

@@ -137,7 +137,7 @@ Theme and appearance controls:
 1. Sign in as `eyad` / `eyad`.
 2. Open `Admin`.
 3. Open `Appearance`.
-4. Choose Clinic Premium, Incision Portal, Minimal Clean, Compact Operations, or Dark Navy.
+4. Choose Original Premium, Clinic Portal, Incision Portal, Minimal Clean, or Compact Operations.
 5. Use `Use here` for this browser, or `Set as default` to save the local demo default.
 
 The Admin and Appearance navigation is hidden for non-admin staff. The server also protects the appearance settings API with admin permissions, and setting changes are audited.

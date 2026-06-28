@@ -31,6 +31,12 @@ type NavGroup = {
   links: Array<[string, string]>;
 };
 
+type PortalSideItem = {
+  label: string;
+  href?: string;
+  badge?: string;
+};
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const navGroups: NavGroup[] = [
@@ -81,6 +87,21 @@ const adminNavGroup: NavGroup = {
     ["/admin/appearance", "Appearance"]
   ]
 };
+
+const portalSideItems: PortalSideItem[] = [
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Calendar", href: "/calendar", badge: "Today" },
+  { label: "Patients", href: "/patients" },
+  { label: "Lab Orders", href: "/investigations" },
+  { label: "Finance", href: "/billing" },
+  { label: "Inventory", badge: "Later" },
+  { label: "Staff", badge: "Later" },
+  { label: "Settings", href: "/admin" },
+  { label: "Logs", href: "/admin" },
+  { label: "Messaging", badge: "Later" },
+  { label: "Analytics", badge: "Later" },
+  { label: "Support", badge: "Later" }
+];
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -338,17 +359,39 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>V0.1 controlled demo</span>
         </Link>
 
-        {[...navGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
-          <nav className="nav-group" key={group.title} aria-label={group.title}>
-            <div className="nav-group-title">{group.title}</div>
-            {group.links.map(([href, label]) => (
-              <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
-                <span>{label}</span>
-                <span className="nav-dot" />
-              </Link>
-            ))}
+        {theme === "medicolize-portal" ? (
+          <nav className="nav-group portal-side-nav" aria-label="Owner portal navigation">
+            {portalSideItems
+              .filter((item) => item.href !== "/admin" || canOpenAdmin)
+              .map((item) =>
+                item.href ? (
+                  <Link className={`nav-item ${isActive(pathname, item.href) ? "active" : ""}`} href={item.href} key={item.label}>
+                    <span className="nav-icon">{item.label.slice(0, 2).toUpperCase()}</span>
+                    <span>{item.label}</span>
+                    {item.badge ? <span className="side-badge">{item.badge}</span> : <span className="nav-dot" />}
+                  </Link>
+                ) : (
+                  <span className="nav-item disabled" key={item.label}>
+                    <span className="nav-icon">{item.label.slice(0, 2).toUpperCase()}</span>
+                    <span>{item.label}</span>
+                    <span className="side-badge">{item.badge}</span>
+                  </span>
+                )
+              )}
           </nav>
-        ))}
+        ) : (
+          [...navGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
+            <nav className="nav-group" key={group.title} aria-label={group.title}>
+              <div className="nav-group-title">{group.title}</div>
+              {group.links.map(([href, label]) => (
+                <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
+                  <span>{label}</span>
+                  <span className="nav-dot" />
+                </Link>
+              ))}
+            </nav>
+          ))
+        )}
       </aside>
 
       <div className="app-main">
@@ -357,6 +400,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="eyebrow">Local pilot workspace</p>
             <p className="muted">No real patient data, no real AI calls, no real payment gateway.</p>
           </div>
+          {theme === "medicolize-portal" ? (
+            <label className="portal-search" aria-label="Search patient files">
+              <span>Search</span>
+              <input placeholder="Find patient file or appointment" />
+            </label>
+          ) : null}
           <div className="topbar-actions">
             {hasToken ? (
               <button className="button secondary compact" onClick={logout} type="button">

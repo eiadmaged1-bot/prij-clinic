@@ -64,7 +64,7 @@ export class AdminOverrideDto {
 
 export class AppearanceSettingsDto {
   @IsString()
-  @IsIn(["clinic-premium", "incision-portal", "minimal-clean", "compact-operations", "dark-navy"])
+  @IsIn(["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"])
   defaultTheme!: string;
 
   @IsBoolean()

@@ -32,7 +32,13 @@ type RelatedConfig = {
 };
 
 const tabs: RelatedConfig[] = [
-  { key: "overview", label: "Overview", actionLabel: "Edit in future", actionHref: "/patients", empty: "Patient demographics and safety context." },
+  { key: "overview", label: "Summary", actionLabel: "Edit in future", actionHref: "/patients", empty: "Patient demographics and safety context." },
+  { key: "medical", label: "Medical", actionLabel: "Add medical note later", actionHref: "/patients", empty: "Medical summary will stay patient-specific here." },
+  { key: "clinical", label: "Clinical", actionLabel: "Create visit note", actionHref: "/encounters", empty: "Clinical notes for this patient will appear here." },
+  { key: "chart", label: "Chart", actionLabel: "Open chart later", actionHref: "/patients", empty: "Patient chart view is planned for a later sprint." },
+  { key: "files", label: "Files", actionLabel: "Plan secure storage", actionHref: "/reports", empty: "Secure file storage is not enabled for real patient files." },
+  { key: "gallery", label: "Attachments", actionLabel: "Plan attachments", actionHref: "/reports", empty: "Attachments remain disabled for real PHI files in V0.1." },
+  { key: "operations", label: "Operations", actionLabel: "Book appointment", actionHref: "/appointments", empty: "Operational actions for this patient stay focused here." },
   { key: "appointments", label: "Appointments", endpoint: "/appointments", collectionKey: "appointments", actionLabel: "Create appointment", actionHref: "/appointments", empty: "No appointments found for this patient in the current branch list." },
   { key: "queue", label: "Queue", endpoint: "/queue/today", collectionKey: "queueTickets", actionLabel: "Check in queue", actionHref: "/queue", empty: "No active queue ticket found for this patient today." },
   { key: "encounters", label: "Encounters", endpoint: "/encounters", collectionKey: "encounters", actionLabel: "Create encounter", actionHref: "/encounters", empty: "No encounters found for this patient." },
@@ -41,8 +47,10 @@ const tabs: RelatedConfig[] = [
   { key: "reports", label: "Reports", endpoint: "/reports", collectionKey: "reports", actionLabel: "Create report", actionHref: "/reports", empty: "No reports found for this patient." },
   { key: "ob", label: "Pregnancy/Ultrasound", endpoint: "/pregnancies", collectionKey: "pregnancies", actionLabel: "Open OB workflow", actionHref: "/pregnancies", empty: "No pregnancy record found for this patient." },
   { key: "billing", label: "Billing", endpoint: "/billing/invoices", collectionKey: "invoices", actionLabel: "Create invoice", actionHref: "/billing", empty: "No invoices found for this patient." },
+  { key: "payments", label: "Payments", endpoint: "/billing/payments", collectionKey: "payments", actionLabel: "Record payment", actionHref: "/billing", empty: "No payments found for this patient." },
   { key: "consents", label: "Consents", endpoint: "/consents", collectionKey: "consentRecords", actionLabel: "Record consent", actionHref: "/consents", empty: "No consent record found for this patient." },
-  { key: "ai", label: "AI Drafts", endpoint: "/ai-drafts", collectionKey: "aiDrafts", actionLabel: "Create AI placeholder", actionHref: "/ai-drafts", empty: "No disabled/mock AI draft found for this patient." }
+  { key: "ai", label: "AI Drafts", endpoint: "/ai-drafts", collectionKey: "aiDrafts", actionLabel: "Create AI placeholder", actionHref: "/ai-drafts", empty: "No disabled/mock AI draft found for this patient." },
+  { key: "timeline", label: "Timeline", actionLabel: "Timeline planned", actionHref: "/patients", empty: "A full patient timeline is planned; current tabs remain patient-focused." }
 ];
 const defaultTab = tabs[0]!;
 

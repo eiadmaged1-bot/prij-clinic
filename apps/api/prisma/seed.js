@@ -469,7 +469,12 @@ async function main() {
 
   await prisma.systemSetting.upsert({
     where: { key: "appearance" },
-    update: {},
+    update: {
+      valueJson: {
+        defaultTheme: "clinic-premium",
+        allowUserThemeOverride: true
+      }
+    },
     create: {
       key: "appearance",
       valueJson: {
