@@ -22,7 +22,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Clinical Workflow
 
 - Patient profile timeline is not complete.
-- Consent records and consent enforcement are not implemented.
+- Consent records now exist as a V0.1 foundation, but production legal text, signature capture, consent override workflow, and full server-side consent enforcement are not implemented.
 - Signed encounter correction/versioning is not implemented.
 - Prescription approval is represented by a sign action in the MVP foundation and needs final doctor-approval semantics before production use.
 - Investigation result review and report review are foundational only.

@@ -20,6 +20,8 @@ const routeDefinitions = [
   { method: "GET", path: "/patients", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient lists." },
   { method: "GET", path: "/patients/:patientId", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient detail." },
   { method: "PATCH", path: "/patients/:patientId", category: "patients", requiredPermission: "patient.update", allowedAs: "owner", denyAs: "nurse", fixtureBody: "patientPatch" },
+  { method: "POST", path: "/consents", category: "consents", requiredPermission: "patient.consent_manage", allowedAs: "owner", denyAs: "nurse", fixtureBody: "consent", notes: "V0.1 consent foundation only; no production legal text or signatures." },
+  { method: "GET", path: "/consents?patientId=:patientId", category: "consents", requiredPermission: "patient.consent_read", allowedAs: "owner", denyAs: "accountant", notes: "Consent enforcement remains partial in V0.1." },
   { method: "POST", path: "/appointments", category: "appointments", requiredPermission: "appointment.manage", allowedAs: "owner", denyAs: "nurse", fixtureBody: "appointment", notes: "Referenced-record create scope remains a known limitation." },
   { method: "GET", path: "/appointments", category: "appointments", requiredPermission: "appointment.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped appointment lists." },
   { method: "GET", path: "/appointments/calendar?date=:today", category: "appointments", requiredPermission: "appointment.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped calendar data." },
@@ -182,6 +184,12 @@ export function bodyFor(kind, ids) {
       notes: "Demo route authorization test only."
     },
     patientPatch: { notes: "Demo route authorization patch only." },
+    consent: {
+      patientId: ids.patientId,
+      consentType: "treatment",
+      status: "granted",
+      notes: "Demo consent foundation test only. Not production legal text."
+    },
     appointment: {
       patientId: ids.patientId,
       startAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
@@ -317,7 +325,7 @@ function scopeExpectationFor(category) {
   if (["appointments", "encounters", "prescriptions", "investigations"].includes(category)) {
     return "Branch-scoped where modeled; doctor-owned reads are doctor-scoped where doctorId exists.";
   }
-  if (["patients", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard"].includes(category)) {
+  if (["patients", "consents", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard"].includes(category)) {
     return "Branch-scoped for non-owner/non-admin users where branchId or patient branch is available.";
   }
   return "Scope expectation documented in controller/service tests.";

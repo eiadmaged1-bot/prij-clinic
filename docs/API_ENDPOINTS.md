@@ -28,6 +28,8 @@ All endpoints below require JWT authentication. Permission names match the imple
 | `GET` | `/patients` | `patient.read` |
 | `GET` | `/patients/:id` | `patient.read` |
 | `PATCH` | `/patients/:id` | `patient.update` |
+| `POST` | `/consents` | `patient.consent_manage` |
+| `GET` | `/consents?patientId=:id` | `patient.consent_read` |
 | `POST` | `/appointments` | `appointment.manage` |
 | `GET` | `/appointments` | `appointment.read` |
 | `GET` | `/appointments/calendar` | `appointment.read` |
@@ -86,6 +88,7 @@ All endpoints below require JWT authentication. Permission names match the imple
 - The actual implemented AI draft API route is `/ai-drafts`.
 - AI draft responses must remain marked with `modelProvider: disabled_mock` and `modelName: no_external_ai`.
 - AI draft review updates only the AI draft artifact and audit metadata; it does not update final clinical records.
+- Consent endpoints are V0.1 foundation only. They store structured demo-safe consent records and audit metadata, but production legal text, signature capture, and full workflow enforcement are not implemented.
 
 ## Automated Route Coverage
 

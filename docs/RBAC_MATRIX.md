@@ -26,6 +26,8 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 | `GET` | `/patients` | JWT | `patient.read` | Owner, Doctor, Nurse, Receptionist, Accountant limited | Branch-scoped for non-owner/non-admin users. Sensitive read audit. |
 | `GET` | `/patients/:id` | JWT | `patient.read` | Owner, Doctor, Nurse, Receptionist, Accountant limited | Branch-scoped for non-owner/non-admin users. Sensitive read audit. |
 | `PATCH` | `/patients/:id` | JWT | `patient.update` | Owner, Receptionist | Branch-scoped lookup before update. |
+| `POST` | `/consents` | JWT | `patient.consent_manage` | Owner, Receptionist | V0.1 consent foundation only; branch-scoped through patient lookup and audited. |
+| `GET` | `/consents?patientId=:id` | JWT | `patient.consent_read` | Owner, Doctor, Receptionist | V0.1 consent read; branch-scoped through patient lookup and audited. |
 | `POST` | `/appointments` | JWT | `appointment.manage` | Owner, Receptionist | TODO: fully enforce branch scope for referenced patient/doctor. |
 | `GET` | `/appointments` | JWT | `appointment.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped; doctors see own doctorId records. |
 | `GET` | `/appointments/calendar` | JWT | `appointment.read` | Owner, Doctor, Nurse, Receptionist | Branch-scoped; doctors see own doctorId records. |
@@ -129,6 +131,7 @@ Representative denied-role mappings used by the expanded runner:
 | Admin users/roles/permissions | Owner | Accountant | Permission-scoped admin read | Admin read audit |
 | Audit | Owner | Receptionist | Permission-scoped audit read | Audit read audit |
 | Patients | Owner | Nurse for create/update; read routes warn | Branch-scoped reads for non-owner users | Patient create/read/update audit |
+| Consent records | Owner | Nurse or Accountant depending on action | Branch-scoped through patient lookup | Consent create/read audit; enforcement remains partial |
 | Appointments | Owner | Nurse for manage routes; read routes warn | Branch and doctor scope where modeled | Create/status audit |
 | Queue | Owner | Doctor for manage/status routes; read route warns | Branch-scoped queue records | Check-in/status audit |
 | Encounters | Owner | Receptionist | Branch and doctor scope where modeled | Create/read/update/sign audit |

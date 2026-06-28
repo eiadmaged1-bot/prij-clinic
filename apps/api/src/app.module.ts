@@ -4,6 +4,7 @@ import { AuditModule } from "./audit/audit.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
+import { ConsentsModule } from "./consents/consents.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { HealthModule } from "./health/health.module";
@@ -26,6 +27,7 @@ import { UsersModule } from "./users/users.module";
     RbacModule,
     AuditModule,
     PatientsModule,
+    ConsentsModule,
     AppointmentsModule,
     QueueModule,
     EncountersModule,

@@ -16,6 +16,15 @@ async function main() {
   });
   record.pass("create demo patient");
 
+  const consent = await apiJson("POST", "/consents", owner, {
+    patientId: patient.id,
+    consentType: "treatment",
+    status: "granted",
+    notes: "Demo consent foundation only. Not production legal text."
+  });
+  await apiJson("GET", `/consents?patientId=${patient.id}`, owner);
+  record.pass("create and read demo consent foundation record");
+
   const appointment = await apiJson("POST", "/appointments", owner, {
     patientId: patient.id,
     startAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
@@ -140,6 +149,7 @@ async function main() {
   const audit = (await apiJson("GET", "/audit?limit=200", owner)).auditLogs ?? [];
   const requiredAudit = [
     ["patient.created", patient.id],
+    ["consent.created", consent.id],
     ["appointment.created", appointment.id],
     ["queue.checked_in", ticket.id],
     ["encounter.created", encounter.id],
