@@ -2,9 +2,9 @@
 
 Date: 2026-06-28
 
-Branch: `ui/patient-file-and-focused-workflow`
+Branch: `release/v0.1-admin-control-real-demo`
 
-Target tag: `v0.1-focused-patient-workflow`
+Target tag: `v0.1-admin-demo-ready`
 
 ## Status Summary
 
@@ -20,7 +20,8 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - Consent records: V0.1 structured consent foundation with audit metadata. Production legal text, signature capture, overrides, and full enforcement remain incomplete.
 - AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
 - V0.1 focused clinic UI: login displays demo credentials, patients has a clear patient-file list, new patient creates a real demo file through `POST /patients`, and `/patients/:id` is the focused patient workspace.
-- V0.1 module pages: home, login, dashboard, patients, new patient, patient file, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
+- V0.1 Admin Control Center: local admin login `eyad` / `eyad`, users/roles overview, service catalog and price editing, system safety status, audit viewer, and reason-required override endpoints.
+- V0.1 module pages: home, login, dashboard, admin, patients, new patient, patient file, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
 - V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
 - Backup/restore foundation: local-only backup script, guarded restore script, and backup/restore docs.
 - Deployment readiness docs: environment strategy, CI env example, deployment requirements, and production blockers documented.
@@ -65,6 +66,7 @@ API-only security integration check:
 ```powershell
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:admin:control
 npm run test:e2e:v01
 ```
 
@@ -78,8 +80,11 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 
 - The app shell shows compact demo/local warnings and AI disabled/mock-only status.
 - The login page shows the exact local Demo Owner credentials: `demo.owner@prij.local` / `LocalDev123!`.
+- The login page shows the exact local admin credentials: `eyad` / `eyad`.
 - Patient file creation redirects to `/patients/:id` after a successful API save.
 - Module pages are intentionally focused on the active workflow and no longer repeat broad dashboard/module shortcut content.
+- Admin can edit local demo service prices and deactivate/reactivate services from the UI.
+- Admin override endpoints require a reason and confirmation, create audit entries, and do not provide hard-delete routes for audit logs or signed clinical records.
 - Forms and page copy instruct users not to enter real patient, payment, report, credential, or secret data.
 - AI draft UI remains disabled/mock-only and doctor-review-only.
 - OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.

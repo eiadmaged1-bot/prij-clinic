@@ -24,7 +24,18 @@ npm run dev:stop
 
 ## Demo Login
 
-Use seeded local demo staff accounts only. The default local password is `LocalDev123!` unless overridden in local `.env`.
+Use seeded local demo staff accounts only.
+
+Primary local admin demo login:
+
+```text
+Admin ID: eyad
+Password: eyad
+```
+
+This credential is local demo only and is forbidden outside a local/private demo database.
+
+Other demo accounts use the default local password `LocalDev123!` unless overridden in local `.env`.
 
 ```text
 Demo Owner:        demo.owner@prij.local       / LocalDev123!
@@ -36,13 +47,14 @@ Demo Nurse:        demo.nurse@prij.local       / LocalDev123!
 
 Do not use real clinic credentials.
 
-The `/login` page displays the Demo Owner credentials and has a `Use demo login` button.
+The `/login` page displays the local admin demo credentials and has a `Use Admin Demo Login` button.
 
 ## UI Tour
 
 - `/` premium demo landing page.
 - `/login` staff demo login.
 - `/dashboard` focused operational overview and patient-file entry point.
+- `/admin` local Admin Control Center for settings, users/roles overview, service prices, safe overrides, system status, and audit review.
 - `/patients` patient file list and search.
 - `/patients/new` creates a demo-safe patient file and opens it after save.
 - `/patients/:id` patient file workspace with patient-scoped tabs.
@@ -63,6 +75,17 @@ The `/login` page displays the Demo Owner credentials and has a `Use demo login`
 6. Continue from the patient file page.
 7. Use patient file tabs to move through appointment, queue, encounter, prescription, investigation, report/OB ultrasound, billing, consent, and AI draft placeholder review.
 8. Use module pages only for focused module work; they intentionally do not show unrelated dashboard content.
+
+## Admin Control Center
+
+1. Sign in with `eyad` / `eyad`.
+2. Open `Admin`.
+3. Review Users and Roles.
+4. Add or edit a service under Service Catalog and Prices.
+5. Deactivate or reactivate demo services as needed.
+6. Review Audit Log Viewer after changes.
+
+Admin override actions require a reason and confirmation. They void, cancel, or archive records rather than silently deleting clinical or audit history. Audit logs cannot be deleted from the normal UI.
 
 ## Create A Patient File
 
@@ -85,6 +108,7 @@ npm run smoke:test
 npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:admin:control
 npm run test:e2e:v01
 ```
 

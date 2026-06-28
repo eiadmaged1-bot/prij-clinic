@@ -16,6 +16,7 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Create a New Patient File.
 - Open the patient file and work from that patient-scoped workspace.
 - Use module pages only for their focused workflow: appointments, queue, encounters, prescriptions, investigations, reports, pregnancy/ultrasound, billing, consents, and AI draft placeholders.
+- Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, and audit review.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
@@ -61,7 +62,16 @@ DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
 
-Demo accounts are local-only and use the default password `LocalDev123!` unless overridden. The login page also shows the Demo Owner credentials and includes a "Use demo login" button.
+Primary local demo admin login:
+
+```text
+Admin ID: eyad
+Password: eyad
+```
+
+This credential is local demo only and is forbidden outside a local/private demo database.
+
+Other demo accounts are local-only and use the default password `LocalDev123!` unless overridden.
 
 ```text
 Demo Owner:        demo.owner@prij.local       / LocalDev123!
@@ -91,6 +101,7 @@ Open:
 http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
+http://localhost:3000/admin
 http://localhost:3000/patients
 http://localhost:3000/patients/new
 http://localhost:3000/appointments
@@ -112,6 +123,14 @@ Recommended demo flow:
 ```text
 Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file -> patient file tabs -> appointment -> queue -> encounter -> prescription -> investigation -> pregnancy/ultrasound/report -> billing -> consent -> AI draft placeholder
 ```
+
+Admin demo flow:
+
+```text
+Login as eyad -> Admin -> Service Catalog and Prices -> edit price or deactivate service -> review Audit Log Viewer
+```
+
+Safe admin overrides are reason-required and audited. The app supports void/cancel/archive style corrections only; audit logs and signed clinical records cannot be deleted from the normal UI.
 
 Patient file creation:
 
@@ -261,6 +280,7 @@ npm run test:scope:records
 npm run test:audit:assertions
 npm run test:ai:regression
 npm run test:security:expanded
+npm run test:admin:control
 ```
 
 Current hardening matrices:

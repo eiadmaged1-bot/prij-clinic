@@ -10,6 +10,10 @@ V0.1 supports a demo-safe end-to-end clinic workflow:
 
 Login -> dashboard -> patient registration -> consent foundation -> appointment -> queue/check-in -> encounter -> prescription -> investigation order -> pregnancy/OB ultrasound/report -> invoice/payment -> audit/security checks -> AI draft placeholder review.
 
+The latest admin demo release also supports:
+
+Login as local admin -> Admin Control Center -> users/roles overview -> service catalog and price editing -> safe reason-required overrides -> audit review.
+
 ## Included Modules
 
 - Auth, demo login, JWT bearer/cookie support.
@@ -17,6 +21,7 @@ Login -> dashboard -> patient registration -> consent foundation -> appointment 
 - Branch-scoped demo records and referenced-record write scope checks where implemented.
 - Audit logging and expanded audit assertions for representative sensitive reads, writes, status changes, sign/review actions, payments, consents, and AI draft review.
 - Patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
+- Admin Control Center with local demo admin login, service catalog/pricing, users/roles overview, safety settings, audit viewer, and reason-required override endpoints.
 - Consent record foundation.
 - Disabled/mock-only AI draft placeholders.
 - Local backup/restore helper scripts.
@@ -32,6 +37,8 @@ Login -> dashboard -> patient registration -> consent foundation -> appointment 
 - No diagnostic AI.
 - No autonomous diagnosis, prescribing, signing, final-record update, RBAC bypass, consent bypass, or doctor-approval bypass.
 - OB ultrasound records are manual data records only and do not diagnose FGR or any condition.
+- Local admin credential `eyad` / `eyad` is for local demo only and must never be used outside a private local demo.
+- Admin override actions require a reason and audit entry. Audit logs and signed clinical records cannot be silently hard-deleted from the normal UI/API.
 
 ## Verification Commands
 
@@ -45,6 +52,7 @@ npm run smoke:test
 npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
+npm run test:admin:control
 npm run test:e2e:v01
 ```
 
@@ -56,4 +64,5 @@ npm run test:e2e:v01
 - File storage is documented but not implemented for real PHI files.
 - Backup scripts are local helpers, not production backup infrastructure.
 - Audit logs are application append-only but not tamper-resistant.
+- Service catalog prices are editable from Admin, but invoice line items are not yet automatically generated from the catalog.
 - MFA, monitoring, legal review, production deployment, and operational runbooks remain future work.

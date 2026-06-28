@@ -1,19 +1,22 @@
 # Next Steps
 
-The exact next recommended sprint after the V0.1 premium demo is:
+The exact next recommended sprint after the V0.1 admin demo release is:
 
-## V0.1 Pilot QA And Usability Hardening
+## Patient-Centered Workflow Actions
 
 Goals:
 
-- Run role-by-role manual QA for Owner, Admin, Doctor, Nurse, Receptionist, and Accountant.
-- Verify the premium UI on desktop, tablet, and mobile viewport widths.
-- Add Playwright or equivalent page smoke checks for the main web routes.
-- Improve form validation messages without adding new clinical features.
-- Confirm every page keeps the "Demo/local only - no real patient data" boundary visible.
+- Add patient-file-native actions for appointment booking, queue check-in, encounter creation, prescription placeholder, investigation order, report metadata, billing, consent, and AI placeholder.
+- Remove the need to copy internal patient references between module forms.
+- Keep all actions server-authorized and audit logged.
+- Keep all demo data fake/local only.
 - Keep AI disabled/mock-only and doctor-review-only.
-- Keep OB ultrasound informational only, with physician interpretation required.
-- Capture screenshots for internal demo documentation using fake/demo data only.
+
+## Admin Hardening Follow-Up
+
+- Add role-by-role manual QA for the Admin Control Center.
+- Add browser-level checks for login, admin service price edit, patient creation, and patient file open.
+- Add production policy design for admin correction workflows, retention, and audit tamper resistance.
 
 ## Security And Production-Readiness Hardening
 
