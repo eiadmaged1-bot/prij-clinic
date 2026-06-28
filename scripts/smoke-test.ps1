@@ -80,6 +80,7 @@ if ($health.status -ne "ok") {
   throw "GET /health did not return ok."
 }
 
+Write-Step "health/db"
 $healthDb = Invoke-Json -Uri "$ApiBaseUrl/health/db"
 if ($healthDb.status -ne "ok" -or $healthDb.database -ne "connected") {
   throw "GET /health/db did not return connected."
@@ -143,7 +144,20 @@ if ($firstDraft) {
 }
 
 if (-not $SkipWeb) {
-  foreach ($page in @("/dashboard", "/reports", "/pregnancies", "/ultrasound", "/billing", "/ai-drafts")) {
+  foreach ($page in @(
+    "/",
+    "/login",
+    "/dashboard",
+    "/patients",
+    "/appointments",
+    "/queue",
+    "/encounters",
+    "/reports",
+    "/pregnancies",
+    "/ultrasound",
+    "/billing",
+    "/ai-drafts"
+  )) {
     Write-Step "web $page"
     Assert-WebPage "$WebBaseUrl$page"
   }
