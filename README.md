@@ -116,6 +116,22 @@ npm run typecheck
 npm run build
 ```
 
+## Smoke Test
+
+Start the API and web app, then run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
+```
+
+The smoke test covers health, DB connectivity, login, anonymous rejection for a protected route, representative protected endpoints from each implemented module, AI disabled/mock metadata, and the core web pages.
+
+To run API-only checks:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/smoke-test.ps1 -SkipWeb
+```
+
 Authenticated smoke checks use the local demo owner:
 
 ```powershell
