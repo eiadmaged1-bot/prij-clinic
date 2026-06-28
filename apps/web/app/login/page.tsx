@@ -4,10 +4,12 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const demoEmail = "demo.owner@prij.local";
+const demoPassword = "LocalDev123!";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo.owner@prij.local");
+  const [email, setEmail] = useState(demoEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +47,12 @@ export default function LoginPage() {
     }
   }
 
+  function useDemoLogin() {
+    setEmail(demoEmail);
+    setPassword(demoPassword);
+    setError("");
+  }
+
   return (
     <main className="page centered">
       <section className="login-shell">
@@ -65,7 +73,18 @@ export default function LoginPage() {
           <div>
             <p className="eyebrow">Demo login</p>
             <h2>Sign in</h2>
-            <p className="muted">Use seeded demo staff credentials only. External AI and payment services are not enabled.</p>
+            <p className="muted">Use seeded local demo staff credentials only. External AI and payment services are not enabled.</p>
+          </div>
+
+          <div className="credential-card" aria-label="Demo owner credentials">
+            <div>
+              <span className="eyebrow">Demo Owner</span>
+              <strong>{demoEmail}</strong>
+              <code>{demoPassword}</code>
+            </div>
+            <button className="button secondary compact" onClick={useDemoLogin} type="button">
+              Use demo login
+            </button>
           </div>
 
           <label>

@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Field = {
   name: string;
@@ -22,6 +22,7 @@ type MvpPageProps = {
   createEndpoint?: string;
   createFields?: Field[];
   createNote?: string;
+  primaryAction?: [string, string];
 };
 
 type NavGroup = {
@@ -72,15 +73,6 @@ const navGroups: NavGroup[] = [
   }
 ];
 
-const quickLinks = [
-  ["/patients/new", "New Patient", "Register a demo-safe patient record."],
-  ["/appointments", "New Appointment", "Book a local demo appointment."],
-  ["/queue", "Queue Check-in", "Move the visit into today's queue."],
-  ["/encounters", "New Encounter", "Start a doctor-authored draft record."],
-  ["/reports", "Report Metadata", "Create safe report metadata only."],
-  ["/billing", "Billing", "Review demo invoices and payments."]
-];
-
 const displayKeys = [
   "medicalRecordNumber",
   "firstName",
@@ -108,7 +100,8 @@ export function MvpPage({
   collectionKey,
   createEndpoint,
   createFields = [],
-  createNote
+  createNote,
+  primaryAction
 }: MvpPageProps) {
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [status, setStatus] = useState("Not loaded");
@@ -203,6 +196,11 @@ export function MvpPage({
             <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
+            {primaryAction ? (
+              <Link className="button compact" href={primaryAction[0]}>
+                {primaryAction[1]}
+              </Link>
+            ) : null}
             <span className="badge warning">Demo/local only</span>
             <span className="badge accent">AI disabled</span>
           </div>
@@ -214,18 +212,10 @@ export function MvpPage({
 
       <SafetyAlert />
 
-      <section className="workflow-band" aria-label="End-to-end workflow">
-        {["Patient", "Appointment", "Queue", "Encounter", "Rx", "Orders", "Report/OB", "Billing", "Audit", "AI draft"].map(
-          (step) => (
-            <span key={step}>{step}</span>
-          )
-        )}
-      </section>
-
       <section className="content-grid">
         <div className="panel">
           <div className="section-heading">
-            <h2>Module scope</h2>
+            <h2>{title} scope</h2>
             <span className="badge">V0.1</span>
           </div>
           <ul className="feature-list">
@@ -248,7 +238,7 @@ export function MvpPage({
             ) : null}
           </div>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>No API list is configured for this page.</EmptyState>}
+          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>This workflow is create-only in the current UI.</EmptyState>}
         </div>
       </section>
 
@@ -281,27 +271,32 @@ export function MvpPage({
           </form>
         </section>
       ) : null}
-
-      <section className="panel">
-        <div className="section-heading">
-          <h2>Workflow shortcuts</h2>
-          <span className="badge accent">Demo flow</span>
-        </div>
-        <div className="quick-grid">
-          {quickLinks.map(([href, label, description]) => (
-            <a className="quick-card" href={href} key={href}>
-              <strong>{label}</strong>
-              <span className="muted">{description}</span>
-            </a>
-          ))}
-        </div>
-      </section>
     </AppShell>
   );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    setHasToken(Boolean(sessionStorage.getItem("prijClinicToken")));
+  }, []);
+
+  async function logout() {
+    const token = sessionStorage.getItem("prijClinicToken");
+
+    await fetch(`${apiUrl}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    }).catch(() => undefined);
+
+    sessionStorage.removeItem("prijClinicToken");
+    setHasToken(false);
+    router.push("/login");
+  }
 
   return (
     <main className="app-shell">
@@ -332,9 +327,15 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="muted">No real patient data, no real AI calls, no real payment gateway.</p>
           </div>
           <div className="topbar-actions">
-            <Link className="button secondary compact" href="/login">
-              Login
-            </Link>
+            {hasToken ? (
+              <button className="button secondary compact" onClick={logout} type="button">
+                Logout
+              </button>
+            ) : (
+              <Link className="button secondary compact" href="/login">
+                Login
+              </Link>
+            )}
             <Link className="button secondary compact" href="/">
               Home
             </Link>
@@ -375,7 +376,13 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
       {rows.slice(0, 12).map((row, index) => (
         <article className="data-row" key={String(row.id ?? index)}>
           <div className="data-row-header">
-            <strong>{rowLabel(row)}</strong>
+            {row.id && row.medicalRecordNumber ? (
+              <Link href={`/patients/${String(row.id)}`}>
+                <strong>{rowLabel(row)}</strong>
+              </Link>
+            ) : (
+              <strong>{rowLabel(row)}</strong>
+            )}
             <span className="badge">{String(row.status ?? row.reviewStatus ?? row.category ?? "demo")}</span>
           </div>
           <dl>
