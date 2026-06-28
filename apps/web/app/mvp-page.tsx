@@ -38,12 +38,20 @@ export function MvpPage({ title, eyebrow, items }: MvpPageProps) {
         </nav>
       </header>
 
+      <section className="notice">
+        MVP demo foundation only. Use local demo data only; do not enter real patient, payment, report, or secret data.
+      </section>
+
       <section className="panel">
         <ul className="feature-list">
           {items.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
+      </section>
+
+      <section className="empty-state">
+        Detailed production workflows, exports, uploads, and final clinical approvals are intentionally out of scope for this demo foundation.
       </section>
     </main>
   );

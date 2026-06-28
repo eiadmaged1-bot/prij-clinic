@@ -99,7 +99,7 @@ export default function DashboardPage() {
     <main className="dashboard">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Prij Clinic</p>
+          <p className="eyebrow">MVP demo foundation</p>
           <h1>Prij Clinic Dashboard</h1>
         </div>
         <nav className="nav-links" aria-label="MVP navigation">
@@ -118,11 +118,18 @@ export default function DashboardPage() {
           <a className="button secondary" href="/billing">
             Billing
           </a>
+          <a className="button secondary" href="/ai-drafts">
+            AI Drafts
+          </a>
           <button className="button secondary" onClick={logout} type="button">
             Logout
           </button>
         </nav>
       </header>
+
+      <section className="notice">
+        Local demo only. AI is disabled/mock-only and cannot diagnose, prescribe, sign, or update final clinical records.
+      </section>
 
       <section className="panel">
         <h2>Logged-in user</h2>

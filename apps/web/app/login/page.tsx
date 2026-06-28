@@ -51,6 +51,7 @@ export default function LoginPage() {
         <div>
           <p className="eyebrow">Staff access</p>
           <h1>Login</h1>
+          <p className="muted">Local demo owner access only. Do not use real clinic credentials.</p>
         </div>
 
         <label>
