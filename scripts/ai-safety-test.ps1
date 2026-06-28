@@ -74,7 +74,16 @@ Assert-True "dashboard reports doctor review required" ($summary.safety.clinical
 
 $patients = Invoke-Json -Uri "$ApiBaseUrl/patients" -Headers $owner
 $patient = @($patients.patients | Where-Object { $_.medicalRecordNumber -eq "DEMO-MRN-001" } | Select-Object -First 1)
-Assert-True "demo patient is available for AI safety test" ($null -ne $patient)
+if (-not $patient -or -not $patient.id) {
+  $patient = Invoke-Json -Method Post -Uri "$ApiBaseUrl/patients" -Headers $owner -Body @{
+    medicalRecordNumber = "DEMO-AI-SAFETY-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    firstName = "Demo"
+    lastName = "AISafety"
+    notes = "Fake local demo patient for AI safety test only."
+  }
+  Write-Step "WARN seed demo patient was unavailable; created fake local AI safety patient"
+}
+Assert-True "demo patient is available for AI safety test" ($null -ne $patient -and $null -ne $patient.id)
 
 $draft = Invoke-Json -Method Post -Uri "$ApiBaseUrl/ai-drafts" -Headers $owner -Body @{
   draftType = "encounter_summary"
