@@ -5,6 +5,7 @@ const steps = [
   "test:routes:auth",
   "test:scope:records",
   "test:audit:assertions",
+  "test:consent:privacy",
   "test:ai:regression"
 ];
 

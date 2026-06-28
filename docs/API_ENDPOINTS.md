@@ -88,7 +88,7 @@ All endpoints below require JWT authentication. Permission names match the imple
 - The actual implemented AI draft API route is `/ai-drafts`.
 - AI draft responses must remain marked with `modelProvider: disabled_mock` and `modelName: no_external_ai`.
 - AI draft review updates only the AI draft artifact and audit metadata; it does not update final clinical records.
-- Consent endpoints are V0.1 foundation only. They store structured demo-safe consent records and audit metadata, but production legal text, signature capture, and full workflow enforcement are not implemented.
+- Consent endpoints are V0.1 foundation only. They require JWT/RBAC, branch-scope patient references, and audit metadata, but production legal text, signature capture, override workflow, and full workflow blocking are not implemented.
 
 ## Automated Route Coverage
 
