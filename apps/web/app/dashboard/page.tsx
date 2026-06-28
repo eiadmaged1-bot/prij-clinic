@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AppShell, SafetyAlert } from "../mvp-page";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -33,6 +34,17 @@ type DashboardSummary = {
     pendingAiDrafts: number;
   };
 };
+
+const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "AI review"];
+
+const quickActions = [
+  ["/patients/new", "New Patient", "Start demo registration with fake identifiers only."],
+  ["/appointments", "New Appointment", "Schedule a safe local visit."],
+  ["/queue", "Queue Check-in", "Move a demo patient into today's queue."],
+  ["/encounters", "New Encounter", "Open a doctor-authored draft record."],
+  ["/billing", "New Invoice", "Review demo invoices without payment gateway data."],
+  ["/ai-drafts", "AI Draft Placeholder", "Review disabled/mock-only AI draft boundaries."]
+];
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -84,8 +96,10 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <main className="page">
+      <main className="page centered">
         <section className="panel">
+          <p className="eyebrow">Authentication required</p>
+          <h1>Sign in</h1>
           <p className="form-error">{error}</p>
           <a className="button" href="/login">
             Login
@@ -96,137 +110,113 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="dashboard">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">MVP demo foundation</p>
-          <h1>Prij Clinic Dashboard</h1>
+    <AppShell>
+      <section className="page-header">
+        <div className="header-row">
+          <div>
+            <p className="eyebrow">V0.1 clinic command center</p>
+            <h1>Dashboard</h1>
+          </div>
+          <div className="topbar-actions">
+            <button className="button secondary compact" onClick={logout} type="button">
+              Logout
+            </button>
+            <span className="badge accent">AI disabled</span>
+            <span className="badge warning">Demo only</span>
+          </div>
         </div>
-        <nav className="nav-links" aria-label="MVP navigation">
-          <a className="button secondary" href="/patients">
-            Patients
-          </a>
-          <a className="button secondary" href="/patients/new">
-            New Patient
-          </a>
-          <a className="button secondary" href="/appointments">
-            Appointments
-          </a>
-          <a className="button secondary" href="/calendar">
-            Calendar
-          </a>
-          <a className="button secondary" href="/queue">
-            Queue
-          </a>
-          <a className="button secondary" href="/encounters">
-            Encounters
-          </a>
-          <a className="button secondary" href="/prescriptions">
-            Prescriptions
-          </a>
-          <a className="button secondary" href="/investigations">
-            Investigations
-          </a>
-          <a className="button secondary" href="/reports">
-            Reports
-          </a>
-          <a className="button secondary" href="/pregnancies">
-            Pregnancy
-          </a>
-          <a className="button secondary" href="/ultrasound">
-            OB Ultrasound
-          </a>
-          <a className="button secondary" href="/billing">
-            Billing
-          </a>
-          <a className="button secondary" href="/ai-drafts">
-            AI Drafts
-          </a>
-          <button className="button secondary" onClick={logout} type="button">
-            Logout
-          </button>
-        </nav>
-      </header>
+        <p className="muted">
+          A safe local workflow view for clinic operations, clinical drafts, OB records, billing, and security checks.
+        </p>
+      </section>
 
-      <section className="notice">
-        Local demo only. AI is disabled/mock-only and cannot diagnose, prescribe, sign, or update final clinical records.
+      <SafetyAlert />
+
+      <section className="summary-grid" aria-label="Operational summary">
+        <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
+        <Metric label="Queue waiting" value={summary?.operational.waitingQueue ?? "-"} />
+        <Metric label="Pending reports" value={summary?.operational.pendingReports ?? "-"} />
+        <Metric label="Open invoices" value={summary?.billing.openInvoices ?? "-"} detail={`Payments today: ${summary?.billing.paymentsToday ?? "-"}`} />
+      </section>
+
+      <section className="dashboard-grid">
+        <div className="panel">
+          <div className="section-heading">
+            <h2>Quick actions</h2>
+            <span className="badge">Safe workflow</span>
+          </div>
+          <div className="quick-grid">
+            {quickActions.map(([href, label, description]) => (
+              <a className="quick-card" href={href} key={href}>
+                <strong>{label}</strong>
+                <span className="muted">{description}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="section-heading">
+            <h2>Session</h2>
+            <span className="badge">{user?.status ?? "Loading"}</span>
+          </div>
+          {user ? (
+            <dl className="profile-grid">
+              <div>
+                <dt>Name</dt>
+                <dd>{user.displayName}</dd>
+              </div>
+              <div>
+                <dt>Email</dt>
+                <dd>{user.email}</dd>
+              </div>
+              <div>
+                <dt>Roles</dt>
+                <dd>{user.roles.join(", ") || "None"}</dd>
+              </div>
+              <div>
+                <dt>Branch</dt>
+                <dd>{user.branchId ?? "Demo scope"}</dd>
+              </div>
+              <div className="wide">
+                <dt>Permissions</dt>
+                <dd>{user.permissions.slice(0, 12).join(", ") || "None"}</dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="skeleton" />
+          )}
+        </div>
       </section>
 
       <section className="panel">
-        <h2>Logged-in user</h2>
-        {user ? (
-          <dl className="profile-grid">
-            <div>
-              <dt>Name</dt>
-              <dd>{user.displayName}</dd>
-            </div>
-            <div>
-              <dt>Email</dt>
-              <dd>{user.email}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{user.status}</dd>
-            </div>
-            <div>
-              <dt>Roles</dt>
-              <dd>{user.roles.join(", ") || "None"}</dd>
-            </div>
-            <div className="wide">
-              <dt>Permissions</dt>
-              <dd>{user.permissions.join(", ") || "None"}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p>Loading</p>
-        )}
+        <div className="section-heading">
+          <h2>Clinic workflow</h2>
+          <span className="badge accent">End-to-end demo</span>
+        </div>
+        <div className="workflow-band">
+          {workflow.map((step) => (
+            <span key={step}>{step}</span>
+          ))}
+        </div>
       </section>
 
-      <section className="panel">
-        <h2>Operational summary</h2>
-        {summary ? (
-          <dl className="profile-grid">
-            <div>
-              <dt>Appointments today</dt>
-              <dd>{summary.operational.appointmentsToday}</dd>
-            </div>
-            <div>
-              <dt>Waiting queue</dt>
-              <dd>{summary.operational.waitingQueue}</dd>
-            </div>
-            <div>
-              <dt>Pending reports</dt>
-              <dd>{summary.operational.pendingReports}</dd>
-            </div>
-            <div>
-              <dt>Active pregnancies</dt>
-              <dd>{summary.operational.activePregnancies}</dd>
-            </div>
-            <div>
-              <dt>Draft OB ultrasounds</dt>
-              <dd>{summary.operational.draftUltrasounds}</dd>
-            </div>
-            <div>
-              <dt>Open invoices</dt>
-              <dd>{summary.billing.openInvoices}</dd>
-            </div>
-            <div>
-              <dt>Payments today</dt>
-              <dd>{summary.billing.paymentsToday}</dd>
-            </div>
-            <div>
-              <dt>AI status</dt>
-              <dd>{summary.safety.aiEnabled ? "Enabled" : "Disabled"}</dd>
-            </div>
-            <div>
-              <dt>Pending AI drafts</dt>
-              <dd>{summary.safety.pendingAiDrafts}</dd>
-            </div>
-          </dl>
-        ) : (
-          <p>Loading</p>
-        )}
+      <section className="summary-grid">
+        <Metric label="Active pregnancies" value={summary?.operational.activePregnancies ?? "-"} />
+        <Metric label="Draft ultrasounds" value={summary?.operational.draftUltrasounds ?? "-"} detail="Physician interpretation required" />
+        <Metric label="Pending AI drafts" value={summary?.safety.pendingAiDrafts ?? "-"} detail="Mock-only, review required" />
+        <Metric label="AI features" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="No external provider required" />
       </section>
-    </main>
+    </AppShell>
+  );
+}
+
+function Metric({ label, value, detail }: { label: string; value: number | string; detail?: string }) {
+  return (
+    <article className="metric-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <p className="muted">{detail ?? "Local demo summary"}</p>
+    </article>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 type Field = {
   name: string;
@@ -22,23 +24,61 @@ type MvpPageProps = {
   createNote?: string;
 };
 
+type NavGroup = {
+  title: string;
+  links: Array<[string, string]>;
+};
+
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-const links = [
-  ["/dashboard", "Dashboard"],
-  ["/patients", "Patients"],
-  ["/patients/new", "New Patient"],
-  ["/appointments", "Appointments"],
-  ["/calendar", "Calendar"],
-  ["/queue", "Queue"],
-  ["/encounters", "Encounters"],
-  ["/prescriptions", "Prescriptions"],
-  ["/investigations", "Investigations"],
-  ["/reports", "Reports"],
-  ["/pregnancies", "Pregnancy"],
-  ["/ultrasound", "OB Ultrasounds"],
-  ["/billing", "Billing"],
-  ["/ai-drafts", "AI Drafts"]
+const navGroups: NavGroup[] = [
+  {
+    title: "Operations",
+    links: [
+      ["/dashboard", "Dashboard"],
+      ["/patients", "Patients"],
+      ["/patients/new", "New Patient"],
+      ["/appointments", "Appointments"],
+      ["/calendar", "Calendar"],
+      ["/queue", "Queue"]
+    ]
+  },
+  {
+    title: "Clinical",
+    links: [
+      ["/encounters", "Encounters"],
+      ["/prescriptions", "Prescriptions"],
+      ["/investigations", "Investigations"],
+      ["/reports", "Reports"]
+    ]
+  },
+  {
+    title: "OB/Pregnancy",
+    links: [
+      ["/pregnancies", "Pregnancy"],
+      ["/ultrasound", "OB Ultrasound"]
+    ]
+  },
+  {
+    title: "Finance",
+    links: [["/billing", "Billing"]]
+  },
+  {
+    title: "Safety/Admin",
+    links: [
+      ["/consents", "Consents"],
+      ["/ai-drafts", "AI Drafts"]
+    ]
+  }
+];
+
+const quickLinks = [
+  ["/patients/new", "New Patient", "Register a demo-safe patient record."],
+  ["/appointments", "New Appointment", "Book a local demo appointment."],
+  ["/queue", "Queue Check-in", "Move the visit into today's queue."],
+  ["/encounters", "New Encounter", "Start a doctor-authored draft record."],
+  ["/reports", "Report Metadata", "Create safe report metadata only."],
+  ["/billing", "Billing", "Review demo invoices and payments."]
 ];
 
 const displayKeys = [
@@ -56,7 +96,8 @@ const displayKeys = [
   "amount",
   "draftType",
   "modelProvider",
-  "modelName"
+  "modelName",
+  "reviewStatus"
 ];
 
 export function MvpPage({
@@ -89,6 +130,8 @@ export function MvpPage({
   }, [endpoint]);
 
   async function loadRows() {
+    if (!endpoint) return;
+
     setError("");
     setStatus("Loading");
 
@@ -143,7 +186,7 @@ export function MvpPage({
       }
 
       setFormState(Object.fromEntries(createFields.map((field) => [field.name, field.defaultValue ?? ""])));
-      await loadRows();
+      if (endpoint) await loadRows();
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to save demo record.");
     } finally {
@@ -152,27 +195,27 @@ export function MvpPage({
   }
 
   return (
-    <main className="dashboard">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">{eyebrow}</p>
-          <h1>{title}</h1>
+    <AppShell>
+      <section className="page-header">
+        <div className="header-row">
+          <div>
+            <p className="eyebrow">{eyebrow}</p>
+            <h1>{title}</h1>
+          </div>
+          <div className="topbar-actions">
+            <span className="badge warning">Demo/local only</span>
+            <span className="badge accent">AI disabled</span>
+          </div>
         </div>
-        <nav className="nav-links" aria-label="V0.1 navigation">
-          {links.map(([href, label]) => (
-            <a key={href} className="button secondary" href={href}>
-              {label}
-            </a>
-          ))}
-        </nav>
-      </header>
-
-      <section className="notice">
-        V0.1 local/private pilot only. Use demo data only. Do not enter real patient, payment, report, credential, or secret data.
+        <p className="muted">
+          Use fake demo records only. This V0.1 interface is for local workflow review and is not ready for real patient use.
+        </p>
       </section>
 
+      <SafetyAlert />
+
       <section className="workflow-band" aria-label="End-to-end workflow">
-        {["Login", "Patient", "Appointment", "Queue", "Encounter", "Rx", "Orders", "OB/Report", "Billing", "Audit", "AI draft"].map(
+        {["Patient", "Appointment", "Queue", "Encounter", "Rx", "Orders", "Report/OB", "Billing", "Audit", "AI draft"].map(
           (step) => (
             <span key={step}>{step}</span>
           )
@@ -181,7 +224,10 @@ export function MvpPage({
 
       <section className="content-grid">
         <div className="panel">
-          <h2>Module scope</h2>
+          <div className="section-heading">
+            <h2>Module scope</h2>
+            <span className="badge">V0.1</span>
+          </div>
           <ul className="feature-list">
             {items.map((item) => (
               <li key={item}>{item}</li>
@@ -191,23 +237,30 @@ export function MvpPage({
 
         <div className="panel">
           <div className="section-heading">
-            <h2>Local API data</h2>
+            <div>
+              <h2>Local API data</h2>
+              <p className="muted">Status: {status}</p>
+            </div>
             {endpoint ? (
               <button className="button secondary compact" onClick={loadRows} type="button">
                 Refresh
               </button>
             ) : null}
           </div>
-          <p className="muted">Status: {status}</p>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} /> : <p className="empty-state">No API list is configured for this page.</p>}
+          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>No API list is configured for this page.</EmptyState>}
         </div>
       </section>
 
       {createEndpoint && createFields.length > 0 ? (
         <section className="panel">
-          <h2>Safe demo form</h2>
-          {createNote ? <p className="muted">{createNote}</p> : null}
+          <div className="section-heading">
+            <div>
+              <h2>Safe demo form</h2>
+              {createNote ? <p className="muted">{createNote}</p> : null}
+            </div>
+            <span className="badge warning">No real data</span>
+          </div>
           <form className="form-grid" onSubmit={submit}>
             {createFields.map((field) => (
               <label key={field.name}>
@@ -223,36 +276,115 @@ export function MvpPage({
               </label>
             ))}
             <button className="button" disabled={isSubmitting} type="submit">
-              {isSubmitting ? "Saving" : "Create demo record"}
+              {isSubmitting ? "Saving demo record" : "Create demo record"}
             </button>
           </form>
         </section>
       ) : null}
 
-      <section className="empty-state">
-        Production workflows, file uploads, real payment gateways, diagnostic automation, and external AI calls are intentionally not enabled.
+      <section className="panel">
+        <div className="section-heading">
+          <h2>Workflow shortcuts</h2>
+          <span className="badge accent">Demo flow</span>
+        </div>
+        <div className="quick-grid">
+          {quickLinks.map(([href, label, description]) => (
+            <a className="quick-card" href={href} key={href}>
+              <strong>{label}</strong>
+              <span className="muted">{description}</span>
+            </a>
+          ))}
+        </div>
       </section>
+    </AppShell>
+  );
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <main className="app-shell">
+      <aside className="sidebar">
+        <Link className="brand" href="/dashboard">
+          <span className="brand-mark">PC</span>
+          <strong>Prij Clinic</strong>
+          <span>V0.1 controlled demo</span>
+        </Link>
+
+        {navGroups.map((group) => (
+          <nav className="nav-group" key={group.title} aria-label={group.title}>
+            <div className="nav-group-title">{group.title}</div>
+            {group.links.map(([href, label]) => (
+              <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
+                <span>{label}</span>
+                <span className="nav-dot" />
+              </Link>
+            ))}
+          </nav>
+        ))}
+      </aside>
+
+      <div className="app-main">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Local pilot workspace</p>
+            <p className="muted">No real patient data, no real AI calls, no real payment gateway.</p>
+          </div>
+          <div className="topbar-actions">
+            <Link className="button secondary compact" href="/login">
+              Login
+            </Link>
+            <Link className="button secondary compact" href="/">
+              Home
+            </Link>
+          </div>
+        </header>
+        {children}
+      </div>
     </main>
   );
 }
 
-function DataList({ rows }: { rows: Record<string, unknown>[] }) {
+export function SafetyAlert() {
+  return (
+    <section className="alert">
+      <div>
+        <strong>Demo/local only - no real patient data.</strong>
+        <p className="muted">
+          AI remains disabled/mock-only and cannot diagnose, prescribe, sign, update final records, or bypass RBAC, consent, audit, or
+          doctor approval.
+        </p>
+      </div>
+      <span className="badge danger">Not production-ready</span>
+    </section>
+  );
+}
+
+function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: string }) {
+  if (status === "Loading") {
+    return <div className="skeleton" aria-label="Loading local API data" />;
+  }
+
   if (rows.length === 0) {
-    return <p className="empty-state">No demo rows returned yet.</p>;
+    return <EmptyState>No demo rows returned yet. Sign in and seed local demo data before workflow QA.</EmptyState>;
   }
 
   return (
     <div className="data-list">
       {rows.slice(0, 12).map((row, index) => (
         <article className="data-row" key={String(row.id ?? index)}>
-          <strong>{rowLabel(row)}</strong>
+          <div className="data-row-header">
+            <strong>{rowLabel(row)}</strong>
+            <span className="badge">{String(row.status ?? row.reviewStatus ?? row.category ?? "demo")}</span>
+          </div>
           <dl>
             {displayKeys
               .filter((key) => row[key] !== undefined && row[key] !== null && row[key] !== "")
-              .slice(0, 5)
+              .slice(0, 6)
               .map((key) => (
                 <div key={key}>
-                  <dt>{key}</dt>
+                  <dt>{labelize(key)}</dt>
                   <dd>{String(row[key])}</dd>
                 </div>
               ))}
@@ -263,8 +395,16 @@ function DataList({ rows }: { rows: Record<string, unknown>[] }) {
   );
 }
 
+function EmptyState({ children }: { children: ReactNode }) {
+  return <p className="empty-state">{children}</p>;
+}
+
 function rowLabel(row: Record<string, unknown>) {
   return String(row.displayName ?? row.invoiceNumber ?? row.title ?? row.medicalRecordNumber ?? row.id ?? "Demo row");
+}
+
+function labelize(value: string) {
+  return value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function buildPayload(fields: Field[], state: Record<string, string>) {
@@ -279,4 +419,10 @@ function buildPayload(fields: Field[], state: Record<string, string>) {
   }
 
   return payload;
+}
+
+function isActive(pathname: string | null, href: string) {
+  if (!pathname) return false;
+  if (href === "/dashboard") return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

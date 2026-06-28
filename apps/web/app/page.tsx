@@ -1,39 +1,55 @@
-export default function Home() {
-  const modules = [
-    ["/patients", "Patients"],
-    ["/appointments", "Appointments"],
-    ["/queue", "Queue"],
-    ["/encounters", "Encounters"],
-    ["/reports", "Reports"],
-    ["/pregnancies", "Pregnancy"],
-    ["/ultrasound", "OB ultrasound"],
-    ["/billing", "Billing"],
-    ["/ai-drafts", "AI drafts"]
-  ];
+const modules = [
+  ["/dashboard", "Dashboard", "Operational summary and workflow shortcuts"],
+  ["/patients", "Patients", "Demo-safe registration and registry"],
+  ["/appointments", "Appointments", "Scheduling and calendar foundations"],
+  ["/queue", "Queue", "Check-in and front desk flow"],
+  ["/encounters", "Encounters", "Doctor-authored clinical drafts"],
+  ["/reports", "Reports", "Report metadata and review status"],
+  ["/pregnancies", "Pregnancy", "Pregnancy episode records"],
+  ["/ultrasound", "OB ultrasound", "Measurements without automatic diagnosis"],
+  ["/billing", "Billing", "Invoices and payment records without gateway data"],
+  ["/consents", "Consents", "Consent foundation for demo privacy workflows"],
+  ["/ai-drafts", "AI drafts", "Disabled/mock-only review placeholders"]
+];
 
+export default function Home() {
   return (
-    <main className="page">
-      <section className="shell">
-        <p className="eyebrow">MVP demo foundation</p>
-        <h1>Prij Clinic MVP</h1>
-        <p className="muted">
-          Local demo only. Do not enter real patient data, report files, payment details, or secrets.
-        </p>
-        <div className="actions">
-          <a className="button" href="/login">
-            Login
-          </a>
-          <a className="button secondary" href="/dashboard">
-            Dashboard
-          </a>
-        </div>
-        <nav className="module-grid" aria-label="Demo modules">
-          {modules.map(([href, label]) => (
-            <a key={href} href={href}>
-              {label}
+    <main className="page hero-page">
+      <section className="hero-shell">
+        <div className="hero-copy">
+          <p className="eyebrow">Premium V0.1 clinic demo</p>
+          <h1>Prij Clinic</h1>
+          <p className="muted">
+            A controlled local/private pilot for the full clinic workflow: registration, scheduling, queue, encounter,
+            prescriptions, investigations, OB ultrasound, reports, billing, audit checks, consent, and AI draft review.
+          </p>
+          <div className="actions">
+            <a className="button" href="/login">
+              Staff login
             </a>
-          ))}
-        </nav>
+            <a className="button ghost" href="/dashboard">
+              Open dashboard
+            </a>
+          </div>
+          <div className="workflow-band">
+            {["No real patient data", "AI disabled/mock-only", "Not production-ready", "Doctor approval required"].map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className="hero-panel">
+          <span className="badge warning">Demo/local only</span>
+          <h2 style={{ color: "#ffffff" }}>Workflow modules</h2>
+          <div className="module-grid">
+            {modules.map(([href, label, description]) => (
+              <a className="module-card" href={href} key={href}>
+                <strong>{label}</strong>
+                <span className="muted">{description}</span>
+              </a>
+            ))}
+          </div>
+        </div>
       </section>
     </main>
   );
