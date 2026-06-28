@@ -2,16 +2,16 @@
 
 Clinic Management System MVP scaffold for OB/GYN and women's health.
 
-Sprint: Auth + RBAC + Audit Foundation.
-
-This sprint implements the authentication, RBAC, and audit foundation only. Patients, appointments, queue, encounters, prescriptions, investigations, reports, billing, and AI are intentionally not implemented yet.
+Current foundation includes auth, RBAC, audit logs, patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, and disabled AI draft placeholders.
 
 ## Safety Rules
 
 - Do not use real patient data in development, tests, screenshots, seeds, or docs.
 - Do not commit secrets, API keys, passwords, tokens, reports, backups, or patient data.
-- AI features are disabled and not implemented in this sprint.
-- Clinical output must remain doctor-reviewed in future phases.
+- AI external access is disabled. AI draft placeholders are metadata-only and mock/disabled.
+- AI cannot diagnose, prescribe, sign records, approve clinical records, override RBAC, or bypass doctor approval.
+- Clinical output must remain doctor-authored or doctor-reviewed before use.
+- Clinical writes, billing changes, report review, and AI draft review placeholders are audit logged.
 
 ## Stack
 
@@ -21,23 +21,19 @@ This sprint implements the authentication, RBAC, and audit foundation only. Pati
 - PostgreSQL via Docker Compose
 - Prisma ORM in `apps/api`
 
-## Windows PowerShell Setup
-
-Install dependencies:
+## Local Setup
 
 ```powershell
 npm install
-```
-
-Create a local environment file:
-
-```powershell
 Copy-Item .env.example .env
+docker compose up -d postgres
+npm run prisma:repair
+npm run prisma:seed
 ```
 
 Edit `.env` locally. Use real local values only in `.env`, never in `.env.example`.
 
-Required Sprint 1 variables:
+Required local variables:
 
 ```powershell
 API_PORT=3001
@@ -49,41 +45,12 @@ DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
 ```
 
-The demo owner account and password are for local development only. The seed hashes the password before storing it and does not create patient data.
+The demo owner account is for local development only. Seed data uses only demo records such as `Demo Patient A`.
 
-Start PostgreSQL:
-
-```powershell
-docker compose up -d postgres
-```
-
-Generate Prisma Client:
-
-```powershell
-npm run prisma:generate
-```
-
-Apply local migrations:
-
-```powershell
-npm run prisma:migrate:dev -- --name auth_rbac_audit_foundation
-```
-
-Seed non-clinical foundation data:
-
-```powershell
-npm run prisma:seed
-```
-
-Start the API:
+## Development
 
 ```powershell
 npm run dev:api
-```
-
-Start the web app in another PowerShell window:
-
-```powershell
 npm run dev:web
 ```
 
@@ -93,42 +60,63 @@ Open:
 http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
+http://localhost:3000/reports
+http://localhost:3000/pregnancies
+http://localhost:3000/ultrasound
+http://localhost:3000/billing
+http://localhost:3000/ai-drafts
 ```
 
 ## Current Endpoints
 
-Health checks:
+Health:
 
 ```text
-GET http://localhost:3001/health
-GET http://localhost:3001/health/db
+GET /health
+GET /health/db
 ```
 
-Auth:
+Auth/admin/audit:
 
 ```text
-POST http://localhost:3001/auth/login
-GET  http://localhost:3001/auth/me
-POST http://localhost:3001/auth/logout
+POST /auth/login
+GET  /auth/me
+POST /auth/logout
+GET  /admin/users
+GET  /admin/roles
+GET  /admin/permissions
+GET  /audit
 ```
 
-Admin:
+MVP workflows:
 
 ```text
-GET http://localhost:3001/admin/users
-GET http://localhost:3001/admin/roles
-GET http://localhost:3001/admin/permissions
+GET  /patients
+GET  /appointments
+GET  /appointments/calendar
+GET  /queue/today
+GET  /encounters
+GET  /prescriptions
+GET  /investigations/orders
+GET  /reports
+GET  /pregnancies
+GET  /ob-ultrasounds
+GET  /billing/invoices
+GET  /billing/payments
+GET  /dashboard/summary
+GET  /ai-drafts
 ```
 
-Audit:
+## Verification
 
-```text
-GET http://localhost:3001/audit
+```powershell
+npm run prisma:repair
+npm run prisma:seed
+npm run typecheck
+npm run build
 ```
 
-## API Test Commands
-
-Login and save the Bearer token:
+Authenticated smoke checks use the local demo owner:
 
 ```powershell
 $body = @{
@@ -140,77 +128,26 @@ $login = Invoke-RestMethod `
   -Method Post `
   -Uri "http://localhost:3001/auth/login" `
   -ContentType "application/json" `
-  -Body $body `
-  -SessionVariable session
+  -Body $body
 
-$token = $login.token
-$headers = @{ Authorization = "Bearer $token" }
+$headers = @{ Authorization = "Bearer $($login.token)" }
+Invoke-RestMethod "http://localhost:3001/auth/me" -Headers $headers
+Invoke-RestMethod "http://localhost:3001/reports" -Headers $headers
+Invoke-RestMethod "http://localhost:3001/pregnancies" -Headers $headers
+Invoke-RestMethod "http://localhost:3001/ob-ultrasounds" -Headers $headers
+Invoke-RestMethod "http://localhost:3001/billing/invoices" -Headers $headers
+Invoke-RestMethod "http://localhost:3001/ai-drafts" -Headers $headers
 ```
 
-Test current user:
+## Prisma Workflow
+
+Use the repository-root wrappers:
 
 ```powershell
-Invoke-RestMethod `
-  -Method Get `
-  -Uri "http://localhost:3001/auth/me" `
-  -Headers $headers
-```
-
-Health check commands:
-
-```powershell
-Invoke-RestMethod "http://localhost:3001/health"
-Invoke-RestMethod "http://localhost:3001/health/db"
-```
-
-Test admin users:
-
-```powershell
-Invoke-RestMethod `
-  -Method Get `
-  -Uri "http://localhost:3001/admin/users" `
-  -Headers $headers
-```
-
-Test audit logs:
-
-```powershell
-Invoke-RestMethod `
-  -Method Get `
-  -Uri "http://localhost:3001/audit" `
-  -Headers $headers
-```
-
-Test logout:
-
-```powershell
-Invoke-RestMethod `
-  -Method Post `
-  -Uri "http://localhost:3001/auth/logout" `
-  -Headers $headers
-```
-
-Cookie-based testing also works by reusing `$session`:
-
-```powershell
-Invoke-RestMethod `
-  -Method Get `
-  -Uri "http://localhost:3001/auth/me" `
-  -WebSession $session
-```
-
-## Commands
-
-```powershell
-npm run dev
-npm run dev:web
-npm run dev:api
-npm run build
-npm run lint
-npm run typecheck
-npm run prisma:generate
-npm run prisma:migrate:dev
+npm run dev:stop
+npm run prisma:migrate:local -- migration_name
+npm run prisma:repair
 npm run prisma:seed
 ```
 
-Prisma scripts are reliable from the repository root. The API Prisma wrapper loads root `.env` before running Prisma CLI commands.
+Stop immediately if Prisma asks to reset the database or if a command would delete data or migrations.
