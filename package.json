@@ -40,6 +40,7 @@
     "prisma:migrate:local": "powershell -ExecutionPolicy Bypass -File scripts/prisma-migrate-local.ps1",
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
     "prisma:seed": "npm run prisma:seed -w apps/api",
+    "demo:reset": "powershell -ExecutionPolicy Bypass -File scripts/reset-demo-data.ps1",
     "backup:local": "powershell -ExecutionPolicy Bypass -File scripts/backup-local-db.ps1",
     "backup:verify": "powershell -ExecutionPolicy Bypass -File scripts/verify-local-backup.ps1",
     "restore:local": "powershell -ExecutionPolicy Bypass -File scripts/restore-local-db.ps1"
