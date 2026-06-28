@@ -20,9 +20,9 @@ export class AuthService {
     private readonly audit: AuditService
   ) {}
 
-  async login(email: string, password: string, metadata: RequestMetadata) {
-    const normalizedEmail = email.trim().toLowerCase();
-    const user = await this.users.findByEmailForAuth(normalizedEmail);
+  async login(identifier: string, password: string, metadata: RequestMetadata) {
+    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const user = await this.users.findByIdentifierForAuth(normalizedIdentifier);
     const now = new Date();
 
     if (!user || user.status !== "active") {
@@ -30,7 +30,7 @@ export class AuthService {
         action: "auth.login_failure",
         resourceType: "session",
         severity: "medium",
-        metadataJson: { reason: "invalid_credentials", email: normalizedEmail },
+        metadataJson: { reason: "invalid_credentials", identifier: normalizedIdentifier },
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent
       });

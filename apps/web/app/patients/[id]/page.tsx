@@ -115,10 +115,6 @@ export default function PatientFilePage() {
               <p className="eyebrow">Contact</p>
               <strong>{patient.phone || patient.email || "Not saved"}</strong>
             </div>
-            <div className="wide">
-              <p className="eyebrow">Patient ID for demo forms</p>
-              <code>{patient.id}</code>
-            </div>
           </section>
 
           <section className="patient-tabs" aria-label="Patient file sections">

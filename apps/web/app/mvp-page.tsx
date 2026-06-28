@@ -67,6 +67,7 @@ const navGroups: NavGroup[] = [
   {
     title: "Safety/Admin",
     links: [
+      ["/admin", "Admin"],
       ["/consents", "Consents"],
       ["/ai-drafts", "AI Drafts"]
     ]

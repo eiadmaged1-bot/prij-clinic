@@ -15,6 +15,8 @@ import { AuthService } from "./auth.service";
 
 type LoginBody = {
   email?: unknown;
+  identifier?: unknown;
+  loginId?: unknown;
   password?: unknown;
 };
 
@@ -33,11 +35,13 @@ export class AuthController {
     @Req() request: RequestWithUser,
     @Res({ passthrough: true }) response: CookieResponse
   ) {
-    if (typeof body.email !== "string" || typeof body.password !== "string") {
+    const identifier = body.email ?? body.identifier ?? body.loginId;
+
+    if (typeof identifier !== "string" || typeof body.password !== "string") {
       throw new UnauthorizedException("Invalid email or password.");
     }
 
-    const result = await this.auth.login(body.email, body.password, {
+    const result = await this.auth.login(identifier, body.password, {
       ipAddress: request.ip,
       userAgent: request.get("user-agent") ?? null
     });

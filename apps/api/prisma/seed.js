@@ -362,6 +362,49 @@ async function main() {
     demoOwner = owner;
   }
 
+  const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
+  const localAdmin = await prisma.user.upsert({
+    where: { email: "eyad.admin@prij.local" },
+    update: {
+      loginId: "eyad",
+      displayName: "Eyad Admin",
+      status: "active",
+      branchId: mainBranch.id,
+      passwordHash: await hashPassword(localAdminPassword),
+      failedLoginCount: 0,
+      lockedUntil: null
+    },
+    create: {
+      email: "eyad.admin@prij.local",
+      loginId: "eyad",
+      displayName: "Eyad Admin",
+      status: "active",
+      branchId: mainBranch.id,
+      passwordHash: await hashPassword(localAdminPassword)
+    }
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId_branchId: {
+        userId: localAdmin.id,
+        roleId: roleByName.get("Owner").id,
+        branchId: mainBranch.id
+      }
+    },
+    update: {},
+    create: {
+      userId: localAdmin.id,
+      roleId: roleByName.get("Owner").id,
+      branchId: mainBranch.id,
+      createdByUserId: demoOwner?.id
+    }
+  });
+
+  if (!demoOwner) {
+    demoOwner = localAdmin;
+  }
+
   const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
   const demoUsers = [
     ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
@@ -406,6 +449,21 @@ async function main() {
         branchId,
         createdByUserId: demoOwner?.id
       }
+    });
+  }
+
+  const serviceItems = [
+    ["CONSULT-GYN", "Gynecology consultation", "Consultation", "500.00", "EGP"],
+    ["US-OB-BASIC", "OB ultrasound basic", "Ultrasound", "750.00", "EGP"],
+    ["LAB-PANEL-DEMO", "Demo lab panel", "Investigations", "350.00", "EGP"],
+    ["FOLLOW-UP", "Follow-up visit", "Consultation", "300.00", "EGP"]
+  ];
+
+  for (const [code, name, category, price, currency] of serviceItems) {
+    await prisma.serviceItem.upsert({
+      where: { code },
+      update: { name, category, price, currency, active: true },
+      create: { code, name, category, price, currency, active: true }
     });
   }
 

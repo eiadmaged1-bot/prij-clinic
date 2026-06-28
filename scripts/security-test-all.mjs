@@ -5,7 +5,8 @@ const steps = [
   "test:routes:auth",
   "test:scope:records",
   "test:audit:assertions",
-  "test:ai:regression"
+  "test:ai:regression",
+  "test:admin:control"
 ];
 
 let failed = 0;

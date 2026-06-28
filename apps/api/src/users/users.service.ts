@@ -30,6 +30,16 @@ export class UsersService {
     });
   }
 
+  findByIdentifierForAuth(identifier: string) {
+    const normalized = identifier.trim().toLowerCase();
+    return this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: normalized }, { loginId: normalized }]
+      },
+      include: userProfileInclude
+    });
+  }
+
   findByIdForAuth(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

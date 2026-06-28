@@ -36,6 +36,7 @@ model Branch {
 model User {
   id            String     @id @default(uuid()) @db.Uuid
   email         String     @unique
+  loginId       String?    @unique
   displayName   String
   status        String
   passwordHash  String?
@@ -615,6 +616,21 @@ model Payment {
   @@index([patientId, paidAt])
   @@index([invoiceId])
   @@index([status])
+}
+
+model ServiceItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  category  String
+  price     Decimal  @db.Decimal(12, 2)
+  currency  String   @default("EGP")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([category])
+  @@index([active])
 }
 
 model AiDraft {

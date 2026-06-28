@@ -4,8 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const demoEmail = "demo.owner@prij.local";
-const demoPassword = "LocalDev123!";
+const demoEmail = "eyad";
+const demoPassword = "eyad";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,23 +78,23 @@ export default function LoginPage() {
 
           <div className="credential-card" aria-label="Demo owner credentials">
             <div>
-              <span className="eyebrow">Demo Owner</span>
+              <span className="eyebrow">Local Admin Demo</span>
               <strong>{demoEmail}</strong>
-              <code>{demoPassword}</code>
+              <span className="credential-value">{demoPassword}</span>
             </div>
             <button className="button secondary compact" onClick={useDemoLogin} type="button">
-              Use demo login
+              Use Admin Demo Login
             </button>
           </div>
 
           <label>
-            Email
+            Admin ID or email
             <input
               autoComplete="username"
               name="email"
               onChange={(event) => setEmail(event.target.value)}
               required
-              type="email"
+              type="text"
               value={email}
             />
           </label>
