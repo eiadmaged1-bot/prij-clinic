@@ -89,3 +89,13 @@ Local scripts now cover representative RBAC, scope, audit, and AI safety behavio
 - `npm run test:security`
 
 These scripts require a seeded local database and running API/web apps. They are intentionally local security smoke tests and are not exhaustive production security tests.
+
+Expanded V0.1 route-level checks are also available:
+
+- `npm run test:routes:auth`: route manifest coverage for anonymous denial, owner allow, and representative denied-role checks.
+- `npm run test:scope:records`: seeded branch scope assertions plus documented warnings for referenced-record and doctor-assignment gaps.
+- `npm run test:audit:assertions`: audit event assertions for representative writes/status/review actions and token minimization.
+- `npm run test:ai:regression`: disabled/mock-only AI regression checks, including no sign/insert/diagnose/prescribe routes.
+- `npm run test:security:expanded`: aggregate runner for expanded checks.
+
+The expanded tests are V0.1 pilot safety tests, not production certification.

@@ -86,3 +86,13 @@ All endpoints below require JWT authentication. Permission names match the imple
 - The actual implemented AI draft API route is `/ai-drafts`.
 - AI draft responses must remain marked with `modelProvider: disabled_mock` and `modelName: no_external_ai`.
 - AI draft review updates only the AI draft artifact and audit metadata; it does not update final clinical records.
+
+## Automated Route Coverage
+
+Route-level authorization coverage is tracked in `scripts/security-route-manifest.mjs` and executed with:
+
+```powershell
+npm run test:routes:auth
+```
+
+The expanded test suite checks anonymous rejection, owner access, and representative denied-role behavior for protected route categories. Some authenticated read routes are intentionally broad across staff roles and are reported as documented warnings rather than failures.

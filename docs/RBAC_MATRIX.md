@@ -91,3 +91,15 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 - Patient-to-doctor assignment is not modeled yet, so patient reads are branch-scoped but not doctor-assignment scoped.
 - Receptionist and nurse read scopes are branch-based only.
 - AI routes are disabled/mock-only; future AI approval/insertion workflows are intentionally not implemented.
+
+## Expanded Test Coverage
+
+The V0.1 pilot branch adds Node-based route-level security tests:
+
+- `npm run test:routes:auth`
+- `npm run test:scope:records`
+- `npm run test:audit:assertions`
+- `npm run test:ai:regression`
+- `npm run test:security:expanded`
+
+These tests cover every implemented protected API route with anonymous denial and owner access checks. Denied-role checks are included where a route has a clear lower-role denial case. Broad authenticated routes such as `/auth/me`, staff patient reads, and queue reads are documented warnings.

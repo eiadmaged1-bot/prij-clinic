@@ -70,6 +70,12 @@ The local demo password follows the README pattern and defaults to `LocalDev123!
 - `scripts/ai-safety-test.ps1`: verifies AI is disabled/mock-only, AI draft metadata stays disabled, lower-role review is denied, no sign/insert AI routes exist, and AI review audit metadata records no clinical insertion.
 - `scripts/security-test-all.ps1`: runs smoke, RBAC, scope, audit, and AI safety scripts.
 - `scripts/security-integration-test.mjs`: verifies CI-friendly API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI safety boundaries.
+- `scripts/security-route-manifest.mjs`: documents implemented protected API routes for expanded route-level checks.
+- `scripts/route-authorization-test.mjs`: checks anonymous denial, owner access, and representative denied-role behavior across implemented routes.
+- `scripts/referenced-scope-test.mjs`: checks seeded branch scope behavior and reports documented V0.1 scope warnings.
+- `scripts/audit-assertion-test.mjs`: checks representative audit events and confirms audit output does not expose bearer tokens.
+- `scripts/ai-safety-regression-test.mjs`: checks AI remains disabled/mock-only and cannot sign, insert, diagnose, or prescribe.
+- `scripts/security-test-expanded.mjs`: runs the expanded Node security test set.
 
 ## CI Status
 
