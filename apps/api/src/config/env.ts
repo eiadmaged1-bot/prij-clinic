@@ -54,6 +54,42 @@ export function requireEnv(name: string) {
   return value;
 }
 
+export function validateRuntimeEnv() {
+  const appEnv = process.env.APP_ENV ?? process.env.NODE_ENV ?? "development";
+  const required = ["DATABASE_URL", "JWT_SECRET"];
+  const missing = required.filter((name) => !process.env[name]);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(", ")}.`);
+  }
+
+  if (process.env.AI_FEATURES_ENABLED === "true") {
+    throw new Error("AI_FEATURES_ENABLED must remain false for V0.1.");
+  }
+
+  if (process.env.AI_PROVIDER && process.env.AI_PROVIDER !== "disabled") {
+    throw new Error("AI_PROVIDER must remain disabled for V0.1.");
+  }
+
+  if (appEnv === "production") {
+    const secret = process.env.JWT_SECRET ?? "";
+    const unsafeSecrets = new Set([
+      "replace-with-local-development-secret",
+      "ci-placeholder-secret",
+      "change-me",
+      "placeholder"
+    ]);
+
+    if (unsafeSecrets.has(secret) || secret.length < 32) {
+      throw new Error("JWT_SECRET is not production-safe.");
+    }
+
+    if (!process.env.APP_URL?.startsWith("https://")) {
+      throw new Error("APP_URL must use HTTPS when APP_ENV=production.");
+    }
+  }
+}
+
 function findRepoRoot() {
   for (const start of [process.cwd(), __dirname]) {
     let current = resolve(start);

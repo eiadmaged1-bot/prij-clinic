@@ -14,6 +14,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Lower-role role matrix documentation and representative denial tests.
 - Local backup/restore helper scripts.
 - Environment examples with placeholders only.
+- Runtime environment validation for required variables, disabled AI settings, and production-safe JWT/HTTPS checks.
 
 ## Not Ready For Production
 
@@ -28,6 +29,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Production backup encryption and restore-test evidence.
 - Monitoring, alerting, and PHI-safe logging.
 - Legal/compliance review.
+- Real production secret manager integration.
 
 ## Required Before Deployment
 
@@ -40,6 +42,7 @@ Prij Clinic V0.1 is a local/private pilot foundation. It is GitHub-backed and CI
 - Define backup retention, encryption, access, and restore ownership.
 - Add deployment-specific infrastructure review.
 - Add operational runbooks.
+- Run staging demo and pilot QA with synthetic data only.
 
 ## Build And Start Commands
 
@@ -52,3 +55,14 @@ npm run start:web
 ```
 
 These commands assume dependencies are installed and required environment variables are configured outside source control.
+
+## Environment Files
+
+Tracked examples are placeholders only:
+
+- `.env.example`
+- `.env.ci.example`
+- `.env.staging.example`
+- `.env.production.example`
+
+Real `.env` files remain ignored by git. Production values must be injected by a secret manager or deployment platform.
