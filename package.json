@@ -9,12 +9,15 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev-ports.ps1",
     "dev:web": "npm run dev -w apps/web",
     "dev:api": "npm run dev -w apps/api",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "prisma:generate": "npm run prisma:generate -w apps/api",
+    "prisma:repair": "powershell -ExecutionPolicy Bypass -File scripts/prisma-repair-client.ps1",
+    "prisma:migrate:local": "powershell -ExecutionPolicy Bypass -File scripts/prisma-migrate-local.ps1",
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
     "prisma:seed": "npm run prisma:seed -w apps/api"
   },

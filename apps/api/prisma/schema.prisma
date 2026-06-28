@@ -48,6 +48,10 @@ model User {
   createdPatients Patient[] @relation("PatientsCreatedBy")
   doctorAppointments Appointment[] @relation("AppointmentsDoctor")
   createdAppointments Appointment[] @relation("AppointmentsCreatedBy")
+  doctorEncounters Encounter[] @relation("EncountersDoctor")
+  signedEncounters Encounter[] @relation("EncountersSignedBy")
+  doctorPrescriptions Prescription[] @relation("PrescriptionsDoctor")
+  doctorInvestigationOrders InvestigationOrder[] @relation("InvestigationOrdersDoctor")
 
   @@index([branchId])
   @@index([status])
@@ -99,6 +103,9 @@ model Patient {
   createdByUser       User?         @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   appointments         Appointment[]
   queueTickets         QueueTicket[]
+  encounters           Encounter[]
+  prescriptions        Prescription[]
+  investigationOrders  InvestigationOrder[]
 
   @@index([branchId])
   @@index([status])
@@ -125,6 +132,7 @@ model Appointment {
   doctor          User?             @relation("AppointmentsDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
   createdByUser   User?             @relation("AppointmentsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   queueTickets    QueueTicket[]
+  encounters       Encounter[]
 
   @@index([branchId, startAt])
   @@index([patientId, startAt])
@@ -155,6 +163,149 @@ model QueueTicket {
   @@index([branchId, checkedInAt])
   @@index([patientId])
   @@index([appointmentId])
+  @@index([status])
+}
+
+enum EncounterStatus {
+  draft
+  signed
+  voided
+}
+
+enum PrescriptionStatus {
+  draft
+  signed
+  cancelled
+  voided
+}
+
+enum InvestigationOrderStatus {
+  requested
+  scheduled
+  sample_collected
+  sent_out
+  result_pending
+  result_received
+  reviewed
+  cancelled
+  voided
+}
+
+enum InvestigationPriority {
+  routine
+  urgent
+}
+
+enum InvestigationCategory {
+  laboratory
+  radiology
+  ultrasound
+  pathology
+  cytology
+  procedure
+  other
+}
+
+model Encounter {
+  id              String          @id @default(uuid()) @db.Uuid
+  patientId       String          @db.Uuid
+  appointmentId   String?         @db.Uuid
+  doctorId        String          @db.Uuid
+  status          EncounterStatus @default(draft)
+  chiefComplaint  String?
+  historyText     String?
+  examText        String?
+  assessmentText  String?
+  planText        String?
+  signedAt        DateTime?       @db.Timestamptz(3)
+  signedByUserId  String?         @db.Uuid
+  createdAt       DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(3)
+
+  patient         Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment     Appointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  doctor          User            @relation("EncountersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  signedByUser    User?           @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
+  prescriptions   Prescription[]
+  investigationOrders InvestigationOrder[]
+
+  @@index([patientId, createdAt])
+  @@index([doctorId, createdAt])
+  @@index([appointmentId])
+  @@index([status])
+}
+
+model Prescription {
+  id              String             @id @default(uuid()) @db.Uuid
+  patientId       String             @db.Uuid
+  encounterId     String?            @db.Uuid
+  doctorId        String             @db.Uuid
+  status          PrescriptionStatus @default(draft)
+  notes           String?
+  signedAt        DateTime?          @db.Timestamptz(3)
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(3)
+
+  patient         Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter       Encounter?         @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  doctor          User               @relation("PrescriptionsDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  items           PrescriptionItem[]
+
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([doctorId, createdAt])
+  @@index([status])
+}
+
+model PrescriptionItem {
+  id               String       @id @default(uuid()) @db.Uuid
+  prescriptionId   String       @db.Uuid
+  medicationName   String
+  dose             String?
+  route            String?
+  frequency        String?
+  duration         String?
+  instructions     String?
+
+  prescription     Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
+}
+
+model InvestigationOrder {
+  id              String                   @id @default(uuid()) @db.Uuid
+  patientId       String                   @db.Uuid
+  encounterId     String?                  @db.Uuid
+  doctorId        String                   @db.Uuid
+  status          InvestigationOrderStatus @default(requested)
+  priority        InvestigationPriority    @default(routine)
+  notes           String?
+  createdAt       DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                 @updatedAt @db.Timestamptz(3)
+
+  patient         Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter       Encounter?               @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  doctor          User                     @relation("InvestigationOrdersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  items           InvestigationOrderItem[]
+
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([doctorId, createdAt])
+  @@index([status])
+}
+
+model InvestigationOrderItem {
+  id              String                   @id @default(uuid()) @db.Uuid
+  orderId         String                   @db.Uuid
+  category        InvestigationCategory
+  testName        String
+  instructions    String?
+  status          InvestigationOrderStatus @default(requested)
+
+  order           InvestigationOrder       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([category])
   @@index([status])
 }
 
