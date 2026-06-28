@@ -15,9 +15,28 @@ type SafeUser = {
   permissions: string[];
 };
 
+type DashboardSummary = {
+  operational: {
+    appointmentsToday: number;
+    waitingQueue: number;
+    pendingReports: number;
+    activePregnancies: number;
+    draftUltrasounds: number;
+  };
+  billing: {
+    openInvoices: number;
+    paymentsToday: string;
+  };
+  safety: {
+    aiEnabled: boolean;
+    clinicalDraftsRequireDoctorReview: boolean;
+  };
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<SafeUser | null>(null);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -34,7 +53,18 @@ export default function DashboardPage() {
 
         return (await response.json()) as { user: SafeUser };
       })
-      .then((data) => setUser(data.user))
+      .then((data) => {
+        setUser(data.user);
+        return fetch(`${apiUrl}/dashboard/summary`, {
+          credentials: "include",
+          headers: token ? { authorization: `Bearer ${token}` } : undefined
+        });
+      })
+      .then(async (response) => {
+        if (response?.ok) {
+          setSummary((await response.json()) as DashboardSummary);
+        }
+      })
       .catch(() => setError("Please sign in to continue."));
   }, []);
 
@@ -84,6 +114,9 @@ export default function DashboardPage() {
           <a className="button secondary" href="/queue">
             Queue
           </a>
+          <a className="button secondary" href="/billing">
+            Billing
+          </a>
           <button className="button secondary" onClick={logout} type="button">
             Logout
           </button>
@@ -113,6 +146,48 @@ export default function DashboardPage() {
             <div className="wide">
               <dt>Permissions</dt>
               <dd>{user.permissions.join(", ") || "None"}</dd>
+            </div>
+          </dl>
+        ) : (
+          <p>Loading</p>
+        )}
+      </section>
+
+      <section className="panel">
+        <h2>Operational summary</h2>
+        {summary ? (
+          <dl className="profile-grid">
+            <div>
+              <dt>Appointments today</dt>
+              <dd>{summary.operational.appointmentsToday}</dd>
+            </div>
+            <div>
+              <dt>Waiting queue</dt>
+              <dd>{summary.operational.waitingQueue}</dd>
+            </div>
+            <div>
+              <dt>Pending reports</dt>
+              <dd>{summary.operational.pendingReports}</dd>
+            </div>
+            <div>
+              <dt>Active pregnancies</dt>
+              <dd>{summary.operational.activePregnancies}</dd>
+            </div>
+            <div>
+              <dt>Draft OB ultrasounds</dt>
+              <dd>{summary.operational.draftUltrasounds}</dd>
+            </div>
+            <div>
+              <dt>Open invoices</dt>
+              <dd>{summary.billing.openInvoices}</dd>
+            </div>
+            <div>
+              <dt>Payments today</dt>
+              <dd>{summary.billing.paymentsToday}</dd>
+            </div>
+            <div>
+              <dt>AI status</dt>
+              <dd>{summary.safety.aiEnabled ? "Enabled" : "Disabled"}</dd>
             </div>
           </dl>
         ) : (

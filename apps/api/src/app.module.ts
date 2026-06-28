@@ -2,6 +2,8 @@ import { Module } from "@nestjs/common";
 import { AuditModule } from "./audit/audit.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { AuthModule } from "./auth/auth.module";
+import { BillingModule } from "./billing/billing.module";
+import { DashboardModule } from "./dashboard/dashboard.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { HealthModule } from "./health/health.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
@@ -29,7 +31,9 @@ import { UsersModule } from "./users/users.module";
     PrescriptionsModule,
     InvestigationsModule,
     ReportsModule,
-    PregnancyModule
+    PregnancyModule,
+    BillingModule,
+    DashboardModule
   ]
 })
 export class AppModule {}

@@ -81,6 +81,7 @@ const permissions = [
   "billing.adjust",
   "billing.void",
   "billing.report",
+  "dashboard.read",
   "user.read",
   "user.manage",
   "role.read",
@@ -192,6 +193,7 @@ const rolePermissionKeys = {
     "billing.adjust",
     "billing.void",
     "billing.report",
+    "dashboard.read",
     "patient.read"
   ]
 };
@@ -494,6 +496,65 @@ async function main() {
         amnioticFluid: "Demo placeholder",
         impressionText: "Draft local demo OB ultrasound note. Doctor review required.",
         createdByUserId: demoOwner?.id
+      }
+    });
+  }
+
+  let demoInvoice = await prisma.invoice.findUnique({
+    where: { invoiceNumber: "DEMO-INV-0001" }
+  });
+
+  if (!demoInvoice) {
+    demoInvoice = await prisma.invoice.create({
+      data: {
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        invoiceNumber: "DEMO-INV-0001",
+        status: "issued",
+        issueDate: new Date(),
+        subtotalAmount: "500.00",
+        discountAmount: "0.00",
+        totalAmount: "500.00",
+        amountPaid: "200.00",
+        balanceAmount: "300.00",
+        notes: "Local demo billing record only. No card or payment secrets stored.",
+        createdByUserId: demoOwner?.id,
+        issuedByUserId: demoOwner?.id,
+        issuedAt: new Date(),
+        items: {
+          create: [
+            {
+              description: "Demo consultation service",
+              quantity: 1,
+              unitAmount: "500.00",
+              lineAmount: "500.00",
+              notes: "Local demo invoice item only."
+            }
+          ]
+        }
+      }
+    });
+  }
+
+  const existingPayment = await prisma.payment.findFirst({
+    where: {
+      invoiceId: demoInvoice.id,
+      amount: "200.00",
+      method: "cash",
+      status: "recorded"
+    }
+  });
+
+  if (!existingPayment) {
+    await prisma.payment.create({
+      data: {
+        invoiceId: demoInvoice.id,
+        patientId: demoPatientA.id,
+        branchId: mainBranch.id,
+        method: "cash",
+        amount: "200.00",
+        referenceNote: "Local demo cash payment only.",
+        recordedByUserId: demoOwner?.id
       }
     });
   }
