@@ -121,6 +121,8 @@ export class PatientsService {
       investigationOrders,
       reports,
       pregnancies,
+      previousPregnancies,
+      pregnancyFetuses,
       antenatalVisits,
       obUltrasounds,
       invoices,
@@ -134,6 +136,8 @@ export class PatientsService {
       this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { items: true, doctor: true } }),
       this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user) }, include: { uploadedByUser: true, reviewedByUser: true } }),
       this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user) }, include: { fetuses: true } }),
+      this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user) } }),
+      this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) } } }),
       this.prisma.antenatalVisit.findMany({ where: { patientId: id, ...branchScope(user) } }),
       this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user) }, include: { reviewedByUser: true } }),
       this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true } }),
@@ -150,8 +154,11 @@ export class PatientsService {
       ...investigationOrders.map((item) => timelineItem(item.createdAt, "investigation", "Investigation ordered", item.status, item.items.map((orderItem) => orderItem.testName).join(", ") || "Investigation order", item.doctor.displayName, "/investigations")),
       ...reports.map((item) => timelineItem(item.createdAt, "report", "Report created", item.status, item.title, item.uploadedByUser?.displayName, "/reports")),
       ...pregnancies.map((item) => timelineItem(item.createdAt, "pregnancy", "Pregnancy episode recorded", item.status, `${item.fetuses.length || 1} fetus record(s)`, undefined, "/pregnancies")),
+      ...previousPregnancies.map((item) => timelineItem(item.createdAt, "previous_pregnancy", "Previous pregnancy history recorded", "recorded", item.outcome, undefined, "/pregnancies")),
+      ...pregnancyFetuses.map((item) => timelineItem(item.createdAt, "pregnancy_fetus", "Fetus record created", item.status, item.label, undefined, "/pregnancies")),
+      ...pregnancyFetuses.map((item) => timelineItem(item.updatedAt, "pregnancy_fetus", "Fetus record updated", item.status, item.label, undefined, "/pregnancies")),
       ...antenatalVisits.map((item) => timelineItem(item.visitDate, "antenatal_visit", "Antenatal visit recorded", "recorded", item.gestationalAgeDisplay ?? "Pregnancy follow-up", undefined, "/pregnancies")),
-      ...obUltrasounds.map((item) => timelineItem(item.performedAt, "ultrasound", "Ultrasound draft recorded", item.status, "Recording only; clinician interpretation required", item.reviewedByUser?.displayName, "/ultrasound")),
+      ...obUltrasounds.map((item) => timelineItem(item.performedAt, "ultrasound", item.status === "draft" ? "Ultrasound draft recorded" : "Ultrasound study recorded", item.status, item.scanType ?? "Recording only; clinician interpretation required", item.reviewedByUser?.displayName, "/ultrasound")),
       ...invoices.map((item) => timelineItem(item.createdAt, "invoice", "Invoice created", item.status, `Balance ${item.balanceAmount.toString()}`, item.createdByUser?.displayName, "/billing")),
       ...payments.map((item) => timelineItem(item.paidAt, "payment", "Payment recorded", item.status, `${item.method} ${item.amount.toString()}`, item.recordedByUser?.displayName, "/billing")),
       ...consentRecords.map((item) => timelineItem(item.capturedAt, "consent", "Consent recorded", item.status, item.consentType.replaceAll("_", " "), item.capturedByUser?.displayName, "/consents"))
@@ -311,13 +318,38 @@ export class PatientsService {
 
   async createUltrasound(id: string, dto: PatientContextUltrasoundDto, user: AuthUser) {
     const patient = await this.get(id, user);
-    await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: id });
+    const pregnancy = await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: id });
+    await this.assertCanReferenceFetus(dto.fetusId, pregnancy?.id);
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: id, requireDoctorScope: true });
     const ultrasound = await this.prisma.obUltrasound.create({
-      data: { patientId: id, branchId: patient.branchId, pregnancyId: dto.pregnancyId ?? null, encounterId: dto.encounterId ?? null, performedAt: toDateTime(dto.performedAt) ?? new Date(), gestationalAgeWeeks: dto.gestationalAgeWeeks, gestationalAgeDays: dto.gestationalAgeDays, impressionText: clean(dto.impressionText), createdByUserId: user.id },
-      include: { patient: true, pregnancy: true, encounter: true }
+      data: {
+        patientId: id,
+        branchId: patient.branchId,
+        pregnancyId: dto.pregnancyId ?? null,
+        fetusId: dto.fetusId ?? null,
+        encounterId: dto.encounterId ?? null,
+        performedAt: toDateTime(dto.performedAt) ?? new Date(),
+        scanType: clean(dto.scanType),
+        indication: clean(dto.indication),
+        gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
+        gestationalAgeWeeks: dto.gestationalAgeWeeks,
+        gestationalAgeDays: dto.gestationalAgeDays,
+        fetalHeartText: clean(dto.fetalHeartText),
+        presentation: clean(dto.presentation),
+        placenta: clean(dto.placenta),
+        amnioticFluid: clean(dto.amnioticFluid),
+        bpdMm: decimalOrNull(dto.bpdMm),
+        hcMm: decimalOrNull(dto.hcMm),
+        acMm: decimalOrNull(dto.acMm),
+        flMm: decimalOrNull(dto.flMm),
+        efwGrams: dto.efwGrams,
+        dopplerNote: clean(dto.dopplerNote),
+        impressionText: clean(dto.impressionText),
+        createdByUserId: user.id
+      },
+      include: { patient: true, pregnancy: true, fetus: true, encounter: true }
     });
-    await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.created", resourceType: "ob_ultrasound", resourceId: ultrasound.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, source: "patient_file", safety: "recording_only" } });
+    await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.created", resourceType: "ob_ultrasound", resourceId: ultrasound.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, source: "patient_file", fetusId: ultrasound.fetusId, safety: "recording_only_clinician_interpretation_required" } });
     return ultrasound;
   }
 
@@ -399,6 +431,19 @@ export class PatientsService {
     const count = await this.prisma.invoice.count();
     return `DEMO-INV-${String(count + 1).padStart(4, "0")}`;
   }
+
+  private async assertCanReferenceFetus(fetusId: string | undefined, pregnancyId: string | null | undefined) {
+    if (!fetusId) return null;
+    if (!pregnancyId) {
+      throw new BadRequestException("A fetus record must be linked to a pregnancy episode.");
+    }
+
+    const fetus = await this.prisma.pregnancyFetus.findFirst({ where: { id: fetusId, pregnancyId } });
+    if (!fetus) {
+      throw new NotFoundException("Fetus record not found.");
+    }
+    return fetus;
+  }
 }
 
 function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string) {
@@ -422,6 +467,10 @@ function paymentRollup(totalAmount: Prisma.Decimal, amountPaid: Prisma.Decimal) 
 
 function money(value: number) {
   return new Prisma.Decimal(value).toDecimalPlaces(2);
+}
+
+function decimalOrNull(value: number | undefined) {
+  return value === undefined ? null : new Prisma.Decimal(value).toDecimalPlaces(2);
 }
 
 function clean(value?: string) {

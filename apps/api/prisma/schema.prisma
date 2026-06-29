@@ -63,6 +63,8 @@ model User {
   uploadedReports Report[] @relation("ReportsUploadedBy")
   reviewedReports Report[] @relation("ReportsReviewedBy")
   createdPregnancies Pregnancy[] @relation("PregnanciesCreatedBy")
+  createdPreviousPregnancies PreviousPregnancy[] @relation("PreviousPregnanciesCreatedBy")
+  createdPregnancyFetuses PregnancyFetus[] @relation("PregnancyFetusesCreatedBy")
   createdObUltrasounds ObUltrasound[] @relation("ObUltrasoundsCreatedBy")
   reviewedObUltrasounds ObUltrasound[] @relation("ObUltrasoundsReviewedBy")
   createdInvoices Invoice[] @relation("InvoicesCreatedBy")
@@ -145,6 +147,7 @@ model Patient {
   investigationOrders  InvestigationOrder[]
   reports              Report[]
   pregnancies          Pregnancy[]
+  previousPregnancies  PreviousPregnancy[]
   antenatalVisits      AntenatalVisit[]
   obUltrasounds        ObUltrasound[]
   invoices             Invoice[]
@@ -396,6 +399,8 @@ enum ReportCategory {
 
 enum PregnancyStatus {
   active
+  inactive
+  ended
   completed
   loss
   unknown
@@ -403,6 +408,7 @@ enum PregnancyStatus {
 
 enum ObUltrasoundStatus {
   draft
+  final
   reviewed
   voided
 }
@@ -495,6 +501,7 @@ model Pregnancy {
   estimatedDueDate     DateTime?       @db.Date
   datingMethod         String?
   riskLevel            String?
+  riskFlags            String?
   notes                String?
   createdByUserId      String?         @db.Uuid
   createdAt            DateTime        @default(now()) @db.Timestamptz(3)
@@ -504,12 +511,39 @@ model Pregnancy {
   patient              Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
   createdByUser        User?           @relation("PregnanciesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   fetuses              PregnancyFetus[]
+  previousPregnancies  PreviousPregnancy[]
   antenatalVisits      AntenatalVisit[]
   obUltrasounds        ObUltrasound[]
 
   @@index([branchId])
   @@index([patientId, createdAt])
   @@index([status])
+}
+
+model PreviousPregnancy {
+  id                      String     @id @default(uuid()) @db.Uuid
+  patientId               String     @db.Uuid
+  pregnancyId             String?    @db.Uuid
+  year                    Int?
+  outcomeDate             DateTime?  @db.Date
+  outcome                 String
+  gestationalAgeAtOutcome String?
+  modeOfDelivery          String?
+  birthWeightGrams        Int?
+  sex                     String?
+  complications           String?
+  notes                   String?
+  createdByUserId         String?    @db.Uuid
+  createdAt               DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime   @updatedAt @db.Timestamptz(3)
+
+  patient                 Patient    @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  pregnancy               Pregnancy? @relation(fields: [pregnancyId], references: [id], onDelete: SetNull)
+  createdByUser           User?      @relation("PreviousPregnanciesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([pregnancyId])
+  @@index([outcome])
 }
 
 model PregnancyFetus {
@@ -520,10 +554,13 @@ model PregnancyFetus {
   amnionicity          String?
   status               String     @default("active")
   notes                String?
+  createdByUserId      String?    @db.Uuid
   createdAt            DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime   @updatedAt @db.Timestamptz(3)
 
   pregnancy            Pregnancy  @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+  createdByUser        User?      @relation("PregnancyFetusesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  obUltrasounds        ObUltrasound[]
 
   @@index([pregnancyId])
   @@index([status])
@@ -538,9 +575,16 @@ model AntenatalVisit {
   gestationalAgeDisplay String?
   bloodPressure         String?
   weightKg              Decimal?   @db.Decimal(6, 2)
+  pulseBpm              Int?
+  edema                 String?
+  urineProtein          String?
   symptomsText          String?
+  examinationText       String?
   fetalHeartText        String?
+  fundalHeightText      String?
   planText              String?
+  medicationsNote       String?
+  investigationsNote    String?
   nextFollowUpDate      DateTime?  @db.Date
   createdByUserId       String?    @db.Uuid
   createdAt             DateTime   @default(now()) @db.Timestamptz(3)
@@ -560,15 +604,26 @@ model ObUltrasound {
   branchId              String?             @db.Uuid
   patientId             String              @db.Uuid
   pregnancyId           String?             @db.Uuid
+  fetusId               String?             @db.Uuid
   encounterId           String?             @db.Uuid
   status                ObUltrasoundStatus  @default(draft)
   performedAt           DateTime            @default(now()) @db.Timestamptz(3)
+  scanType              String?
+  indication            String?
+  gestationalAgeDisplay String?
   gestationalAgeWeeks   Int?
   gestationalAgeDays    Int?
   fetalHeartRateBpm     Int?
+  fetalHeartText        String?
   presentation          String?
   placenta              String?
   amnioticFluid         String?
+  bpdMm                 Decimal?            @db.Decimal(8, 2)
+  hcMm                  Decimal?            @db.Decimal(8, 2)
+  acMm                  Decimal?            @db.Decimal(8, 2)
+  flMm                  Decimal?            @db.Decimal(8, 2)
+  efwGrams              Int?
+  dopplerNote           String?
   impressionText        String?
   createdByUserId       String?             @db.Uuid
   reviewedByUserId      String?             @db.Uuid
@@ -579,6 +634,7 @@ model ObUltrasound {
   branch                Branch?             @relation(fields: [branchId], references: [id], onDelete: SetNull)
   patient               Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
   pregnancy             Pregnancy?          @relation(fields: [pregnancyId], references: [id], onDelete: SetNull)
+  fetus                 PregnancyFetus?     @relation(fields: [fetusId], references: [id], onDelete: SetNull)
   encounter             Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   createdByUser         User?               @relation("ObUltrasoundsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   reviewedByUser        User?               @relation("ObUltrasoundsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
@@ -586,6 +642,7 @@ model ObUltrasound {
   @@index([branchId])
   @@index([patientId, performedAt])
   @@index([pregnancyId])
+  @@index([fetusId])
   @@index([encounterId])
   @@index([status])
 }

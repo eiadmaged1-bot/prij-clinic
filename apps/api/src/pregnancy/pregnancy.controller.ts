@@ -7,6 +7,7 @@ import { Permissions } from "../rbac/require-permissions.decorator";
 import {
   CreateAntenatalVisitDto,
   CreateObUltrasoundDto,
+  CreatePreviousPregnancyDto,
   CreatePregnancyDto,
   CreatePregnancyFetusDto,
   UpdateObUltrasoundDto,
@@ -43,16 +44,51 @@ export class PregnancyController {
     return this.pregnancy.updatePregnancy(id, dto, user);
   }
 
+  @Post("previous-pregnancies")
+  @Permissions("pregnancy.manage")
+  createPreviousPregnancy(@Body() dto: CreatePreviousPregnancyDto, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.createPreviousPregnancy(dto, user);
+  }
+
+  @Get("previous-pregnancies")
+  @Permissions("pregnancy.read")
+  async listPreviousPregnancies(@CurrentUser() user: AuthUser) {
+    return { previousPregnancies: await this.pregnancy.listPreviousPregnancies(user) };
+  }
+
   @Post("pregnancies/:id/fetuses")
   @Permissions("pregnancy.manage")
   createFetus(@Param("id") id: string, @Body() dto: CreatePregnancyFetusDto, @CurrentUser() user: AuthUser) {
     return this.pregnancy.createFetus(id, dto, user);
   }
 
+  @Get("pregnancies/:id/fetuses")
+  @Permissions("pregnancy.read")
+  async listFetuses(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return { fetuses: await this.pregnancy.listFetuses(id, user) };
+  }
+
+  @Patch("pregnancies/:pregnancyId/fetuses/:fetusId")
+  @Permissions("pregnancy.manage")
+  updateFetus(
+    @Param("pregnancyId") pregnancyId: string,
+    @Param("fetusId") fetusId: string,
+    @Body() dto: CreatePregnancyFetusDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.pregnancy.updateFetus(pregnancyId, fetusId, dto, user);
+  }
+
   @Post("pregnancies/:id/antenatal-visits")
   @Permissions("pregnancy.manage")
   createAntenatalVisit(@Param("id") id: string, @Body() dto: CreateAntenatalVisitDto, @CurrentUser() user: AuthUser) {
     return this.pregnancy.createAntenatalVisit(id, dto, user);
+  }
+
+  @Get("pregnancies/:id/antenatal-visits")
+  @Permissions("pregnancy.read")
+  async listAntenatalVisits(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return { antenatalVisits: await this.pregnancy.listAntenatalVisits(id, user) };
   }
 
   @Post("ob-ultrasounds")

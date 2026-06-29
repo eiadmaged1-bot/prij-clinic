@@ -53,6 +53,11 @@ export class CreatePregnancyDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
+  riskFlags?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   notes?: string;
 }
@@ -106,6 +111,65 @@ export class UpdatePregnancyDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(1000)
+  riskFlags?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class CreatePreviousPregnancyDto {
+  @IsUUID()
+  patientId!: string;
+
+  @IsOptional()
+  @IsUUID()
+  pregnancyEpisodeId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(2100)
+  year?: number;
+
+  @IsOptional()
+  @IsDateString()
+  outcomeDate?: string;
+
+  @IsString()
+  @MaxLength(120)
+  outcome!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gestationalAgeAtOutcome?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  modeOfDelivery?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10000)
+  birthWeightGrams?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  sex?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  complications?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   notes?: string;
 }
@@ -120,11 +184,30 @@ export class CreateObUltrasoundDto {
 
   @IsOptional()
   @IsUUID()
+  fetusId?: string;
+
+  @IsOptional()
+  @IsUUID()
   encounterId?: string;
 
   @IsOptional()
   @IsDateString()
   performedAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  scanType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  indication?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gestationalAgeDisplay?: string;
 
   @IsOptional()
   @IsInt()
@@ -146,6 +229,11 @@ export class CreateObUltrasoundDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  fetalHeartText?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   presentation?: string;
 
@@ -158,6 +246,41 @@ export class CreateObUltrasoundDto {
   @IsString()
   @MaxLength(160)
   amnioticFluid?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(300)
+  bpdMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  hcMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  acMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  flMm?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(7000)
+  efwGrams?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  dopplerNote?: string;
 
   @IsOptional()
   @IsString()
@@ -176,11 +299,30 @@ export class UpdateObUltrasoundDto {
 
   @IsOptional()
   @IsUUID()
+  fetusId?: string;
+
+  @IsOptional()
+  @IsUUID()
   encounterId?: string;
 
   @IsOptional()
   @IsDateString()
   performedAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  scanType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  indication?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gestationalAgeDisplay?: string;
 
   @IsOptional()
   @IsInt()
@@ -202,6 +344,11 @@ export class UpdateObUltrasoundDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  fetalHeartText?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(120)
   presentation?: string;
 
@@ -214,6 +361,41 @@ export class UpdateObUltrasoundDto {
   @IsString()
   @MaxLength(160)
   amnioticFluid?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(300)
+  bpdMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  hcMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  acMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  flMm?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(7000)
+  efwGrams?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  dopplerNote?: string;
 
   @IsOptional()
   @IsString()
@@ -269,9 +451,30 @@ export class CreateAntenatalVisitDto {
   weightKg?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(250)
+  pulseBpm?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  edema?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  urineProtein?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
   symptomsText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  examinationText?: string;
 
   @IsOptional()
   @IsString()
@@ -280,8 +483,23 @@ export class CreateAntenatalVisitDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  fundalHeightText?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(2000)
   planText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  medicationsNote?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  investigationsNote?: string;
 
   @IsOptional()
   @IsDateString()

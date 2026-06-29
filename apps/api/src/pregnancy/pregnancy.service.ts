@@ -8,6 +8,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateAntenatalVisitDto,
   CreateObUltrasoundDto,
+  CreatePreviousPregnancyDto,
   CreatePregnancyDto,
   CreatePregnancyFetusDto,
   UpdateObUltrasoundDto,
@@ -34,10 +35,11 @@ export class PregnancyService {
           para: dto.para,
           living: dto.living,
           abortions: dto.abortions,
-          lmpDate: toDate(dto.lmpDate),
-          estimatedDueDate: toDate(dto.estimatedDueDate),
+          lmpDate: parseDate(dto.lmpDate, "lmpDate"),
+          estimatedDueDate: parseDate(dto.estimatedDueDate, "estimatedDueDate"),
           datingMethod: clean(dto.datingMethod),
           riskLevel: clean(dto.riskLevel),
+          riskFlags: clean(dto.riskFlags),
           notes: clean(dto.notes),
           createdByUserId: user.id
         },
@@ -50,7 +52,7 @@ export class PregnancyService {
         resourceType: "pregnancy",
         resourceId: pregnancy.id,
         severity: "high",
-        metadataJson: { patientId: pregnancy.patientId, status: pregnancy.status }
+        metadataJson: { patientId: pregnancy.patientId, status: pregnancy.status, safety: "recording_only" }
       });
 
       return pregnancy;
@@ -110,10 +112,11 @@ export class PregnancyService {
     if (dto.para !== undefined) data.para = dto.para;
     if (dto.living !== undefined) data.living = dto.living;
     if (dto.abortions !== undefined) data.abortions = dto.abortions;
-    if (dto.lmpDate !== undefined) data.lmpDate = toDate(dto.lmpDate);
-    if (dto.estimatedDueDate !== undefined) data.estimatedDueDate = toDate(dto.estimatedDueDate);
+    if (dto.lmpDate !== undefined) data.lmpDate = parseDate(dto.lmpDate, "lmpDate");
+    if (dto.estimatedDueDate !== undefined) data.estimatedDueDate = parseDate(dto.estimatedDueDate, "estimatedDueDate");
     if (dto.datingMethod !== undefined) data.datingMethod = clean(dto.datingMethod);
     if (dto.riskLevel !== undefined) data.riskLevel = clean(dto.riskLevel);
+    if (dto.riskFlags !== undefined) data.riskFlags = clean(dto.riskFlags);
     if (dto.notes !== undefined) data.notes = clean(dto.notes);
 
     const pregnancy = await this.prisma.pregnancy.update({
@@ -128,10 +131,70 @@ export class PregnancyService {
       resourceType: "pregnancy",
       resourceId: pregnancy.id,
       severity: "high",
-      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: pregnancy.status }
+      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: pregnancy.status, safety: "recording_only" }
     });
 
     return pregnancy;
+  }
+
+  async createPreviousPregnancy(dto: CreatePreviousPregnancyDto, user: AuthUser) {
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    await assertCanReferencePregnancy(this.prisma, dto.pregnancyEpisodeId, user, { patientId: dto.patientId });
+
+    const outcome = clean(dto.outcome);
+    if (!outcome) {
+      throw new BadRequestException("Outcome is required.");
+    }
+
+    const history = await this.prisma.previousPregnancy.create({
+      data: {
+        patientId: dto.patientId,
+        pregnancyId: dto.pregnancyEpisodeId ?? null,
+        year: dto.year,
+        outcomeDate: parseDate(dto.outcomeDate, "outcomeDate"),
+        outcome,
+        gestationalAgeAtOutcome: clean(dto.gestationalAgeAtOutcome),
+        modeOfDelivery: clean(dto.modeOfDelivery),
+        birthWeightGrams: dto.birthWeightGrams,
+        sex: clean(dto.sex),
+        complications: clean(dto.complications),
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      },
+      include: previousPregnancyIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "previous_pregnancy.created",
+      resourceType: "previous_pregnancy",
+      resourceId: history.id,
+      branchId: patient.branchId,
+      severity: "high",
+      metadataJson: { patientId: history.patientId, pregnancyId: history.pregnancyId, safety: "history_recording_only" }
+    });
+
+    return history;
+  }
+
+  async listPreviousPregnancies(user: AuthUser) {
+    const histories = await this.prisma.previousPregnancy.findMany({
+      where: { patient: branchScope(user) },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: previousPregnancyIncludes
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "previous_pregnancy.list_read",
+      resourceType: "previous_pregnancy",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { count: histories.length }
+    });
+
+    return histories;
   }
 
   async createFetus(pregnancyId: string, dto: CreatePregnancyFetusDto, user: AuthUser) {
@@ -143,7 +206,8 @@ export class PregnancyService {
         chorionicity: clean(dto.chorionicity),
         amnionicity: clean(dto.amnionicity),
         status: clean(dto.status) ?? "active",
-        notes: clean(dto.notes)
+        notes: clean(dto.notes),
+        createdByUserId: user.id
       }
     });
 
@@ -154,7 +218,52 @@ export class PregnancyService {
       resourceId: fetus.id,
       branchId: pregnancy.branchId,
       severity: "high",
-      metadataJson: { patientId: pregnancy.patientId, pregnancyId, label: fetus.label }
+      metadataJson: { patientId: pregnancy.patientId, pregnancyId, label: fetus.label, safety: "multiple_pregnancy_recording_only" }
+    });
+
+    return fetus;
+  }
+
+  async listFetuses(pregnancyId: string, user: AuthUser) {
+    await this.getPregnancy(pregnancyId, user);
+    const fetuses = await this.prisma.pregnancyFetus.findMany({
+      where: { pregnancyId },
+      orderBy: { createdAt: "asc" }
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy_fetus.list_read",
+      resourceType: "pregnancy_fetus",
+      severity: "medium",
+      metadataJson: { pregnancyId, count: fetuses.length }
+    });
+
+    return fetuses;
+  }
+
+  async updateFetus(pregnancyId: string, fetusId: string, dto: CreatePregnancyFetusDto, user: AuthUser) {
+    const pregnancy = await this.getPregnancy(pregnancyId, user);
+    const existing = await this.getFetusInPregnancy(pregnancyId, fetusId);
+    const fetus = await this.prisma.pregnancyFetus.update({
+      where: { id: existing.id },
+      data: {
+        label: dto.label.trim(),
+        chorionicity: clean(dto.chorionicity),
+        amnionicity: clean(dto.amnionicity),
+        status: clean(dto.status) ?? existing.status,
+        notes: clean(dto.notes)
+      }
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy_fetus.updated",
+      resourceType: "pregnancy_fetus",
+      resourceId: fetus.id,
+      branchId: pregnancy.branchId,
+      severity: "high",
+      metadataJson: { patientId: pregnancy.patientId, pregnancyId, changedFields: Object.keys(dto), safety: "recording_only" }
     });
 
     return fetus;
@@ -167,14 +276,21 @@ export class PregnancyService {
         branchId: pregnancy.branchId,
         patientId: pregnancy.patientId,
         pregnancyId,
-        visitDate: toDate(dto.visitDate) ?? new Date(),
+        visitDate: parseDate(dto.visitDate, "visitDate") ?? new Date(),
         gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
         bloodPressure: clean(dto.bloodPressure),
         weightKg: dto.weightKg !== undefined ? new Prisma.Decimal(dto.weightKg).toDecimalPlaces(2) : null,
+        pulseBpm: dto.pulseBpm,
+        edema: clean(dto.edema),
+        urineProtein: clean(dto.urineProtein),
         symptomsText: clean(dto.symptomsText),
+        examinationText: clean(dto.examinationText),
         fetalHeartText: clean(dto.fetalHeartText),
+        fundalHeightText: clean(dto.fundalHeightText),
         planText: clean(dto.planText),
-        nextFollowUpDate: toDate(dto.nextFollowUpDate),
+        medicationsNote: clean(dto.medicationsNote),
+        investigationsNote: clean(dto.investigationsNote),
+        nextFollowUpDate: parseDate(dto.nextFollowUpDate, "nextFollowUpDate"),
         createdByUserId: user.id
       }
     });
@@ -192,9 +308,30 @@ export class PregnancyService {
     return visit;
   }
 
+  async listAntenatalVisits(pregnancyId: string, user: AuthUser) {
+    await this.getPregnancy(pregnancyId, user);
+    const visits = await this.prisma.antenatalVisit.findMany({
+      where: { pregnancyId, ...branchScope(user) },
+      orderBy: { visitDate: "desc" },
+      take: 100
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "antenatal_visit.list_read",
+      resourceType: "antenatal_visit",
+      branchId: user.branchId,
+      severity: "medium",
+      metadataJson: { pregnancyId, count: visits.length }
+    });
+
+    return visits;
+  }
+
   async createObUltrasound(dto: CreateObUltrasoundDto, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
-    await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: dto.patientId });
+    const pregnancy = await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: dto.patientId });
+    await this.assertCanReferenceFetus(dto.fetusId, pregnancy?.id, user);
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
       patientId: dto.patientId,
       requireDoctorScope: true
@@ -211,14 +348,25 @@ export class PregnancyService {
           patientId: dto.patientId,
           branchId: patient?.branchId,
           pregnancyId: dto.pregnancyId ?? null,
+          fetusId: dto.fetusId ?? null,
           encounterId: dto.encounterId ?? null,
           performedAt: performedAt ?? new Date(),
+          scanType: clean(dto.scanType),
+          indication: clean(dto.indication),
+          gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
           gestationalAgeWeeks: dto.gestationalAgeWeeks,
           gestationalAgeDays: dto.gestationalAgeDays,
           fetalHeartRateBpm: dto.fetalHeartRateBpm,
+          fetalHeartText: clean(dto.fetalHeartText),
           presentation: clean(dto.presentation),
           placenta: clean(dto.placenta),
           amnioticFluid: clean(dto.amnioticFluid),
+          bpdMm: decimalOrNull(dto.bpdMm),
+          hcMm: decimalOrNull(dto.hcMm),
+          acMm: decimalOrNull(dto.acMm),
+          flMm: decimalOrNull(dto.flMm),
+          efwGrams: dto.efwGrams,
+          dopplerNote: clean(dto.dopplerNote),
           impressionText: clean(dto.impressionText),
           createdByUserId: user.id
         },
@@ -231,7 +379,7 @@ export class PregnancyService {
         resourceType: "ob_ultrasound",
         resourceId: ultrasound.id,
         severity: "high",
-        metadataJson: { patientId: ultrasound.patientId, pregnancyId: ultrasound.pregnancyId }
+        metadataJson: { patientId: ultrasound.patientId, pregnancyId: ultrasound.pregnancyId, fetusId: ultrasound.fetusId, safety: "recording_only_clinician_interpretation_required" }
       });
 
       return ultrasound;
@@ -291,7 +439,8 @@ export class PregnancyService {
     }
 
     await assertCanReferencePatient(this.prisma, existing.patientId, user);
-    await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: existing.patientId });
+    const pregnancy = await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: existing.patientId });
+    await this.assertCanReferenceFetus(dto.fetusId, pregnancy?.id ?? existing.pregnancyId, user);
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
       patientId: existing.patientId,
       requireDoctorScope: true
@@ -299,6 +448,9 @@ export class PregnancyService {
 
     const data: Prisma.ObUltrasoundUpdateInput = {};
     if (dto.status !== undefined) data.status = dto.status;
+    if (dto.pregnancyId !== undefined) data.pregnancy = dto.pregnancyId ? { connect: { id: dto.pregnancyId } } : { disconnect: true };
+    if (dto.fetusId !== undefined) data.fetus = dto.fetusId ? { connect: { id: dto.fetusId } } : { disconnect: true };
+    if (dto.encounterId !== undefined) data.encounter = dto.encounterId ? { connect: { id: dto.encounterId } } : { disconnect: true };
     if (dto.performedAt !== undefined) {
       const performedAt = toDateTime(dto.performedAt);
       if (!performedAt) {
@@ -306,12 +458,22 @@ export class PregnancyService {
       }
       data.performedAt = performedAt;
     }
+    if (dto.scanType !== undefined) data.scanType = clean(dto.scanType);
+    if (dto.indication !== undefined) data.indication = clean(dto.indication);
+    if (dto.gestationalAgeDisplay !== undefined) data.gestationalAgeDisplay = clean(dto.gestationalAgeDisplay);
     if (dto.gestationalAgeWeeks !== undefined) data.gestationalAgeWeeks = dto.gestationalAgeWeeks;
     if (dto.gestationalAgeDays !== undefined) data.gestationalAgeDays = dto.gestationalAgeDays;
     if (dto.fetalHeartRateBpm !== undefined) data.fetalHeartRateBpm = dto.fetalHeartRateBpm;
+    if (dto.fetalHeartText !== undefined) data.fetalHeartText = clean(dto.fetalHeartText);
     if (dto.presentation !== undefined) data.presentation = clean(dto.presentation);
     if (dto.placenta !== undefined) data.placenta = clean(dto.placenta);
     if (dto.amnioticFluid !== undefined) data.amnioticFluid = clean(dto.amnioticFluid);
+    if (dto.bpdMm !== undefined) data.bpdMm = decimalOrNull(dto.bpdMm);
+    if (dto.hcMm !== undefined) data.hcMm = decimalOrNull(dto.hcMm);
+    if (dto.acMm !== undefined) data.acMm = decimalOrNull(dto.acMm);
+    if (dto.flMm !== undefined) data.flMm = decimalOrNull(dto.flMm);
+    if (dto.efwGrams !== undefined) data.efwGrams = dto.efwGrams;
+    if (dto.dopplerNote !== undefined) data.dopplerNote = clean(dto.dopplerNote);
     if (dto.impressionText !== undefined) data.impressionText = clean(dto.impressionText);
 
     const ultrasound = await this.prisma.obUltrasound.update({
@@ -326,7 +488,7 @@ export class PregnancyService {
       resourceType: "ob_ultrasound",
       resourceId: ultrasound.id,
       severity: "high",
-      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: ultrasound.status }
+      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: ultrasound.status, safety: "recording_only_clinician_interpretation_required" }
     });
 
     return ultrasound;
@@ -362,18 +524,48 @@ export class PregnancyService {
     }
     throw error;
   }
+
+  private async assertCanReferenceFetus(fetusId: string | undefined, pregnancyId: string | null | undefined, user: AuthUser) {
+    if (!fetusId) return null;
+    if (!pregnancyId) {
+      throw new BadRequestException("A fetus record must be linked to a pregnancy episode.");
+    }
+
+    await this.getPregnancy(pregnancyId, user);
+    const fetus = await this.getFetusInPregnancy(pregnancyId, fetusId);
+    return fetus;
+  }
+
+  private async getFetusInPregnancy(pregnancyId: string, fetusId: string) {
+    const fetus = await this.prisma.pregnancyFetus.findFirst({
+      where: { id: fetusId, pregnancyId }
+    });
+
+    if (!fetus) {
+      throw new NotFoundException("Fetus record not found.");
+    }
+
+    return fetus;
+  }
 }
 
 const pregnancyIncludes = {
   patient: true,
   fetuses: true,
+  previousPregnancies: true,
   antenatalVisits: true,
   obUltrasounds: true
 } satisfies Prisma.PregnancyInclude;
 
+const previousPregnancyIncludes = {
+  patient: true,
+  pregnancy: true
+} satisfies Prisma.PreviousPregnancyInclude;
+
 const obUltrasoundIncludes = {
   patient: true,
   pregnancy: true,
+  fetus: true,
   encounter: true
 } satisfies Prisma.ObUltrasoundInclude;
 
@@ -381,12 +573,21 @@ function clean(value?: string) {
   return value?.trim() || null;
 }
 
-function toDate(value?: string) {
-  return value ? new Date(`${value}T00:00:00.000Z`) : null;
+function parseDate(value: string | undefined, fieldName: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) {
+    throw new BadRequestException(`Invalid ${fieldName}.`);
+  }
+  return date;
 }
 
 function toDateTime(value?: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function decimalOrNull(value: number | undefined) {
+  return value === undefined ? null : new Prisma.Decimal(value).toDecimalPlaces(2);
 }

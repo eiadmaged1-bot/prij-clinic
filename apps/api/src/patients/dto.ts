@@ -268,11 +268,30 @@ export class PatientContextUltrasoundDto {
 
   @IsOptional()
   @IsUUID()
+  fetusId?: string;
+
+  @IsOptional()
+  @IsUUID()
   encounterId?: string;
 
   @IsOptional()
   @IsDateString()
   performedAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  scanType?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  indication?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gestationalAgeDisplay?: string;
 
   @IsOptional()
   @IsInt()
@@ -285,6 +304,61 @@ export class PatientContextUltrasoundDto {
   @Min(0)
   @Max(6)
   gestationalAgeDays?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  fetalHeartText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  presentation?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  placenta?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  amnioticFluid?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(300)
+  bpdMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  hcMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(500)
+  acMm?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(200)
+  flMm?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(7000)
+  efwGrams?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  dopplerNote?: string;
 
   @IsOptional()
   @IsString()
