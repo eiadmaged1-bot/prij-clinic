@@ -46,6 +46,7 @@
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
     "prisma:seed": "npm run prisma:seed -w apps/api",
     "backup:local": "powershell -ExecutionPolicy Bypass -File scripts/backup-local-db.ps1",
+    "backup:staging": "powershell -ExecutionPolicy Bypass -File scripts/backup-staging-db.ps1",
     "restore:local": "powershell -ExecutionPolicy Bypass -File scripts/restore-local-db.ps1"
   },
   "engines": {

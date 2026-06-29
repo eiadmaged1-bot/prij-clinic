@@ -55,6 +55,14 @@ Do not use restore unless you intentionally want to apply a local SQL backup to 
 
 Staging must use fake/demo data only, but backup and restore discipline should still match production expectations.
 
+For the local staging deployment trial, create a staging backup from the compose database with:
+
+```powershell
+npm run backup:staging
+```
+
+The helper reads `.env.staging`, refuses to run unless `APP_ENV=staging`, starts/verifies only the staging Postgres service, and writes a timestamped SQL backup under `backups/staging/`. It does not print secrets and does not restore or delete data. The generated backup path is ignored by Git and must not be committed.
+
 1. Confirm you are connected to the staging host, not production.
 2. Confirm the target database name and host.
 3. Create a timestamped PostgreSQL dump with no owner or ACL metadata:
@@ -87,6 +95,8 @@ Do not store backups in Git, app logs, uploads, or public folders.
 ## Restore Test Checklist
 
 Run restore tests in a disposable restore-test environment only.
+
+For the local staging trial, restore was documented as a checklist rather than applied to the active staging database. A destructive restore should only be tested against a new isolated restore-test project/database after a backup has been verified.
 
 - Verify the backup file checksum before restore.
 - Restore into an empty restore-test database.
