@@ -73,7 +73,7 @@ export default function LoginPage() {
           <div>
             <p className="eyebrow">Demo login</p>
             <h2>Sign in</h2>
-            <p className="muted">Use seeded local demo staff credentials only. External AI and payment services are not enabled.</p>
+            <p className="muted">Use local demo staff credentials only. External AI and payment services are not enabled.</p>
           </div>
 
           <div className="credential-card" aria-label="Demo owner credentials">

@@ -289,14 +289,14 @@ export default function AdminPage() {
 
         <div className="panel">
           <div className="section-heading">
-            <h2>Permissions Overview</h2>
+            <h2>Access Overview</h2>
             <span className="badge">{roles.length} roles</span>
           </div>
           <div className="data-list">
             {roles.map((role) => (
               <article className="data-row" key={role.id}>
                 <strong>{role.name}</strong>
-                <p className="muted">{role.permissions.length} permissions assigned.</p>
+                <p className="muted">{role.permissions.length} access rules assigned.</p>
               </article>
             ))}
           </div>
