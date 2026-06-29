@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
+import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
+import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -20,6 +22,7 @@ type Patient = {
   phone?: string | null;
   email?: string | null;
   status: string;
+  patientType?: string | null;
   notes?: string | null;
 };
 
@@ -242,6 +245,7 @@ export default function PatientFilePage() {
       {patient ? (
         <>
           <PatientActionPanel patientId={patient.id} onSubmit={submitPatientAction} status={actionStatus} related={related} />
+          <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
             {visibleTabs.map((tab) => (
@@ -258,12 +262,15 @@ export default function PatientFilePage() {
           {active.key === "ai-snapshot" ? <ManagementSnapshotPanel patientId={patient.id} /> : null}
           {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "pregnancy" ? (
-            <ObgynWorkspace
-              patient={patient}
-              pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]}
-              reports={related.files ?? []}
-              orders={related.orders ?? []}
-            />
+            <>
+              <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
+              <ObgynWorkspace
+                patient={patient}
+                pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]}
+                reports={related.files ?? []}
+                orders={related.orders ?? []}
+              />
+            </>
           ) : null}
           {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "ai-snapshot" && active.key !== "gynecology" && active.key !== "pregnancy" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />

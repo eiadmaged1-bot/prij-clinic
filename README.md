@@ -1,10 +1,10 @@
 # Prij Clinic
 
-Clinic Management System V0.3 integrated MVP pilot workflow for OB/GYN, general gynecology, and demo finance workflows.
+Clinic Management System V0.5.2 integrated local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, and the local Guideline Center.
 
-Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.
 
-V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, and general gynecology starter. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.5.2 is a verified local/private integration of the AI Management Mega Leap branch and Medical Calculator Suite branch. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 The locked pilot flow is:
 
@@ -30,6 +30,17 @@ The web app is now organized around the clinic workflow the pilot needs:
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
+## V0.5.2 Integration Status
+
+- Medical Calculator Suite is integrated with `CalculatorFormula`, `PatientCalculation`, formula registry, safe handler-based formula engine, `/calculators`, `/admin/calculators`, calculator tests, and admin RBAC.
+- OB dating is integrated with `PregnancyDatingAssessment`, patient type support, OB Dating Card, OB Dating Review Panel, Best EDD, lock/change/void workflows, and OB dating tests.
+- AI Management Mega is integrated with verified Emergency OB/Early Pregnancy, AUB/Menstrual, Contraception, and Routine Antenatal protocol packs.
+- AI Management Snapshots remain deterministic, local, draft support only, and blocked for catalog-only/draft/retired/unknown protocols.
+- Guideline Center is integrated as a local evidence library with source registry, demo chunks, local search, extractive/mock ask, query logs, RBAC, and audit.
+- Pilot walkthrough scripts cover owner, doctor, receptionist, accountant, clinical, finance, AI, guidelines, denials, and full demo flows.
+
+See `docs/V0_5_CALCULATORS_AI_MEGA_INTEGRATION.md`.
+
 Release-candidate verification and production-readiness planning are documented in:
 
 - `docs/MVP_PILOT_WORKFLOW_LOCK_REPORT.md`
@@ -42,6 +53,7 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
 - `docs/V0_3_FINANCE_GYN_INTEGRATION.md`
+- `docs/V0_5_CALCULATORS_AI_MEGA_INTEGRATION.md`
 
 ## Safety Rules
 
@@ -145,9 +157,14 @@ http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
 http://localhost:3000/billing
 http://localhost:3000/consents
+http://localhost:3000/calculators
 http://localhost:3000/ai-drafts
 http://localhost:3000/protocol-atlas
+http://localhost:3000/admin/calculators
 http://localhost:3000/admin/protocol-atlas
+http://localhost:3000/guidelines
+http://localhost:3000/guidelines/search
+http://localhost:3000/guidelines/ask
 ```
 
 Recommended demo flow:
@@ -245,6 +262,14 @@ GET  /billing/patients/:patientId/statement
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
+GET  /calculators/formulas
+POST /calculators/calculate
+GET  /calculators/history/patient/:patientId
+POST /calculators/ob/dating/calculate
+GET  /calculators/ob/patient/:patientId/current
+POST /calculators/ob/dating/:id/set-best
+POST /calculators/ob/dating/:id/lock
+GET  /admin/calculators
 GET  /protocol-atlas
 GET  /protocol-atlas/groups
 GET  /protocol-atlas/:id
@@ -300,6 +325,8 @@ npm run test:gyn:starter
 npm run test:visual:qa
 npm run test:accounts:rbac
 npm run test:finance:reports
+npm run test:calculators
+npm run test:ob-dating
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.

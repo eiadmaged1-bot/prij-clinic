@@ -59,6 +59,7 @@ const navGroups: NavGroup[] = [
     title: "Clinical",
     links: [
       ["/doctor/visit", "Guided Visit", "encounter"],
+      ["/calculators", "Calculators", "investigations"],
       ["/protocol-atlas", "Protocol Atlas", "ai"],
       ["/guidelines", "Guideline Center", "reports"],
       ["/encounters", "Visits", "encounter"],
@@ -91,6 +92,7 @@ const adminNavGroup: NavGroup = {
   title: "Admin",
   links: [
     ["/admin", "Control Center", "admin"],
+    ["/admin/calculators", "Formula Registry", "investigations"],
     ["/admin/protocol-atlas", "Protocol Verification", "ai"],
     ["/admin/appearance", "Appearance", "settings"],
     ["/admin/accounts", "Accounts", "reception"]

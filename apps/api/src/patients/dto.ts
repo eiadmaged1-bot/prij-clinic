@@ -23,6 +23,7 @@ import {
   InvestigationPriority,
   PaymentMethod,
   PatientStatus,
+  PatientType,
   ReportCategory
 } from "@prisma/client";
 
@@ -50,6 +51,10 @@ export class CreatePatientDto {
   @IsString()
   @MaxLength(32)
   sex?: string;
+
+  @IsOptional()
+  @IsEnum(PatientType)
+  patientType?: PatientType;
 
   @IsOptional()
   @IsString()
@@ -86,6 +91,10 @@ export class UpdatePatientDto {
   @IsString()
   @MaxLength(32)
   sex?: string;
+
+  @IsOptional()
+  @IsEnum(PatientType)
+  patientType?: PatientType;
 
   @IsOptional()
   @IsString()

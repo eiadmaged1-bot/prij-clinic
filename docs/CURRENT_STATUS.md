@@ -1,30 +1,30 @@
 # Current Status
 
-Women's Health Protocol Atlas sprint added:
+# V0.5.2 Calculators + AI Mega Integration
 
-- `ClinicalProtocol`
-- `AIManagementSnapshot`
-- `PatientClinicalMemory`
-- protocol atlas API
-- deterministic AI management snapshot API
-- protocol atlas UI
-- patient file AI Snapshot tab
-- admin protocol verification page
-- structured protocol editor for Owner/Admin
-- protocol source, alias, structured content, request-verification, verify, and retire endpoints
-- protocol content validator and unsafe clinical phrase detection
-- route manifest coverage for protocol atlas and AI management routes
+Integration branch `integration/v0.5-calculators-ai-mega` merges:
 
-Verified snapshot generation is limited to endometriosis, PCOS ovulation induction, and unexplained infertility.
+- AI Management Mega base at `a803bee`.
+- Medical Calculator Suite source at `c752a62`.
 
-All other atlas entries are catalog-only and do not generate management options.
+The integration preserves calculator, OB dating, verified protocol pack, AI snapshot, guideline center, pilot walkthrough, RBAC denial, and audit-log functionality from both branches.
 
-Protocol editor hardening is active:
+Medical Calculator Suite and Always-On OB Dating Engine sprint added:
 
-- raw JSON editing is blocked in the UI
-- every source/content/status change requires an audit reason
-- catalog-only, draft, retired, and unknown protocols generate no management advice
-- snapshot output remains deterministic and local with no external AI calls
+- `CalculatorFormula`
+- `PatientCalculation`
+- `PregnancyDatingAssessment`
+- `Patient.patientType`
+- calculator API and admin registry API
+- verified safe handler formula engine
+- OB dating candidate, Best EDD, lock, locked-change, and void workflows
+- patient-linked calculation history
+- `/calculators` hub
+- `/admin/calculators` metadata registry
+- always-on OB Dating Card for OB patients and active pregnancies
+- GYN/Women Health hide behavior when no active pregnancy exists
+- focused calculator and OB dating tests
+
 # V0.5 AI Management Mega Leap Status
 
 Implemented:
@@ -34,7 +34,26 @@ Implemented:
 - Guideline route coverage in the shared route authorization manifest.
 - Script-assisted pilot walkthrough automation for owner, doctor, receptionist, accountant, clinical, finance, AI management, guideline, role-denial, and full demo flows.
 
+Protocol editor hardening is active:
+
+- raw JSON editing is blocked in the UI
+- every source/content/status change requires an audit reason
+- catalog-only, draft, retired, and unknown protocols generate no management advice
+- snapshot output remains deterministic and local with no external AI calls
+
 Not fully implemented:
 - Full Playwright/real-browser click automation with screenshots.
 - Real PDF extraction.
 - Production clinical governance approval of guideline source versions.
+
+Remaining production work includes formal clinical formula review, richer UI polish, validated ultrasound coefficient governance, and production compliance review.
+
+Latest local verification passed:
+
+- Prisma repair/generate, migration deploy, seed.
+- Typecheck and production build.
+- Security, UI, workflow, clinical persistence, OB/GYN, account RBAC, finance, gynecology, AI regression, protocol atlas, AI management, calculator, OB dating, protocol pack, and guideline tests.
+- Pilot walkthroughs for owner, doctor, receptionist, accountant, clinical, finance, AI, guidelines, denials, and demo.
+- Local route spot checks for calculator/guideline/AI role denials and blocked draft/unknown clinical outputs.
+
+`test:staging:smoke` was not run because local `APP_ENV=local`; staging smoke remains environment-gated.
