@@ -7,13 +7,13 @@ export default function ObUltrasoundsPage() {
       title="OB Ultrasounds"
       items={[
         "Structured OB ultrasound draft measurements and findings",
-        "No diagnostic fetal-image AI or automatic clinical conclusions",
+        "Measurements stay recording-only for doctor review",
         "Doctor review status and audit logging are part of the foundation"
       ]}
       endpoint="/ob-ultrasounds"
       collectionKey="obUltrasounds"
       createEndpoint="/ob-ultrasounds"
-      createNote="Demo measurements only. The system must not automatically diagnose FGR or any other condition."
+      createNote="Demo measurements only. The doctor completes all clinical interpretation."
       createFields={[
         { name: "patientId", label: "Patient ID", required: true },
         { name: "pregnancyId", label: "Pregnancy ID" },

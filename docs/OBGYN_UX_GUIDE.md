@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-This guide describes the browser-facing OB/GYN workflow for the V0.1 demo. It is for fake/demo data only and is not approved for real patient use.
+This guide describes the browser-facing OB/GYN v0.2 workflow after accounts/session hardening. It is for fake/demo data only and is not approved for real patient use.
 
 ## Patient File Workspace
 
@@ -10,13 +10,15 @@ Open a patient file, then choose the Pregnancy tab. The workspace is organized f
 
 - Pregnancy Overview
 - Obstetric History
+- Fetus Records
 - Antenatal Visits
 - Ultrasound
+- Timeline integration
 - Investigations
 - Reports
 - Follow-up
 
-The page stays patient-focused. It does not show unrelated owner/admin content.
+The page stays patient-focused. The account/session topbar remains visible, and owner/admin shortcuts are still controlled by the account permissions system.
 
 ## Pregnancy Dashboard
 
@@ -33,6 +35,22 @@ The pregnancy dashboard shows:
 - important clinician notes
 
 The dashboard is recording-only. It does not calculate risk, diagnose fetal growth restriction, or provide automated interpretation.
+The page can start a pregnancy episode for the current fake/demo patient by recording gravida, para, living, abortions, LMP, EDD, dating method, and clinician notes.
+
+## Obstetric History And Fetus Records
+
+The workspace shows prior obstetric history and fetus records linked to the pregnancy episode. The doctor can record:
+
+- previous pregnancy outcome
+- year
+- gestational age at outcome
+- mode of delivery
+- birth weight if recorded
+- complication note
+- fetus label such as Singleton, A, or B
+- chorionicity and amnionicity notes
+
+These records are structured history only. They do not infer risk or diagnosis.
 
 ## Antenatal Visit Form
 
@@ -48,7 +66,7 @@ The antenatal visit card gives the doctor a readable form with:
 - investigations
 - next follow-up
 
-The form is UI-ready for the parallel backend merge. Until matching persistence is available in the merged branch, it should be treated as a guided browser template.
+The form is connected to the v0.2 backend. Saved fake/demo visits appear in the pregnancy workspace and patient timeline.
 
 ## Ultrasound Report Builder
 
@@ -68,6 +86,7 @@ The ultrasound report builder includes:
 - draft/final placeholder status
 
 Measurements are recorded for clinician review. Interpretation must be completed by the doctor.
+Saved fake/demo ultrasound drafts appear in the ultrasound section and patient timeline.
 
 The app does not provide:
 
@@ -85,6 +104,7 @@ Browser print styling is available for:
 - antenatal visit summary
 - ultrasound report draft
 - linked report summaries
+- pregnancy timeline summaries
 
 Use the print buttons in the patient OB/GYN workspace. No generated PDF library or PHI file upload is introduced.
 

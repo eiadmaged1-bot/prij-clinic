@@ -2002,6 +2002,24 @@ td span {
   gap: 0.85rem;
 }
 
+.obgyn-inline-form,
+.obgyn-form-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  padding: 0.85rem;
+}
+
+.obgyn-inline-form strong,
+.obgyn-form-section strong {
+  align-self: center;
+  color: var(--foreground);
+}
+
 .obgyn-form-grid textarea {
   min-height: 7rem;
   resize: vertical;

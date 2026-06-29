@@ -2,9 +2,9 @@
 
 Date: 2026-06-29
 
-Branch: `leap/a-obgyn-core-depth`
+Branch: `verify/obgyn-v02-workflow-polish-after-accounts`
 
-This sprint deepens the OB/GYN backend for recording real clinic workflow structure with fake/demo data only. It does not add diagnostic automation.
+This document describes the OB/GYN backend depth verified after accounts/session hardening. It records real clinic workflow structure with fake/demo data only and does not add diagnostic automation.
 
 ## Implemented Backend Depth
 
@@ -53,10 +53,12 @@ Run with the API started against fake/demo seed data:
 
 ```powershell
 npm run test:obgyn:core
+npm run test:obgyn:workflow
 npm run test:clinical:persistence
 ```
 
 The OB/GYN core test creates fake/demo records only, verifies role denial, checks timeline entries, checks audit events, and rejects forbidden diagnostic interpretation text in ultrasound responses.
+The workflow verification test creates a fake patient path after login/session hardening, verifies pregnancy workspace data endpoints, checks timeline events, checks non-admin `/admin/accounts` denial, and confirms UI source safety/session cues.
 
 ## Future Items
 

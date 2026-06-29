@@ -2,18 +2,19 @@
 
 Date: 2026-06-29
 
-Branch: `integration/obgyn-depth-v02`
+Branch: `verify/obgyn-v02-workflow-polish-after-accounts`
 
-Base branch: local `deploy/vps-staging-trial` at `82fb6d2`
+Base branch: `auth/accounts-session-rbac-hardening`
 
-Target tag: `v0.2-obgyn-specialty-engine`
+Target tag: `v0.2-obgyn-workflow-verified-after-accounts`
 
 ## Status Summary
 
-Prij Clinic is integrating the OB/GYN Specialty Engine v0.2 work on top of the verified local/private MVP release-candidate foundation. This integration combines:
+Prij Clinic has verified and polished the OB/GYN Specialty Engine v0.2 workflow after the accounts/session hardening sprint. This state combines:
 
-- Codex A backend OB/GYN core depth.
-- Codex B browser OB/GYN workspace, reporting UX, templates, and print-friendly summaries.
+- Backend OB/GYN core depth from `v0.2-obgyn-specialty-engine`.
+- Stable `/auth/me` session identity, persistent user menu, protected `eyad` System Owner account, and `/admin/accounts` from `v0.2-accounts-session-rbac`.
+- A connected patient-file Pregnancy workspace for pregnancy episode, previous pregnancy history, fetus records, antenatal visits, ultrasound drafts, timeline, and print-friendly summaries.
 - Existing V0.1 operational workflows, route security, doctor-friendly UI, local staging prep, and fake/demo-only verification.
 
 This remains local/demo software only. It is not production-ready, not a medical device, and must not be used with real patient data, real payment data, PHI uploads, external AI providers, or live clinical workflows.
@@ -32,15 +33,15 @@ Backend depth preserved from Codex A:
 - Dedicated `scripts/obgyn-core-depth-test.mjs` and `npm run test:obgyn:core`.
 - `docs/OBGYN_CORE_DEPTH.md`.
 
-Frontend/reporting UX preserved from Codex B:
+Frontend/reporting UX verified and polished:
 
-- Patient-file Pregnancy workspace with Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, and Follow-up.
+- Patient-file Pregnancy workspace with Pregnancy Overview, Obstetric History, Fetus Records, Antenatal Visits, Ultrasound, Timeline integration, Investigations, Reports, and Follow-up.
 - Pregnancy dashboard showing LMP, EDD, dating method, gravida/para, status, visit prompts, ultrasound summary, and notes.
-- Antenatal visit UX form.
-- OB ultrasound report builder UI with recording-only measurements and doctor-written impression.
+- Connected antenatal visit UX form with grouped visit details, vitals, pregnancy checks, clinician notes, plan, investigations, and next follow-up.
+- Connected OB ultrasound report builder UI with recording-only scan details, fetus/pregnancy context, presentation, placenta, amniotic fluid, fetal heart, biometry, Doppler note placeholder, and doctor-written impression.
 - Print-friendly browser summaries for patient summary, antenatal visit summary, ultrasound draft, and report cards.
 - OB/GYN doctor workflow templates.
-- Visual/doctor UX test updates.
+- Visual/doctor UX test updates plus `scripts/obgyn-workflow-verification-test.mjs`.
 - `docs/OBGYN_UX_GUIDE.md`.
 
 ## Existing Foundation
@@ -86,6 +87,8 @@ npm run test:doctor:ux
 npm run test:e2e:v01
 npm run test:clinical:persistence
 npm run test:obgyn:core
+npm run test:obgyn:workflow
+npm run test:accounts:rbac
 npm run test:visual:qa
 npm run test:staging:smoke
 npm run staging:env:check

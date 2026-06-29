@@ -30,7 +30,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
 - Mobile/tablet QA is improved for demo acceptance, but production device certification, accessibility audit, and full browser matrix testing remain future work.
 - Patient file tabs show patient-scoped related records where current APIs support it; deeper specialty screens and production charting workflows remain future work.
-- OB/GYN patient workspace UX is now present, but final merge verification must prove every backend field appears correctly after integration.
+- OB/GYN patient workspace UX is now connected to the v0.2 backend for pregnancy episode, previous pregnancy history, fetus records, antenatal visits, ultrasound drafts, and timeline summaries. It remains a demo workflow and is not a complete production specialty EHR.
 
 ## Security And Privacy
 
@@ -94,3 +94,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 - `npm run test:clinical:persistence` covers patient-context clinical persistence, OB/GYN core recording, patient timeline aggregation, patient finance basics, audit assertions, and signed encounter edit protection for fake/demo records only.
 - `npm run test:obgyn:core` covers pregnancy episode depth, previous pregnancy history, fetus/multiple pregnancy records, antenatal visit depth, OB ultrasound recording fields, timeline entries, audit entries, unauthorized-role denial, and no diagnostic ultrasound behavior for fake/demo records only.
+- `npm run test:obgyn:workflow` covers the verified doctor workflow after accounts/session hardening: fake patient creation, pregnancy episode, previous pregnancy history, fetus record, antenatal visit, ultrasound draft, timeline entries, session shell cues, login already-signed-in source state, accounts shortcut visibility source state, and non-admin `/admin/accounts` denial.

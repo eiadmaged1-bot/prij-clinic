@@ -6,7 +6,7 @@ const modules = [
   ["/encounters", "Encounters", "Doctor-authored clinical drafts"],
   ["/reports", "Reports", "Report records and review status"],
   ["/pregnancies", "Pregnancy", "Pregnancy episode records"],
-  ["/ultrasound", "OB ultrasound", "Measurements without automatic diagnosis"],
+  ["/ultrasound", "OB ultrasound", "Measurements for doctor review"],
   ["/billing", "Billing", "Invoices and payment records without gateway data"],
   ["/consents", "Consents", "Consent foundation for demo privacy workflows"],
   ["/ai-drafts", "AI drafts", "Disabled draft review placeholders"]

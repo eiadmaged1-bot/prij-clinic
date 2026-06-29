@@ -1,28 +1,16 @@
 # Next Steps
 
-The exact next recommended sprint after this integration is:
+The exact next recommended sprint after the verified OB/GYN v0.2 workflow polish is:
 
-## OB/GYN v0.2 Verification + Workflow Polish
+## Home Server Dry Run Or VPS Trial
 
 Goals:
-
-- Verify the merged Codex A backend depth and Codex B OB/GYN browser UX together.
-- Confirm pregnancy episode, previous pregnancy history, fetus/multiple pregnancy records, antenatal visits, ultrasound drafts, reports, investigations, and timeline events appear cleanly inside the patient file.
-- Wire any remaining UI form gaps to the new backend APIs without changing schema unless a separate backend sprint approves it.
-- Keep all ultrasound, Doppler, fetal biometry, risk flags, and pregnancy history behavior recording-only.
-- Keep all data fake/demo-only.
-- Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, and no PHI uploads.
-- Run the full local verification suite, including `npm run test:obgyn:core`.
-
-## Then Home Server Dry Run Or VPS Trial
-
-When infrastructure is ready:
 
 - Use the prepared local/home-server runbooks or VPS staging scripts.
 - Use fake/demo data only.
 - Use staging-only secrets.
 - Run `npm run prisma:migrate:deploy`, then explicit fake/demo seed.
-- Verify `/health`, `/health/db`, login, admin denial, patient workflow, OB/GYN core depth, clinical persistence, visual QA, staging smoke, and backup procedure.
+- Verify `/health`, `/health/db`, login, `/auth/me`, logout, login already-signed-in behavior, admin denial, patient workflow, OB/GYN core depth, OB/GYN workflow verification, accounts RBAC, clinical persistence, visual QA, staging smoke, and backup procedure.
 - Exercise rollback without dropping or resetting the database.
 - Configure reverse proxy/TLS before broader review or any internet exposure.
 

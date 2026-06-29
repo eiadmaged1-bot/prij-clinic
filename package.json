@@ -35,6 +35,7 @@
     "test:doctor:ux": "node scripts/doctor-friendly-ui-test.mjs",
     "test:clinical:persistence": "node scripts/clinical-persistence-test.mjs",
     "test:obgyn:core": "node scripts/obgyn-core-depth-test.mjs",
+    "test:obgyn:workflow": "node scripts/obgyn-workflow-verification-test.mjs",
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",
     "test:accounts:rbac": "node scripts/accounts-session-rbac-test.mjs",

@@ -12,7 +12,7 @@ const steps = [
   ["Complaint", "What brought the patient today?", "Chief complaint"],
   ["History", "Relevant history in the doctor's words.", "History"],
   ["Examination", "Clinical examination notes.", "Examination"],
-  ["Impression", "Doctor-written impression or diagnosis text.", "Impression / diagnosis text"],
+  ["Impression", "Doctor-written impression.", "Doctor-written impression"],
   ["Prescription", "Manual prescription plan. No automatic prescribing.", "Prescription plan"],
   ["Orders", "Lab or radiology orders to request.", "Orders"],
   ["Follow-up", "Plan and next follow-up.", "Follow-up"],
@@ -140,7 +140,7 @@ function GuidedVisitContent() {
               value={formState[fieldForStep(step)]}
             />
           </label>
-          {step === 3 ? <p className="notice">This field is doctor-authored. The app does not diagnose automatically.</p> : null}
+          {step === 3 ? <p className="notice">This field is doctor-authored. The app does not complete it automatically.</p> : null}
           {step === 4 ? <p className="notice">Prescription text must be written and reviewed by the doctor.</p> : null}
           {step === 7 ? <p className="notice">Finish only after manual review. Signed records stay protected.</p> : null}
           {saved ? <p className="notice success">{saved}</p> : null}

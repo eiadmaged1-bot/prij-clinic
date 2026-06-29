@@ -28,11 +28,60 @@ type PregnancyRecord = {
   para?: number | string | null;
   living?: number | string | null;
   abortions?: number | string | null;
-  lmp?: string | null;
-  edd?: string | null;
+  lmpDate?: string | null;
+  estimatedDueDate?: string | null;
   datingMethod?: string | null;
   status?: string | null;
+  riskFlags?: string | null;
   notes?: string | null;
+  fetuses?: FetusRecord[];
+  previousPregnancies?: PreviousPregnancyRecord[];
+  antenatalVisits?: AntenatalVisitRecord[];
+  obUltrasounds?: UltrasoundRecord[];
+};
+
+type PreviousPregnancyRecord = {
+  id?: string;
+  year?: number | string | null;
+  outcome?: string | null;
+  gestationalAgeAtOutcome?: string | null;
+  modeOfDelivery?: string | null;
+  complications?: string | null;
+};
+
+type FetusRecord = {
+  id?: string;
+  label?: string | null;
+  chorionicity?: string | null;
+  amnionicity?: string | null;
+  status?: string | null;
+  notes?: string | null;
+};
+
+type AntenatalVisitRecord = {
+  id?: string;
+  visitDate?: string | null;
+  gestationalAgeDisplay?: string | null;
+  bloodPressure?: string | null;
+  weightKg?: number | string | null;
+  fetalHeartText?: string | null;
+  fundalHeightText?: string | null;
+  planText?: string | null;
+  nextFollowUpDate?: string | null;
+};
+
+type UltrasoundRecord = {
+  id?: string;
+  performedAt?: string | null;
+  status?: string | null;
+  scanType?: string | null;
+  indication?: string | null;
+  gestationalAgeDisplay?: string | null;
+  presentation?: string | null;
+  placenta?: string | null;
+  amnioticFluid?: string | null;
+  fetalHeartText?: string | null;
+  impressionText?: string | null;
 };
 
 type TabConfig = {
@@ -210,7 +259,7 @@ export default function PatientFilePage() {
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
           {active.key === "pregnancy" ? (
-            <ObgynWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} />
+            <ObgynWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} timelineItems={timelineItems} />
           ) : null}
           {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "pregnancy" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
@@ -269,14 +318,44 @@ function ObgynWorkspace({
   patient,
   pregnancies,
   reports,
-  orders
+  orders,
+  timelineItems
 }: {
   patient: Patient;
   pregnancies: PregnancyRecord[];
   reports: Record<string, unknown>[];
   orders: Record<string, unknown>[];
+  timelineItems: TimelineItem[];
 }) {
   const activePregnancy = pregnancies[0];
+  const fetuses = activePregnancy?.fetuses ?? [];
+  const previousPregnancies = activePregnancy?.previousPregnancies ?? [];
+  const antenatalVisits = activePregnancy?.antenatalVisits ?? [];
+  const obUltrasounds = activePregnancy?.obUltrasounds ?? [];
+  const obTimeline = timelineItems.filter((item) => ["pregnancy", "antenatal_visit", "ultrasound", "previous_pregnancy", "pregnancy_fetus"].includes(item.type));
+  const [status, setStatus] = useState("");
+
+  async function submitObgyn(endpoint: string, payload: Record<string, unknown>) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    setStatus("Saving");
+    const response = await fetch(`${apiUrl}${endpoint}`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save. Check the account permission and try again.");
+      return;
+    }
+
+    setStatus("Saved to pregnancy workflow.");
+    window.setTimeout(() => window.location.reload(), 500);
+  }
 
   return (
     <section className="obgyn-workspace">
@@ -289,6 +368,7 @@ function ObgynWorkspace({
           <ThreeDMedicalIcon name="ultrasound" size="sm" tone="slate" />
           Print ultrasound draft
         </button>
+        {status ? <span className="badge">{status}</span> : null}
       </div>
 
       <article className="obgyn-dashboard printable-summary">
@@ -301,47 +381,34 @@ function ObgynWorkspace({
           <ThreeDMedicalIcon name="pregnancy" size="lg" tone="rose" />
         </div>
         <div className="obgyn-metric-grid">
-          <Metric label="LMP" value={formatDate(activePregnancy?.lmp)} />
-          <Metric label="EDD" value={formatDate(activePregnancy?.edd)} />
+          <Metric label="LMP" value={formatDate(activePregnancy?.lmpDate)} />
+          <Metric label="EDD" value={formatDate(activePregnancy?.estimatedDueDate)} />
           <Metric label="Dating method" value={String(activePregnancy?.datingMethod ?? "Not recorded")} />
           <Metric label="Gravida / Para" value={`${activePregnancy?.gravida ?? "-"} / ${activePregnancy?.para ?? "-"}`} />
           <Metric label="Current status" value={String(activePregnancy?.status ?? "Not recorded")} />
-          <Metric label="Next visit" value="Schedule follow-up" />
-          <Metric label="Last visit" value="Review visits below" />
-          <Metric label="Ultrasound summary" value={reports.length ? `${reports.length} report record(s)` : "No ultrasound report yet"} />
+          <Metric label="Next follow-up" value={formatDate(antenatalVisits[0]?.nextFollowUpDate) === "Not recorded" ? "Schedule follow-up" : formatDate(antenatalVisits[0]?.nextFollowUpDate)} />
+          <Metric label="Last visit" value={formatDate(antenatalVisits[0]?.visitDate)} />
+          <Metric label="Ultrasound summary" value={obUltrasounds.length ? `${obUltrasounds.length} ultrasound record(s)` : "No ultrasound record yet"} />
         </div>
         <div className="notice">
           <strong>Important notes</strong>
-          <p className="muted">{activePregnancy?.notes || "Use this area for clinician-authored pregnancy notes only. No automatic diagnosis, growth scoring, or fetal-risk interpretation is performed."}</p>
+          <p className="muted">{activePregnancy?.notes || "Use this area for clinician-authored pregnancy notes only. The app does not provide automated clinical conclusions, growth scoring, or fetal-risk interpretation."}</p>
         </div>
+        <PregnancyEpisodeForm patientId={patient.id} onSubmit={submitObgyn} />
       </article>
 
       <section className="obgyn-section-grid">
-        <article className="panel printable-summary">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Obstetric History</p>
-              <h2>History snapshot</h2>
-            </div>
-            <ThreeDMedicalIcon name="timeline" size="sm" tone="navy" />
-          </div>
-          <dl className="profile-grid">
-            <div><dt>Gravida</dt><dd>{activePregnancy?.gravida ?? "Not recorded"}</dd></div>
-            <div><dt>Para</dt><dd>{activePregnancy?.para ?? "Not recorded"}</dd></div>
-            <div><dt>Living</dt><dd>{activePregnancy?.living ?? "Not recorded"}</dd></div>
-            <div><dt>Abortions</dt><dd>{activePregnancy?.abortions ?? "Not recorded"}</dd></div>
-          </dl>
-          <p className="empty-state">
-            <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
-            <span>Previous pregnancy details remain a structured recording area after backend merge. Do not enter real patient history in demo mode.</span>
-          </p>
-        </article>
-
-        <AntenatalVisitCard />
+        <ObstetricHistoryCard activePregnancy={activePregnancy} histories={previousPregnancies} patientId={patient.id} onSubmit={submitObgyn} />
+        <FetusCard activePregnancy={activePregnancy} fetuses={fetuses} onSubmit={submitObgyn} />
       </section>
 
       <section className="obgyn-section-grid">
-        <UltrasoundReportBuilder />
+        <AntenatalVisitCard activePregnancy={activePregnancy} patientId={patient.id} visits={antenatalVisits} onSubmit={submitObgyn} />
+        <UltrasoundReportBuilder activePregnancy={activePregnancy} fetuses={fetuses} patientId={patient.id} ultrasounds={obUltrasounds} onSubmit={submitObgyn} />
+      </section>
+
+      <section className="obgyn-section-grid">
+        <PregnancyTimelineCard items={obTimeline} />
         <DoctorTemplateCards />
       </section>
 
@@ -420,6 +487,26 @@ function ObgynWorkspace({
   );
 }
 
+function PregnancyEpisodeForm({ patientId, onSubmit }: { patientId: string; onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void> }) {
+  return (
+    <form className="obgyn-inline-form no-print" onSubmit={submitForm((form) => onSubmit("/pregnancies", { patientId, status: "active", ...numberValues(form, ["gravida", "para", "living", "abortions"]), ...values(form, ["lmpDate", "estimatedDueDate", "datingMethod", "notes"]) }))}>
+      <strong>Start or update a pregnancy episode</strong>
+      <label>Gravida<input name="gravida" type="number" min="0" max="20" /></label>
+      <label>Para<input name="para" type="number" min="0" max="20" /></label>
+      <label>Living<input name="living" type="number" min="0" max="20" /></label>
+      <label>Abortions<input name="abortions" type="number" min="0" max="20" /></label>
+      <label>LMP<input name="lmpDate" type="date" /></label>
+      <label>EDD<input name="estimatedDueDate" type="date" /></label>
+      <label>Dating method<input name="datingMethod" placeholder="Doctor-recorded method" /></label>
+      <label className="wide">Pregnancy notes<textarea name="notes" placeholder="Clinician-authored notes only" /></label>
+      <button className="button" type="submit">
+        <ThreeDMedicalIcon name="pregnancy" size="sm" />
+        Save pregnancy episode
+      </button>
+    </form>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="obgyn-metric">
@@ -429,38 +516,188 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AntenatalVisitCard() {
+function ObstetricHistoryCard({
+  activePregnancy,
+  histories,
+  patientId,
+  onSubmit
+}: {
+  activePregnancy?: PregnancyRecord;
+  histories: PreviousPregnancyRecord[];
+  patientId: string;
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+}) {
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Obstetric History</p>
+          <h2>History snapshot</h2>
+        </div>
+        <ThreeDMedicalIcon name="timeline" size="sm" tone="navy" />
+      </div>
+      <dl className="profile-grid">
+        <div><dt>Gravida</dt><dd>{activePregnancy?.gravida ?? "Not recorded"}</dd></div>
+        <div><dt>Para</dt><dd>{activePregnancy?.para ?? "Not recorded"}</dd></div>
+        <div><dt>Living</dt><dd>{activePregnancy?.living ?? "Not recorded"}</dd></div>
+        <div><dt>Abortions</dt><dd>{activePregnancy?.abortions ?? "Not recorded"}</dd></div>
+      </dl>
+      <div className="data-list">
+        {histories.slice(0, 3).map((history, index) => (
+          <article className="data-row" key={String(history.id ?? index)}>
+            <div className="data-row-header">
+              <strong>{history.outcome ?? "Previous pregnancy"}</strong>
+              <span className="badge">{history.year ?? "Year not set"}</span>
+            </div>
+            <p className="muted">{[history.gestationalAgeAtOutcome, history.modeOfDelivery, history.complications].filter(Boolean).join(" | ") || "Clinician-recorded history."}</p>
+          </article>
+        ))}
+      </div>
+      {histories.length === 0 ? (
+        <p className="empty-state">
+          <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
+          <span>No previous pregnancy history recorded yet. Add fake/demo history only during workflow review.</span>
+        </p>
+      ) : null}
+      <form className="obgyn-inline-form no-print" onSubmit={submitForm((form) => onSubmit("/previous-pregnancies", { patientId, pregnancyEpisodeId: activePregnancy?.id, ...numberValues(form, ["year", "birthWeightGrams"]), ...values(form, ["outcome", "gestationalAgeAtOutcome", "modeOfDelivery", "complications", "notes"]) }))}>
+        <strong>Add previous pregnancy history</strong>
+        <label>Year<input name="year" type="number" min="1900" max="2100" /></label>
+        <label>Outcome<input name="outcome" required placeholder="Recorded outcome" /></label>
+        <label>Gestational age<input name="gestationalAgeAtOutcome" placeholder="Weeks or term note" /></label>
+        <label>Mode of delivery<input name="modeOfDelivery" placeholder="Doctor-recorded" /></label>
+        <label>Birth weight<input name="birthWeightGrams" type="number" min="0" max="10000" /></label>
+        <label className="wide">Complications or notes<textarea name="complications" placeholder="Recording only" /></label>
+        <button className="button secondary" type="submit">Save history</button>
+      </form>
+    </article>
+  );
+}
+
+function FetusCard({
+  activePregnancy,
+  fetuses,
+  onSubmit
+}: {
+  activePregnancy?: PregnancyRecord;
+  fetuses: FetusRecord[];
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+}) {
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Fetus Records</p>
+          <h2>Singleton or multiple pregnancy</h2>
+          <p className="muted">Use Singleton, A, B, or another clinician-entered label. This is recording only.</p>
+        </div>
+        <ThreeDMedicalIcon name="pregnancy" size="sm" tone="rose" />
+      </div>
+      <div className="data-list">
+        {fetuses.map((fetus, index) => (
+          <article className="data-row" key={String(fetus.id ?? index)}>
+            <div className="data-row-header">
+              <strong>Fetus {fetus.label ?? "record"}</strong>
+              <span className="badge">{fetus.status ?? "active"}</span>
+            </div>
+            <p className="muted">{[fetus.chorionicity, fetus.amnionicity, fetus.notes].filter(Boolean).join(" | ") || "No additional note."}</p>
+          </article>
+        ))}
+      </div>
+      {fetuses.length === 0 ? (
+        <p className="empty-state">
+          <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
+          <span>No fetus record yet. Add Singleton for one fetus or A/B for multiple pregnancy support.</span>
+        </p>
+      ) : null}
+      <form className="obgyn-inline-form no-print" onSubmit={submitForm((form) => activePregnancy?.id ? onSubmit(`/pregnancies/${activePregnancy.id}/fetuses`, { status: "active", ...values(form, ["label", "chorionicity", "amnionicity", "notes"]) }) : Promise.resolve())}>
+        <strong>Add fetus record</strong>
+        <label>Label<input name="label" required placeholder="Singleton / A / B" /></label>
+        <label>Chorionicity<input name="chorionicity" placeholder="If recorded" /></label>
+        <label>Amnionicity<input name="amnionicity" placeholder="If recorded" /></label>
+        <label className="wide">Notes<textarea name="notes" placeholder="Clinician note" /></label>
+        <button className="button secondary" disabled={!activePregnancy?.id} type="submit">Save fetus record</button>
+      </form>
+    </article>
+  );
+}
+
+function AntenatalVisitCard({
+  activePregnancy,
+  patientId,
+  visits,
+  onSubmit
+}: {
+  activePregnancy?: PregnancyRecord;
+  patientId: string;
+  visits: AntenatalVisitRecord[];
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+}) {
   return (
     <article className="panel printable-summary">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Antenatal Visits</p>
-          <h2>Visit note template</h2>
-          <p className="muted">Doctor-friendly recording form. It is UI-ready and persists only when the matching patient workflow is available after backend merge.</p>
+          <h2>Visit note workflow</h2>
+          <p className="muted">Doctor-friendly recording form. Saved visits appear in the pregnancy timeline and print summary.</p>
         </div>
         <ThreeDMedicalIcon name="doctor" size="sm" tone="teal" />
       </div>
-      <form className="obgyn-form-grid">
-        <label>Symptoms<textarea placeholder="Clinician-recorded symptoms" /></label>
-        <label>BP<input placeholder="Example format: 120/80" /></label>
-        <label>Weight<input type="number" min="0" step="0.1" placeholder="kg" /></label>
-        <label>Fetal heart<input placeholder="Recording only" /></label>
-        <label>Fundal height<input placeholder="cm, if recorded" /></label>
-        <label>Examination<textarea placeholder="Doctor examination notes" /></label>
-        <label>Plan<textarea placeholder="Doctor-authored plan" /></label>
-        <label>Investigations<textarea placeholder="Orders or follow-up tests" /></label>
-        <label>Next follow-up<input type="datetime-local" /></label>
+      <div className="data-list">
+        {visits.slice(0, 3).map((visit, index) => (
+          <article className="data-row" key={String(visit.id ?? index)}>
+            <div className="data-row-header">
+              <strong>{formatDate(visit.visitDate)}</strong>
+              <span className="badge">{visit.gestationalAgeDisplay ?? "GA not set"}</span>
+            </div>
+            <p className="muted">{[visit.bloodPressure, visit.fetalHeartText, visit.planText].filter(Boolean).join(" | ") || "Antenatal visit recorded."}</p>
+          </article>
+        ))}
+      </div>
+      <form className="obgyn-form-grid" onSubmit={submitForm((form) => activePregnancy?.id ? onSubmit(`/pregnancies/${activePregnancy.id}/antenatal-visits`, { ...numberValues(form, ["weightKg", "pulseBpm"]), ...values(form, ["visitDate", "gestationalAgeDisplay", "bloodPressure", "edema", "urineProtein", "symptomsText", "examinationText", "fetalHeartText", "fundalHeightText", "planText", "medicationsNote", "investigationsNote", "nextFollowUpDate"]) }) : Promise.resolve())}>
+        <div className="obgyn-form-section wide">
+          <strong>Visit details</strong>
+          <label>Visit date<input name="visitDate" type="date" /></label>
+          <label>Gestational age<input name="gestationalAgeDisplay" placeholder="Weeks + days" /></label>
+          <label>Next follow-up<input name="nextFollowUpDate" type="date" /></label>
+        </div>
+        <div className="obgyn-form-section wide">
+          <strong>Vitals and pregnancy checks</strong>
+          <label>BP<input name="bloodPressure" placeholder="Example format: 120/80" /></label>
+          <label>Weight<input name="weightKg" type="number" min="0" step="0.1" placeholder="kg" /></label>
+          <label>Pulse<input name="pulseBpm" type="number" min="0" max="250" /></label>
+          <label>Fetal heart<input name="fetalHeartText" placeholder="Recording only" /></label>
+          <label>Fundal height<input name="fundalHeightText" placeholder="cm, if recorded" /></label>
+          <label>Edema<input name="edema" placeholder="If recorded" /></label>
+          <label>Urine protein<input name="urineProtein" placeholder="If recorded" /></label>
+        </div>
+        <label>Symptoms<textarea name="symptomsText" placeholder="Clinician-recorded symptoms" /></label>
+        <label>Examination<textarea name="examinationText" placeholder="Doctor examination notes" /></label>
+        <label>Plan<textarea name="planText" placeholder="Doctor-authored plan" /></label>
+        <label>Investigations<textarea name="investigationsNote" placeholder="Orders or follow-up tests" /></label>
+        <label>Medication note<textarea name="medicationsNote" placeholder="Medication note if needed" /></label>
         <div className="form-actions no-print">
-          <button className="button secondary" type="button">Save Draft</button>
-          <button className="button" type="button">Save Visit</button>
-          <Link className="button secondary" href="/patients">Return to patient file</Link>
+          <button className="button secondary" disabled={!activePregnancy?.id} type="submit">Save Draft</button>
+          <button className="button" disabled={!activePregnancy?.id} type="submit">Save Visit</button>
+          <Link className="button secondary" href={`/patients/${patientId}`}>Return to patient file</Link>
         </div>
       </form>
     </article>
   );
 }
 
-function UltrasoundReportBuilder() {
+function UltrasoundReportBuilder({
+  activePregnancy,
+  fetuses,
+  patientId,
+  ultrasounds,
+  onSubmit
+}: {
+  activePregnancy?: PregnancyRecord;
+  fetuses: FetusRecord[];
+  patientId: string;
+  ultrasounds: UltrasoundRecord[];
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+}) {
   return (
     <article className="panel printable-summary">
       <div className="section-heading">
@@ -471,25 +708,86 @@ function UltrasoundReportBuilder() {
         </div>
         <ThreeDMedicalIcon name="ultrasound" size="sm" tone="violet" />
       </div>
-      <form className="obgyn-form-grid">
-        <label>Scan type<input placeholder="Dating, anatomy, growth, follow-up" /></label>
-        <label>Indication<input placeholder="Doctor-entered indication" /></label>
-        <label>Gestational age<input placeholder="Weeks + days" /></label>
-        <label>Fetus selector<input placeholder="Singleton / A / B / C" /></label>
-        <label>Fetal presentation<input placeholder="Recording only" /></label>
-        <label>Placenta<input placeholder="Location and notes" /></label>
-        <label>Amniotic fluid<input placeholder="Recording only" /></label>
-        <label>Fetal heart<input placeholder="BPM or observed" /></label>
+      <p className="notice">Measurements are recorded for clinician review. Interpretation must be completed by the doctor.</p>
+      <div className="data-list">
+        {ultrasounds.slice(0, 3).map((scan, index) => (
+          <article className="data-row" key={String(scan.id ?? index)}>
+            <div className="data-row-header">
+              <strong>{scan.scanType ?? "OB ultrasound"}</strong>
+              <span className="badge">{scan.status ?? "draft"}</span>
+            </div>
+            <p className="muted">{[formatDate(scan.performedAt), scan.gestationalAgeDisplay, scan.impressionText].filter(Boolean).join(" | ") || "Doctor review required."}</p>
+          </article>
+        ))}
+      </div>
+      <form className="obgyn-form-grid" onSubmit={submitForm((form) => onSubmit("/ob-ultrasounds", { patientId, pregnancyId: activePregnancy?.id, ...numberValues(form, ["gestationalAgeWeeks", "gestationalAgeDays", "fetalHeartRateBpm", "bpdMm", "hcMm", "acMm", "flMm", "efwGrams"]), ...dateTimeValues(form, ["performedAt"]), ...values(form, ["scanType", "indication", "gestationalAgeDisplay", "fetusId", "presentation", "placenta", "amnioticFluid", "fetalHeartText", "dopplerNote", "impressionText"]) }))}>
+        <div className="obgyn-form-section wide">
+          <strong>Scan details</strong>
+          <label>Scan date and time<input name="performedAt" type="datetime-local" /></label>
+          <label>Scan type<input name="scanType" placeholder="Dating, anatomy, growth, follow-up" /></label>
+          <label>Indication<input name="indication" placeholder="Doctor-entered indication" /></label>
+        </div>
+        <div className="obgyn-form-section wide">
+          <strong>Fetus and pregnancy context</strong>
+          <label>Gestational age<input name="gestationalAgeDisplay" placeholder="Weeks + days" /></label>
+          <label>Weeks<input name="gestationalAgeWeeks" type="number" min="0" max="45" /></label>
+          <label>Days<input name="gestationalAgeDays" type="number" min="0" max="6" /></label>
+          <label>Fetus selector<select name="fetusId" defaultValue="">
+            <option value="">Singleton or not selected</option>
+            {fetuses.map((fetus) => <option key={String(fetus.id)} value={String(fetus.id)}>{fetus.label ?? "Fetus"}</option>)}
+          </select></label>
+        </div>
+        <label>Fetal presentation<input name="presentation" placeholder="Recording only" /></label>
+        <label>Placenta<input name="placenta" placeholder="Location and notes" /></label>
+        <label>Amniotic fluid<input name="amnioticFluid" placeholder="Recording only" /></label>
+        <label>Fetal heart<input name="fetalHeartText" placeholder="BPM or observed" /></label>
+        <label>Fetal heart rate<input name="fetalHeartRateBpm" type="number" min="40" max="240" placeholder="BPM" /></label>
         <div className="obgyn-biometry wide">
           {["BPD", "HC", "AC", "FL", "EFW"].map((field) => (
-            <label key={field}>{field}<input placeholder="Manual measurement" /></label>
+            <label key={field}>{field}<input name={field === "EFW" ? "efwGrams" : `${field.toLowerCase()}Mm`} type="number" min="0" step={field === "EFW" ? "1" : "0.1"} placeholder="Manual measurement" /></label>
           ))}
         </div>
-        <label>Doppler note<textarea placeholder="Optional clinician note" /></label>
-        <label>Impression<textarea placeholder="Doctor-written impression only" /></label>
-        <label>Report status<select defaultValue="Draft"><option>Draft</option><option>Final placeholder</option></select></label>
-        <p className="notice wide">No automatic FGR diagnosis, fetal risk scoring, percentile engine, or fetal-image interpretation is performed.</p>
+        <label>Doppler note<textarea name="dopplerNote" placeholder="Optional clinician note placeholder" /></label>
+        <label>Impression<textarea name="impressionText" placeholder="Doctor-written impression only" /></label>
+        <label>Report status<select defaultValue="Draft"><option>Draft</option></select></label>
+        <p className="notice wide">No automated growth interpretation, fetal risk scoring, growth chart calculation, or fetal-image interpretation is performed.</p>
+        <div className="form-actions no-print">
+          <button className="button" type="submit">Save ultrasound draft</button>
+          <button className="button secondary" type="button" onClick={() => window.print()}>Print ultrasound report</button>
+        </div>
       </form>
+    </article>
+  );
+}
+
+function PregnancyTimelineCard({ items }: { items: TimelineItem[] }) {
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Timeline integration</p>
+          <h2>Pregnancy timeline</h2>
+        </div>
+        <ThreeDMedicalIcon name="timeline" size="sm" tone="teal" />
+      </div>
+      {items.length === 0 ? (
+        <p className="empty-state">
+          <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
+          <span>Pregnancy episode, obstetric history, antenatal visits, fetus records, and ultrasound records appear here after saving.</span>
+        </p>
+      ) : (
+        <div className="timeline-list">
+          {items.slice(0, 6).map((item, index) => (
+            <article className="timeline-item" key={`${item.title}-${index}`}>
+              <ThreeDMedicalIcon name={timelineIcon(item.type)} size="sm" />
+              <div>
+                <strong>{item.title}</strong>
+                <p className="muted">{item.description} - {formatDate(item.dateTime)}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
     </article>
   );
 }
@@ -632,7 +930,7 @@ function PatientActionPanel({
       {open === "ultrasound" ? (
         <ActionForm
           fields={[["impressionText", "Doctor-written impression", "text", false]]}
-          note="Recording only. The app does not diagnose fetal growth or risk."
+          note="Recording only. The doctor interprets fetal growth and risk."
           onSubmit={handleSubmit("ultrasounds", (form) => values(form, ["impressionText"]))}
           submitLabel="Create ultrasound draft"
         />
@@ -708,6 +1006,33 @@ function ActionForm({
 function values(form: HTMLFormElement, keys: string[]) {
   const formData = new FormData(form);
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "").trim()]).filter(([, value]) => value));
+}
+
+function numberValues(form: HTMLFormElement, keys: string[]) {
+  const formData = new FormData(form);
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, String(formData.get(key) ?? "").trim()] as const)
+      .filter(([, value]) => value !== "")
+      .map(([key, value]) => [key, Number(value)])
+  );
+}
+
+function dateTimeValues(form: HTMLFormElement, keys: string[]) {
+  const formData = new FormData(form);
+  return Object.fromEntries(
+    keys
+      .map((key) => [key, String(formData.get(key) ?? "").trim()] as const)
+      .filter(([, value]) => value !== "")
+      .map(([key, value]) => [key, new Date(value).toISOString()])
+  );
+}
+
+function submitForm(callback: (form: HTMLFormElement) => Promise<void>) {
+  return (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void callback(event.currentTarget);
+  };
 }
 
 function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string, unknown>[] }) {

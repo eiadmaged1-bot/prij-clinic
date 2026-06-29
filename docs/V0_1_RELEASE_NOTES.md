@@ -4,6 +4,17 @@ Date: 2026-06-28
 
 Prij Clinic V0.1 is a local/private pilot foundation for demo and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
+## OB/GYN v0.2 Workflow Verified After Accounts - 2026-06-29
+
+This sprint verifies OB/GYN v0.2 after the accounts/session hardening tag `v0.2-accounts-session-rbac`.
+
+- `/auth/me` remains the app identity source of truth.
+- The patient Pregnancy workspace now records fake/demo pregnancy episodes, obstetric history, fetus records, antenatal visits, and OB ultrasound drafts through the existing backend APIs.
+- OB/GYN timeline and print-friendly summaries were polished.
+- The OB ultrasound builder keeps visible clinician-review safety wording and does not add FGR diagnosis, percentile calculation, fetal risk scoring, or automatic interpretation.
+- Added `npm run test:obgyn:workflow` for the verified workflow path after stable accounts/session.
+- Created `docs/OBGYN_V02_VERIFICATION_REPORT.md`.
+
 ## Staging Deployment Prep - 2026-06-29
 
 This sprint prepares a safe staging deployment path with fake/demo data only:
