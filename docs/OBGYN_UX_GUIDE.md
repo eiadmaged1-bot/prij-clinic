@@ -6,7 +6,20 @@ This guide describes the browser-facing OB/GYN workflow for the V0.1 demo. It is
 
 ## Patient File Workspace
 
-Open a patient file, then choose the Pregnancy tab. The workspace is organized for a doctor who wants one calm view:
+Open a patient file, then choose either the Gynecology tab or the Pregnancy tab. The workspace is organized for a doctor who wants one calm view.
+
+The Gynecology tab contains:
+
+- general gynecology visit template
+- abnormal bleeding starter
+- pelvic pain starter
+- PCOS starter
+- fibroid or ovarian cyst starter
+- contraception counseling starter
+- gynecology timeline cards
+- browser print summary
+
+The Pregnancy tab contains:
 
 - Pregnancy Overview
 - Obstetric History
@@ -17,6 +30,29 @@ Open a patient file, then choose the Pregnancy tab. The workspace is organized f
 - Follow-up
 
 The page stays patient-focused. It does not show unrelated owner/admin content.
+
+## General Gynecology Workspace
+
+The general gynecology workspace starts from a clear Start Gynecology Visit action and lets the doctor select a recording template.
+
+The general visit template records:
+
+- reason for visit
+- menstrual history
+- bleeding pattern
+- pain symptoms
+- discharge or infection symptoms
+- obstetric history summary
+- contraception history
+- relevant medical or surgical history
+- examination notes
+- doctor-written impression
+- doctor-written plan
+- follow-up date
+
+Problem-focused starters are included for abnormal uterine bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling.
+
+These starters do not diagnose, recommend treatment, recommend contraception methods, or prescribe. They only structure clinician-entered notes.
 
 ## Pregnancy Dashboard
 
@@ -77,6 +113,7 @@ The app does not provide:
 Browser print styling is available for:
 
 - patient summary
+- gynecology summary
 - antenatal visit summary
 - ultrasound report
 - linked report summaries
@@ -103,6 +140,9 @@ Templates guide the doctor to the right workflow only. They do not diagnose, pre
 - No external AI calls.
 - No real payment gateway.
 - No automatic diagnosis.
+- No automatic general gynecology diagnosis.
+- No automatic treatment plan.
+- No automatic contraception recommendation.
 - No automatic OB ultrasound interpretation.
 - No automatic FGR diagnosis.
 - Doctor-authored or doctor-reviewed content remains required.

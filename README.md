@@ -2,7 +2,7 @@
 
 Clinic Management System V0.2 MVP pilot workflow lock for OB/GYN and women's health.
 
-Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
 V0.2 is a verified local/private MVP pilot workflow lock. It is not production-ready, not a medical device, and must not be used with real patient data.
 
@@ -25,6 +25,7 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, audit review, and appearance settings.
 - Doctors can use Doctor Mode for a simpler daily workflow: open patient, start visit, write note, prescribe, order tests, finish, and move to the next patient.
 - Patient files now use simplified tabs, large actions, and 3D-style medical icons for older-doctor-friendly recognition.
+- Patient files now include a General Gynecology workspace with recording-only visit templates for abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
@@ -227,6 +228,9 @@ GET  /encounters
 GET  /prescriptions
 GET  /investigations/orders
 GET  /reports
+GET  /gynecology-visits
+GET  /patients/:id/gynecology-visits
+POST /patients/:id/gynecology-visits
 GET  /pregnancies
 GET  /ob-ultrasounds
 GET  /billing/invoices
@@ -266,6 +270,7 @@ npm run test:theme:ui
 npm run test:doctor:ux
 npm run test:e2e:v01
 npm run test:clinical:persistence
+npm run test:gyn:starter
 npm run test:visual:qa
 npm run test:accounts:rbac
 ```

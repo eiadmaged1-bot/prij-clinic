@@ -25,6 +25,16 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Clinician interpretation is required for ultrasound, Doppler notes, fetal biometry, pregnancy risk notes, and report impressions.
 - Browser print styles are intended for demo review and are not legal medical stationery, prescription paper, or production report output.
 
+## General Gynecology Starter Limitations
+
+- General gynecology starter templates are recording aids only.
+- They do not diagnose abnormal bleeding, pelvic pain, PCOS, fibroids, ovarian cysts, or contraception eligibility.
+- They do not recommend treatment plans, contraception methods, investigations, medications, or follow-up intervals.
+- Doctor-written impression and plan fields remain manual.
+- Fertility, IVF, menopause, colposcopy, oncology, preventive screening, and urogynecology workflows are not implemented.
+- Gynecology print output is browser print styling only and is not signed production clinical stationery.
+- Gynecology routes currently use existing encounter clinical permissions; more granular gynecology-specific permissions remain future work.
+
 ## Release Candidate UX Limitations
 
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
@@ -61,6 +71,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Investigation result review and report review are foundational only.
 - OB ultrasound records support raw recording fields for scan type, indication, fetus link, biometry, EFW, Doppler note, and doctor-written impression, but they do not provide diagnostic automation.
 - OB/GYN records include previous pregnancy history, fetus/multiple pregnancy records, deeper antenatal visits, ultrasound reports, and pregnancy timeline events, but remain recording-only.
+- General gynecology records include starter templates and timeline events, but remain recording-only.
 - The patient-file antenatal visit form saves only when a pregnancy episode exists for the patient.
 - Ultrasound print output is browser print styling only; it is not a signed production report format.
 
@@ -96,3 +107,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 - `npm run test:clinical:persistence` covers patient-context clinical persistence, OB/GYN core recording, patient timeline aggregation, patient finance basics, audit assertions, and signed encounter edit protection for fake/demo records only.
 - `npm run test:obgyn:core` covers pregnancy episode depth, previous pregnancy history, fetus/multiple pregnancy records, antenatal visit depth, OB ultrasound recording fields, timeline entries, audit entries, unauthorized-role denial, and no diagnostic ultrasound behavior for fake/demo records only.
+- `npm run test:gyn:starter` covers gynecology workspace text, starter template persistence, timeline events, print-summary UI markers, audit events, non-clinical denial, and safety wording for fake/demo records only.

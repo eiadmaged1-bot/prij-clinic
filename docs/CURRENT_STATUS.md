@@ -2,20 +2,20 @@
 
 Date: 2026-06-29
 
-Branch: `pilot/mvp-obgyn-workflow-lock`
+Branch: `leap/b-general-gynecology-starter`
 
-Base branch: `auth/accounts-session-rbac-hardening` at `87eb7e5`
+Base branch: `pilot/mvp-obgyn-workflow-lock` at `a4b22c6`
 
-Target tag: `v0.2-mvp-pilot-workflow-lock`
+Target tag: `v0.3-general-gynecology-starter`
 
 ## Status Summary
 
-Prij Clinic is locking the MVP pilot workflow on top of the accounts/session/RBAC hardening branch and the OB/GYN Specialty Engine v0.2 integration. This sprint is verification and workflow polish, not a new module sprint.
+Prij Clinic now adds the first general gynecology starter layer on top of the locked MVP pilot OB/GYN workflow. The app is no longer pregnancy-only, while the new templates remain recording-only and doctor-led.
 
 The intended pilot flow is now:
 
 ```text
-Owner login -> patient file -> doctor workflow -> OB/GYN pregnancy workspace -> antenatal visit -> ultrasound report -> timeline -> print -> role-safe account behavior
+Owner login -> patient file -> doctor workflow -> General Gynecology or Pregnancy/OB -> timeline -> print -> role-safe account behavior
 ```
 
 This work combines:
@@ -23,6 +23,7 @@ This work combines:
 - Codex A backend OB/GYN core depth.
 - Codex B browser OB/GYN workspace, reporting UX, templates, and print-friendly summaries, now polished into a single patient-file workflow.
 - Existing V0.1 operational workflows, route security, doctor-friendly UI, local staging prep, and fake/demo-only verification.
+- General gynecology starter workspace, structured visit template, problem-focused starter templates, timeline events, and print summary.
 
 This remains local/demo software only. It is not production-ready, not a medical device, and must not be used with real patient data, real payment data, PHI uploads, external AI providers, or live clinical workflows.
 
@@ -52,6 +53,19 @@ Frontend/reporting UX preserved from Codex B:
 - Visual/doctor UX/account-session test updates for the locked pilot flow.
 - `docs/OBGYN_UX_GUIDE.md`.
 
+## General Gynecology Starter Scope
+
+- Prisma migration `apps/api/prisma/migrations/20260629170000_general_gynecology_starter/migration.sql`.
+- Dedicated `GynecologyVisit` model for recording-only structured gynecology visits.
+- API routes for patient-scoped gynecology visits under `/patients/:id/gynecology-visits`.
+- Patient-file Gynecology tab visible to authorized clinical users.
+- General gynecology visit template with menstrual history, bleeding, pain, discharge, contraception history, examination, doctor impression, doctor plan, and follow-up date.
+- Starter templates for abnormal uterine bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling.
+- Patient timeline events for gynecology visit and each starter template.
+- Browser print-friendly gynecology summary.
+- Focused `scripts/general-gynecology-starter-test.mjs` and `npm run test:gyn:starter`.
+- `docs/GENERAL_GYNECOLOGY_STARTER.md`.
+
 ## Existing Foundation
 
 - Auth: local staff login, JWT cookie/bearer support, account lockout after repeated failures, logout audit.
@@ -74,6 +88,7 @@ Frontend/reporting UX preserved from Codex B:
 - AI draft artifacts are disabled/mock-only and cannot update final clinical records.
 - OB ultrasound and pregnancy records do not calculate diagnoses, fetal risk, FGR, or fetal-image analysis.
 - OB/GYN UX labels measurements as recording-only and requires clinician interpretation.
+- General gynecology templates do not diagnose, recommend treatment, recommend contraception methods, or prescribe.
 - Antenatal and ultrasound UX records measurements/observations only; clinician interpretation remains required.
 - Payment records are demo metadata only and do not use a real payment gateway.
 - Report/file workflows remain metadata/placeholder only; no PHI upload is enabled.
@@ -96,6 +111,7 @@ npm run test:doctor:ux
 npm run test:visual:qa
 npm run test:e2e:v01
 npm run test:clinical:persistence
+npm run test:gyn:starter
 npm run test:obgyn:core
 npm run test:accounts:rbac
 npm run test:staging:smoke

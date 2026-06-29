@@ -1,13 +1,24 @@
 # Next Steps
 
-The exact next recommended sprint after the MVP pilot workflow lock is:
+The exact next recommended sprint after General Gynecology Starter is:
+
+## General Gynecology Walkthrough Hardening
+
+Goals:
+
+- Rehearse the fake/demo patient flow from Doctor Mode into the patient-file Gynecology tab.
+- Verify general gynecology visit creation, timeline event display, and browser print summary in the real demo browser.
+- Tighten labels and empty states for the abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception starter templates.
+- Keep all templates recording-only and doctor-authored.
+- Keep no automatic diagnosis, no diagnostic recommendations, no automatic treatment plan, no contraception recommendation engine, and no automatic prescribing.
+- Run the full local verification suite, including `npm run test:gyn:starter`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
 
 ## Pilot Demo Data + Browser Walkthrough Hardening
 
 Goals:
 
 - Prepare a clean fake/demo walkthrough dataset for owner, doctor, receptionist, and patient file flows.
-- Add a script-assisted browser walkthrough for login, patient file, pregnancy workspace, antenatal visit, ultrasound report, timeline, print, theme switch, and non-admin account denial.
+- Add a script-assisted browser walkthrough for login, patient file, gynecology workspace, pregnancy workspace, antenatal visit, ultrasound report, timeline, print, theme switch, and non-admin account denial.
 - Keep the current patient OB/GYN workspace as the pilot surface; avoid new large modules.
 - Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
 - Keep all ultrasound, Doppler, fetal biometry, risk flags, and pregnancy history behavior recording-only.
