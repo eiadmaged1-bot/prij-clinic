@@ -8,8 +8,8 @@ const { PrismaClient } = require("@prisma/client");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
-const appEnv = process.env.APP_ENV || process.env.NODE_ENV || "local";
-const isProduction = appEnv === "production" || process.env.NODE_ENV === "production";
+const appEnv = process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "local");
+const isProduction = appEnv === "production";
 const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA !== "false";
 
 if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true")) {

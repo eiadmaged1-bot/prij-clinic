@@ -45,8 +45,9 @@ export function loadRootEnv() {
 }
 
 export function validateRuntimeEnv() {
-  const appEnv = process.env.APP_ENV ?? process.env.NODE_ENV ?? "local";
-  const isProduction = appEnv === "production" || process.env.NODE_ENV === "production";
+  const appEnv =
+    process.env.APP_ENV ?? (process.env.NODE_ENV === "production" ? "production" : "local");
+  const isProduction = appEnv === "production";
   const isStaging = appEnv === "staging";
   const errors: string[] = [];
 
