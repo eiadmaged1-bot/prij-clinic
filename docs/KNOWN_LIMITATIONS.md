@@ -74,3 +74,11 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Expanded tests use seeded owner access as the positive control. They do not prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 - Browser and visual tests are lightweight page sweeps, not full screenshot comparison, accessibility certification, or full browser matrix testing.
+# Medication Intelligence Limitations
+
+- Demo market data is intentionally tiny and not a complete registry.
+- Safety checks use limited seeded demo logic and are not a commercial interaction database.
+- No dosing database is integrated.
+- No real pharmacy integration exists.
+- Retail metadata connector is disabled by default.
+- Egypt, UAE, and Yemen complete market coverage may require official file uploads.

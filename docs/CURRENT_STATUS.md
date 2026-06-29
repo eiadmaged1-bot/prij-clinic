@@ -88,3 +88,8 @@ npm run test:ai-management
 ```
 
 `npm run test:staging:smoke` requires explicit staging-script mode (`APP_ENV=staging`) even when pointed at the local fake/demo app.
+# Medication Intelligence Engine
+
+The `leap/e-medication-intelligence-engine` branch adds a unified medication catalog, herbal references, patient medication/allergy lists, draft safety checks, Egypt/Gulf market variant database, configurable country badges, source/import policy, admin controls, coverage dashboard pages, regression tests, and documentation.
+
+The feature is a professional reference and safety-support system only. It does not provide patient self-medication guidance, pharmacy availability, retail workflows, autonomous prescribing, automatic dose changes, or AI clinical decisions.

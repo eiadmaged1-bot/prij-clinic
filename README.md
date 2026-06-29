@@ -157,6 +157,12 @@ http://localhost:3000/guidelines/ask
 http://localhost:3000/guidelines/upload
 http://localhost:3000/protocol-atlas
 http://localhost:3000/admin/protocol-atlas
+http://localhost:3000/medications
+http://localhost:3000/medications/search
+http://localhost:3000/drug-market
+http://localhost:3000/drug-market/search
+http://localhost:3000/admin/medications
+http://localhost:3000/admin/drug-market
 ```
 
 Recommended demo flow:

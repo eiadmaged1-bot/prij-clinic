@@ -54,3 +54,10 @@ Do not start real production deployment until the following are designed, implem
 - Payment compliance design before any real payment gateway.
 - Legal/privacy review before real patient use.
 - Any future AI provider integration must have consent, RBAC, audit, privacy, provider contract, and doctor-review controls before use.
+# Medication Intelligence Next Steps
+
+- Add official Egypt, UAE, and Yemen file ingestion once clinic-owned files are available.
+- Expand verified interaction rules through licensed clinical data.
+- Add scheduled official-source update checks.
+- Improve prescription variant selection UX while keeping patient directions doctor-authored.
+- Add broader visual Playwright coverage for medication admin pages.
