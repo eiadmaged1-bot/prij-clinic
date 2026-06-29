@@ -319,16 +319,41 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [comfort, setComfort] = useState("comfortable");
   const { theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
+  const permissions = user?.permissions ?? [];
   const isDoctor = Boolean(user?.roles.includes("Doctor"));
   const canOpenAdmin = isAdmin;
+  const canOpenClinical = hasAnyPermission(permissions, [
+    "encounter.read",
+    "encounter.create",
+    "prescription.read",
+    "investigation.read",
+    "report.read"
+  ]);
+  const canOpenPregnancy = hasAnyPermission(permissions, ["pregnancy.read", "pregnancy.manage", "ob_ultrasound.read", "ob_ultrasound.manage"]);
+  const canOpenFinance = Boolean(
+    user?.roles.includes("Owner") ||
+      user?.roles.includes("Admin") ||
+      user?.roles.includes("Accountant") ||
+      hasAnyPermission(permissions, ["billing.read", "billing.manage", "billing.report"])
+  );
   const canOpenGuidelines = Boolean(
-    user?.permissions.includes("guidelines.read") || user?.permissions.includes("guidelines.search")
+    permissions.includes("guidelines.read") || permissions.includes("guidelines.search")
   );
-  const visibleNavGroups = navGroups.map((group) =>
-    group.title === "Clinical" && canOpenGuidelines
-      ? { ...group, links: [...group.links, ["/guidelines", "Evidence Library", "reports"] as [string, string, IconName]] }
-      : group
-  );
+  const visibleNavGroups = navGroups
+    .filter((group) => group.title !== "Clinical" || canOpenClinical || canOpenGuidelines)
+    .filter((group) => group.title !== "OB/Pregnancy" || canOpenPregnancy)
+    .filter((group) => group.title !== "Finance" || canOpenFinance)
+    .map((group) =>
+      group.title === "Clinical" && canOpenGuidelines
+        ? { ...group, links: [...group.links, ["/guidelines", "Evidence Library", "reports"] as [string, string, IconName]] }
+        : group
+    )
+    .map((group) =>
+      group.title === "Clinical" && !canOpenClinical
+        ? { ...group, links: group.links.filter(([href]) => href === "/guidelines") }
+        : group
+    )
+    .filter((group) => group.links.length > 0);
 
   useEffect(() => {
     setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
@@ -362,6 +387,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         {theme === "medicolize-portal" ? (
           <nav className="nav-group portal-side-nav" aria-label="Owner portal navigation">
             {portalSideItems
+              .filter((item) => item.href !== "/billing" || canOpenFinance)
+              .filter((item) => !["/doctor", "/investigations"].includes(item.href ?? "") || canOpenClinical)
               .filter((item) => item.href !== "/admin" || canOpenAdmin)
               .filter((item) => item.href !== "/admin/accounts" || canOpenAdmin)
               .map((item) =>
@@ -560,4 +587,8 @@ function isActive(pathname: string | null, href: string) {
   if (!pathname) return false;
   if (href === "/dashboard") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function hasAnyPermission(permissions: string[], keys: string[]) {
+  return keys.some((key) => permissions.includes(key));
 }
