@@ -1,10 +1,10 @@
 # Current Status
 
-Date: 2026-06-28
+Date: 2026-06-29
 
-Branch: `ui/medicolize-style-owner-portal`
+Branch: `ux/doctor-friendly-3d-icons-reset`
 
-Target tag: `v0.1-medicolize-style-owner-portal`
+Target tag: `v0.1-doctor-friendly-ux`
 
 ## Status Summary
 
@@ -18,20 +18,24 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - Audit: append-only audit table and metadata-only audit hooks for implemented create/update/status/sign/review/payment and sensitive read actions.
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard.
 - Consent records: V0.1 structured consent foundation with audit metadata. Production legal text, signature capture, overrides, and full enforcement remain incomplete.
-- AI draft review placeholder: disabled/mock-only draft artifact workflow with doctor-review statuses.
+- AI draft review placeholder: disabled draft artifact workflow with doctor-review statuses.
 - V0.1 focused clinic UI: login displays demo credentials, patients has a clear patient-file list, new patient creates a real demo file through `POST /patients`, and `/patients/:id` is the focused patient workspace.
 - V0.1 Admin Control Center: local admin login `eyad` / `eyad`, users/roles overview, service catalog and price editing, system safety status, audit viewer, and reason-required override endpoints.
 - Theme system: Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations appearances.
+- Doctor-friendly mode: `/doctor` provides a large, simple daily doctor workspace focused on waiting patients, today's visits, and the next clinical action.
+- Guided visit flow: `/doctor/visit` presents large step-by-step sections for complaint, history, examination, impression, prescription, orders, follow-up, and finish.
+- 3D medical icon system: reusable original SVG/CSS icons support navigation, patient tabs, doctor actions, and empty states.
+- Elder-friendly display preferences: Comfort, Large, and Compact display modes are available from the app top bar and stored per browser.
 - Admin Appearance Settings: admin-only appearance page and protected settings API for local demo default theme changes with audit entries.
 - V0.1 module pages: home, login, dashboard, admin, patients, new patient, patient file, appointments, calendar, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, consents, and AI drafts.
 - V0.1 E2E workflow test: `npm run test:e2e:v01` creates fake/demo workflow records and checks representative audit metadata.
 - Backup/restore foundation: local-only backup script, guarded restore script, and backup/restore docs.
 - Deployment readiness docs: environment strategy, CI env example, deployment requirements, and production blockers documented.
 - CI: GitHub Actions runs install, Prisma client generation, typecheck, and build on `push` and `pull_request`.
-- Security integration CI: GitHub Actions can run database-backed API security integration tests with PostgreSQL, existing Prisma migrations, demo seed data, and disabled/mock-only AI settings.
-- Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled/mock metadata, and core web pages.
-- Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled/mock safety.
-- CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled/mock-only AI draft safety.
+- Security integration CI: GitHub Actions can run database-backed API security integration tests with PostgreSQL, existing Prisma migrations, demo seed data, and disabled AI settings.
+- Smoke test: `npm run smoke:test` checks health, DB connectivity, login, anonymous denial, protected API routes, AI disabled metadata, and core web pages.
+- Security tests: local scripts cover representative RBAC denial/allow paths, branch scope behavior, audit creation and metadata minimization, and AI disabled safety.
+- CI security test: `npm run test:security:ci` covers API health, database health, seeded owner login, anonymous denial, representative protected endpoints, and disabled AI draft safety.
 - Expanded route security tests: `npm run test:security:expanded` covers the executable route manifest, representative denied-role checks, out-of-branch referenced-record write denial assertions, audit assertions, and AI safety regression.
 - Role permission matrix: `docs/ROLE_PERMISSION_MATRIX.md` documents seeded Owner/Admin/Doctor/Nurse/Receptionist/Accountant behavior and lower-role denial expectations.
 
@@ -81,7 +85,7 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 
 ## UI Safety State
 
-- The app shell shows compact demo/local warnings and AI disabled/mock-only status.
+- The app shell shows compact demo/local warnings and AI disabled status.
 - The login page shows the exact local Demo Owner credentials: `demo.owner@prij.local` / `LocalDev123!`.
 - The login page shows the exact local admin credentials: `eyad` / `eyad`.
 - Patient file creation redirects to `/patients/:id` after a successful API save.
@@ -92,7 +96,10 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 - Clinic Portal theme provides an owner-focused left-sidebar dashboard with patient search, compact badges, owner cards, and hidden owner tools.
 - Incision Portal theme still provides a white app-launcher dashboard with My Apps and All Apps tabs and large workflow tiles.
 - Forms and page copy instruct users not to enter real patient, payment, report, credential, or secret data.
-- AI draft UI remains disabled/mock-only and doctor-review-only.
+- AI draft UI remains disabled, draft-only, and doctor-review-only.
+- Doctor Mode keeps admin, finance-heavy, and configuration-heavy surfaces out of the default doctor workflow while backend RBAC remains the source of truth.
+- Patient file tabs are simplified to Overview, Visits, Prescriptions, Orders & Reports, Pregnancy, Billing, Files, Timeline, and More.
+- Normal-user UI copy was cleaned to avoid developer wording such as stack traces, raw JSON, endpoint labels, and framework/database terms.
 - OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.
 
 ## Commit Safety

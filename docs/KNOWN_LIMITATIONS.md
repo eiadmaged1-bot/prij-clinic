@@ -22,7 +22,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Clinical Workflow
 
-- Patient profile timeline is not complete.
+- Patient profile timeline is simplified and patient-focused, but still aggregates only the records available through current MVP APIs.
+- Doctor Mode and Guided Visit are UX foundations. The guided visit flow does not yet save each step directly into a full structured encounter from the browser.
 - Consent records now exist as a V0.1 foundation, but production legal text, signature capture, consent override workflow, and full server-side consent enforcement are not implemented.
 - Signed encounter correction/versioning is not implemented.
 - Prescription approval is represented by a sign action in the MVP foundation and needs final doctor-approval semantics before production use.
@@ -48,7 +49,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## AI
 
-- AI is disabled/mock-only.
+- AI is disabled and draft-only.
 - No external AI API calls are allowed in the current foundation.
 - AI draft placeholders are not clinical output and cannot update final clinical records.
 - Any future AI integration requires separate consent, RBAC, audit, privacy, provider, and doctor-review design.
@@ -62,6 +63,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Expanded local Node tests now cover implemented protected API routes, representative denied-role cases, branch scope, referenced-record write denial paths, audit assertions, and AI safety regression. They still do not prove production-grade authorization for every future state transition.
 - Admin control tests cover `eyad` login, service price updates, reason-required invoice void override, non-admin denial, audit entries, and absence of normal hard-delete routes for audit/clinical records.
 - Theme UI tests cover required theme registry entries, local admin demo credentials on the login page, Clinic Portal and Incision Portal dashboard labels, non-admin denial for appearance settings, admin theme changes, and major page availability.
+- Doctor UX tests cover the 3D icon registry, Doctor Mode labels, guided visit steps, simplified patient file tabs, comfort controls, non-admin admin denial, and major doctor-friendly page availability.
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 

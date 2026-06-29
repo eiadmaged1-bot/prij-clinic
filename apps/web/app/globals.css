@@ -1392,6 +1392,341 @@ td span {
   width: auto;
 }
 
+.medical-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 30% 20%, rgb(255 255 255 / 95%), rgb(255 255 255 / 30) 38%, transparent 39%),
+    linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(226 246 245 / 70));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 12px 24px rgb(15 23 42 / 12%);
+  color: #0f8f8c;
+}
+
+.medical-icon-sm {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.8rem;
+}
+
+.medical-icon-md {
+  width: 3.1rem;
+  height: 3.1rem;
+}
+
+.medical-icon-lg {
+  width: 4.4rem;
+  height: 4.4rem;
+  border-radius: 1.25rem;
+}
+
+.medical-icon svg {
+  width: 72%;
+  height: 72%;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+}
+
+.medical-icon .medical-icon-glow {
+  fill: currentColor;
+  opacity: 0.1;
+  stroke: none;
+}
+
+.medical-icon-navy {
+  color: #23335f;
+  background: linear-gradient(145deg, #ffffff, #e8eefc);
+}
+
+.medical-icon-violet {
+  color: #6d4bc2;
+  background: linear-gradient(145deg, #ffffff, #f0eafd);
+}
+
+.medical-icon-amber {
+  color: #b7791f;
+  background: linear-gradient(145deg, #ffffff, #fff1d4);
+}
+
+.medical-icon-rose {
+  color: #bf4163;
+  background: linear-gradient(145deg, #ffffff, #ffe5ee);
+}
+
+.medical-icon-slate {
+  color: #64748b;
+  background: linear-gradient(145deg, #ffffff, #edf2f7);
+}
+
+.nav-item {
+  gap: 0.65rem;
+}
+
+.nav-item .medical-icon {
+  margin: -0.25rem 0;
+}
+
+.comfort-switch {
+  display: inline-flex;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 0.2rem;
+}
+
+.comfort-switch button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.45rem 0.65rem;
+}
+
+.comfort-switch button.active {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+.comfort-large {
+  font-size: 1.08rem;
+}
+
+.comfort-large .button,
+.comfort-large input,
+.comfort-large select,
+.comfort-large textarea {
+  min-height: 3.25rem;
+  font-size: 1rem;
+}
+
+.comfort-compact .panel,
+.comfort-compact .card,
+.comfort-compact .data-row,
+.comfort-compact .metric-card,
+.comfort-compact .quick-card {
+  padding: 0.8rem;
+}
+
+.button.large {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.25rem;
+  padding-inline: 1.2rem;
+}
+
+.doctor-hero,
+.patient-simple-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1.2rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #ffffff, #eefdfb);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+}
+
+.doctor-hero h1,
+.patient-simple-hero h1 {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  letter-spacing: 0;
+}
+
+.doctor-hero-actions,
+.patient-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.doctor-today-grid,
+.doctor-friendly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.doctor-focus-card,
+.next-step-card {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.doctor-focus-card strong {
+  font-size: 2.1rem;
+}
+
+.doctor-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.doctor-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 0.85rem;
+}
+
+.doctor-row span:not(.button) {
+  color: var(--muted);
+}
+
+.doctor-step-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+.doctor-step-strip span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 0.7rem 0.9rem;
+  font-weight: 800;
+}
+
+.doctor-step-strip b {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.visit-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.visit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.visit-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.65rem;
+}
+
+.visit-progress button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  cursor: pointer;
+  font-weight: 850;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.visit-progress button.active {
+  border-color: var(--accent);
+  background: rgb(20 184 166 / 10%);
+  box-shadow: 0 0 0 4px rgb(20 184 166 / 10%);
+}
+
+.visit-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.visit-card textarea {
+  min-height: 16rem;
+  font-size: 1rem;
+  resize: vertical;
+}
+
+.visit-actions,
+.patient-action-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.patient-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--foreground);
+  font-weight: 850;
+  padding: 0.55rem 0.85rem;
+}
+
+.patient-tabs.simple .tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+}
+
+.patient-avatar {
+  display: grid;
+  place-items: center;
+}
+
+.timeline-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: 0.85rem;
+}
+
 :root[data-theme="dark-navy"] input,
 :root[data-theme="dark-navy"] textarea,
 :root[data-theme="dark-navy"] select,

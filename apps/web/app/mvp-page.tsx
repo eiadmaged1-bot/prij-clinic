@@ -4,6 +4,7 @@ import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "./theme";
+import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 
 type Field = {
   name: string;
@@ -28,11 +29,12 @@ type MvpPageProps = {
 
 type NavGroup = {
   title: string;
-  links: Array<[string, string]>;
+  links: Array<[string, string, IconName]>;
 };
 
 type PortalSideItem = {
   label: string;
+  icon: IconName;
   href?: string;
   badge?: string;
 };
@@ -43,39 +45,41 @@ const navGroups: NavGroup[] = [
   {
     title: "Operations",
     links: [
-      ["/dashboard", "Dashboard"],
-      ["/patients", "Patients"],
-      ["/patients/new", "New Patient"],
-      ["/appointments", "Appointments"],
-      ["/calendar", "Calendar"],
-      ["/queue", "Queue"]
+      ["/dashboard", "Dashboard", "dashboard"],
+      ["/doctor", "Doctor Mode", "doctor"],
+      ["/patients", "Patients", "patients"],
+      ["/patients/new", "New Patient", "patients"],
+      ["/appointments", "Appointments", "calendar"],
+      ["/calendar", "Calendar", "calendar"],
+      ["/queue", "Queue", "queue"]
     ]
   },
   {
     title: "Clinical",
     links: [
-      ["/encounters", "Encounters"],
-      ["/prescriptions", "Prescriptions"],
-      ["/investigations", "Investigations"],
-      ["/reports", "Reports"]
+      ["/doctor/visit", "Guided Visit", "encounter"],
+      ["/encounters", "Visits", "encounter"],
+      ["/prescriptions", "Prescriptions", "prescription"],
+      ["/investigations", "Orders", "investigations"],
+      ["/reports", "Reports", "reports"]
     ]
   },
   {
     title: "OB/Pregnancy",
     links: [
-      ["/pregnancies", "Pregnancy"],
-      ["/ultrasound", "OB Ultrasound"]
+      ["/pregnancies", "Pregnancy", "pregnancy"],
+      ["/ultrasound", "Ultrasound", "ultrasound"]
     ]
   },
   {
     title: "Finance",
-    links: [["/billing", "Billing"]]
+    links: [["/billing", "Billing", "billing"]]
   },
   {
     title: "Safety/Admin",
     links: [
-      ["/consents", "Consents"],
-      ["/ai-drafts", "AI Draft Review"]
+      ["/consents", "Consents", "consent"],
+      ["/ai-drafts", "AI Draft Review", "ai"]
     ]
   }
 ];
@@ -83,24 +87,25 @@ const navGroups: NavGroup[] = [
 const adminNavGroup: NavGroup = {
   title: "Admin",
   links: [
-    ["/admin", "Control Center"],
-    ["/admin/appearance", "Appearance"]
+    ["/admin", "Control Center", "admin"],
+    ["/admin/appearance", "Appearance", "settings"]
   ]
 };
 
 const portalSideItems: PortalSideItem[] = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Calendar", href: "/calendar", badge: "Today" },
-  { label: "Patients", href: "/patients" },
-  { label: "Lab Orders", href: "/investigations" },
-  { label: "Finance", href: "/billing" },
-  { label: "Inventory", badge: "Later" },
-  { label: "Staff", badge: "Later" },
-  { label: "Settings", href: "/admin" },
-  { label: "Logs", href: "/admin" },
-  { label: "Messaging", badge: "Later" },
-  { label: "Analytics", badge: "Later" },
-  { label: "Support", badge: "Later" }
+  { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
+  { label: "Doctor Mode", icon: "doctor", href: "/doctor" },
+  { label: "Calendar", icon: "calendar", href: "/calendar", badge: "Today" },
+  { label: "Patients", icon: "patients", href: "/patients" },
+  { label: "Lab Orders", icon: "investigations", href: "/investigations" },
+  { label: "Finance", icon: "billing", href: "/billing" },
+  { label: "Inventory", icon: "files", badge: "Later" },
+  { label: "Staff", icon: "reception", badge: "Later" },
+  { label: "Settings", icon: "settings", href: "/admin" },
+  { label: "Logs", icon: "timeline", href: "/admin" },
+  { label: "Messaging", icon: "ai", badge: "Later" },
+  { label: "Analytics", icon: "dashboard", badge: "Later" },
+  { label: "Support", icon: "consent", badge: "Later" }
 ];
 
 const displayKeys = [
@@ -178,8 +183,8 @@ export function MvpPage({
       setStatus("Loaded");
     } catch (loadError) {
       setRows([]);
-      setStatus("API unavailable");
-      setError(loadError instanceof Error ? loadError.message : "Unable to reach local API.");
+      setStatus("Connection unavailable");
+      setError(loadError instanceof Error ? loadError.message : "Unable to reach the clinic service.");
     }
   }
 
@@ -308,10 +313,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [hasToken, setHasToken] = useState(false);
   const [canOpenAdmin, setCanOpenAdmin] = useState(false);
+  const [isDoctor, setIsDoctor] = useState(false);
+  const [comfort, setComfort] = useState("comfortable");
   const { theme } = useTheme();
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
+    setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
     setHasToken(Boolean(token));
     if (!token) {
       setCanOpenAdmin(false);
@@ -326,6 +334,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       .then((data: { user?: { roles?: string[]; permissions?: string[] } } | null) => {
         const roles = data?.user?.roles ?? [];
         const permissions = data?.user?.permissions ?? [];
+        setIsDoctor(roles.includes("Doctor"));
         setCanOpenAdmin(
           roles.includes("Owner") ||
             roles.includes("Admin") ||
@@ -335,6 +344,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       })
       .catch(() => setCanOpenAdmin(false));
   }, []);
+
+  function setComfortMode(next: string) {
+    setComfort(next);
+    localStorage.setItem("prijComfortMode", next);
+  }
 
   async function logout() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -351,7 +365,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme}`}>
+    <main className={`app-shell theme-${theme} comfort-${comfort}`}>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
@@ -366,13 +380,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               .map((item) =>
                 item.href ? (
                   <Link className={`nav-item ${isActive(pathname, item.href) ? "active" : ""}`} href={item.href} key={item.label}>
-                    <span className="nav-icon">{item.label.slice(0, 2).toUpperCase()}</span>
+                    <ThreeDMedicalIcon name={item.icon} size="sm" tone={item.href === "/admin" ? "violet" : "teal"} />
                     <span>{item.label}</span>
                     {item.badge ? <span className="side-badge">{item.badge}</span> : <span className="nav-dot" />}
                   </Link>
                 ) : (
                   <span className="nav-item disabled" key={item.label}>
-                    <span className="nav-icon">{item.label.slice(0, 2).toUpperCase()}</span>
+                    <ThreeDMedicalIcon name={item.icon} size="sm" tone="slate" />
                     <span>{item.label}</span>
                     <span className="side-badge">{item.badge}</span>
                   </span>
@@ -383,8 +397,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           [...navGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
             <nav className="nav-group" key={group.title} aria-label={group.title}>
               <div className="nav-group-title">{group.title}</div>
-              {group.links.map(([href, label]) => (
+              {group.links
+                .filter(([href]) => !isDoctor || canOpenAdmin || !["/admin", "/admin/appearance", "/billing"].includes(href))
+                .map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
+                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
@@ -398,7 +415,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="topbar">
           <div>
             <p className="eyebrow">Local pilot workspace</p>
-            <p className="muted">No real patient data, no real AI calls, no real payment gateway.</p>
+            <p className="muted">Use demo records only. Clinical decisions stay doctor-led.</p>
           </div>
           {theme === "medicolize-portal" ? (
             <label className="portal-search" aria-label="Search patient files">
@@ -407,6 +424,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             </label>
           ) : null}
           <div className="topbar-actions">
+            <div className="comfort-switch" aria-label="Display comfort">
+              {["comfortable", "large", "compact"].map((mode) => (
+                <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
+                  {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
+                </button>
+              ))}
+            </div>
             {hasToken ? (
               <button className="button secondary compact" onClick={logout} type="button">
                 Logout

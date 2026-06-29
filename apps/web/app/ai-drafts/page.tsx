@@ -13,7 +13,7 @@ export default function AiDraftsPage() {
       endpoint="/ai-drafts"
       collectionKey="aiDrafts"
       createEndpoint="/ai-drafts"
-      createNote="Creates a disabled/mock placeholder only. No external AI request is made."
+      createNote="Creates a disabled draft placeholder only. No external AI request is made."
       createFields={[
         { name: "draftType", label: "Draft type", required: true, defaultValue: "encounter_summary" },
         { name: "patientId", label: "Patient ID" },

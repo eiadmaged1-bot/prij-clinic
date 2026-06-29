@@ -17,6 +17,8 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Open the patient file and work from that patient-scoped workspace.
 - Use module pages only for their focused workflow: appointments, queue, encounters, prescriptions, investigations, reports, pregnancy/ultrasound, billing, consents, and AI draft placeholders.
 - Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, audit review, and appearance settings.
+- Doctors can use Doctor Mode for a simpler daily workflow: open patient, start visit, write note, prescribe, order tests, finish, and move to the next patient.
+- Patient files now use simplified tabs, large actions, and 3D-style medical icons for older-doctor-friendly recognition.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
 
@@ -24,7 +26,7 @@ Every UI surface remains demo/local only: no real patient data, no real payment 
 
 - Do not use real patient data in development, tests, screenshots, seeds, or docs.
 - Do not commit secrets, API keys, passwords, tokens, reports, backups, or patient data.
-- AI external access is disabled. AI draft placeholders are metadata-only and mock/disabled.
+- AI external access is disabled. AI draft placeholders are metadata-only, disabled, and draft-only.
 - AI cannot diagnose, prescribe, sign records, approve clinical records, override RBAC, or bypass doctor approval.
 - Clinical output must remain doctor-authored or doctor-reviewed before use.
 - Clinical writes, billing changes, report review, and AI draft review placeholders are audit logged.
@@ -101,6 +103,8 @@ Open:
 http://localhost:3000
 http://localhost:3000/login
 http://localhost:3000/dashboard
+http://localhost:3000/doctor
+http://localhost:3000/doctor/visit
 http://localhost:3000/admin
 http://localhost:3000/patients
 http://localhost:3000/patients/new
@@ -122,6 +126,12 @@ Recommended demo flow:
 
 ```text
 Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file -> patient file tabs -> appointment -> queue -> encounter -> prescription -> investigation -> pregnancy/ultrasound/report -> billing -> consent -> AI draft placeholder
+```
+
+Doctor-friendly demo flow:
+
+```text
+Login -> Doctor Mode -> Open Patient -> Start Visit -> Complaint -> History -> Examination -> Impression -> Prescription -> Orders -> Follow-up -> Finish Visit
 ```
 
 Admin demo flow:
@@ -222,6 +232,7 @@ npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
 npm run test:theme:ui
+npm run test:doctor:ux
 npm run test:e2e:v01
 ```
 
@@ -251,7 +262,7 @@ Start the API and web app, then run:
 npm run smoke:test
 ```
 
-The smoke test covers health, DB connectivity, login, anonymous rejection for a protected route, representative protected endpoints from each implemented module, AI disabled/mock metadata, and the core web pages.
+The smoke test covers health, DB connectivity, login, anonymous rejection for a protected route, representative protected endpoints from each implemented module, AI disabled metadata, and the core web pages.
 
 To run API-only checks:
 
@@ -273,7 +284,7 @@ npm run test:ai-safety
 npm run test:security
 ```
 
-These are local demo safety checks for RBAC, branch scope, audit metadata, and disabled/mock AI behavior. They are not production security certification tests and must not be run with real patient data.
+These are local demo safety checks for RBAC, branch scope, audit metadata, and disabled AI behavior. They are not production security certification tests and must not be run with real patient data.
 
 For the CI-compatible API-only security integration runner, start the API after seeding and run:
 
@@ -281,7 +292,7 @@ For the CI-compatible API-only security integration runner, start the API after 
 npm run test:security:ci
 ```
 
-The runner uses `API_URL` when set, otherwise `http://localhost:3001`. It uses seeded demo credentials only and expects AI to remain disabled/mock-only.
+The runner uses `API_URL` when set, otherwise `http://localhost:3001`. It uses seeded demo credentials only and expects AI to remain disabled and draft-only.
 
 Expanded route-level checks:
 
@@ -293,6 +304,7 @@ npm run test:ai:regression
 npm run test:security:expanded
 npm run test:admin:control
 npm run test:theme:ui
+npm run test:doctor:ux
 ```
 
 Current hardening matrices:
@@ -367,6 +379,7 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/RBAC_AUDIT_REVIEW.md`
 - `docs/KNOWN_LIMITATIONS.md`
 - `docs/NEXT_STEPS.md`
+- `docs/DOCTOR_FRIENDLY_UX.md`
 - `docs/BACKUP_RESTORE.md`
 - `docs/FILE_STORAGE_SECURITY.md`
 - `docs/DEPLOYMENT_READINESS.md`

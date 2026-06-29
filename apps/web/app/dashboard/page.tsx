@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
+import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -39,13 +40,13 @@ type DashboardSummary = {
 
 const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "AI review"];
 
-const quickActions: Array<[string, string, string]> = [
-  ["/patients/new", "New Patient", "Start demo registration with fake identifiers only."],
-  ["/appointments", "New Appointment", "Schedule a safe local visit."],
-  ["/queue", "Queue Check-in", "Move a demo patient into today's queue."],
-  ["/encounters", "New Encounter", "Open a doctor-authored draft record."],
-  ["/billing", "New Invoice", "Review demo invoices without payment gateway data."],
-  ["/ai-drafts", "AI Draft Placeholder", "Review disabled/mock-only AI draft boundaries."]
+const quickActions: Array<[string, string, string, IconName]> = [
+  ["/patients/new", "New Patient", "Start demo registration with fake identifiers only.", "patients"],
+  ["/appointments", "New Appointment", "Schedule a safe local visit.", "calendar"],
+  ["/queue", "Queue Check-in", "Move a demo patient into today's queue.", "queue"],
+  ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
+  ["/billing", "New Invoice", "Review demo invoices without payment gateway data.", "billing"],
+  ["/ai-drafts", "AI Draft Placeholder", "Doctor review required before any use.", "ai"]
 ];
 
 const portalModules: Array<[string, string, string, string, string]> = [
@@ -133,6 +134,43 @@ export default function DashboardPage() {
     user?.roles.includes("Admin") ||
     user?.roles.includes("Super Admin") ||
     user?.permissions.includes("clinic_settings.manage");
+
+  const isDoctorOnly = Boolean(user?.roles.includes("Doctor") && !canOpenAdmin);
+
+  if (isDoctorOnly) {
+    return (
+      <AppShell>
+        <section className="doctor-hero">
+          <div>
+            <p className="eyebrow">Doctor Mode</p>
+            <h1>Good morning, Doctor</h1>
+            <p className="muted">A calm daily workspace: open patient, start visit, write note, prescribe, order tests, finish.</p>
+          </div>
+          <div className="doctor-hero-actions">
+            <Link className="button large" href="/doctor">
+              <ThreeDMedicalIcon name="doctor" size="sm" />
+              Open Doctor Mode
+            </Link>
+            <Link className="button secondary large" href="/patients">
+              <ThreeDMedicalIcon name="patients" size="sm" />
+              Find Patient
+            </Link>
+          </div>
+        </section>
+        <SafetyAlert />
+        <section className="doctor-today-grid">
+          <Metric label="Waiting queue" value={summary?.operational.waitingQueue ?? "-"} detail="Open the next patient when ready" />
+          <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} detail="Today's clinic schedule" />
+          <Metric label="Pending reports" value={summary?.operational.pendingReports ?? "-"} detail="Review manually" />
+        </section>
+        <section className="doctor-step-strip">
+          {["Open patient", "Start visit", "Write note", "Prescription", "Orders", "Finish"].map((step, index) => (
+            <span key={step}><b>{index + 1}</b>{step}</span>
+          ))}
+        </section>
+      </AppShell>
+    );
+  }
 
   if (theme === "incision-portal") {
     return (
@@ -266,8 +304,9 @@ export default function DashboardPage() {
             <span className="badge">Safe workflow</span>
           </div>
           <div className="quick-grid">
-            {quickActions.map(([href, label, description]) => (
+            {quickActions.map(([href, label, description, icon]) => (
               <a className="quick-card" href={href} key={href}>
+                <ThreeDMedicalIcon name={icon} size="md" />
                 <strong>{label}</strong>
                 <span className="muted">{description}</span>
               </a>

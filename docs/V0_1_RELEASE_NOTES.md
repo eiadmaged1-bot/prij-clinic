@@ -18,6 +18,10 @@ The latest owner-portal UI sprint also supports:
 
 Login as local admin -> Appearance -> choose Original Premium, Clinic Portal, Incision Portal, Minimal Clean, or Compact Operations -> open owner portal dashboard -> create/open patient file.
 
+The doctor-friendly UX reset adds:
+
+Login -> Doctor Mode -> open patient -> guided visit steps -> simplified patient file tabs -> large actions with 3D medical icons.
+
 ## Included Modules
 
 - Auth, demo login, JWT bearer/cookie support.
@@ -28,8 +32,11 @@ Login as local admin -> Appearance -> choose Original Premium, Clinic Portal, In
 - Admin Control Center with local demo admin login, service catalog/pricing, users/roles overview, safety settings, audit viewer, and reason-required override endpoints.
 - Admin Appearance Settings with protected/audited theme changes.
 - Clinic Portal theme with left sidebar, top patient search, owner dashboard cards, and patient-centered workspace tabs.
+- Doctor Mode and Guided Visit pages for older-doctor-friendly daily use.
+- Original 3D-style medical icon component used in navigation, patient tabs, doctor actions, and empty states.
+- Comfort, Large, and Compact display preferences.
 - Consent record foundation.
-- Disabled/mock-only AI draft placeholders.
+- Disabled draft-only AI placeholders.
 - Local backup/restore helper scripts.
 - CI and PostgreSQL-backed security integration workflow.
 - V0.1 E2E demo workflow test.
@@ -46,6 +53,7 @@ Login as local admin -> Appearance -> choose Original Premium, Clinic Portal, In
 - Local admin credential `eyad` / `eyad` is for local demo only and must never be used outside a private local demo.
 - Admin override actions require a reason and audit entry. Audit logs and signed clinical records cannot be silently hard-deleted from the normal UI/API.
 - Clinic Portal is original Prij Clinic UI inspired by common clinic operating portal patterns. It does not copy competitor branding, assets, icons, or proprietary text.
+- The 3D medical icons are original inline SVG/CSS UI elements created for this project; no proprietary medical icon pack was copied.
 
 ## Verification Commands
 
@@ -60,6 +68,8 @@ npm run test:security
 npm run test:security:ci
 npm run test:security:expanded
 npm run test:admin:control
+npm run test:theme:ui
+npm run test:doctor:ux
 npm run test:e2e:v01
 ```
 

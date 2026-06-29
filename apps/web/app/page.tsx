@@ -9,7 +9,7 @@ const modules = [
   ["/ultrasound", "OB ultrasound", "Measurements without automatic diagnosis"],
   ["/billing", "Billing", "Invoices and payment records without gateway data"],
   ["/consents", "Consents", "Consent foundation for demo privacy workflows"],
-  ["/ai-drafts", "AI drafts", "Disabled/mock-only review placeholders"]
+  ["/ai-drafts", "AI drafts", "Disabled draft review placeholders"]
 ];
 
 export default function Home() {
@@ -32,7 +32,7 @@ export default function Home() {
             </a>
           </div>
           <div className="workflow-band">
-            {["No real patient data", "AI disabled/mock-only", "Not production-ready", "Doctor approval required"].map((label) => (
+            {["No real patient data", "AI disabled", "Not production-ready", "Doctor approval required"].map((label) => (
               <span key={label}>{label}</span>
             ))}
           </div>

@@ -183,7 +183,7 @@ export default function AdminPage() {
           ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
           ["Billing Settings", "Service catalog prices are active now. Taxes, discounts, and gateways remain future work."],
           ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
-          ["Feature Flags", "AI stays disabled/mock-only. Future flags must remain audited and owner-controlled."],
+          ["Feature Flags", "AI stays disabled and draft-only. Future flags must remain audited and owner-controlled."],
           ["Safety Settings", "Audit logs cannot be deleted and signed records cannot be silently hard-deleted."]
         ].map(([label, description]) => (
           <article className="module-card" key={label}>

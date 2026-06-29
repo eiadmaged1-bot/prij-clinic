@@ -54,13 +54,13 @@ export default function PatientsPage() {
         return;
       }
 
-      if (!response.ok) throw new Error(`Patients API returned ${response.status}.`);
+      if (!response.ok) throw new Error("Patient files could not be loaded.");
       const data = (await response.json()) as { patients?: Patient[] };
       setPatients(data.patients ?? []);
       setStatus("Loaded");
     } catch (loadError) {
       setPatients([]);
-      setStatus("API unavailable");
+      setStatus("Connection unavailable");
       setError(loadError instanceof Error ? loadError.message : "Unable to load patient files.");
     }
   }

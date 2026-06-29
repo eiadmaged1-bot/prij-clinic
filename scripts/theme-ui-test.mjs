@@ -50,6 +50,8 @@ async function main() {
     "/",
     "/login",
     "/dashboard",
+    "/doctor",
+    "/doctor/visit",
     "/patients",
     "/patients/new",
     "/appointments",

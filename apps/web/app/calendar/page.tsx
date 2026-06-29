@@ -7,7 +7,7 @@ export default function CalendarPage() {
       title="Doctor Calendar"
       items={[
         "Daily calendar foundation",
-        "Doctor filtering is available through the API",
+        "Doctor filtering is available for the calendar view",
         "No clinical decisions are automated"
       ]}
       endpoint={`/appointments/calendar?date=${new Date().toISOString().slice(0, 10)}`}
