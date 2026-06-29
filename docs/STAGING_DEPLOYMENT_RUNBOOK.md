@@ -54,6 +54,16 @@ Set placeholder values to staging-only values:
 
 Do not commit `.env.staging`.
 
+For a local staging trial on Windows, copy the example and edit only local fake-data values:
+
+```powershell
+Copy-Item .env.staging.example .env.staging
+notepad .env.staging
+npm run staging:env:check
+```
+
+The checker confirms required staging values are present, AI is disabled, demo seed is intentional, local default demo passwords are not used, and the staging JWT secret is long enough. It does not print secret values.
+
 ## 5. Start Database
 
 ```bash
