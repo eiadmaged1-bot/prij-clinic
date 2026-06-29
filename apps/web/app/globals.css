@@ -1794,6 +1794,100 @@ td span {
   padding: 0.85rem;
 }
 
+.obgyn-workspace {
+  display: grid;
+  gap: 1rem;
+}
+
+.obgyn-print-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.obgyn-dashboard {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, #ffffff 0%, #fff7fb 44%, #eefdfb 100%);
+  box-shadow: var(--shadow-sm);
+  padding: 1.25rem;
+}
+
+.obgyn-metric-grid,
+.obgyn-section-grid,
+.obgyn-template-grid,
+.obgyn-biometry {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.obgyn-metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+}
+
+.obgyn-section-grid {
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+}
+
+.obgyn-metric,
+.obgyn-template-card {
+  display: grid;
+  gap: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  padding: 0.9rem;
+}
+
+.obgyn-metric span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.obgyn-metric strong {
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+.obgyn-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.obgyn-form-grid textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.obgyn-biometry {
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  padding: 0.85rem;
+}
+
+.obgyn-template-grid {
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+}
+
+.obgyn-template-card {
+  align-content: start;
+  min-height: 9rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.obgyn-template-card strong {
+  color: var(--foreground);
+}
+
 :root[data-theme="dark-navy"] input,
 :root[data-theme="dark-navy"] textarea,
 :root[data-theme="dark-navy"] select,
@@ -2002,5 +2096,39 @@ td span {
   .portal-card {
     min-height: 10.5rem;
     padding: 1rem;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  .sidebar,
+  .topbar,
+  .alert,
+  .no-print,
+  .patient-action-strip,
+  .patient-tabs,
+  .button {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-main {
+    display: block;
+    padding: 0;
+  }
+
+  .panel,
+  .obgyn-dashboard,
+  .data-row,
+  .printable-summary {
+    break-inside: avoid;
+    box-shadow: none;
+  }
+
+  .printable-summary {
+    border-color: #d0d7de;
   }
 }

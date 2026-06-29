@@ -16,6 +16,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
 - Mobile/tablet QA is improved for demo acceptance, but production device certification, accessibility audit, and full browser matrix testing remain future work.
 - Patient file tabs show patient-scoped related records where current APIs support it; deeper specialty screens and production charting workflows remain future work.
+- The OB/GYN workspace added in this branch improves browser UX and templates only. Final persistence depends on the Codex A backend merge where fields/endpoints are available.
+- Browser print styles are intended for demo review and are not legal medical stationery, prescription paper, or production report output.
 
 ## Security And Privacy
 
@@ -45,6 +47,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Investigation result review and report review are foundational only.
 - OB ultrasound records do not provide diagnostic automation and must not be interpreted as automated clinical decision support.
 - OB/GYN core records now include pregnancy episode fields, fetus records, and antenatal visits, but no validated growth-chart engine, fetal risk scoring, or automated interpretation is implemented.
+- The ultrasound report builder is a doctor-facing recording UI. It does not calculate percentiles, diagnose FGR, interpret fetal risk, or process fetal images.
 
 ## Billing
 

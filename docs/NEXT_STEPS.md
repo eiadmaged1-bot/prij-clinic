@@ -1,8 +1,20 @@
 # Next Steps
 
-The exact next recommended sprint after this VPS staging trial preparation is:
+The exact next recommended sprint after this OB/GYN UX branch is:
 
-## Execute VPS Staging Trial + TLS Hardening
+## Merge Codex A + Codex B OB/GYN Work
+
+Goals:
+
+- Merge Codex A backend/database/API persistence with Codex B browser UX.
+- Verify pregnancy episode, fetus, antenatal visit, ultrasound draft, investigation, report, and timeline data appear cleanly inside the patient file.
+- Keep all data fake/demo-only.
+- Keep ultrasound recording-only with no automatic FGR diagnosis, fetal risk scoring, fake percentile engine, or fetal-image AI.
+- Run typecheck, build, security, doctor UX, visual QA, clinical persistence, and E2E after merge.
+
+## Then Execute VPS Staging Trial + TLS Hardening
+
+When a VPS is available:
 
 Goals:
 
@@ -62,6 +74,7 @@ The initial production-readiness plan is documented in `docs/PRODUCTION_READINES
 - Add a real patient search dropdown in the top bar that opens patient files without exposing internal IDs.
 - Add role-specific home routing so Doctor users land directly in Doctor Mode and Reception users land on the front-desk flow.
 - Add screenshot-based visual regression only after the release-candidate layout stabilizes.
+- After Codex A merge, wire the antenatal visit form and ultrasound builder to the final persisted endpoints without changing safety boundaries.
 
 ## OB/GYN Follow-Up
 
@@ -69,3 +82,4 @@ The initial production-readiness plan is documented in `docs/PRODUCTION_READINES
 - Add validated gestational-age display only after clinical rules are reviewed.
 - Keep ultrasound as recording-only until clinician-reviewed interpretation workflows are stronger.
 - Do not add automated FGR diagnosis, fetal risk scoring, fetal-image AI, or fake percentile engines.
+- Add clinician-reviewed report templates and print layout QA for real clinic stationery only after privacy/legal review.

@@ -2,17 +2,19 @@
 
 Date: 2026-06-29
 
-Branch: `deploy/vps-staging-trial`
+Branch: `leap/b-obgyn-ux-reports`
 
 Base tag: `v0.1-mvp-release-candidate-verified`
 
-Target tag: `v0.1-vps-staging-trial`
+Target tag: pending integration with Codex A
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-This sprint prepares the VPS staging deployment trial with fake/demo data only. The previous local staging Docker trial passed. Real VPS execution remains pending until server credentials, DNS/TLS details, and staging-only secrets are available. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This branch is Codex B's OB/GYN browser UX branch. It keeps the VPS staging foundation intact while improving the patient-file OB/GYN experience, templates, report-builder UI, and print-friendly clinical summaries. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+
+Parallel backend/database/API work remains owned by Codex A. This branch does not add schema changes, migrations, backend controller changes, backend service changes, or seed changes.
 
 ## Staging Prep Added
 
@@ -24,6 +26,9 @@ This sprint prepares the VPS staging deployment trial with fake/demo data only. 
 - Local backup script verified on 2026-06-29.
 - Local staging compose trial verified API/Web Docker builds, migration deploy, explicit staging demo seed, health endpoints, staging smoke test, and staging backup helper on 2026-06-29.
 - VPS staging checklist, bootstrap script, safe deploy script, remote smoke-test variables, and VPS backup procedure are prepared for the real server trial.
+- OB/GYN browser UX now includes a patient-file Pregnancy workspace with Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, and Follow-up sections.
+- Doctor Mode now includes OB/GYN workflow template cards for pregnancy booking, antenatal follow-up, ultrasound visit, gynecology visit, follow-up visit, and procedure visit placeholder.
+- Patient-file OB/GYN print styling supports browser print views for patient summary, antenatal visit summary, ultrasound report draft, and report cards.
 
 ## Implemented Foundation
 
@@ -39,6 +44,7 @@ This sprint prepares the VPS staging deployment trial with fake/demo data only. 
 - Patient-context workflow actions: `/patients/:id` can create appointment, queue check-in, encounter, prescription, investigation order, report placeholder, ultrasound draft, invoice, payment, and consent records with the patient carried automatically.
 - Patient timeline aggregation: `GET /patients/:id/timeline` aggregates available patient journey events across core MVP records.
 - OB/GYN core persistence: pregnancy episodes support living, abortions, and dating method fields, plus fetus records and antenatal visits for recording-only pregnancy follow-up.
+- OB/GYN UX: pregnancy dashboard, obstetric history summary, antenatal visit form, ultrasound report builder, print actions, and doctor workflow templates are visible in the browser.
 - Visual QA: `npm run test:visual:qa` checks friendly UI wording, layout availability, patient-file tabs, doctor cards, and admin appearance protection.
 - Clinical persistence QA: `npm run test:clinical:persistence` checks patient-context workflow creation, signed encounter edit protection, OB/GYN recording-only behavior, timeline aggregation, and audit entries.
 - Release-candidate verification planning: `docs/MVP_RC_VERIFICATION_CHECKLIST.md` and `docs/PRODUCTION_READINESS_PLAN.md` define the final demo checks and the gates before staging, pilot, or production.
@@ -50,6 +56,7 @@ This sprint prepares the VPS staging deployment trial with fake/demo data only. 
 - AI draft artifacts are marked `disabled_mock` / `no_external_ai`.
 - AI draft review cannot update final clinical records.
 - OB ultrasound and pregnancy records do not calculate diagnoses, fetal risk, FGR, or fetal-image analysis.
+- OB/GYN UX explicitly labels measurements as recording-only and requires clinician interpretation.
 - Payment records are demo metadata only and do not use a real payment gateway.
 - Report/file workflows remain metadata/placeholder only; no PHI upload is enabled.
 

@@ -44,7 +44,19 @@ The test uses fake demo records only and asserts that OB/GYN recording does not 
 
 ## Remaining Work
 
-- Better pregnancy UI for fetus and antenatal visit entry.
+- Merge the Codex B browser UX for Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, print views, and doctor templates.
+- Wire the antenatal visit form and ultrasound report builder to final persisted fields after backend merge.
 - Validated gestational-age calculation display.
 - Clinician-reviewed ultrasound report workflow.
 - Production consent, legal review, PHI file storage, audit retention, and patient access policy.
+
+## Browser UX Added By Codex B
+
+- Patient-file Pregnancy workspace with large readable cards and 3D medical icons.
+- Pregnancy dashboard showing LMP, EDD, dating method, gravida/para, status, visit prompts, ultrasound summary, and notes.
+- Antenatal visit form UI for symptoms, BP, weight, fetal heart, fundal height, examination, plan, investigations, and next follow-up.
+- OB ultrasound report builder for scan type, indication, gestational age, fetus selector, presentation, placenta, amniotic fluid, fetal heart, BPD, HC, AC, FL, EFW, Doppler note, impression, and report status.
+- Browser print-friendly summaries for patient summary, antenatal visit summary, report cards, and ultrasound draft.
+- OB/GYN doctor workflow templates for pregnancy booking, antenatal follow-up, ultrasound visit, gynecology visit, follow-up visit, and procedure visit placeholder.
+
+All UX additions remain recording-only and do not add diagnosis, fetal-risk scoring, percentile interpretation, fetal-image AI, real AI calls, real payment gateway behavior, or PHI upload.

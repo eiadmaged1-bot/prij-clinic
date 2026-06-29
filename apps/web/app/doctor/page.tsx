@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -127,6 +127,33 @@ export default function DoctorModePage() {
         {["Open patient", "Start visit", "Write note", "Prescribe", "Order tests", "Finish", "Next patient"].map((step, index) => (
           <span key={step}><b>{index + 1}</b>{step}</span>
         ))}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">OB/GYN Templates</p>
+            <h2>Choose the visit type</h2>
+            <p className="muted">Templates guide the doctor to the right patient-file section. They do not diagnose, prescribe, or complete records automatically.</p>
+          </div>
+          <ThreeDMedicalIcon name="pregnancy" size="sm" tone="rose" />
+        </div>
+        <div className="obgyn-template-grid">
+          {[
+            ["New pregnancy booking", "Pregnancy overview and obstetric history", "pregnancy"],
+            ["Routine antenatal follow-up", "BP, weight, symptoms, fetal heart, plan", "calendar"],
+            ["Ultrasound visit", "Measurements and doctor-written impression", "ultrasound"],
+            ["Gynecology visit", "Complaint, history, examination, impression", "doctor"],
+            ["Follow-up visit", "Timeline, reports, orders, and next step", "timeline"],
+            ["Procedure visit placeholder", "Clinician-authored procedure note", "reports"]
+          ].map(([title, text, icon]) => (
+            <Link className="obgyn-template-card" href="/patients" key={title}>
+              <ThreeDMedicalIcon name={icon as IconName} size="sm" />
+              <strong>{title}</strong>
+              <p className="muted">{text}</p>
+            </Link>
+          ))}
+        </div>
       </section>
     </AppShell>
   );

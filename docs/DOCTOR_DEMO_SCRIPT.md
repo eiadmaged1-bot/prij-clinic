@@ -15,6 +15,10 @@ Show an older doctor a calm daily workflow with large actions, readable cards, a
 7. Click Start Visit.
 8. In Guided Visit, move through Complaint, History, Examination, Impression, Prescription, Orders, Follow-up, and Finish Visit.
 9. Use Save Draft to show the demo-safe visit shell.
+10. Return to the patient file and open Pregnancy.
+11. Show Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, and Follow-up.
+12. Open the ultrasound report builder and point out that measurements are recording-only and interpretation is doctor-completed.
+13. Use the print buttons to show browser print-friendly clinical summaries.
 
 ## Talking Points
 
@@ -22,4 +26,5 @@ Show an older doctor a calm daily workflow with large actions, readable cards, a
 - The app does not diagnose automatically.
 - Prescription text is manual and doctor-reviewed.
 - AI is disabled in V0.1 and cannot update final records.
-- The current branch is UX polish only; persistence improvements are expected from Codex A.
+- OB/GYN templates guide the visit type but do not diagnose, prescribe, or auto-complete clinical records.
+- The current branch is browser UX/reporting polish only; persistence improvements are expected from Codex A.

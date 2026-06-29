@@ -22,6 +22,19 @@ type Patient = {
   notes?: string | null;
 };
 
+type PregnancyRecord = {
+  id?: string;
+  gravida?: number | string | null;
+  para?: number | string | null;
+  living?: number | string | null;
+  abortions?: number | string | null;
+  lmp?: string | null;
+  edd?: string | null;
+  datingMethod?: string | null;
+  status?: string | null;
+  notes?: string | null;
+};
+
 type TabConfig = {
   key: string;
   label: string;
@@ -196,7 +209,10 @@ export default function PatientFilePage() {
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
-          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" ? (
+          {active.key === "pregnancy" ? (
+            <ObgynWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} />
+          ) : null}
+          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "pregnancy" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -246,6 +262,267 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
         </p>
       </article>
     </section>
+  );
+}
+
+function ObgynWorkspace({
+  patient,
+  pregnancies,
+  reports,
+  orders
+}: {
+  patient: Patient;
+  pregnancies: PregnancyRecord[];
+  reports: Record<string, unknown>[];
+  orders: Record<string, unknown>[];
+}) {
+  const activePregnancy = pregnancies[0];
+
+  return (
+    <section className="obgyn-workspace">
+      <div className="obgyn-print-toolbar no-print">
+        <button className="button secondary compact" type="button" onClick={() => window.print()}>
+          <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+          Print patient summary
+        </button>
+        <button className="button secondary compact" type="button" onClick={() => window.print()}>
+          <ThreeDMedicalIcon name="ultrasound" size="sm" tone="slate" />
+          Print ultrasound draft
+        </button>
+      </div>
+
+      <article className="obgyn-dashboard printable-summary">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Pregnancy Overview</p>
+            <h2>{activePregnancy ? "Active pregnancy record" : "No active pregnancy recorded"}</h2>
+            <p className="muted">Recording-only pregnancy summary for {patient.firstName} {patient.lastName}. The doctor completes interpretation.</p>
+          </div>
+          <ThreeDMedicalIcon name="pregnancy" size="lg" tone="rose" />
+        </div>
+        <div className="obgyn-metric-grid">
+          <Metric label="LMP" value={formatDate(activePregnancy?.lmp)} />
+          <Metric label="EDD" value={formatDate(activePregnancy?.edd)} />
+          <Metric label="Dating method" value={String(activePregnancy?.datingMethod ?? "Not recorded")} />
+          <Metric label="Gravida / Para" value={`${activePregnancy?.gravida ?? "-"} / ${activePregnancy?.para ?? "-"}`} />
+          <Metric label="Current status" value={String(activePregnancy?.status ?? "Not recorded")} />
+          <Metric label="Next visit" value="Schedule follow-up" />
+          <Metric label="Last visit" value="Review visits below" />
+          <Metric label="Ultrasound summary" value={reports.length ? `${reports.length} report record(s)` : "No ultrasound report yet"} />
+        </div>
+        <div className="notice">
+          <strong>Important notes</strong>
+          <p className="muted">{activePregnancy?.notes || "Use this area for clinician-authored pregnancy notes only. No automatic diagnosis, growth scoring, or fetal-risk interpretation is performed."}</p>
+        </div>
+      </article>
+
+      <section className="obgyn-section-grid">
+        <article className="panel printable-summary">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Obstetric History</p>
+              <h2>History snapshot</h2>
+            </div>
+            <ThreeDMedicalIcon name="timeline" size="sm" tone="navy" />
+          </div>
+          <dl className="profile-grid">
+            <div><dt>Gravida</dt><dd>{activePregnancy?.gravida ?? "Not recorded"}</dd></div>
+            <div><dt>Para</dt><dd>{activePregnancy?.para ?? "Not recorded"}</dd></div>
+            <div><dt>Living</dt><dd>{activePregnancy?.living ?? "Not recorded"}</dd></div>
+            <div><dt>Abortions</dt><dd>{activePregnancy?.abortions ?? "Not recorded"}</dd></div>
+          </dl>
+          <p className="empty-state">
+            <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
+            <span>Previous pregnancy details remain a structured recording area after backend merge. Do not enter real patient history in demo mode.</span>
+          </p>
+        </article>
+
+        <AntenatalVisitCard />
+      </section>
+
+      <section className="obgyn-section-grid">
+        <UltrasoundReportBuilder />
+        <DoctorTemplateCards />
+      </section>
+
+      <section className="obgyn-section-grid">
+        <article className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Investigations</p>
+              <h2>Orders linked to this patient</h2>
+            </div>
+            <span className="badge">{orders.length} order(s)</span>
+          </div>
+          {orders.length === 0 ? (
+            <p className="empty-state">
+              <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
+              <span>No investigation order is linked yet. Use Order Tests from patient actions when clinically needed.</span>
+            </p>
+          ) : (
+            <div className="data-list">
+              {orders.slice(0, 3).map((order, index) => (
+                <article className="data-row" key={String(order.id ?? index)}>
+                  <div className="data-row-header">
+                    <strong>{String(order.testName ?? order.title ?? "Investigation order")}</strong>
+                    <span className="badge">{String(order.status ?? "Requested")}</span>
+                  </div>
+                  <p className="muted">{String(order.instructions ?? "Clinician review required.")}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+
+        <article className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Reports</p>
+              <h2>Clinical report drafts</h2>
+            </div>
+            <span className="badge">{reports.length} report(s)</span>
+          </div>
+          {reports.length === 0 ? (
+            <p className="empty-state">
+              <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+              <span>No report is linked yet. Report drafts stay clinician-authored and can be printed from the browser.</span>
+            </p>
+          ) : (
+            <div className="data-list">
+              {reports.slice(0, 3).map((report, index) => (
+                <article className="data-row printable-summary" key={String(report.id ?? index)}>
+                  <div className="data-row-header">
+                    <strong>{String(report.title ?? "Report draft")}</strong>
+                    <span className="badge">{String(report.reviewStatus ?? report.status ?? "Draft")}</span>
+                  </div>
+                  <p className="muted">{String(report.resultSummary ?? "Doctor review required.")}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
+
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Follow-up</p>
+            <h2>Next clinical step</h2>
+          </div>
+          <ThreeDMedicalIcon name="calendar" size="sm" tone="teal" />
+        </div>
+        <p className="empty-state">
+          <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
+          <span>Set the next follow-up from the appointment action when the doctor completes the visit. This page does not create automatic care plans.</span>
+        </p>
+      </article>
+    </section>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="obgyn-metric">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function AntenatalVisitCard() {
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Antenatal Visits</p>
+          <h2>Visit note template</h2>
+          <p className="muted">Doctor-friendly recording form. It is UI-ready and persists only when the matching patient workflow is available after backend merge.</p>
+        </div>
+        <ThreeDMedicalIcon name="doctor" size="sm" tone="teal" />
+      </div>
+      <form className="obgyn-form-grid">
+        <label>Symptoms<textarea placeholder="Clinician-recorded symptoms" /></label>
+        <label>BP<input placeholder="Example format: 120/80" /></label>
+        <label>Weight<input type="number" min="0" step="0.1" placeholder="kg" /></label>
+        <label>Fetal heart<input placeholder="Recording only" /></label>
+        <label>Fundal height<input placeholder="cm, if recorded" /></label>
+        <label>Examination<textarea placeholder="Doctor examination notes" /></label>
+        <label>Plan<textarea placeholder="Doctor-authored plan" /></label>
+        <label>Investigations<textarea placeholder="Orders or follow-up tests" /></label>
+        <label>Next follow-up<input type="datetime-local" /></label>
+        <div className="form-actions no-print">
+          <button className="button secondary" type="button">Save Draft</button>
+          <button className="button" type="button">Save Visit</button>
+          <Link className="button secondary" href="/patients">Return to patient file</Link>
+        </div>
+      </form>
+    </article>
+  );
+}
+
+function UltrasoundReportBuilder() {
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Ultrasound</p>
+          <h2>OB ultrasound report builder</h2>
+          <p className="muted">Measurements are recorded for clinician review. Interpretation must be completed by the doctor.</p>
+        </div>
+        <ThreeDMedicalIcon name="ultrasound" size="sm" tone="violet" />
+      </div>
+      <form className="obgyn-form-grid">
+        <label>Scan type<input placeholder="Dating, anatomy, growth, follow-up" /></label>
+        <label>Indication<input placeholder="Doctor-entered indication" /></label>
+        <label>Gestational age<input placeholder="Weeks + days" /></label>
+        <label>Fetus selector<input placeholder="Singleton / A / B / C" /></label>
+        <label>Fetal presentation<input placeholder="Recording only" /></label>
+        <label>Placenta<input placeholder="Location and notes" /></label>
+        <label>Amniotic fluid<input placeholder="Recording only" /></label>
+        <label>Fetal heart<input placeholder="BPM or observed" /></label>
+        <div className="obgyn-biometry wide">
+          {["BPD", "HC", "AC", "FL", "EFW"].map((field) => (
+            <label key={field}>{field}<input placeholder="Manual measurement" /></label>
+          ))}
+        </div>
+        <label>Doppler note<textarea placeholder="Optional clinician note" /></label>
+        <label>Impression<textarea placeholder="Doctor-written impression only" /></label>
+        <label>Report status<select defaultValue="Draft"><option>Draft</option><option>Final placeholder</option></select></label>
+        <p className="notice wide">No automatic FGR diagnosis, fetal risk scoring, percentile engine, or fetal-image interpretation is performed.</p>
+      </form>
+    </article>
+  );
+}
+
+function DoctorTemplateCards() {
+  const templates: Array<[string, IconName, string]> = [
+    ["New pregnancy booking", "pregnancy", "Open pregnancy overview, obstetric history, dating details, and first plan."],
+    ["Routine antenatal follow-up", "calendar", "Record symptoms, BP, weight, fetal heart, plan, and next visit."],
+    ["Ultrasound visit", "ultrasound", "Record scan type, indication, measurements, and doctor-written impression."],
+    ["Gynecology visit", "doctor", "Use the guided visit flow for complaint, history, examination, impression, and plan."],
+    ["Follow-up visit", "timeline", "Review timeline, prior orders, reports, prescriptions, and follow-up plan."],
+    ["Procedure visit placeholder", "reports", "Prepare a clinician-authored note without automatic recommendations."]
+  ];
+
+  return (
+    <article className="panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Doctor Templates</p>
+          <h2>OB/GYN workflow templates</h2>
+        </div>
+        <ThreeDMedicalIcon name="files" size="sm" tone="amber" />
+      </div>
+      <div className="obgyn-template-grid">
+        {templates.map(([title, icon, text]) => (
+          <div className="obgyn-template-card" key={title}>
+            <ThreeDMedicalIcon name={icon} size="sm" />
+            <strong>{title}</strong>
+            <p className="muted">{text}</p>
+          </div>
+        ))}
+      </div>
+    </article>
   );
 }
 
@@ -515,4 +792,9 @@ function timelineIcon(key: string): IconName {
   if (key.includes("ultrasound")) return "ultrasound";
   if (key.includes("consent")) return "consent";
   return "timeline";
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Not recorded";
+  return value.slice(0, 10);
 }

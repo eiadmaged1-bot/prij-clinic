@@ -31,6 +31,11 @@ async function main() {
   }
   record.pass("patient file simplified tabs and actions are implemented");
 
+  for (const label of ["Pregnancy Overview", "Obstetric History", "Antenatal Visits", "OB ultrasound report builder", "Doctor Templates", "Print patient summary"]) {
+    if (!patientSource.includes(label)) throw new Error(`OB/GYN workspace label missing: ${label}`);
+  }
+  record.pass("OB/GYN patient workspace and report builder are implemented");
+
   const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
   for (const label of ["Comfort", "Large", "Compact", "Doctor Mode"]) {
     if (!shellSource.includes(label)) throw new Error(`Comfort or role navigation label missing: ${label}`);
