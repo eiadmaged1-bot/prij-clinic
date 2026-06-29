@@ -25,6 +25,7 @@ model Branch {
   queueTickets   QueueTicket[]
   reports        Report[]
   pregnancies    Pregnancy[]
+  gynecologyVisits GynecologyVisit[]
   antenatalVisits AntenatalVisit[]
   obUltrasounds  ObUltrasound[]
   invoices       Invoice[]
@@ -70,6 +71,7 @@ model User {
   uploadedReports Report[] @relation("ReportsUploadedBy")
   reviewedReports Report[] @relation("ReportsReviewedBy")
   createdPregnancies Pregnancy[] @relation("PregnanciesCreatedBy")
+  createdGynecologyVisits GynecologyVisit[] @relation("GynecologyVisitsCreatedBy")
   createdPreviousPregnancies PreviousPregnancy[] @relation("PreviousPregnanciesCreatedBy")
   createdPregnancyFetuses PregnancyFetus[] @relation("PregnancyFetusesCreatedBy")
   createdObUltrasounds ObUltrasound[] @relation("ObUltrasoundsCreatedBy")
@@ -156,6 +158,7 @@ model Patient {
   investigationOrders  InvestigationOrder[]
   reports              Report[]
   pregnancies          Pregnancy[]
+  gynecologyVisits     GynecologyVisit[]
   previousPregnancies  PreviousPregnancy[]
   antenatalVisits      AntenatalVisit[]
   obUltrasounds        ObUltrasound[]
@@ -305,6 +308,7 @@ model Encounter {
   prescriptions   Prescription[]
   investigationOrders InvestigationOrder[]
   reports         Report[]
+  gynecologyVisits GynecologyVisit[]
   obUltrasounds   ObUltrasound[]
   aiDrafts        AiDraft[]
 
@@ -422,6 +426,15 @@ enum ObUltrasoundStatus {
   voided
 }
 
+enum GynecologyVisitTemplate {
+  general
+  abnormal_uterine_bleeding
+  pelvic_pain
+  pcos
+  fibroid_ovarian_cyst
+  contraception
+}
+
 enum InvoiceStatus {
   draft
   issued
@@ -527,6 +540,68 @@ model Pregnancy {
   @@index([branchId])
   @@index([patientId, createdAt])
   @@index([status])
+}
+
+model GynecologyVisit {
+  id                         String                    @id @default(uuid()) @db.Uuid
+  branchId                   String?                   @db.Uuid
+  patientId                  String                    @db.Uuid
+  encounterId                String?                   @db.Uuid
+  templateType               GynecologyVisitTemplate   @default(general)
+  visitDate                  DateTime                  @default(now()) @db.Timestamptz(3)
+  reasonForVisit             String?
+  menstrualHistory           String?
+  bleedingPattern            String?
+  painSymptoms               String?
+  dischargeSymptoms          String?
+  obstetricHistorySummary    String?
+  contraceptionHistory       String?
+  medicalSurgicalHistory     String?
+  examinationNotes           String?
+  doctorImpression           String?
+  doctorPlan                 String?
+  followUpDate               DateTime?                 @db.Date
+  cycleRegularity            String?
+  bleedingDuration           String?
+  bleedingAmount             String?
+  clots                      String?
+  intermenstrualBleeding     String?
+  postcoitalBleeding         String?
+  associatedSymptoms         String?
+  pregnancyTestNote          String?
+  painOnset                  String?
+  painDuration               String?
+  painSite                   String?
+  relationToCycle            String?
+  painSeverity               String?
+  urinaryBowelSymptoms       String?
+  cyclePattern               String?
+  acneHirsutismNote          String?
+  weightMetabolicRiskNote    String?
+  ultrasoundNote             String?
+  labsNote                   String?
+  findingSource              String?
+  sizeLocationNote           String?
+  symptoms                   String?
+  followUpPlan               String?
+  currentMethod              String?
+  previousMethods            String?
+  contraindicationChecklist  String?
+  counselingNotes            String?
+  chosenMethod               String?
+  createdByUserId            String?                   @db.Uuid
+  createdAt                  DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime                  @updatedAt @db.Timestamptz(3)
+
+  branch                     Branch?                   @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient                    Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter                  Encounter?                @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  createdByUser              User?                     @relation("GynecologyVisitsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([patientId, visitDate])
+  @@index([encounterId])
+  @@index([templateType])
 }
 
 model PreviousPregnancy {

@@ -120,6 +120,7 @@ export class PatientsService {
       prescriptions,
       investigationOrders,
       reports,
+      gynecologyVisits,
       pregnancies,
       previousPregnancies,
       pregnancyFetuses,
@@ -135,6 +136,7 @@ export class PatientsService {
       this.prisma.prescription.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, items: true } }),
       this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { items: true, doctor: true } }),
       this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user) }, include: { uploadedByUser: true, reviewedByUser: true } }),
+      this.prisma.gynecologyVisit.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true } }),
       this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user) }, include: { fetuses: true } }),
       this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user) } }),
       this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) } } }),
@@ -153,6 +155,7 @@ export class PatientsService {
       ...prescriptions.map((item) => timelineItem(item.createdAt, "prescription", "Prescription created", item.status, `${item.items.length} medicine item(s)`, item.doctor.displayName, "/prescriptions")),
       ...investigationOrders.map((item) => timelineItem(item.createdAt, "investigation", "Investigation ordered", item.status, item.items.map((orderItem) => orderItem.testName).join(", ") || "Investigation order", item.doctor.displayName, "/investigations")),
       ...reports.map((item) => timelineItem(item.createdAt, "report", "Report created", item.status, item.title, item.uploadedByUser?.displayName, "/reports")),
+      ...gynecologyVisits.map((item) => timelineItem(item.visitDate, "gynecology", gynecologyTimelineTitle(item.templateType), "recorded", item.reasonForVisit ?? "Recording-only gynecology visit", item.createdByUser?.displayName, `/patients/${patient.id}`)),
       ...pregnancies.map((item) => timelineItem(item.createdAt, "pregnancy", "Pregnancy episode recorded", item.status, `${item.fetuses.length || 1} fetus record(s)`, undefined, "/pregnancies")),
       ...previousPregnancies.map((item) => timelineItem(item.createdAt, "previous_pregnancy", "Previous pregnancy history recorded", "recorded", item.outcome, undefined, "/pregnancies")),
       ...pregnancyFetuses.map((item) => timelineItem(item.createdAt, "pregnancy_fetus", "Fetus record created", item.status, item.label, undefined, "/pregnancies")),
@@ -448,6 +451,15 @@ export class PatientsService {
 
 function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string) {
   return { dateTime: dateTime.toISOString(), type, title, status, description, actor, href };
+}
+
+function gynecologyTimelineTitle(templateType: string) {
+  if (templateType === "abnormal_uterine_bleeding") return "AUB template recorded";
+  if (templateType === "pelvic_pain") return "Pelvic pain template recorded";
+  if (templateType === "pcos") return "PCOS template recorded";
+  if (templateType === "fibroid_ovarian_cyst") return "Fibroid or ovarian cyst template recorded";
+  if (templateType === "contraception") return "Contraception counseling template recorded";
+  return "Gynecology visit recorded";
 }
 
 function calculateTotals(items: Array<{ quantity?: number; unitAmount: number }>, discountAmount: number, paidAmount: number) {

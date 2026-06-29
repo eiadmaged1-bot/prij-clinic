@@ -41,6 +41,23 @@ type FetusRecord = {
   status?: string | null;
 };
 
+type GynecologyVisit = {
+  id?: string;
+  templateType?: string | null;
+  visitDate?: string | null;
+  reasonForVisit?: string | null;
+  menstrualHistory?: string | null;
+  bleedingPattern?: string | null;
+  painSymptoms?: string | null;
+  dischargeSymptoms?: string | null;
+  contraceptionHistory?: string | null;
+  examinationNotes?: string | null;
+  doctorImpression?: string | null;
+  doctorPlan?: string | null;
+  followUpDate?: string | null;
+  createdByUser?: { displayName?: string | null } | null;
+};
+
 type TabConfig = {
   key: string;
   label: string;
@@ -72,6 +89,7 @@ const tabs: TabConfig[] = [
   { key: "visits", label: "Visits", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready." },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit." },
   { key: "orders", label: "Orders & Reports", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed." },
+  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet. Start with a recording-only template." },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet." },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details." },
   { key: "files", label: "Files", icon: "files", endpoint: "/reports", collectionKey: "reports", empty: "No report or attachment record yet. Real clinical file upload is disabled." },
@@ -86,10 +104,15 @@ export default function PatientFilePage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
 
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
+  const visibleTabs = useMemo(
+    () => tabs.filter((tab) => tab.key !== "gynecology" || permissions.includes("encounter.read") || permissions.includes("encounter.create")),
+    [permissions]
+  );
   const ageLabel = patient?.dateOfBirth ? `${patient.dateOfBirth.slice(0, 10)}` : "Age not set";
 
   useEffect(() => {
@@ -104,6 +127,17 @@ export default function PatientFilePage() {
         setPatient((await response.json()) as Patient);
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to open patient file."));
+
+    fetch(`${apiUrl}/auth/me`, {
+      credentials: "include",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const session = await response.json() as { user?: { permissions?: string[] } };
+        setPermissions(session.user?.permissions ?? []);
+      })
+      .catch(() => setPermissions([]));
   }, [patientId]);
 
   useEffect(() => {
@@ -111,7 +145,7 @@ export default function PatientFilePage() {
     const load = async () => {
       const pairs = await Promise.all(
         tabs
-          .filter((tab) => tab.endpoint)
+          .filter((tab) => tab.endpoint && (tab.key !== "gynecology" || permissions.includes("encounter.read") || permissions.includes("encounter.create")))
           .map(async (tab) => {
             try {
               const response = await fetch(`${apiUrl}${tab.endpoint}`, {
@@ -143,7 +177,7 @@ export default function PatientFilePage() {
       }
     };
     void load();
-  }, [patientId]);
+  }, [patientId, permissions]);
 
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -204,7 +238,7 @@ export default function PatientFilePage() {
           <PatientActionPanel patientId={patient.id} onSubmit={submitPatientAction} status={actionStatus} related={related} />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
-            {tabs.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button className={`tab-button ${activeTab === tab.key ? "active" : ""}`} key={tab.key} onClick={() => setActiveTab(tab.key)} type="button">
                 <ThreeDMedicalIcon name={tab.icon} size="sm" />
                 {tab.label}
@@ -215,6 +249,7 @@ export default function PatientFilePage() {
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
+          {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "pregnancy" ? (
             <ObgynWorkspace
               patient={patient}
@@ -223,7 +258,7 @@ export default function PatientFilePage() {
               orders={related.orders ?? []}
             />
           ) : null}
-          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "pregnancy" ? (
+          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "gynecology" && active.key !== "pregnancy" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -271,6 +306,244 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
           <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
           <span>Use the tabs above to review visits, prescriptions, orders, reports, pregnancy records, billing, files, and timeline.</span>
         </p>
+      </article>
+    </section>
+  );
+}
+
+const gynecologyTemplateOptions = [
+  ["general", "Gynecology visit"],
+  ["abnormal_uterine_bleeding", "Abnormal bleeding"],
+  ["pelvic_pain", "Pelvic pain"],
+  ["pcos", "PCOS"],
+  ["fibroid_ovarian_cyst", "Fibroid or ovarian cyst"],
+  ["contraception", "Contraception counseling"]
+] as const;
+
+const gynecologyTemplateFields: Record<string, Array<[string, string, "text" | "textarea" | "date"]>> = {
+  general: [
+    ["reasonForVisit", "Reason for visit", "textarea"],
+    ["menstrualHistory", "Menstrual history", "textarea"],
+    ["bleedingPattern", "Bleeding pattern", "textarea"],
+    ["painSymptoms", "Pain symptoms", "textarea"],
+    ["dischargeSymptoms", "Discharge or infection symptoms", "textarea"],
+    ["obstetricHistorySummary", "Obstetric history summary", "textarea"],
+    ["contraceptionHistory", "Contraception history", "textarea"],
+    ["medicalSurgicalHistory", "Relevant medical or surgical history", "textarea"],
+    ["examinationNotes", "Examination notes", "textarea"],
+    ["doctorImpression", "Doctor-written impression", "textarea"],
+    ["doctorPlan", "Doctor-written plan", "textarea"],
+    ["followUpDate", "Follow-up date", "date"]
+  ],
+  abnormal_uterine_bleeding: [
+    ["cycleRegularity", "Cycle regularity", "text"],
+    ["bleedingDuration", "Duration", "text"],
+    ["bleedingAmount", "Amount", "text"],
+    ["clots", "Clots", "text"],
+    ["intermenstrualBleeding", "Intermenstrual bleeding", "text"],
+    ["postcoitalBleeding", "Postcoital bleeding", "text"],
+    ["associatedSymptoms", "Associated symptoms", "textarea"],
+    ["pregnancyTestNote", "Pregnancy test note", "textarea"],
+    ["doctorImpression", "Doctor-written impression", "textarea"]
+  ],
+  pelvic_pain: [
+    ["painOnset", "Onset", "text"],
+    ["painDuration", "Duration", "text"],
+    ["painSite", "Site", "text"],
+    ["relationToCycle", "Relation to cycle", "text"],
+    ["painSeverity", "Severity", "text"],
+    ["urinaryBowelSymptoms", "Urinary or bowel symptoms", "textarea"],
+    ["associatedSymptoms", "Associated symptoms", "textarea"],
+    ["doctorImpression", "Doctor-written impression", "textarea"]
+  ],
+  pcos: [
+    ["cyclePattern", "Cycle pattern", "text"],
+    ["acneHirsutismNote", "Acne or hirsutism note", "textarea"],
+    ["weightMetabolicRiskNote", "Weight or metabolic risk note", "textarea"],
+    ["ultrasoundNote", "Ultrasound note field", "textarea"],
+    ["labsNote", "Labs note field", "textarea"],
+    ["doctorImpression", "Doctor-written impression", "textarea"]
+  ],
+  fibroid_ovarian_cyst: [
+    ["findingSource", "Finding source", "text"],
+    ["sizeLocationNote", "Size or location note", "textarea"],
+    ["symptoms", "Symptoms", "textarea"],
+    ["followUpPlan", "Follow-up plan", "textarea"],
+    ["doctorImpression", "Doctor-written impression", "textarea"]
+  ],
+  contraception: [
+    ["currentMethod", "Current method", "text"],
+    ["previousMethods", "Previous methods", "textarea"],
+    ["contraindicationChecklist", "Contraindication checklist placeholder", "textarea"],
+    ["counselingNotes", "Counseling notes", "textarea"],
+    ["chosenMethod", "Chosen method", "text"],
+    ["followUpPlan", "Follow-up plan", "textarea"]
+  ]
+};
+
+function GynecologyWorkspace({ patient, visits }: { patient: Patient; visits: GynecologyVisit[] }) {
+  const [templateType, setTemplateType] = useState("general");
+  const [status, setStatus] = useState("");
+
+  async function saveGynecologyVisit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem("prijClinicToken");
+    const payload = {
+      templateType,
+      visitDate: new Date().toISOString(),
+      ...formPayload(event.currentTarget)
+    };
+
+    const response = await fetch(`${apiUrl}/patients/${patient.id}/gynecology-visits`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save the gynecology visit. Check your clinical role and try again.");
+      return;
+    }
+
+    setStatus("Gynecology visit saved as recording-only and added to the timeline.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
+  const latest = visits[0];
+  const templateFields = gynecologyTemplateFields[templateType] ?? gynecologyTemplateFields.general!;
+
+  return (
+    <section className="obgyn-workspace gynecology-workspace">
+      <div className="obgyn-print-toolbar no-print">
+        <button className="button compact" type="button" onClick={() => setTemplateType("general")}>
+          <ThreeDMedicalIcon name="doctor" size="sm" />
+          Start Gynecology Visit
+        </button>
+        <button className="button secondary compact" type="button" onClick={() => window.print()}>
+          <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+          Print gynecology summary
+        </button>
+      </div>
+
+      <article className="obgyn-dashboard printable-summary">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">General Gynecology</p>
+            <h2>{latest ? "Latest gynecology record" : "Start the first gynecology visit"}</h2>
+            <p className="muted">Recording-only gynecology workspace for {patient.firstName} {patient.lastName}. The doctor writes the impression and plan.</p>
+          </div>
+          <ThreeDMedicalIcon name="doctor" size="lg" tone="teal" />
+        </div>
+        {!latest ? (
+          <p className="empty-state">
+            <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+            <span>Use Start Gynecology Visit, choose a starter template, record the history and findings, then the doctor completes the impression and plan.</span>
+          </p>
+        ) : null}
+        <div className="obgyn-metric-grid">
+          <Metric label="Visit type" value={templateLabel(latest?.templateType)} />
+          <Metric label="Reason" value={latest?.reasonForVisit ?? "Not recorded"} />
+          <Metric label="Doctor impression" value={latest?.doctorImpression ?? "Not recorded"} />
+          <Metric label="Follow-up" value={formatDate(latest?.followUpDate)} />
+        </div>
+        <p className="notice safety-note">These templates record clinician-entered information only. They do not diagnose, recommend treatment, choose contraception, or prescribe.</p>
+      </article>
+
+      <section className="obgyn-section-grid">
+        <article className="panel printable-summary">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Visit Template</p>
+              <h2>Recording form</h2>
+              <p className="muted">Choose the visit type, then fill only what the doctor wants to record.</p>
+            </div>
+            <ThreeDMedicalIcon name="files" size="sm" tone="navy" />
+          </div>
+          <form className="obgyn-form-grid grouped" onSubmit={saveGynecologyVisit}>
+            <fieldset className="obgyn-fieldset wide">
+              <legend>Visit type</legend>
+              <label>
+                Template
+                <select value={templateType} onChange={(event) => setTemplateType(event.target.value)}>
+                  {gynecologyTemplateOptions.map(([value, label]) => (
+                    <option value={value} key={value}>{label}</option>
+                  ))}
+                </select>
+              </label>
+            </fieldset>
+            {templateFields.map(([name, label, type]) => (
+              <fieldset className={type === "textarea" ? "obgyn-fieldset wide" : "obgyn-fieldset"} key={`${templateType}-${name}`}>
+                <legend>{label}</legend>
+                <label>
+                  {label}
+                  {type === "textarea" ? <textarea name={name} placeholder="Doctor-entered note" /> : <input name={name} type={type} />}
+                </label>
+              </fieldset>
+            ))}
+            {status ? <p className="notice wide">{status}</p> : null}
+            <div className="form-actions no-print">
+              <button className="button secondary" type="button" onClick={() => window.print()}>
+                <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+                Print summary
+              </button>
+              <button className="button" type="submit">
+                <ThreeDMedicalIcon name="doctor" size="sm" />
+                Save gynecology visit
+              </button>
+            </div>
+          </form>
+        </article>
+
+        <article className="panel printable-summary">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Starter Templates</p>
+              <h2>Problem-focused recording aids</h2>
+            </div>
+            <span className="badge">{gynecologyTemplateOptions.length} templates</span>
+          </div>
+          <div className="obgyn-template-grid">
+            {gynecologyTemplateOptions.slice(1).map(([value, label]) => (
+              <button className={`obgyn-template-card ${templateType === value ? "active" : ""}`} key={value} onClick={() => setTemplateType(value)} type="button">
+                <ThreeDMedicalIcon name={value === "contraception" ? "consent" : value === "pelvic_pain" ? "encounter" : "doctor"} size="sm" />
+                <strong>{label}</strong>
+                <p className="muted">{templateSummary(value)}</p>
+              </button>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <article className="panel printable-summary">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Gynecology Timeline</p>
+            <h2>Recorded visits</h2>
+          </div>
+          <span className="badge">{visits.length} visit(s)</span>
+        </div>
+        {visits.length === 0 ? (
+          <p className="empty-state">
+            <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
+            <span>No gynecology event is recorded yet. Saved templates will appear here and in the patient timeline.</span>
+          </p>
+        ) : null}
+        <div className="data-list">
+          {visits.slice(0, 6).map((visit, index) => (
+            <article className="data-row printable-summary" key={String(visit.id ?? index)}>
+              <div className="data-row-header">
+                <strong>{templateLabel(visit.templateType)}</strong>
+                <span className="badge">{formatDate(visit.visitDate)}</span>
+              </div>
+              <p className="muted">{visit.reasonForVisit || visit.doctorImpression || "Recording-only gynecology visit."}</p>
+              <p className="muted">Plan: {visit.doctorPlan || "Doctor plan not recorded yet."}</p>
+            </article>
+          ))}
+        </div>
       </article>
     </section>
   );
@@ -995,10 +1268,25 @@ function timelineIcon(key: string): IconName {
   if (key.includes("prescription")) return "prescription";
   if (key.includes("order") || key.includes("investigation")) return "investigations";
   if (key.includes("billing") || key.includes("invoice") || key.includes("payment")) return "billing";
+  if (key.includes("gynecology")) return "doctor";
   if (key.includes("pregnancy")) return "pregnancy";
   if (key.includes("ultrasound")) return "ultrasound";
   if (key.includes("consent")) return "consent";
   return "timeline";
+}
+
+function templateLabel(value?: string | null) {
+  const found = gynecologyTemplateOptions.find(([key]) => key === value);
+  return found?.[1] ?? "Not recorded";
+}
+
+function templateSummary(value: string) {
+  if (value === "abnormal_uterine_bleeding") return "Cycle pattern, amount, clots, related bleeding, and doctor impression.";
+  if (value === "pelvic_pain") return "Onset, site, relation to cycle, urinary or bowel symptoms, and doctor impression.";
+  if (value === "pcos") return "Cycle pattern, acne or hirsutism note, ultrasound note, labs note, and doctor impression.";
+  if (value === "fibroid_ovarian_cyst") return "Finding source, size or location note, symptoms, follow-up plan, and impression.";
+  if (value === "contraception") return "Current method, previous methods, checklist placeholder, counseling notes, chosen method.";
+  return "General gynecology visit recording.";
 }
 
 function formatDate(value?: string | null) {
