@@ -4,9 +4,17 @@ Date: 2026-06-28
 
 Prij Clinic V0.1 is a local/private pilot foundation for demo and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
-## Release Candidate UX Polish - 2026-06-29
+## MVP Release Candidate Verification - 2026-06-29
 
-This branch adds frontend-only polish for a doctor demo release candidate:
+The MVP release candidate now integrates clinical persistence, OB/GYN core recording, patient-context workflow actions, patient timeline aggregation, release-candidate UX polish, visual QA, and production-readiness planning.
+
+Verification additions:
+
+- `docs/MVP_RC_VERIFICATION_CHECKLIST.md` for local demo pass/fail checks.
+- `docs/PRODUCTION_READINESS_PLAN.md` for staging, pilot, and production gates.
+- Final verification sequence covers typecheck, build, security CI, expanded security, theme UI, doctor UX, V0.1 E2E, clinical persistence, and visual QA.
+
+The release-candidate UX polish includes:
 
 - Larger, more readable controls and form fields.
 - Tablet/mobile stacking for the app shell, top bar, patient header, patient tabs, guided visit steps, and admin views.
@@ -17,8 +25,6 @@ This branch adds frontend-only polish for a doctor demo release candidate:
 - Normal dashboard wording avoids technical implementation details.
 - `npm run test:visual:qa` lightweight visual QA sweep.
 - New demo scripts for doctor, reception, owner, and mobile/tablet QA.
-
-Codex A is expected to add backend persistence and OB/GYN core integration separately before this branch becomes a merged release candidate.
 
 ## Completed Pilot Workflow
 
@@ -97,6 +103,7 @@ npm run test:theme:ui
 npm run test:doctor:ux
 npm run test:clinical:persistence
 npm run test:e2e:v01
+npm run test:visual:qa
 ```
 
 ## Remaining Limits
@@ -108,5 +115,5 @@ npm run test:e2e:v01
 - Backup scripts are local helpers, not production backup infrastructure.
 - Audit logs are application append-only but not tamper-resistant.
 - Service catalog prices are editable from Admin, but invoice line items are not yet automatically generated from the catalog.
-- Patient-context action forms are functional V0.1 workflow forms; they still need release-candidate UI polish from the parallel frontend branch.
+- Patient-context action forms are functional V0.1 workflow forms; they still need more production-grade usability testing and specialty workflow depth.
 - MFA, monitoring, legal review, production deployment, and operational runbooks remain future work.

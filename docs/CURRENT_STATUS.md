@@ -2,13 +2,13 @@
 
 Date: 2026-06-29
 
-Branch: `integration/mvp-rc-obgyn-ux`
+Branch: `release/mvp-rc-verification`
 
-Target tag: `v0.1-mvp-release-candidate`
+Target tag: `v0.1-mvp-release-candidate-verified`
 
 ## Status Summary
 
-Prij Clinic V0.1 is now an integrated local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording from Codex A with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation from Codex B.
+Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
 It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
@@ -28,6 +28,7 @@ It is not production-ready and must not be used with real patient data, real pay
 - OB/GYN core persistence: pregnancy episodes support living, abortions, and dating method fields, plus fetus records and antenatal visits for recording-only pregnancy follow-up.
 - Visual QA: `npm run test:visual:qa` checks friendly UI wording, layout availability, patient-file tabs, doctor cards, and admin appearance protection.
 - Clinical persistence QA: `npm run test:clinical:persistence` checks patient-context workflow creation, signed encounter edit protection, OB/GYN recording-only behavior, timeline aggregation, and audit entries.
+- Release-candidate verification planning: `docs/MVP_RC_VERIFICATION_CHECKLIST.md` and `docs/PRODUCTION_READINESS_PLAN.md` define the final demo checks and the gates before staging, pilot, or production.
 
 ## Safety State
 

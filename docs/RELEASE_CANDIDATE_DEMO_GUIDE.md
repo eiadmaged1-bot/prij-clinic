@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-Prij Clinic V0.1 is a local/private release-candidate demo for workflow review. It is not production-ready, not a medical device, and must not be used with real patient data.
+Prij Clinic V0.1 is a verified local/private release-candidate demo for workflow review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 ## Local Login
 
@@ -56,6 +56,14 @@ The top bar has Comfort, Large, and Compact display controls.
 - Real report/private clinical file upload is disabled.
 - Admin and appearance tools remain owner/admin-only.
 
-## Codex A Integration Notes
+## Operational Verification
 
-Codex A owns backend persistence, Prisma/schema, clinical APIs, patient-context semantics, and DB-heavy tests. This branch intentionally limits changes to frontend polish, visual QA, and release-candidate demo documentation.
+Use `docs/MVP_RC_VERIFICATION_CHECKLIST.md` to run the final local demo path:
+
+1. Owner dashboard and Owner Control Center.
+2. Reception patient creation, appointment, and queue.
+3. Doctor Mode and Guided Visit saving real encounter draft fields.
+4. Patient file timeline across appointments, queue, encounter, prescription, orders/reports, OB/GYN, finance, consent, and AI draft placeholder records.
+5. Admin/RBAC checks proving non-admins cannot access Admin or Appearance controls.
+
+Production planning is documented in `docs/PRODUCTION_READINESS_PLAN.md`. The exact next sprint is Production Hardening + Staging Deployment Prep.

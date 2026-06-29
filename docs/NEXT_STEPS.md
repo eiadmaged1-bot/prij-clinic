@@ -1,32 +1,23 @@
 # Next Steps
 
-The exact next recommended sprint after this integration is:
+The exact next recommended sprint after this release-candidate verification is:
 
-## MVP Release Candidate Verification + Production-Readiness Planning
+## Production Hardening + Staging Deployment Prep
 
 Goals:
 
-- Complete one final full local verification pass across API, web, mobile/tablet layouts, visual QA, security tests, doctor workflow, patient workflow, OB/GYN workflow, and billing demo flow.
-- Open the app manually at desktop, tablet, and phone widths using `docs/MOBILE_TABLET_QA.md`.
-- Run the owner, reception, doctor, and release-candidate demo scripts end to end.
-- Confirm patient-context actions remain operational after Codex A/B merge:
-  - guided visit save
-  - appointment
-  - queue check-in
-  - prescription
-  - investigation order
-  - report placeholder
-  - ultrasound draft
-  - invoice/payment
-  - consent
-  - timeline
-- Confirm release-candidate UX remains readable and elder-friendly after backend persistence integration.
+- Use `docs/MVP_RC_VERIFICATION_CHECKLIST.md` as the verified local-demo baseline.
+- Implement staging deployment prep without using real patient data.
+- Remove or disable all local demo credentials outside local/private demo seeds.
+- Harden secrets handling, environment validation, HTTPS configuration, backup encryption, restore proof, and incident-response runbooks.
+- Prepare staging smoke/security verification using `npm run prisma:migrate:deploy`, not reset/drop commands.
+- Review role-by-role workflows with clinic stakeholders using fake data only.
 - Keep AI disabled, mock-only, draft-only, non-diagnostic, and doctor-review-only.
 - Keep all data fake/local/demo-only.
 
 ## Production-Readiness Planning
 
-Do not start real production deployment until the following are designed, implemented, tested, and reviewed:
+The initial production-readiness plan is documented in `docs/PRODUCTION_READINESS_PLAN.md`. Do not start real production deployment until the following are designed, implemented, tested, and reviewed:
 
 - Patient-to-doctor assignment or another explicit clinical access model.
 - Production consent enforcement, legal text, signature/capture policy, and override workflow.

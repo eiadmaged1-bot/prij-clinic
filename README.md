@@ -1,10 +1,10 @@
 # Prij Clinic
 
-Clinic Management System V0.1 pilot scaffold for OB/GYN and women's health.
+Clinic Management System V0.1 MVP release candidate for OB/GYN and women's health.
 
 Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.1 is a local/private demo foundation. It is not production-ready and is not a medical device.
+V0.1 is a local/private demo foundation and MVP release candidate. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 ## V0.1 Focused Clinic Workflow
 
@@ -21,6 +21,11 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Patient files now use simplified tabs, large actions, and 3D-style medical icons for older-doctor-friendly recognition.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
+
+Release-candidate verification and production-readiness planning are documented in:
+
+- `docs/MVP_RC_VERIFICATION_CHECKLIST.md`
+- `docs/PRODUCTION_READINESS_PLAN.md`
 
 ## Safety Rules
 
@@ -234,6 +239,8 @@ npm run test:security:expanded
 npm run test:theme:ui
 npm run test:doctor:ux
 npm run test:e2e:v01
+npm run test:clinical:persistence
+npm run test:visual:qa
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
@@ -305,6 +312,8 @@ npm run test:security:expanded
 npm run test:admin:control
 npm run test:theme:ui
 npm run test:doctor:ux
+npm run test:clinical:persistence
+npm run test:visual:qa
 ```
 
 Current hardening matrices:
@@ -325,6 +334,17 @@ npm run test:e2e:v01
 ```
 
 This creates demo-only records for the V0.1 workflow and verifies representative audit metadata. It does not use real patient data, real clinical histories, real payment data, real report files, or external AI calls.
+
+Clinical persistence and release-candidate UI sweeps:
+
+```powershell
+npm run test:clinical:persistence
+npm run test:visual:qa
+```
+
+`test:clinical:persistence` verifies fake/demo patient-context appointment, queue, guided visit persistence, prescription, investigation, report, OB/GYN, invoice/payment, consent, timeline, audit, and signed-encounter edit protection.
+
+`test:visual:qa` verifies release-candidate pages are reachable, normal UI avoids obvious technical text, patient file and doctor pages are present, and admin appearance controls remain protected.
 
 ## Local Backup
 
@@ -374,6 +394,8 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 
 - `docs/CURRENT_STATUS.md`
 - `docs/V0_1_RELEASE_NOTES.md`
+- `docs/MVP_RC_VERIFICATION_CHECKLIST.md`
+- `docs/PRODUCTION_READINESS_PLAN.md`
 - `docs/API_ENDPOINTS.md`
 - `docs/RBAC_MATRIX.md`
 - `docs/RBAC_AUDIT_REVIEW.md`

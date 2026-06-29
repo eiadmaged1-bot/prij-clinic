@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $clientDir = Join-Path $repoRoot "node_modules\.prisma\client"
+$packagePrismaDir = Join-Path $repoRoot "node_modules\@prisma\client\.prisma"
+$generatedPrismaDir = Join-Path $repoRoot "node_modules\.prisma"
 $requiredFiles = @(
   (Join-Path $clientDir "default.js"),
   (Join-Path $clientDir "query_engine-windows.dll.node")
@@ -30,6 +32,15 @@ if (Test-Path -LiteralPath $clientDir) {
 
 Invoke-RepoCommand @("npm", "run", "prisma:generate")
 
+if (Test-Path -LiteralPath $generatedPrismaDir) {
+  if (Test-Path -LiteralPath $packagePrismaDir) {
+    Remove-Item -LiteralPath $packagePrismaDir -Recurse -Force
+  }
+
+  New-Item -ItemType Directory -Path $packagePrismaDir | Out-Null
+  Copy-Item -LiteralPath (Join-Path $generatedPrismaDir "client") -Destination $packagePrismaDir -Recurse -Force
+}
+
 foreach ($file in $requiredFiles) {
   if (-not (Test-Path -LiteralPath $file)) {
     throw "Required Prisma Client file is missing: $file"
@@ -38,6 +49,7 @@ foreach ($file in $requiredFiles) {
 
 $importTest = @'
 const { PrismaClient } = require("@prisma/client");
+require("@prisma/client/default.js");
 
 if (typeof PrismaClient !== "function") {
   throw new Error("PrismaClient export is not a constructor.");

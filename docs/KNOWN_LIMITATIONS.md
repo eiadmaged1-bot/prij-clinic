@@ -4,11 +4,10 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Release Candidate UX Limitations
 
-- The current branch is frontend polish, visual QA, and documentation only.
-- Workflow persistence, patient-context API semantics, Prisma/schema updates, and DB-heavy tests are owned by Codex A.
+- The current branch verifies the integrated MVP release candidate and adds production-readiness planning.
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
 - Mobile/tablet QA is improved for demo acceptance, but production device certification, accessibility audit, and full browser matrix testing remain future work.
-- Patient file tabs show patient-scoped related records where current APIs support it; deeper persistence behavior depends on Codex A integration.
+- Patient file tabs show patient-scoped related records where current APIs support it; deeper specialty screens and production charting workflows remain future work.
 
 ## Security And Privacy
 
@@ -81,3 +80,4 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 - V0.1 is local/private pilot software only.
 - Production deployment, staging hardening, secrets management, monitoring, HTTPS policy, MFA, secure file storage, backup encryption, restore proof, and legal/privacy review remain future work.
+- The production-readiness plan exists in `docs/PRODUCTION_READINESS_PLAN.md`, but implementation of those gates is not complete.
