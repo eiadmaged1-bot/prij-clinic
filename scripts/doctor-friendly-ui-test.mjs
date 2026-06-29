@@ -31,10 +31,33 @@ async function main() {
   }
   record.pass("patient file simplified tabs and actions are implemented");
 
-  for (const label of ["Pregnancy Overview", "Obstetric History", "Antenatal Visits", "OB ultrasound report builder", "Doctor Templates", "Print patient summary"]) {
+  for (const label of [
+    "Pregnancy Overview",
+    "Obstetric History",
+    "Antenatal Visits",
+    "Visit details",
+    "Maternal observations",
+    "Fetal observations",
+    "Next follow-up",
+    "OB ultrasound report builder",
+    "Scan details",
+    "Pregnancy and fetus context",
+    "Biometry recording",
+    "Doppler note placeholder",
+    "Measurements are recorded for clinician review. Interpretation must be completed by the doctor.",
+    "Doctor Templates",
+    "Print patient summary",
+    "Print antenatal summary",
+    "Print ultrasound report"
+  ]) {
     if (!patientSource.includes(label)) throw new Error(`OB/GYN workspace label missing: ${label}`);
   }
   record.pass("OB/GYN patient workspace and report builder are implemented");
+
+  for (const forbidden of ["FGR", "fetal growth restriction", "percentile engine"]) {
+    if (patientSource.includes(forbidden)) throw new Error(`Patient OB/GYN workspace includes forbidden wording: ${forbidden}`);
+  }
+  record.pass("OB/GYN patient workspace avoids fetal growth automation wording");
 
   const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
   for (const label of ["Comfort", "Large", "Compact", "Doctor Mode"]) {

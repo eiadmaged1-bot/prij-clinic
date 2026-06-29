@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { readFile } from "node:fs/promises";
 
 const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
 const WEB_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -9,6 +10,18 @@ const checks = [];
 async function main() {
   await expectReachable(`${WEB_URL}/login`, "login page reachable");
   await expectReachable(`${WEB_URL}/admin/accounts`, "accounts page reachable");
+
+  const loginSource = await readFile("apps/web/app/login/page.tsx", "utf8");
+  for (const label of ["Already logged in as", "Go to Dashboard", "Go to Accounts", "Log out and switch account"]) {
+    assert(loginSource.includes(label), `login page missing already-logged-in label: ${label}`);
+  }
+  checks.push("login while authenticated shows current-session actions");
+
+  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
+  for (const label of ["user?.displayName", "user.loginId", "Accounts", "Logout"]) {
+    assert(shellSource.includes(label), `app shell missing session/topbar label: ${label}`);
+  }
+  checks.push("account session topbar source remains visible");
 
   const owner = await login("eyad", "eyad");
   checks.push("login as eyad");

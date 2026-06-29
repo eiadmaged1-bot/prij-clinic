@@ -136,8 +136,26 @@ async function main() {
     if (!visibleText(patientHtml).includes(label)) throw new Error(`Patient file missing ${label}.`);
   }
   const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
-  for (const label of ["Overview", "Visits", "Prescriptions", "Orders & Reports", "Pregnancy Overview", "Antenatal Visits", "OB ultrasound report builder", "Print patient summary"]) {
+  for (const label of [
+    "Overview",
+    "Visits",
+    "Prescriptions",
+    "Orders & Reports",
+    "Pregnancy Overview",
+    "Antenatal Visits",
+    "Visit details",
+    "Save Visit",
+    "OB ultrasound report builder",
+    "Scan details",
+    "Biometry recording",
+    "Print patient summary",
+    "Print antenatal summary",
+    "Print ultrasound report"
+  ]) {
     if (!patientSource.includes(label)) throw new Error(`Patient file tab source missing ${label}.`);
+  }
+  for (const forbidden of ["FGR", "fetal growth restriction", "percentile engine"]) {
+    if (patientSource.includes(forbidden)) throw new Error(`Patient file source includes forbidden automation wording: ${forbidden}.`);
   }
   record.pass("patient file tabs and primary actions are visible");
 }
