@@ -6,6 +6,8 @@ Branch: `pilot/mvp-obgyn-workflow-lock`
 
 Base: `auth/accounts-session-rbac-hardening` at `87eb7e5`
 
+Addendum: `leap/b-general-gynecology-starter` builds on this lock at `a4b22c6` and adds the first recording-only general gynecology layer.
+
 ## Supported Pilot Workflow
 
 The MVP pilot flow now supports:
@@ -18,7 +20,11 @@ Owner login -> patient file -> doctor workflow -> OB/GYN pregnancy workspace -> 
 
 The follow-up finance/report sprint adds MVP pilot finance depth on top of this locked workflow: service catalog placeholders, catalog-linked invoice lines, manual payments, reason-required refunds and voids, daily closing, patient statements, owner finance reports, print placeholders, and audit coverage. This remains fake/demo data only with no real payment gateway, no insurance/TPA, and no full accounting ledger.
 
-The patient file is the central workflow surface. The Pregnancy tab contains Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, and print actions.
+## General Gynecology Starter Note
+
+The follow-up general gynecology sprint adds the first recording-only general gynecology layer on top of this locked workflow: gynecology visit records, abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling starter templates, plus timeline and print summary support. This remains clinician-authored documentation only with no automatic diagnosis, treatment recommendation, contraception recommendation, or prescribing.
+
+The patient file is the central workflow surface. The Pregnancy tab contains Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, and print actions. The v0.3 addendum adds a Gynecology tab with general gynecology visit, abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling starter templates.
 
 ## Demo After Stable Accounts
 
@@ -40,6 +46,7 @@ The patient file is the central workflow surface. The Pregnancy tab contains Pre
 - Fetal biometry is stored as raw recording fields only.
 - Pregnancy risk flags and notes are clinician-entered text only.
 - Clinician interpretation is required before clinical use.
+- General gynecology templates are recording aids only and require doctor-written impression and plan fields.
 
 ## Explicitly Not Included
 
@@ -52,6 +59,7 @@ The patient file is the central workflow surface. The Pregnancy tab contains Pre
 - No WhatsApp integration.
 - No real payment gateway.
 - No inventory, insurance, or telemedicine workflow.
+- No automatic gynecology diagnosis, treatment recommendation, contraception recommendation, or prescribing.
 
 ## Verification
 
@@ -67,6 +75,7 @@ npm run test:doctor:ux
 npm run test:visual:qa
 npm run test:e2e:v01
 npm run test:clinical:persistence
+npm run test:gyn:starter
 npm run test:obgyn:core
 npm run test:accounts:rbac
 npm run test:staging:smoke

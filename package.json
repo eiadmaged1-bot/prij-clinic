@@ -34,6 +34,7 @@
     "test:theme:ui": "node scripts/theme-ui-test.mjs",
     "test:doctor:ux": "node scripts/doctor-friendly-ui-test.mjs",
     "test:clinical:persistence": "node scripts/clinical-persistence-test.mjs",
+    "test:gyn:starter": "node scripts/general-gynecology-starter-test.mjs",
     "test:obgyn:core": "node scripts/obgyn-core-depth-test.mjs",
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",

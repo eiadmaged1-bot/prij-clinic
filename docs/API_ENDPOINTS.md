@@ -66,6 +66,10 @@ All endpoints below require JWT authentication. Permission names match the imple
 | `GET` | `/reports/:id` | `report.read` |
 | `PATCH` | `/reports/:id` | `report.update` |
 | `PATCH` | `/reports/:id/review` | `report.review` |
+| `POST` | `/patients/:id/gynecology-visits` | `encounter.create` |
+| `GET` | `/patients/:id/gynecology-visits` | `encounter.read` |
+| `GET` | `/gynecology-visits` | `encounter.read` |
+| `GET` | `/gynecology-visits/:id` | `encounter.read` |
 | `POST` | `/pregnancies` | `pregnancy.manage` |
 | `GET` | `/pregnancies` | `pregnancy.read` |
 | `GET` | `/pregnancies/:id` | `pregnancy.read` |

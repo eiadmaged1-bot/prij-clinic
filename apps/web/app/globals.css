@@ -1940,6 +1940,10 @@ td span {
   gap: 1rem;
 }
 
+.gynecology-workspace .obgyn-dashboard {
+  border-color: rgba(20, 184, 166, 0.32);
+}
+
 .obgyn-print-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -1982,6 +1986,7 @@ td span {
   border-radius: var(--radius-md);
   background: #ffffff;
   padding: 0.9rem;
+  text-align: left;
 }
 
 .obgyn-metric span {
@@ -2076,6 +2081,16 @@ td span {
 
 .obgyn-template-card strong {
   color: var(--foreground);
+}
+
+button.obgyn-template-card {
+  cursor: pointer;
+  font: inherit;
+}
+
+.obgyn-template-card.active {
+  border-color: rgba(20, 184, 166, 0.5);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
 }
 
 :root[data-theme="dark-navy"] input,
