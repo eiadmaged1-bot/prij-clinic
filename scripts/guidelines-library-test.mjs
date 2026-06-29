@@ -26,7 +26,19 @@ async function main() {
   assert(deniedSearch.status === 403, "receptionist guideline search must be denied");
   const deniedAsk = await apiRequest("POST", "/guidelines/ask", reception, { question: "antenatal" });
   assert(deniedAsk.status === 403, "receptionist guideline ask must be denied");
-  checks.push("receptionist blocked from guideline content");
+  const accountantDeniedSearch = await apiRequest("GET", "/guidelines/search?q=antenatal", accountant);
+  assert(accountantDeniedSearch.status === 403, "accountant guideline search must be denied");
+  const accountantDeniedAsk = await apiRequest("POST", "/guidelines/ask", accountant, { question: "antenatal" });
+  assert(accountantDeniedAsk.status === 403, "accountant guideline ask must be denied");
+  checks.push("receptionist and accountant blocked from guideline content");
+
+  const anonymousSources = await apiRequest("GET", "/guidelines/sources", null);
+  assert(anonymousSources.status === 401, "anonymous source registry access must be denied");
+  const anonymousSearch = await apiRequest("GET", "/guidelines/search?q=antenatal", null);
+  assert(anonymousSearch.status === 401, "anonymous guideline search must be denied");
+  const anonymousAsk = await apiRequest("POST", "/guidelines/ask", null, { question: "antenatal" });
+  assert(anonymousAsk.status === 401, "anonymous guideline ask must be denied");
+  checks.push("anonymous guideline access blocked");
 
   const uploadDenied = await apiRequest("POST", "/guidelines/sources", doctor, {
     name: `Doctor Blocked Source ${runId}`,
@@ -96,6 +108,10 @@ async function main() {
 
   const privateDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}`, reception);
   assert(privateDenied.status === 403, "receptionist direct private document access must be denied");
+  const accountantPrivateDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}`, accountant);
+  assert(accountantPrivateDenied.status === 403, "accountant direct private document access must be denied");
+  const anonymousPrivateDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}`, null);
+  assert(anonymousPrivateDenied.status === 401, "anonymous direct private document access must be denied");
   checks.push("private document direct access blocked");
 
   const listedDocuments = await apiJson("GET", "/guidelines/documents", owner);
@@ -113,10 +129,14 @@ async function main() {
   assert(receptionistViewDenied.status === 403, "receptionist private file view must be denied");
   const accountantViewDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, accountant);
   assert(accountantViewDenied.status === 403, "accountant private file view must be denied");
-  checks.push("receptionist and accountant blocked from guideline files");
+  const anonymousViewDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, null);
+  assert(anonymousViewDenied.status === 401, "anonymous private file view must be denied");
+  checks.push("receptionist, accountant, and anonymous users blocked from guideline files");
 
   const disabledDownload = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/download`, owner);
   assert(disabledDownload.status === 403, "download must be blocked when disabled");
+  const anonymousDownloadDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/download`, null);
+  assert(anonymousDownloadDenied.status === 401, "anonymous private file download must be denied");
   const doctorSettingsDenied = await apiRequest("PATCH", `/guidelines/documents/${upload.document.id}/file-access-settings`, doctor, {
     downloadsAllowed: true
   });
