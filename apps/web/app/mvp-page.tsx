@@ -60,6 +60,8 @@ const navGroups: NavGroup[] = [
     links: [
       ["/doctor/visit", "Guided Visit", "encounter"],
       ["/protocol-atlas", "Protocol Atlas", "ai"],
+      ["/medications", "Medications", "prescription"],
+      ["/drug-market", "Drug Market", "prescription"],
       ["/encounters", "Visits", "encounter"],
       ["/prescriptions", "Prescriptions", "prescription"],
       ["/investigations", "Orders", "investigations"],
@@ -90,6 +92,8 @@ const adminNavGroup: NavGroup = {
   title: "Admin",
   links: [
     ["/admin", "Control Center", "admin"],
+    ["/admin/medications", "Medication Catalog", "prescription"],
+    ["/admin/drug-market", "Drug Market Admin", "prescription"],
     ["/admin/protocol-atlas", "Protocol Verification", "ai"],
     ["/admin/appearance", "Appearance", "settings"],
     ["/admin/accounts", "Accounts", "reception"]
@@ -330,6 +334,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     "prescription.read",
     "investigation.read",
     "report.read"
+    ,
+    "medications.read",
+    "drug_market.read"
   ]);
   const canOpenPregnancy = hasAnyPermission(permissions, ["pregnancy.read", "pregnancy.manage", "ob_ultrasound.read", "ob_ultrasound.manage"]);
   const canOpenFinance = Boolean(
