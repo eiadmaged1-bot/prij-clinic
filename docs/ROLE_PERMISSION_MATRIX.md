@@ -7,6 +7,7 @@ This matrix documents the seeded V0.1 demo roles and the lower-role permission e
 ## Safety Rules
 
 - Owner is intentionally broad for local demo setup, repair, seed, and security review.
+- `eyad` is the only protected local demo System Owner. Reserved `system_owner.manage` and `developer_owner.manage` permissions are per-user protected metadata and are not normal Owner/Admin role grants.
 - Admin is administrative only in the current seed and is not the clinical/billing operator role.
 - Doctor can manage clinical drafts, sign clinical records, request/review AI draft placeholders, and is scoped by branch plus doctor-owned records where modeled.
 - Nurse can read/support clinical workflow and queue status, but cannot sign encounters, prescriptions, reports, or manage billing.

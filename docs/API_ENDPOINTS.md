@@ -21,6 +21,13 @@ All endpoints below require JWT authentication. Permission names match the imple
 | `GET` | `/auth/me` | Authenticated user |
 | `POST` | `/auth/logout` | Authenticated user |
 | `GET` | `/admin/users` | `user.read` |
+| `GET` | `/admin/accounts` | `user.read` |
+| `POST` | `/admin/accounts` | `user.manage` |
+| `PATCH` | `/admin/accounts/:id` | `user.manage` |
+| `POST` | `/admin/accounts/:id/reset-password` | `user.manage` |
+| `POST` | `/admin/accounts/:id/deactivate` | `user.manage` |
+| `POST` | `/admin/accounts/:id/activate` | `user.manage` |
+| `PATCH` | `/admin/accounts/:id/permissions` | `user.manage` |
 | `GET` | `/admin/roles` | `role.read` |
 | `GET` | `/admin/permissions` | `permission.read` |
 | `GET` | `/audit` | `audit.read` |

@@ -1,9 +1,13 @@
 export type AuthUser = {
   id: string;
   email: string;
+  loginId: string | null;
   displayName: string;
   status: string;
   branchId: string | null;
+  permissionPreset: string;
+  protectedAccount: boolean;
+  isSystemOwner: boolean;
   roles: string[];
   permissions: string[];
 };

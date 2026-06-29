@@ -24,7 +24,10 @@ Use this checklist before merging release/staging branches and before any stagin
 
 - [ ] `npm run test:security:ci` passes.
 - [ ] `npm run test:security:expanded` passes.
+- [ ] `npm run test:accounts:rbac` passes.
 - [ ] Admin and appearance APIs remain denied to non-admin users.
+- [ ] Accounts API and `/admin/accounts` remain denied to non-admin users.
+- [ ] `eyad` protected System Owner rules are verified.
 - [ ] RBAC, scope checks, audit behavior, consent boundaries, and AI safety checks are not weakened.
 - [ ] No audit deletion or silent signed-record hard-delete path is introduced.
 

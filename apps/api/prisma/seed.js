@@ -118,8 +118,12 @@ const permissions = [
   "backup.metadata_read",
   "security.review",
   "session.manage",
-  "config.read_safe"
+  "config.read_safe",
+  "system_owner.manage",
+  "developer_owner.manage"
 ];
+
+const reservedSystemOwnerPermissions = ["system_owner.manage", "developer_owner.manage"];
 
 const rolePermissionKeys = {
   Owner: permissions,
@@ -232,6 +236,10 @@ function describePermission(key) {
 }
 
 function riskLevelFor(key) {
+  if (reservedSystemOwnerPermissions.includes(key)) {
+    return "critical";
+  }
+
   if (key === "audit.read" || key.endsWith(".manage")) {
     return "high";
   }
@@ -314,7 +322,7 @@ async function main() {
   for (const [roleName, keys] of Object.entries(rolePermissionKeys)) {
     const role = roleByName.get(roleName);
 
-    for (const key of keys) {
+    for (const key of keys.filter((key) => !reservedSystemOwnerPermissions.includes(key))) {
       const permission = permissionByKey.get(key);
 
       await prisma.rolePermission.upsert({
@@ -349,6 +357,8 @@ async function main() {
         displayName: "Demo Owner",
         status: "active",
         branchId: mainBranch.id,
+        permissionPreset: "advanced",
+        protectedAccount: false,
         passwordHash: await hashPassword(password)
       },
       create: {
@@ -356,6 +366,8 @@ async function main() {
         displayName: "Demo Owner",
         status: "active",
         branchId: mainBranch.id,
+        permissionPreset: "advanced",
+        protectedAccount: false,
         passwordHash: await hashPassword(password)
       }
     });
@@ -388,6 +400,8 @@ async function main() {
         displayName: "Eyad Admin",
         status: "active",
         branchId: mainBranch.id,
+        permissionPreset: "advanced",
+        protectedAccount: true,
         passwordHash: await hashPassword(localAdminPassword),
         failedLoginCount: 0,
         lockedUntil: null
@@ -398,6 +412,9 @@ async function main() {
         displayName: "Eyad Admin",
         status: "active",
         branchId: mainBranch.id,
+        permissionPreset: "advanced",
+        protectedAccount: true,
+        createdByUserId: demoOwner?.id,
         passwordHash: await hashPassword(localAdminPassword)
       }
     });
@@ -423,6 +440,29 @@ async function main() {
       demoOwner = localAdmin;
     }
 
+    for (const key of reservedSystemOwnerPermissions) {
+      const permission = permissionByKey.get(key);
+
+      await prisma.userPermissionOverride.upsert({
+        where: {
+          userId_permissionId: {
+            userId: localAdmin.id,
+            permissionId: permission.id
+          }
+        },
+        update: {
+          effect: "allow",
+          grantedByUserId: localAdmin.id
+        },
+        create: {
+          userId: localAdmin.id,
+          permissionId: permission.id,
+          effect: "allow",
+          grantedByUserId: localAdmin.id
+        }
+      });
+    }
+
     const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
     const demoUsers = [
       ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
@@ -439,6 +479,8 @@ async function main() {
           displayName,
           status: "active",
           branchId,
+          permissionPreset: "advanced",
+          protectedAccount: false,
           passwordHash: await hashPassword(demoPassword),
           failedLoginCount: 0,
           lockedUntil: null
@@ -448,6 +490,9 @@ async function main() {
           displayName,
           status: "active",
           branchId,
+          permissionPreset: "advanced",
+          protectedAccount: false,
+          createdByUserId: demoOwner?.id,
           passwordHash: await hashPassword(demoPassword)
         }
       });

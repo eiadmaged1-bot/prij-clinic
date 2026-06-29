@@ -49,7 +49,8 @@ const requiredText = {
   "/patients": ["Patient files", "New Patient File", "Search patient files"],
   "/patients/new": ["New patient file", "Save and open patient file"],
   "/admin": ["Owner Control Center", "Access Overview"],
-  "/admin/appearance": ["Appearance", "Set as default"]
+  "/admin/appearance": ["Appearance", "Set as default"],
+  "/admin/accounts": ["Accounts", "Create account", "Permission"]
 };
 
 async function fetchHtml(page) {
@@ -102,7 +103,8 @@ async function main() {
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");
-  record.pass("appearance settings remain protected from non-admin staff");
+  assertStatus(await apiStatus("GET", "/admin/accounts", reception), 403, "non-admin accounts settings");
+  record.pass("appearance and accounts settings remain protected from non-admin staff");
 
   const patient = await apiJson("POST", "/patients", adminToken, {
     medicalRecordNumber: `DEMO-VISUAL-${Date.now()}`,
@@ -111,7 +113,7 @@ async function main() {
     notes: "Visual QA demo patient only."
   });
 
-  const pages = [...normalPages, `/patients/${patient.id}`, "/admin", "/admin/appearance"];
+  const pages = [...normalPages, `/patients/${patient.id}`, "/admin", "/admin/appearance", "/admin/accounts"];
   for (const page of pages) {
     const html = await fetchHtml(page);
     assertLayout(page, html);

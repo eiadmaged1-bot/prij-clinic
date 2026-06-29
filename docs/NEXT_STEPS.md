@@ -26,6 +26,16 @@ When infrastructure is ready:
 - Exercise rollback without dropping or resetting the database.
 - Configure reverse proxy/TLS before broader review or any internet exposure.
 
+## Then Account Security Deepening
+
+Goals:
+
+- Add MFA planning and implementation for Owner/Admin and doctor accounts.
+- Add production password reset/change flow and force-change-after-temporary-password behavior.
+- Add session/device inventory and server-side session revocation.
+- Review production role design separately from demo presets.
+- Keep `eyad` local/private demo only unless a separate production owner provisioning policy approves otherwise.
+
 ## Then Finance/Reports Deepening
 
 Goals:

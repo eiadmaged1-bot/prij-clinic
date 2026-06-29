@@ -1,11 +1,22 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
 import { AuditService } from "../audit/audit.service";
+import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import type { RequestWithUser } from "../auth/auth.types";
+import type { AuthUser, RequestWithUser } from "../auth/auth.types";
 import { UsersService } from "../users/users.service";
 import { PermissionsGuard } from "./permissions.guard";
 import { Permissions } from "./require-permissions.decorator";
-import { AdminOverrideDto, AppearanceSettingsDto, CreateServiceItemDto, UpdateServiceItemDto } from "./admin.dto";
+import {
+  AccountStatusChangeDto,
+  AdminOverrideDto,
+  AppearanceSettingsDto,
+  CreateAccountDto,
+  CreateServiceItemDto,
+  ResetAccountPasswordDto,
+  UpdateAccountDto,
+  UpdateAccountPermissionsDto,
+  UpdateServiceItemDto
+} from "./admin.dto";
 import { RbacService } from "./rbac.service";
 
 @Controller("admin")
@@ -39,6 +50,50 @@ export class AdminController {
     await this.auditAdminRead(request, "admin.permissions.read", "permission");
 
     return { permissions: await this.rbac.listPermissions() };
+  }
+
+  @Get("accounts")
+  @Permissions("user.read")
+  async accountsList(@Req() request: RequestWithUser) {
+    await this.auditAdminRead(request, "admin.accounts.read", "user");
+
+    return this.rbac.listAccounts();
+  }
+
+  @Post("accounts")
+  @Permissions("user.manage")
+  createAccount(@Body() dto: CreateAccountDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.createAccount(dto, user);
+  }
+
+  @Patch("accounts/:id")
+  @Permissions("user.manage")
+  updateAccount(@Param("id") id: string, @Body() dto: UpdateAccountDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.updateAccount(id, dto, user);
+  }
+
+  @Post("accounts/:id/reset-password")
+  @Permissions("user.manage")
+  resetAccountPassword(@Param("id") id: string, @Body() dto: ResetAccountPasswordDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.resetAccountPassword(id, dto, user);
+  }
+
+  @Post("accounts/:id/deactivate")
+  @Permissions("user.manage")
+  deactivateAccount(@Param("id") id: string, @Body() dto: AccountStatusChangeDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.deactivateAccount(id, dto, user);
+  }
+
+  @Post("accounts/:id/activate")
+  @Permissions("user.manage")
+  activateAccount(@Param("id") id: string, @Body() dto: AccountStatusChangeDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.activateAccount(id, dto, user);
+  }
+
+  @Patch("accounts/:id/permissions")
+  @Permissions("user.manage")
+  updateAccountPermissions(@Param("id") id: string, @Body() dto: UpdateAccountPermissionsDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.updateAccountPermissions(id, dto, user);
   }
 
   @Get("control-center")

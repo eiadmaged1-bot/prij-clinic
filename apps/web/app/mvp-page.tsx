@@ -3,6 +3,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 
@@ -88,7 +89,8 @@ const adminNavGroup: NavGroup = {
   title: "Admin",
   links: [
     ["/admin", "Control Center", "admin"],
-    ["/admin/appearance", "Appearance", "settings"]
+    ["/admin/appearance", "Appearance", "settings"],
+    ["/admin/accounts", "Accounts", "reception"]
   ]
 };
 
@@ -100,7 +102,7 @@ const portalSideItems: PortalSideItem[] = [
   { label: "Lab Orders", icon: "investigations", href: "/investigations" },
   { label: "Finance", icon: "billing", href: "/billing" },
   { label: "Inventory", icon: "files", badge: "Later" },
-  { label: "Staff", icon: "reception", badge: "Later" },
+  { label: "Accounts", icon: "reception", href: "/admin/accounts" },
   { label: "Settings", icon: "settings", href: "/admin" },
   { label: "Logs", icon: "timeline", href: "/admin" },
   { label: "Messaging", icon: "ai", badge: "Later" },
@@ -314,56 +316,29 @@ export function MvpPage({
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [hasToken, setHasToken] = useState(false);
-  const [canOpenAdmin, setCanOpenAdmin] = useState(false);
-  const [isDoctor, setIsDoctor] = useState(false);
   const [comfort, setComfort] = useState("comfortable");
   const { theme } = useTheme();
+  const { user, status, isAdmin, logout } = useSession();
+  const isDoctor = Boolean(user?.roles.includes("Doctor"));
+  const canOpenAdmin = isAdmin;
 
   useEffect(() => {
-    const token = sessionStorage.getItem("prijClinicToken");
     setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
-    setHasToken(Boolean(token));
-    if (!token) {
-      setCanOpenAdmin(false);
-      return;
-    }
-
-    fetch(`${apiUrl}/auth/me`, {
-      credentials: "include",
-      headers: { authorization: `Bearer ${token}` }
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data: { user?: { roles?: string[]; permissions?: string[] } } | null) => {
-        const roles = data?.user?.roles ?? [];
-        const permissions = data?.user?.permissions ?? [];
-        setIsDoctor(roles.includes("Doctor"));
-        setCanOpenAdmin(
-          roles.includes("Owner") ||
-            roles.includes("Admin") ||
-            roles.includes("Super Admin") ||
-            permissions.includes("clinic_settings.manage")
-        );
-      })
-      .catch(() => setCanOpenAdmin(false));
   }, []);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [router, status]);
 
   function setComfortMode(next: string) {
     setComfort(next);
     localStorage.setItem("prijComfortMode", next);
   }
 
-  async function logout() {
-    const token = sessionStorage.getItem("prijClinicToken");
-
-    await fetch(`${apiUrl}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: token ? { authorization: `Bearer ${token}` } : undefined
-    }).catch(() => undefined);
-
-    sessionStorage.removeItem("prijClinicToken");
-    setHasToken(false);
+  async function signOut() {
+    await logout();
     router.push("/login");
   }
 
@@ -380,6 +355,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="nav-group portal-side-nav" aria-label="Owner portal navigation">
             {portalSideItems
               .filter((item) => item.href !== "/admin" || canOpenAdmin)
+              .filter((item) => item.href !== "/admin/accounts" || canOpenAdmin)
               .map((item) =>
                 item.href ? (
                   <Link className={`nav-item ${isActive(pathname, item.href) ? "active" : ""}`} href={item.href} key={item.label}>
@@ -435,17 +411,36 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               ))}
             </div>
-            {hasToken ? (
-              <button className="button secondary compact" onClick={logout} type="button">
-                <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-                Logout
-              </button>
-            ) : (
-              <Link className="button secondary compact" href="/login">
-                <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
-                Login
-              </Link>
-            )}
+            <div className="user-menu" aria-label="Current user">
+              <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />
+              <div className="user-menu-copy">
+                <strong>{user?.displayName ?? "Not signed in"}</strong>
+                <span>{user ? `${user.loginId ?? user.email} - ${user.roles.join(", ") || "Staff"}` : "Login required"}</span>
+              </div>
+              {user ? (
+                <>
+                  <Link className="button secondary compact" href="/dashboard">
+                    <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
+                    Dashboard
+                  </Link>
+                  {canOpenAdmin ? (
+                    <Link className="button secondary compact" href="/admin/accounts">
+                      <ThreeDMedicalIcon name="reception" size="sm" tone="violet" />
+                      Accounts
+                    </Link>
+                  ) : null}
+                  <button className="button secondary compact" onClick={signOut} type="button">
+                    <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link className="button secondary compact" href="/login">
+                  <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+                  Login
+                </Link>
+              )}
+            </div>
             <Link className="button secondary compact" href="/">
               <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
               Home

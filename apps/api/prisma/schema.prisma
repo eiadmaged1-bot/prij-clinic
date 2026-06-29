@@ -42,6 +42,9 @@ model User {
   status        String
   passwordHash  String?
   branchId      String?    @db.Uuid
+  permissionPreset String  @default("advanced")
+  protectedAccount Boolean @default(false)
+  createdByUserId String?  @db.Uuid
   lastLoginAt   DateTime?  @db.Timestamptz(3)
   failedLoginCount Int     @default(0)
   lockedUntil   DateTime?  @db.Timestamptz(3)
@@ -49,8 +52,12 @@ model User {
   updatedAt     DateTime   @updatedAt @db.Timestamptz(3)
 
   branch        Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdByUser User?      @relation("UsersCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdUsers  User[]     @relation("UsersCreatedBy")
   userRoles     UserRole[] @relation("UserRolesUser")
   assignedRoles UserRole[] @relation("UserRolesCreatedBy")
+  permissionOverrides UserPermissionOverride[] @relation("UserPermissionOverridesUser")
+  grantedPermissionOverrides UserPermissionOverride[] @relation("UserPermissionOverridesGrantedBy")
   roleGrants    RolePermission[] @relation("RolePermissionsCreatedBy")
   auditLogs     AuditLog[] @relation("AuditLogsActor")
   createdPatients Patient[] @relation("PatientsCreatedBy")
@@ -78,6 +85,8 @@ model User {
   updatedSystemSettings SystemSetting[] @relation("SystemSettingsUpdatedBy")
 
   @@index([branchId])
+  @@index([createdByUserId])
+  @@index([protectedAccount])
   @@index([status])
 }
 
@@ -808,8 +817,27 @@ model Permission {
   updatedAt       DateTime         @updatedAt @db.Timestamptz(3)
 
   rolePermissions RolePermission[]
+  userPermissionOverrides UserPermissionOverride[]
 
   @@index([riskLevel])
+}
+
+model UserPermissionOverride {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  permissionId    String   @db.Uuid
+  effect          String
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  grantedByUserId String?  @db.Uuid
+
+  user            User       @relation("UserPermissionOverridesUser", fields: [userId], references: [id], onDelete: Cascade)
+  permission      Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  grantedByUser   User?      @relation("UserPermissionOverridesGrantedBy", fields: [grantedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, permissionId])
+  @@index([permissionId])
+  @@index([grantedByUserId])
 }
 
 model UserRole {

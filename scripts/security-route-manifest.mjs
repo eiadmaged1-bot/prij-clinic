@@ -13,6 +13,7 @@ const routeDefinitions = [
   { method: "GET", path: "/auth/me", category: "auth", requiredPermission: "authenticated", allowedAs: "owner", denyAs: null, notes: "Broad authenticated route." },
   { method: "POST", path: "/auth/logout", category: "auth", requiredPermission: "authenticated", allowedAs: "owner", denyAs: null, notes: "Broad authenticated route; logout is audited." },
   { method: "GET", path: "/admin/users", category: "admin", requiredPermission: "user.read", allowedAs: "owner", denyAs: "accountant" },
+  { method: "GET", path: "/admin/accounts", category: "admin", requiredPermission: "user.read", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/admin/roles", category: "admin", requiredPermission: "role.read", allowedAs: "owner", denyAs: "accountant" },
   { method: "GET", path: "/admin/permissions", category: "admin", requiredPermission: "permission.read", allowedAs: "owner", denyAs: "accountant" },
   { method: "GET", path: "/admin/control-center", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception" },

@@ -153,10 +153,11 @@ Login -> Doctor Mode -> Open Patient -> Start Visit -> Complaint -> History -> E
 Admin demo flow:
 
 ```text
-Login as eyad -> Admin -> Service Catalog and Prices -> edit price or deactivate service -> Appearance -> choose theme -> review Audit Log Viewer
+Login as eyad -> Admin -> Accounts or Service Catalog and Prices -> create demo staff account or edit price -> Appearance -> choose theme -> review Audit Log Viewer
 ```
 
 Safe admin overrides are reason-required and audited. The app supports void/cancel/archive style corrections only; audit logs and signed clinical records cannot be deleted from the normal UI.
+The `eyad` account is the protected local demo System Owner. Normal UI/API flows cannot create a second System Owner, grant reserved System Owner permissions to another account, deactivate `eyad`, or demote `eyad`.
 
 Theme and appearance controls:
 
@@ -194,6 +195,13 @@ POST /auth/login
 GET  /auth/me
 POST /auth/logout
 GET  /admin/users
+GET  /admin/accounts
+POST /admin/accounts
+PATCH /admin/accounts/:id
+POST /admin/accounts/:id/reset-password
+POST /admin/accounts/:id/deactivate
+POST /admin/accounts/:id/activate
+PATCH /admin/accounts/:id/permissions
 GET  /admin/roles
 GET  /admin/permissions
 GET  /audit
@@ -252,6 +260,7 @@ npm run test:doctor:ux
 npm run test:e2e:v01
 npm run test:clinical:persistence
 npm run test:visual:qa
+npm run test:accounts:rbac
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.

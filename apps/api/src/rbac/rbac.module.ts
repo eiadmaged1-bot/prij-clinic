@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
+import { AuthModule } from "../auth/auth.module";
 import { AppJwtService } from "../auth/jwt.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PrismaModule } from "../prisma/prisma.module";
@@ -10,7 +11,7 @@ import { RbacService } from "./rbac.service";
 import { RolesGuard } from "./roles.guard";
 
 @Module({
-  imports: [AuditModule, PrismaModule, UsersModule],
+  imports: [AuditModule, AuthModule, PrismaModule, UsersModule],
   controllers: [AdminController],
   providers: [AppJwtService, JwtAuthGuard, PermissionsGuard, RbacService, RolesGuard],
   exports: [PermissionsGuard, RbacService, RolesGuard]

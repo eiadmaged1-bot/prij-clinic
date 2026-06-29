@@ -37,6 +37,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Branch, clinic, patient, and doctor scoping cover representative read paths and referenced-record write paths for implemented MVP modules, but production-grade policy for every future state transition is still incomplete.
 - Sensitive read audit coverage exists for core sensitive MVP reads, but export/download and future timeline reads still need policy-specific coverage.
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
+- Account management now supports local/demo account creation, presets, toggles, and protected `eyad` metadata, but production-grade onboarding, invitation, force password change, MFA, and session inventory remain future work.
 - No automated production backup job is implemented yet.
 - Local backup/restore helper scripts and a local staging backup helper exist, but production encrypted backup storage, off-site backup, and formal restore-test automation remain future work.
 - No secure report file/object storage is implemented. Current report records store metadata/reference text only, and the file storage security plan remains documentation.
@@ -71,6 +72,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Admin Control
 
 - The `eyad` / `eyad` admin credential is local demo only and must not exist in staging or production.
+- `eyad` is protected as the only local demo System Owner. Normal UI/API flows block deactivation, demotion, and reserved permission removal, but production owner provisioning still needs a separate policy.
 - Admin override actions are V0.1 repair tools only. They require a reason and audit event, but do not replace a full production correction/retention policy.
 - Audit logs cannot be deleted from the normal app UI, but database-level tamper resistance and retention enforcement remain future work.
 - Signed clinical record hard-delete routes are not exposed in the normal UI/API; production-grade correction/versioning still needs more policy work.

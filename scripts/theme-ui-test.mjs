@@ -25,13 +25,20 @@ async function main() {
   }
   record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
+  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
+  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Control Center", "Appearance", "Accounts"]) {
+    if (!shellSource.includes(label)) throw new Error(`Admin navigation label missing from shell source: ${label}`);
+  }
+  record.pass("owner admin navigation includes control center appearance and accounts");
+
   const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
   const admin = adminLogin.token;
   if (!admin) throw new Error("eyad login did not return token.");
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");
-  record.pass("non-admin cannot access appearance settings API");
+  assertStatus(await apiStatus("GET", "/admin/accounts", reception), 403, "non-admin accounts settings");
+  record.pass("non-admin cannot access appearance or accounts APIs");
 
   const appearance = await apiJson("GET", "/admin/settings/appearance", admin);
   if (!appearance.defaultTheme) throw new Error("Appearance settings did not return a default theme.");
@@ -67,7 +74,8 @@ async function main() {
     "/consents",
     "/ai-drafts",
     "/admin",
-    "/admin/appearance"
+    "/admin/appearance",
+    "/admin/accounts"
   ];
   for (const page of pages) {
     const response = await fetch(`${webUrl}${page}`);

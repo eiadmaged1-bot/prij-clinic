@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsBoolean, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateServiceItemDto {
   @IsString()
@@ -69,4 +69,96 @@ export class AppearanceSettingsDto {
 
   @IsBoolean()
   allowUserThemeOverride!: boolean;
+}
+
+export class CreateAccountDto {
+  @IsString()
+  @MaxLength(80)
+  loginId!: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(160)
+  email?: string;
+
+  @IsString()
+  @MaxLength(140)
+  displayName!: string;
+
+  @IsString()
+  @IsIn(["Owner", "Admin", "Doctor", "Nurse", "Receptionist", "Accountant"])
+  role!: string;
+
+  @IsString()
+  @IsIn(["minimum", "standard", "advanced", "custom"])
+  permissionPreset!: string;
+
+  @IsString()
+  @MinLength(8)
+  @MaxLength(200)
+  temporaryPassword!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
+
+export class UpdateAccountDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(140)
+  displayName?: string;
+
+  @IsOptional()
+  @IsEmail()
+  @MaxLength(160)
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(["Owner", "Admin", "Doctor", "Nurse", "Receptionist", "Accountant"])
+  role?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(["minimum", "standard", "advanced", "custom"])
+  permissionPreset?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
+
+export class ResetAccountPasswordDto {
+  @IsString()
+  @MinLength(8)
+  @MaxLength(200)
+  temporaryPassword!: string;
+
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class AccountStatusChangeDto {
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class UpdateAccountPermissionsDto {
+  @IsString()
+  @IsIn(["minimum", "standard", "advanced", "custom"])
+  permissionPreset!: string;
+
+  @IsArray()
+  @ArrayMaxSize(120)
+  @IsString({ each: true })
+  allowedPermissions!: string[];
+
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
 }

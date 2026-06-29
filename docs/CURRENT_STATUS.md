@@ -52,6 +52,7 @@ Frontend/reporting UX preserved from Codex B:
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard, consents, admin, and AI draft placeholders.
 - Admin Control Center: local admin login `eyad` / `eyad`, users/roles overview, service catalog and price editing, system safety status, audit viewer, and reason-required override endpoints.
 - Theme system: Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations appearances.
+- Accounts/session hardening: `/auth/me` driven app identity, persistent user menu, reliable logout, login already-signed-in state, `/admin/accounts`, permission presets/toggles, and protected `eyad` System Owner metadata.
 - Doctor-friendly UX: `/doctor` daily workspace, guided visit steps, simplified patient file, 3D medical icons, comfortable/large/compact display preferences, and mobile/tablet responsive polish.
 - Patient-context workflow actions under `/patients/:id`.
 - Patient timeline aggregation with OB/GYN event coverage after this integration.
@@ -66,6 +67,7 @@ Frontend/reporting UX preserved from Codex B:
 - OB/GYN UX labels measurements as recording-only and requires clinician interpretation.
 - Payment records are demo metadata only and do not use a real payment gateway.
 - Report/file workflows remain metadata/placeholder only; no PHI upload is enabled.
+- The protected `eyad` account is the only seeded System Owner. Reserved System Owner permissions cannot be granted to other accounts through normal UI/API flows.
 
 ## Local Verification
 

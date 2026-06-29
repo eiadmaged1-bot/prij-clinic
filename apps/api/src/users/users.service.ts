@@ -16,8 +16,15 @@ const userProfileInclude = {
         }
       }
     }
+  },
+  permissionOverrides: {
+    include: {
+      permission: true
+    }
   }
 } as const;
+
+const reservedSystemOwnerPermissions = new Set(["system_owner.manage", "developer_owner.manage"]);
 
 @Injectable()
 export class UsersService {
@@ -62,24 +69,87 @@ export class UsersService {
     }
 
     const roleNames = new Set<string>();
-    const permissionKeys = new Set<string>();
+    const rolePermissionKeys = new Set<string>();
 
     for (const userRole of user.userRoles) {
       roleNames.add(userRole.role.name);
 
       for (const rolePermission of userRole.role.rolePermissions) {
-        permissionKeys.add(rolePermission.permission.key);
+        rolePermissionKeys.add(rolePermission.permission.key);
       }
     }
+
+    const permissionKeys = applyPermissionPreset(rolePermissionKeys, user.permissionPreset);
+
+    for (const override of user.permissionOverrides) {
+      const key = override.permission.key;
+      const isReserved = reservedSystemOwnerPermissions.has(key);
+      const canUseReserved = user.loginId === "eyad" && user.protectedAccount;
+
+      if (isReserved && !canUseReserved) {
+        continue;
+      }
+
+      if (override.effect === "allow") {
+        permissionKeys.add(key);
+      }
+
+      if (override.effect === "deny") {
+        permissionKeys.delete(key);
+      }
+    }
+
+    const permissions = [...permissionKeys].sort();
 
     return {
       id: user.id,
       email: user.email,
+      loginId: user.loginId,
       displayName: user.displayName,
       status: user.status,
       branchId: user.branchId,
+      permissionPreset: user.permissionPreset,
+      protectedAccount: user.protectedAccount,
+      isSystemOwner:
+        user.loginId === "eyad" &&
+        user.protectedAccount &&
+        reservedSystemOwnerPermissions.has("system_owner.manage") &&
+        permissions.includes("system_owner.manage"),
       roles: [...roleNames].sort(),
-      permissions: [...permissionKeys].sort()
+      permissions
     };
   }
+}
+
+function applyPermissionPreset(rolePermissionKeys: Set<string>, preset: string) {
+  const permissions = new Set<string>();
+
+  for (const key of rolePermissionKeys) {
+    if (reservedSystemOwnerPermissions.has(key)) {
+      continue;
+    }
+
+    if (preset === "minimum" && !isMinimumPermission(key)) {
+      continue;
+    }
+
+    if (preset === "standard" && !isStandardPermission(key)) {
+      continue;
+    }
+
+    permissions.add(key);
+  }
+
+  return permissions;
+}
+
+function isMinimumPermission(key: string) {
+  return key.endsWith(".read") || key.endsWith("s.read") || key === "queue.read" || key === "dashboard.read";
+}
+
+function isStandardPermission(key: string) {
+  if (reservedSystemOwnerPermissions.has(key)) return false;
+  if (key.includes("delete") || key.includes("void") || key.includes("override") || key.includes("export")) return false;
+  if (key === "role.manage" || key === "permission.read" || key === "audit.export" || key === "backup.manage") return false;
+  return true;
 }

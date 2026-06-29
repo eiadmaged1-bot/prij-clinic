@@ -19,6 +19,13 @@ This matrix documents the implemented MVP routes after the `RBAC + Branch/Patien
 | `GET` | `/auth/me` | JWT | Authenticated user | All staff | Returns safe user, roles, permissions. |
 | `POST` | `/auth/logout` | JWT | Authenticated user | All staff | Audits logout. |
 | `GET` | `/admin/users` | JWT | `user.read` | Owner, Admin | Audited admin read. |
+| `GET` | `/admin/accounts` | JWT | `user.read` | Owner, Admin | Audited account read. |
+| `POST` | `/admin/accounts` | JWT | `user.manage` | Owner, Admin | Account creation; password hashed; audited. |
+| `PATCH` | `/admin/accounts/:id` | JWT | `user.manage` | Owner, Admin | Account update; protected `eyad` blocked. |
+| `POST` | `/admin/accounts/:id/reset-password` | JWT | `user.manage` | Owner, Admin | Temporary password set; reason required; audited. |
+| `POST` | `/admin/accounts/:id/deactivate` | JWT | `user.manage` | Owner, Admin | Reason required; protected `eyad` blocked; audited. |
+| `POST` | `/admin/accounts/:id/activate` | JWT | `user.manage` | Owner, Admin | Reason required; audited. |
+| `PATCH` | `/admin/accounts/:id/permissions` | JWT | `user.manage` | Owner, Admin | Presets/toggles inside role boundaries; reserved System Owner permissions blocked for non-`eyad`; audited. |
 | `GET` | `/admin/roles` | JWT | `role.read` | Owner, Admin | Audited admin read. |
 | `GET` | `/admin/permissions` | JWT | `permission.read` | Owner, Admin | Audited admin read. |
 | `GET` | `/audit` | JWT | `audit.read` | Owner, Admin, Auditor later | Audits audit-log read. |

@@ -18,7 +18,11 @@ This checklist is required before staging and must be fully accepted before any 
 
 - [ ] Remove or disable demo credentials before production.
 - [ ] Review all owner/admin accounts before staging and before production.
+- [ ] Confirm `/auth/me` shows the correct current user and invalid sessions are cleared.
+- [ ] Confirm logout clears browser token state and API cookie state.
 - [ ] Confirm non-admin users cannot open admin tools or appearance settings.
+- [ ] Confirm non-admin users cannot open `/admin/accounts` directly.
+- [ ] Confirm `eyad` is the only protected local demo System Owner and cannot be demoted, deactivated, or copied.
 - [ ] Review RBAC role assignments for Owner, Admin, Doctor, Nurse, Receptionist, Accountant, and Auditor roles.
 - [ ] Confirm server-side authorization remains the source of truth; UI hiding is not treated as security.
 - [ ] MFA/2FA is planned before real production use.

@@ -338,6 +338,14 @@ select:focus {
   padding: clamp(1.5rem, 4vw, 2.25rem);
 }
 
+.login-card-single {
+  width: min(100%, 38rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 18rem minmax(0, 1fr);
@@ -455,6 +463,37 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
+}
+
+.user-menu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: min(100%, 18rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--foreground);
+  padding: 0.45rem;
+}
+
+.user-menu-copy {
+  display: grid;
+  min-width: 9rem;
+  max-width: 18rem;
+  line-height: 1.2;
+}
+
+.user-menu-copy strong,
+.user-menu-copy span {
+  overflow-wrap: anywhere;
+}
+
+.user-menu-copy span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
 }
 
 .page-header {
@@ -822,6 +861,108 @@ code {
 
 .data-row:hover {
   border-color: var(--border-strong);
+}
+
+.accounts-layout {
+  align-items: start;
+}
+
+.account-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.9rem;
+  text-align: left;
+}
+
+.account-row:hover,
+.account-row.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgb(15 143 140 / 10%);
+}
+
+.account-row span:first-child {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.account-row small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.preset-grid,
+.permission-groups {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.preset-grid {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.preset-card {
+  display: grid;
+  gap: 0.35rem;
+  min-height: 6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.9rem;
+  text-align: left;
+}
+
+.preset-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.preset-card.locked,
+.preset-card:disabled {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.permission-groups {
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.permission-group {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  padding: 0.9rem;
+}
+
+.permission-toggle {
+  align-items: flex-start;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  padding: 0.65rem;
+}
+
+.permission-toggle span {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.permission-toggle small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .data-row-header {

@@ -1,14 +1,17 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { useSession } from "../session";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const demoEmail = "eyad";
 const demoPassword = "eyad";
 
 export default function LoginPage() {
   const router = useRouter();
+  const session = useSession();
   const [email, setEmail] = useState(demoEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,28 +23,10 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${apiUrl}/auth/login`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (!response.ok) {
-        throw new Error("Invalid email or password.");
-      }
-
-      const data = (await response.json()) as { token?: string };
-
-      if (data.token) {
-        sessionStorage.setItem("prijClinicToken", data.token);
-      }
-
+      await session.login({ identifier: email, password });
       router.push("/dashboard");
     } catch {
-      setError("Invalid email or password.");
+      setError("Invalid login ID or password.");
     } finally {
       setIsSubmitting(false);
     }
@@ -51,6 +36,59 @@ export default function LoginPage() {
     setEmail(demoEmail);
     setPassword(demoPassword);
     setError("");
+  }
+
+  async function switchAccount() {
+    await session.logout();
+    setPassword("");
+    setError("");
+  }
+
+  if (session.status === "loading") {
+    return (
+      <main className="page centered">
+        <section className="login-panel login-card-single">
+          <div>
+            <p className="eyebrow">Staff access</p>
+            <h1>Sign in</h1>
+            <p className="muted">Checking whether you already have an active session. Use Admin Demo Login if no active session is found.</p>
+          </div>
+          <div className="skeleton" aria-label="Checking session" />
+        </section>
+      </main>
+    );
+  }
+
+  if (session.status === "authenticated" && session.user) {
+    return (
+      <main className="page centered">
+        <section className="login-panel login-card-single">
+          <div>
+            <p className="eyebrow">Current session</p>
+            <h1>Already logged in as {session.user.displayName}</h1>
+            <p className="muted">
+              {session.user.loginId ?? session.user.email} - {session.user.roles.join(", ") || "Staff"}
+            </p>
+          </div>
+          <div className="form-actions">
+            <Link className="button" href="/dashboard">
+              <ThreeDMedicalIcon name="dashboard" size="sm" />
+              Go to Dashboard
+            </Link>
+            {session.isAdmin ? (
+              <Link className="button secondary" href="/admin/accounts">
+                <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
+                Go to Accounts
+              </Link>
+            ) : null}
+            <button className="button secondary" onClick={switchAccount} type="button">
+              <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+              Log out and switch account
+            </button>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -75,6 +113,8 @@ export default function LoginPage() {
             <h2>Sign in</h2>
             <p className="muted">Use local demo staff credentials only. External AI and payment services are not enabled.</p>
           </div>
+
+          {session.message ? <p className="notice">{session.message}</p> : null}
 
           <div className="credential-card" aria-label="Demo owner credentials">
             <div>
