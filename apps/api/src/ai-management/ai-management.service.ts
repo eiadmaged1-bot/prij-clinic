@@ -5,6 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { isOwnerOrAdmin } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { detectUnsafeClinicalPhrases, validateProtocolContentForStatus } from "../protocol-atlas/protocol-content.schema";
 import { ProtocolAtlasService } from "../protocol-atlas/protocol-atlas.service";
 import { CreateManagementSnapshotDto } from "./dto/create-management-snapshot.dto";
 import { ReviewManagementSnapshotDto } from "./dto/review-management-snapshot.dto";
@@ -123,19 +124,22 @@ function buildOutput(protocol: Awaited<ReturnType<AiManagementService["findByCod
       version: protocol?.sourceVersion ?? null,
       url: protocol?.sourceUrl ?? null
     },
-    limitations: ["No automatic diagnosis.", "No automatic prescribing.", "No final plan without doctor approval.", "No external AI call."],
+    limitations: ["If no verified protocol is available, this tool cannot provide management options.", "No automatic diagnosis.", "No automatic prescribing.", "No final plan without doctor approval.", "No external AI call."],
     doctorDecisionRequired: true
   };
-  if (!protocol) return { ...base, keyContext: [...base.keyContext, "No verified protocol matched."] };
-  if (protocol.implementationStatus === "catalog_only") return { ...base, keyContext: [...base.keyContext, "Protocol is listed in the Women's Health Atlas, but management snapshot is not yet verified."], safetyChecks: ["Add a guideline source and verify protocol before using AI management options."] };
-  if (protocol.implementationStatus === "draft") return { ...base, keyContext: [...base.keyContext, "Draft protocol exists but is not approved for management snapshot."], safetyChecks: ["Needs verification before management options are shown."] };
-  if (protocol.implementationStatus !== "verified") return base;
-  const content = protocol.contentJson as { options?: string[]; safetyChecks?: string[] };
+  const noVerifiedMessage = "If no verified protocol is available, this tool cannot provide management options.";
+  if (!protocol) return { ...base, keyContext: [...base.keyContext, "No verified protocol matched.", noVerifiedMessage] };
+  if (protocol.implementationStatus === "catalog_only") return { ...base, keyContext: [...base.keyContext, "Protocol is listed in the Women's Health Atlas, but management snapshot is not yet verified.", noVerifiedMessage], safetyChecks: ["Add a guideline source and verify protocol before using AI management options."] };
+  if (protocol.implementationStatus === "draft") return { ...base, keyContext: [...base.keyContext, "Draft protocol exists but is not approved for management snapshot.", noVerifiedMessage], safetyChecks: ["Needs verification before management options are shown."] };
+  if (protocol.implementationStatus !== "verified") return { ...base, keyContext: [...base.keyContext, noVerifiedMessage] };
+  const content = validateProtocolContentForStatus("verified", protocol.contentJson);
+  const options = content.options.filter((item) => detectUnsafeClinicalPhrases(item).length === 0).slice(0, 5);
+  const safetyChecks = content.safetyChecks.filter((item) => detectUnsafeClinicalPhrases(item).length === 0).slice(0, 8);
   return {
     ...base,
     title: protocol.title,
-    guidelineBasedOptions: (content.options ?? []).slice(0, 5),
-    safetyChecks: (content.safetyChecks ?? []).slice(0, 6)
+    guidelineBasedOptions: options,
+    safetyChecks: safetyChecks.length ? safetyChecks : ["Doctor review required"]
   };
 }
 

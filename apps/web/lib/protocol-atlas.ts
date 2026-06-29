@@ -22,7 +22,7 @@ export function listProtocolGroups() {
   return request<{ groups: Array<{ name: string; count: number }> }>("/protocol-atlas/groups");
 }
 
-export function searchProtocols(input: { query?: string; group?: string }) {
+export function searchProtocols(input: { query?: string; group?: string; status?: string; riskLevel?: string; verifiedOnly?: boolean }) {
   return request<{ protocols: ProtocolSummary[] }>("/protocol-atlas/search", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -38,6 +38,34 @@ export function updateProtocolStatus(id: string, input: { implementationStatus: 
   return request<ClinicalProtocol>(`/protocol-atlas/${id}/status`, { method: "PATCH", body: JSON.stringify(input) });
 }
 
+export function getProtocolEditor(id: string) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/editor`);
+}
+
+export function updateProtocolSource(id: string, input: { reason: string; sourceName: string; sourceYear?: number; sourceVersion?: string; sourceUrl?: string }) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/source`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function updateProtocolAliases(id: string, input: { reason: string; aliases: string[] }) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/aliases`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function updateStructuredProtocolContent(id: string, input: { reason: string; content: StructuredProtocolContent }) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/structured-content`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
+export function requestProtocolVerification(id: string, reason: string) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/request-verification`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export function verifyProtocol(id: string, reason: string) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/verify`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+export function retireProtocol(id: string, reason: string) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/retire`, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
 export type ProtocolSummary = {
   id: string;
   code: string;
@@ -50,9 +78,25 @@ export type ProtocolSummary = {
   sourceName: string;
   sourceYear?: number | null;
   sourceVersion?: string | null;
+  updatedAt?: string;
 };
 
 export type ClinicalProtocol = ProtocolSummary & {
   contentJson: unknown;
+  sourceUrl?: string | null;
+  structuredContent?: StructuredProtocolContent;
   safetyJson?: unknown;
+};
+
+export type StructuredProtocolContent = {
+  summary: string;
+  verifiedManagementAvailable: boolean;
+  goals: string[];
+  options: string[];
+  safetyChecks: string[];
+  contraindicationChecks: string[];
+  redFlags: string[];
+  followUpConsiderations: string[];
+  referralConsiderations: string[];
+  limitations: string[];
 };

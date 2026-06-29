@@ -2106,6 +2106,29 @@ button.obgyn-template-card {
   gap: 0.75rem;
 }
 
+.filter-row,
+.status-count-row,
+.protocol-editor-layout .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.filter-row label {
+  min-width: 12rem;
+}
+
+.protocol-editor-layout .stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.protocol-editor-layout h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .protocol-group-grid,
 .protocol-card-grid {
   display: grid;

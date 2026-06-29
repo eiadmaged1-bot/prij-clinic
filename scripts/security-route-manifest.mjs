@@ -82,7 +82,25 @@ const routeDefinitions = [
   { method: "POST", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.request", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiDraft", notes: "Disabled/mock-only placeholder." },
   { method: "GET", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.read", allowedAs: "owner", denyAs: "nurse" },
   { method: "GET", path: "/ai-drafts/:aiDraftId", category: "ai-drafts", requiredPermission: "ai_draft.read", allowedAs: "owner", denyAs: "nurse" },
-  { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", requiredPermission: "ai_draft.review", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiReview", notes: "Review updates only AI draft artifact." }
+  { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", requiredPermission: "ai_draft.review", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiReview", notes: "Review updates only AI draft artifact." },
+  { method: "GET", path: "/protocol-atlas", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "GET", path: "/protocol-atlas/groups", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/:editorProtocolId", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/by-code/ENDOMETRIOSIS_MANAGEMENT_V1", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "POST", path: "/protocol-atlas/search", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "protocolSearch" },
+  { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/status", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolStatus", notes: "Owner/admin-only protocol status change; reason required." },
+  { method: "GET", path: "/protocol-atlas/:editorProtocolId/editor", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/source", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolSource" },
+  { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/aliases", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolAliases" },
+  { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/structured-content", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolContent" },
+  { method: "POST", path: "/protocol-atlas/:requestProtocolId/request-verification", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "reason", notes: "Moves catalog-only to draft only with reason." },
+  { method: "POST", path: "/protocol-atlas/:verifyProtocolId/verify", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "reason", notes: "Verifies only prepared draft protocol with source/content/reason." },
+  { method: "POST", path: "/protocol-atlas/:retireProtocolId/retire", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "reason", notes: "Retires protocol only with reason." },
+  { method: "POST", path: "/ai-management/snapshots", category: "ai-management", requiredPermission: "ai_management.request", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementSnapshot", notes: "Deterministic local snapshot; no external AI." },
+  { method: "GET", path: "/ai-management/snapshots", category: "ai-management", requiredPermission: "ai_management.read", allowedAs: "doctor", denyAs: "reception" },
+  { method: "GET", path: "/ai-management/snapshots/:snapshotId", category: "ai-management", requiredPermission: "ai_management.read", allowedAs: "doctor", denyAs: "reception" },
+  { method: "POST", path: "/ai-management/snapshots/:snapshotId/review", category: "ai-management", requiredPermission: "ai_management.review", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementReview", notes: "Doctor review only; does not modify signed encounter." },
+  { method: "POST", path: "/ai-management/snapshots/:approvedSnapshotId/save-memory", category: "ai-management", requiredPermission: "ai_management.memory_save", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementMemory", notes: "Memory save only after approved snapshot." }
 ];
 
 export const routeManifest = routeDefinitions.map((route) => ({
@@ -183,7 +201,13 @@ export function substitutePath(path, ids) {
     .replace(":invoiceId", ids.invoiceId)
     .replace(":refundPaymentId", ids.refundPaymentId)
     .replace(":paymentId", ids.paymentId)
-    .replace(":aiDraftId", ids.aiDraftId);
+    .replace(":aiDraftId", ids.aiDraftId)
+    .replace(":editorProtocolId", ids.editorProtocolId)
+    .replace(":requestProtocolId", ids.requestProtocolId)
+    .replace(":verifyProtocolId", ids.verifyProtocolId)
+    .replace(":retireProtocolId", ids.retireProtocolId)
+    .replace(":approvedSnapshotId", ids.approvedSnapshotId)
+    .replace(":snapshotId", ids.snapshotId);
 }
 
 export function bodyFor(kind, ids) {
@@ -273,6 +297,30 @@ export function bodyFor(kind, ids) {
       inputSourceSummary: "Demo AI route test only. No external AI request."
     },
     aiReview: { status: "rejected", reviewNote: "Demo AI review rejection only." }
+    ,
+    protocolSearch: { query: "endometriosis", verifiedOnly: true },
+    protocolStatus: { implementationStatus: "draft", reason: "Demo protocol status authorization check only." },
+    protocolSource: { sourceName: "Demo guideline source for route authorization", sourceYear: 2026, sourceVersion: "demo-route-v1", reason: "Demo protocol source authorization check only." },
+    protocolAliases: { aliases: ["Demo route protocol", "demo route protocol alias"], reason: "Demo protocol alias authorization check only." },
+    protocolContent: {
+      reason: "Demo structured protocol content authorization check only.",
+      content: {
+        summary: "Demo structured protocol summary for authorization testing only.",
+        verifiedManagementAvailable: false,
+        goals: ["Demo doctor-reviewed goal"],
+        options: ["Demo option for draft storage only"],
+        safetyChecks: ["Doctor review required"],
+        contraindicationChecks: ["Demo contraindication check"],
+        redFlags: ["Demo red flag check"],
+        followUpConsiderations: ["Demo follow-up consideration"],
+        referralConsiderations: ["Demo referral consideration"],
+        limitations: ["No automatic diagnosis.", "No automatic prescribing."]
+      }
+    },
+    reason: { reason: "Demo protocol status authorization check only." },
+    managementSnapshot: { patientId: ids.patientId, diagnosisText: "endometriosis", protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1", clinicalGoal: "pain control" },
+    managementReview: { decision: "approved" },
+    managementMemory: { memoryType: "protocol_used", title: "Demo protocol memory", valueJson: { protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" } }
   };
   return bodies[kind];
 }
@@ -309,6 +357,24 @@ export async function createRouteFixtures(ownerToken) {
   ids.refundPaymentId = refundPayment.id;
   const aiDraft = await apiJson("POST", "/ai-drafts", ownerToken, bodyFor("aiDraft", ids));
   ids.aiDraftId = aiDraft.id;
+  const protocolSearch = await apiJson("POST", "/protocol-atlas/search", ownerToken, { status: "catalog_only" });
+  const catalogProtocols = protocolSearch.protocols ?? [];
+  if (catalogProtocols.length < 4) throw new Error("Expected catalog protocol fixtures for route authorization.");
+  ids.editorProtocolId = catalogProtocols[0].id;
+  ids.requestProtocolId = catalogProtocols[1].id;
+  ids.verifyProtocolId = catalogProtocols[2].id;
+  ids.retireProtocolId = catalogProtocols[3].id;
+  await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/source`, ownerToken, bodyFor("protocolSource", ids));
+  await apiJson("POST", `/protocol-atlas/${ids.verifyProtocolId}/request-verification`, ownerToken, bodyFor("reason", ids));
+  await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/structured-content`, ownerToken, {
+    ...bodyFor("protocolContent", ids),
+    content: { ...bodyFor("protocolContent", ids).content, verifiedManagementAvailable: false }
+  });
+  const snapshot = await apiJson("POST", "/ai-management/snapshots", ownerToken, bodyFor("managementSnapshot", ids));
+  ids.snapshotId = snapshot.id;
+  const approvedSnapshot = await apiJson("POST", "/ai-management/snapshots", ownerToken, bodyFor("managementSnapshot", ids));
+  ids.approvedSnapshotId = approvedSnapshot.id;
+  await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
   return ids;
 }
 
@@ -344,9 +410,11 @@ function scopeExpectationFor(category) {
   if (["appointments", "encounters", "prescriptions", "investigations"].includes(category)) {
     return "Branch-scoped where modeled; doctor-owned reads are doctor-scoped where doctorId exists.";
   }
-  if (["patients", "consents", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard"].includes(category)) {
+  if (["patients", "consents", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard", "ai-management"].includes(category)) {
     return "Branch-scoped for non-owner/non-admin users where branchId or patient branch is available.";
   }
+  if (category === "protocol-atlas") return "Clinical protocol read route; protected by protocol_atlas.read and clinical-role RBAC.";
+  if (category === "protocol-atlas-admin") return "Owner/admin-only protocol editor route; all mutations require audit reasons.";
   return "Scope expectation documented in controller/service tests.";
 }
 

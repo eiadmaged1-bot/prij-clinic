@@ -10,7 +10,18 @@ Women's Health Protocol Atlas sprint added:
 - protocol atlas UI
 - patient file AI Snapshot tab
 - admin protocol verification page
+- structured protocol editor for Owner/Admin
+- protocol source, alias, structured content, request-verification, verify, and retire endpoints
+- protocol content validator and unsafe clinical phrase detection
+- route manifest coverage for protocol atlas and AI management routes
 
 Verified snapshot generation is limited to endometriosis, PCOS ovulation induction, and unexplained infertility.
 
 All other atlas entries are catalog-only and do not generate management options.
+
+Protocol editor hardening is active:
+
+- raw JSON editing is blocked in the UI
+- every source/content/status change requires an audit reason
+- catalog-only, draft, retired, and unknown protocols generate no management advice
+- snapshot output remains deterministic and local with no external AI calls

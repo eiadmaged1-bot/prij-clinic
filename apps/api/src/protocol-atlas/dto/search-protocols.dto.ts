@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsBoolean, IsOptional, IsString, MaxLength } from "class-validator";
 
 export class SearchProtocolsDto {
   @IsOptional()
@@ -10,4 +10,18 @@ export class SearchProtocolsDto {
   @IsString()
   @MaxLength(120)
   group?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  riskLevel?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  verifiedOnly?: boolean;
 }

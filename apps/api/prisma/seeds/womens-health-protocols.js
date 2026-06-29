@@ -13,6 +13,8 @@ const verifiedProtocols = [
     sourceYear: 2022,
     sourceVersion: "v1",
     contentJson: {
+      summary: "Structured management snapshot for doctor-reviewed endometriosis care planning.",
+      verifiedManagementAvailable: true,
       goals: ["pain control", "fertility priority", "both pain and fertility"],
       options: [
         "Analgesia and supportive pain control may be considered.",
@@ -27,7 +29,12 @@ const verifiedProtocols = [
         "Contraindications to hormones",
         "Fertility goal before suppression",
         "Previous ovarian surgery or ovarian reserve if fertility is a priority"
-      ]
+      ],
+      contraindicationChecks: ["Hormonal therapy contraindications", "Pregnancy possibility"],
+      redFlags: ["Acute abdomen", "Severe or rapidly worsening pain"],
+      followUpConsiderations: ["Review symptom response and patient goals."],
+      referralConsiderations: ["Refer for refractory symptoms, endometrioma, deep disease, uncertain diagnosis, or fertility planning."],
+      limitations: ["Draft support only until reviewed by a doctor.", "No automatic diagnosis.", "No automatic prescribing."]
     },
     safetyJson: { noDoses: true, doctorReviewRequired: true, externalAi: false }
   },
@@ -45,6 +52,9 @@ const verifiedProtocols = [
     sourceYear: 2023,
     sourceVersion: "v1",
     contentJson: {
+      summary: "Structured management snapshot for doctor-reviewed PCOS ovulation induction planning.",
+      verifiedManagementAvailable: true,
+      goals: ["ovulation induction", "fertility planning"],
       options: [
         "If anovulatory infertility with PCOS and no other infertility factor is confirmed, letrozole is a first-line option to consider.",
         "If oral induction fails or is unsuitable, consider second-line options with monitoring.",
@@ -58,7 +68,12 @@ const verifiedProtocols = [
         "BMI and metabolic risk",
         "Ultrasound monitoring",
         "Multiple pregnancy risk"
-      ]
+      ],
+      contraindicationChecks: ["Pregnancy possibility", "Contraindications to induction medication"],
+      redFlags: ["Severe pelvic pain during stimulation", "Symptoms concerning for OHSS"],
+      followUpConsiderations: ["Follow response with clinician-directed monitoring."],
+      referralConsiderations: ["Refer for specialist fertility care when first-line pathways are unsuitable or unsuccessful."],
+      limitations: ["Draft support only until reviewed by a doctor.", "No medication dose automation.", "No automatic prescribing."]
     },
     safetyJson: { noDoses: true, doctorReviewRequired: true, externalAi: false, offLabelMayVaryByCountry: true }
   },
@@ -76,6 +91,9 @@ const verifiedProtocols = [
     sourceYear: 2023,
     sourceVersion: "v1",
     contentJson: {
+      summary: "Structured management snapshot for doctor-reviewed unexplained infertility planning.",
+      verifiedManagementAvailable: true,
+      goals: ["complete evaluation review", "fertility planning"],
       options: [
         "Confirm the basic infertility evaluation is complete.",
         "OS-IUI may be considered in suitable couples.",
@@ -88,7 +106,12 @@ const verifiedProtocols = [
         "Tubal patency",
         "Ovarian reserve and age",
         "Multiple pregnancy risk with stimulation"
-      ]
+      ],
+      contraindicationChecks: ["Pregnancy possibility", "Contraindications to stimulation pathways"],
+      redFlags: ["Severe pain", "Positive pregnancy test with pain or bleeding"],
+      followUpConsiderations: ["Review age, duration, ovarian reserve, and prior treatments."],
+      referralConsiderations: ["Refer for fertility specialist decision-making when indicated."],
+      limitations: ["Draft support only until reviewed by a doctor.", "No automatic diagnosis.", "No automatic prescribing."]
     },
     safetyJson: { noDoses: true, doctorReviewRequired: true, externalAi: false }
   }

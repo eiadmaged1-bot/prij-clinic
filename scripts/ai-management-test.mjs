@@ -43,12 +43,32 @@ async function main() {
   pass("verified protocol returns management options");
 
   const catalog = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "fibroid", protocolCode: "UTERINE_FIBROIDS_CATALOG_V1" }) });
-  if (!catalog.response.ok || catalog.body.outputJson.guidelineBasedOptions.length !== 0) throw new Error("catalog-only returned management options");
+  if (!catalog.response.ok || catalog.body.outputJson.guidelineBasedOptions.length !== 0 || !catalog.body.outputJson.limitations.join(" ").includes("cannot provide management options")) throw new Error("catalog-only returned management options");
   pass("catalog-only protocol returns no management options");
 
   const unknown = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "not a protocol xyz" }) });
   if (!unknown.response.ok || unknown.body.outputJson.guidelineBasedOptions.length !== 0) throw new Error("unknown diagnosis returned advice");
   pass("unknown diagnosis returns no hallucinated advice");
+
+  const catalogList = await request("/protocol-atlas/search", { method: "POST", body: JSON.stringify({ status: "catalog_only" }) });
+  const [draftProtocol, retiredProtocol] = catalogList.body.protocols;
+  if (!draftProtocol || !retiredProtocol) throw new Error("catalog protocols unavailable for draft/retired snapshot tests");
+  await request(`/protocol-atlas/${draftProtocol.id}/request-verification`, { method: "POST", body: JSON.stringify({ reason: "Demo AI draft guard test only." }) });
+  const draftSnapshot = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: draftProtocol.title, protocolCode: draftProtocol.code }) });
+  if (!draftSnapshot.response.ok || draftSnapshot.body.outputJson.guidelineBasedOptions.length !== 0) throw new Error("draft protocol returned management options");
+  pass("draft protocol returns no management options");
+
+  await request(`/protocol-atlas/${retiredProtocol.id}/retire`, { method: "POST", body: JSON.stringify({ reason: "Demo AI retired guard test only." }) });
+  const retiredSnapshot = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: retiredProtocol.title, protocolCode: retiredProtocol.code }) });
+  if (!retiredSnapshot.response.ok || retiredSnapshot.body.outputJson.guidelineBasedOptions.length !== 0) throw new Error("retired protocol returned management options");
+  pass("retired protocol returns no management options");
+
+  const outputText = JSON.stringify(verified.body.outputJson).toLowerCase();
+  for (const unsafe of [" mg", "must prescribe", "definitive diagnosis", "guaranteed"]) {
+    if (outputText.includes(unsafe)) throw new Error(`verified output included unsafe phrase ${unsafe}`);
+  }
+  if (!verified.body.outputJson.doctorDecisionRequired) throw new Error("doctor approval flag missing");
+  pass("verified output remains dose-free and doctor-review-only");
 
   const denied = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "endometriosis" }) }, receptionToken);
   if (denied.response.status !== 403) throw new Error(`receptionist got ${denied.response.status}`);
@@ -65,6 +85,13 @@ async function main() {
   const memory = await request(`/ai-management/snapshots/${verified.body.id}/save-memory`, { method: "POST", body: JSON.stringify({ memoryType: "protocol_used", title: "Endometriosis protocol", valueJson: { protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" } }) }, doctorToken);
   if (!memory.response.ok) throw new Error("memory save failed");
   pass("save memory only after approval works");
+
+  const audit = await request("/audit?limit=100");
+  for (const action of ["ai_management_snapshot_created", "ai_management_snapshot_reviewed", "ai_management_snapshot_memory_saved"]) {
+    const entry = audit.body.auditLogs.find((log) => log.action === action && log.metadataJson?.snapshotId);
+    if (!entry || entry.resourceId !== null) throw new Error(`audit missing CUID metadata for ${action}`);
+  }
+  pass("AI management actions are audited with CUID metadata");
 }
 
 main().catch((error) => fail("ai management suite", error)).finally(() => {

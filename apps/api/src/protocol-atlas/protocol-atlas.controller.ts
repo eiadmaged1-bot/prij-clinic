@@ -4,6 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
+import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
 import { SearchProtocolsDto } from "./dto/search-protocols.dto";
 import { UpdateProtocolStatusDto } from "./dto/update-protocol-status.dto";
 import { ProtocolAtlasService } from "./protocol-atlas.service";
@@ -47,5 +48,47 @@ export class ProtocolAtlasController {
   @Permissions("protocol_atlas.manage")
   updateStatus(@Param("id") id: string, @Body() dto: UpdateProtocolStatusDto, @CurrentUser() user: AuthUser) {
     return this.atlas.updateStatus(id, dto, user);
+  }
+
+  @Get(":id/editor")
+  @Permissions("protocol_atlas.manage")
+  editor(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.atlas.getEditor(id, user);
+  }
+
+  @Patch(":id/source")
+  @Permissions("protocol_atlas.manage")
+  updateSource(@Param("id") id: string, @Body() dto: UpdateProtocolSourceDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.updateSource(id, dto, user);
+  }
+
+  @Patch(":id/aliases")
+  @Permissions("protocol_atlas.manage")
+  updateAliases(@Param("id") id: string, @Body() dto: UpdateProtocolAliasesDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.updateAliases(id, dto, user);
+  }
+
+  @Patch(":id/structured-content")
+  @Permissions("protocol_atlas.manage")
+  updateStructuredContent(@Param("id") id: string, @Body() dto: UpdateStructuredProtocolContentDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.updateStructuredContent(id, dto, user);
+  }
+
+  @Post(":id/request-verification")
+  @Permissions("protocol_atlas.manage")
+  requestVerification(@Param("id") id: string, @Body() dto: ProtocolReasonDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.requestVerification(id, dto, user);
+  }
+
+  @Post(":id/verify")
+  @Permissions("protocol_atlas.manage")
+  verify(@Param("id") id: string, @Body() dto: ProtocolReasonDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.verify(id, dto, user);
+  }
+
+  @Post(":id/retire")
+  @Permissions("protocol_atlas.manage")
+  retire(@Param("id") id: string, @Body() dto: ProtocolReasonDto, @CurrentUser() user: AuthUser) {
+    return this.atlas.retire(id, dto, user);
   }
 }
