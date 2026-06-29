@@ -4,6 +4,8 @@ Date: 2026-06-29
 
 This sprint deepens the MVP pilot finance workflow for fake/demo data only. It is not a full accounting system, not an e-invoicing system, and has no real payment gateway.
 
+Integration status: merged into `integration/v0.3-finance-gyn` with the General Gynecology Starter. Finance appears in the patient file as Billing/Finance and coexists with Pregnancy/OB, General Gynecology, Encounters, Prescriptions, Investigations, Files, and Timeline.
+
 ## Service Catalog
 
 - Owner/Admin manage services from Admin.
@@ -91,6 +93,7 @@ Server-side RBAC remains the authority. UI hiding is not an authorization bounda
 - No real payment gateway.
 - No full accounting ledger.
 - No insurance/TPA.
+- No inventory.
 - No tax engine or e-invoicing.
 - No production export workflow.
 - No real patient or real payment data.

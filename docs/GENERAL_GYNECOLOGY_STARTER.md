@@ -6,6 +6,8 @@ Branch: `leap/b-general-gynecology-starter`
 
 This sprint adds the first general gynecology layer to the patient file so the app is not pregnancy-only. It remains local/demo software only and must not be used with real patient data.
 
+Integration status: merged into `integration/v0.3-finance-gyn` with Finance and Reports Deepening. General Gynecology appears as a patient-file tab alongside Pregnancy/OB, Encounters, Prescriptions, Investigations, Billing/Finance, Files, and Timeline.
+
 ## Implemented Scope
 
 - Patient-file Gynecology tab for authorized clinical users.
@@ -70,6 +72,7 @@ Contraception counseling records current method, previous methods, contraindicat
 
 - No real patient data.
 - No real AI calls.
+- No real payment gateway.
 - No PHI upload.
 - No DICOM/PACS workflow.
 - No automatic diagnosis.

@@ -35,6 +35,14 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Gynecology print output is browser print styling only and is not signed production clinical stationery.
 - Gynecology routes currently use existing encounter clinical permissions; more granular gynecology-specific permissions remain future work.
 
+## v0.3 Integration Limitations
+
+- Finance and gynecology are integrated in the patient file, but this is still an MVP pilot workflow, not a complete production chart.
+- Print summaries use browser print styling only and are not signed legal clinical stationery, production receipts, or audited export packages.
+- The script-assisted browser rehearsal verifies representative fake/demo flows; it is not a full cross-browser manual acceptance test.
+- Finance tab access and gynecology tab access rely on existing seeded permissions; production role design still needs policy review.
+- Timeline aggregation is readable for pilot review, but it is not a legal amendment ledger or production clinical chronology.
+
 ## Release Candidate UX Limitations
 
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
@@ -84,6 +92,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Print/export is placeholder/browser-based; audited production export is not implemented.
 - Payment records must remain metadata-only and must not store card numbers, CVV, payment tokens, or gateway secrets.
 - Payment gateway integrations are not implemented.
+- Insurance/TPA, inventory, accounting ledger, tax, e-invoicing, and real gateway reconciliation are not implemented.
 
 ## Admin Control
 

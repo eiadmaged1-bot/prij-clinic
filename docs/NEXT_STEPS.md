@@ -1,6 +1,18 @@
 # Next Steps
 
-The exact next recommended sprint after General Gynecology Starter is:
+The exact next recommended sprint after v0.3 Finance + General Gynecology Integration is:
+
+## Pilot Demo Data + Browser Walkthrough Hardening
+
+Goals:
+
+- Prepare a clean fake/demo walkthrough dataset covering Owner, Doctor, Receptionist, Accountant, and patient-file roles.
+- Add a checked-in script-assisted browser walkthrough for login, patient list, patient file tabs, Pregnancy/OB, General Gynecology, Billing/Finance, timeline, print summaries, finance reports, daily closing, and role denials.
+- Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
+- Keep the current integrated patient file as the pilot surface; avoid new large modules.
+- Keep all data fake/demo-only.
+- Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, no PHI uploads, no real payment gateway, and no automatic gynecology treatment or prescribing.
+- Run the full local verification suite, including `npm run test:finance:reports`, `npm run test:gyn:starter`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
 
 ## General Gynecology Walkthrough Hardening
 
@@ -13,18 +25,15 @@ Goals:
 - Keep no automatic diagnosis, no diagnostic recommendations, no automatic treatment plan, no contraception recommendation engine, and no automatic prescribing.
 - Run the full local verification suite, including `npm run test:gyn:starter`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
 
-## Pilot Demo Data + Browser Walkthrough Hardening
+## Then Finance/Reports Hardening
 
 Goals:
 
-- Prepare a clean fake/demo walkthrough dataset for owner, doctor, receptionist, and patient file flows.
-- Add a script-assisted browser walkthrough for login, patient file, gynecology workspace, pregnancy workspace, antenatal visit, ultrasound report, timeline, print, theme switch, and non-admin account denial.
-- Keep the current patient OB/GYN workspace as the pilot surface; avoid new large modules.
-- Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
-- Keep all ultrasound, Doppler, fetal biometry, risk flags, and pregnancy history behavior recording-only.
-- Keep all data fake/demo-only.
-- Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, and no PHI uploads.
-- Run the full local verification suite, including `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
+- Rehearse finance workflows with fake pilot data across Owner, Reception, and Accountant roles.
+- Decide discount approval policy, refund approval policy, and whether dual approval is needed.
+- Add production export controls only after access control, audit, and privacy review.
+- Keep files metadata-only until secure PHI storage is implemented.
+- Defer accounting ledger, taxes, e-invoicing, insurance/TPA, and payment gateway work.
 
 ## Then Home Server Dry Run Or VPS Trial
 
@@ -48,15 +57,13 @@ Goals:
 - Review production role design separately from demo presets.
 - Keep `eyad` local/private demo only unless a separate production owner provisioning policy approves otherwise.
 
-## Then Finance/Reports Hardening
+## Then Specialty Depth
 
 Goals:
 
-- Rehearse finance workflows with fake pilot data across Owner, Reception, and Accountant roles.
-- Decide discount approval policy, refund approval policy, and whether dual approval is needed.
-- Add production export controls only after access control, audit, and privacy review.
-- Keep files metadata-only until secure PHI storage is implemented.
-- Defer accounting ledger, taxes, e-invoicing, insurance/TPA, and payment gateway work.
+- Extend only one specialty slice at a time after walkthrough hardening.
+- Candidate slices: fertility/IVF, menopause, colposcopy, preventive screening, urogynecology, or deeper antenatal reporting.
+- Keep all new clinical behavior recording-only until clinical owner review.
 
 ## Then Safe AI Assistant
 

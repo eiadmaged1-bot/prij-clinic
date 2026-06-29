@@ -1,15 +1,15 @@
 # Prij Clinic
 
-Clinic Management System V0.2 MVP pilot workflow lock for OB/GYN and women's health.
+Clinic Management System V0.3 integrated MVP pilot workflow for OB/GYN, general gynecology, and demo finance workflows.
 
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.2 is a verified local/private MVP pilot workflow lock. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, and general gynecology starter. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 The locked pilot flow is:
 
 ```text
-Owner login -> patient file -> doctor workflow -> OB/GYN pregnancy workspace -> antenatal visit -> ultrasound report -> timeline -> print -> role-safe account behavior
+Owner login -> patient file -> Pregnancy/OB or General Gynecology -> Billing/Finance -> timeline -> print -> role-safe account behavior
 ```
 
 ## V0.1 Focused Clinic Workflow
@@ -41,6 +41,7 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/OPERATIONS_MONITORING_PLAN.md`
 - `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+- `docs/V0_3_FINANCE_GYN_INTEGRATION.md`
 
 ## Safety Rules
 
@@ -383,6 +384,15 @@ npm run test:visual:qa
 `test:clinical:persistence` verifies fake/demo patient-context appointment, queue, guided visit persistence, prescription, investigation, report, OB/GYN, invoice/payment, consent, timeline, audit, and signed-encounter edit protection.
 
 `test:visual:qa` verifies release-candidate pages are reachable, normal UI avoids obvious technical text, patient file and doctor pages are present, and admin appearance controls remain protected.
+
+Finance and general gynecology integration checks:
+
+```powershell
+npm run test:finance:reports
+npm run test:gyn:starter
+```
+
+These use fake/demo data only. Finance remains manual with no real payment gateway, and gynecology remains recording-only with no automatic diagnosis, treatment recommendation, contraception recommendation, or prescribing.
 
 ## Local Backup
 

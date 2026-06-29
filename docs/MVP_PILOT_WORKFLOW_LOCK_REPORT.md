@@ -8,6 +8,8 @@ Base: `auth/accounts-session-rbac-hardening` at `87eb7e5`
 
 Addendum: `leap/b-general-gynecology-starter` builds on this lock at `a4b22c6` and adds the first recording-only general gynecology layer.
 
+Integration addendum: `integration/v0.3-finance-gyn` merges Finance and Reports Deepening plus General Gynecology Starter into one stable v0.3 integration branch.
+
 ## Supported Pilot Workflow
 
 The MVP pilot flow now supports:
@@ -24,7 +26,7 @@ The follow-up finance/report sprint adds MVP pilot finance depth on top of this 
 
 The follow-up general gynecology sprint adds the first recording-only general gynecology layer on top of this locked workflow: gynecology visit records, abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling starter templates, plus timeline and print summary support. This remains clinician-authored documentation only with no automatic diagnosis, treatment recommendation, contraception recommendation, or prescribing.
 
-The patient file is the central workflow surface. The Pregnancy tab contains Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, and print actions. The v0.3 addendum adds a Gynecology tab with general gynecology visit, abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling starter templates.
+The patient file is the central workflow surface. It now includes Summary, Pregnancy/OB, General Gynecology, Encounters, Prescriptions, Investigations, Billing/Finance, Files, Timeline, and More. The Pregnancy/OB workspace contains Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, and print actions. The General Gynecology workspace contains gynecology visit, abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling starter templates. Billing/Finance contains patient statement summary and print action.
 
 ## Demo After Stable Accounts
 
