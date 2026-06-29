@@ -1,18 +1,18 @@
 # Next Steps
 
-The exact next recommended sprint after v0.3 Finance + General Gynecology Integration is:
+The exact next recommended sprint after v0.3 Finance + General Gynecology + Secure Guideline Center Integration is:
 
 ## Pilot Demo Data + Browser Walkthrough Hardening
 
 Goals:
 
 - Prepare a clean fake/demo walkthrough dataset covering Owner, Doctor, Receptionist, Accountant, and patient-file roles.
-- Add a checked-in script-assisted browser walkthrough for login, patient list, patient file tabs, Pregnancy/OB, General Gynecology, Billing/Finance, timeline, print summaries, finance reports, daily closing, and role denials.
+- Add a checked-in script-assisted browser walkthrough for login, patient list, patient file tabs, Pregnancy/OB, General Gynecology, Billing/Finance, Guideline Center, private vault denial, timeline, print summaries, finance reports, daily closing, and role denials.
 - Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
 - Keep the current integrated patient file as the pilot surface; avoid new large modules.
 - Keep all data fake/demo-only.
 - Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, no PHI uploads, no real payment gateway, and no automatic gynecology treatment or prescribing.
-- Run the full local verification suite, including `npm run test:finance:reports`, `npm run test:gyn:starter`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
+- Run the full local verification suite, including `npm run test:finance:reports`, `npm run test:gyn:starter`, `npm run test:guidelines`, `npm run test:integrated:probes`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
 
 ## General Gynecology Walkthrough Hardening
 
@@ -95,6 +95,8 @@ The authorized private-vault viewer/download workflow is now implemented for loc
 Future guideline work:
 
 - Configure and operationally test a non-committed `GUIDELINE_VAULT_ENCRYPTION_KEY`.
+- Keep `GUIDELINE_VAULT_ENCRYPTION_KEY` as a placeholder in committed examples only.
+- Do not use real licensed files until a real non-committed vault key and encrypted backup/restore proof are configured.
 - Add backup and restore proof for encrypted guideline files and database metadata together.
 - Add upload malware scanning and file type inspection beyond browser MIME hints.
 - Add key rotation and encrypted-storage incident procedures.

@@ -2,25 +2,26 @@
 
 Date: 2026-06-29
 
-Branch: `integration/v0.3-finance-gyn`
+Branch: `integration/v0.3-finance-gyn-guidelines`
 
-Base branch: `pilot/mvp-obgyn-workflow-lock` at `a4b22c6`
+Base branch: `integration/v0.3-finance-gyn` at `f4ce33a1c8a4dfd4807170979dd18f9510ba34bd`
 
 Integrated source branches:
 
 - `origin/leap/a-finance-reports-deepening` at `48ea318`
 - `origin/leap/b-general-gynecology-starter` at `f057d85`
+- `origin/hardening/guideline-secure-vault` at `7a0a46d606c978995062a92374d91b00b8bc0267`
 
-Target tag: `v0.3-finance-gyn-integrated`
+Target tag: `v0.3.2-finance-gyn-guidelines-integrated`
 
 ## Status Summary
 
-Prij Clinic now integrates the finance/report deepening sprint with the general gynecology starter sprint on top of the locked MVP pilot OB/GYN workflow.
+Prij Clinic now integrates the finance/report deepening sprint, the general gynecology starter sprint, and the secure local Guideline Center on top of the locked MVP pilot OB/GYN workflow.
 
 The intended pilot flow is now:
 
 ```text
-Owner login -> patient file -> Pregnancy/OB or General Gynecology -> Encounters -> Prescriptions -> Investigations -> Billing/Finance -> Timeline -> Print summaries -> role-safe account behavior
+Owner login -> patient file -> Pregnancy/OB or General Gynecology -> Encounters -> Prescriptions -> Investigations -> Billing/Finance -> Evidence Library when authorized -> Timeline -> Print summaries -> role-safe account behavior
 ```
 
 This remains local/demo software only. It is not production-ready, not a medical device, and must not be used with real patient data, real payment data, PHI uploads, external AI providers, or live clinical workflows.
@@ -32,6 +33,7 @@ This remains local/demo software only. It is not production-ready, not a medical
 - Patient timeline includes available appointment, queue, encounter, prescription, investigation, report, gynecology, pregnancy, antenatal, ultrasound, invoice, payment, and consent events.
 - Print-friendly browser summaries remain available for patient, antenatal, ultrasound, gynecology, billing statement, daily closing, and finance-report views.
 - Role and permission checks remain server-side. UI hiding is not an authorization boundary.
+- Guideline Center is available only to authorized Owner/Admin/Doctor-style evidence-library users; Receptionist and Accountant remain blocked from guideline medical content.
 
 ## Finance Status
 
@@ -61,6 +63,7 @@ This remains local/demo software only. It is not production-ready, not a medical
 - Payment records are demo metadata only and do not use a real payment gateway.
 - Report/file workflows remain metadata/placeholder only; no PHI upload is enabled.
 - The protected `eyad` account is the only seeded local demo System Owner.
+- Guideline private vault encryption is optional for local/demo uploads and requires a non-committed `GUIDELINE_VAULT_ENCRYPTION_KEY`; placeholders only are documented in env examples.
 
 ## Local Verification
 
@@ -84,6 +87,8 @@ npm run test:obgyn:core
 npm run test:accounts:rbac
 npm run test:finance:reports
 npm run test:gyn:starter
+npm run test:guidelines
+npm run test:integrated:probes
 npm run test:staging:smoke
 ```
 
@@ -140,3 +145,9 @@ Added private guideline file hardening:
 - AES-256-GCM local encryption for new uploads when `GUIDELINE_VAULT_ENCRYPTION_KEY` is configured.
 
 Still local/demo only. Do not upload real paid or licensed guideline PDFs until encryption keys, backup/restore, malware scanning, retention, and license operations are reviewed.
+
+## Finance Gynecology Guideline Integration Update
+
+Documented in `docs/V0_3_FINANCE_GYN_GUIDELINE_INTEGRATION.md`.
+
+This branch preserves finance/report deepening, daily closing, service catalog, patient statement, general gynecology templates, Pregnancy/OB workflow, patient file tabs, secure Guideline Center, source registry, upload/import/reindex/update checks, secure viewer/download workflow, file access audit, optional AES-256-GCM guideline vault encryption, and role-denial coverage.

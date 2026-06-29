@@ -2,7 +2,7 @@
 
 Clinic Management System V0.3 integrated MVP pilot workflow for OB/GYN, general gynecology, and demo finance workflows.
 
-Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, secure Guideline Center, guideline source registry, private guideline vault controls, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
 V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, general gynecology starter, and secure Clinical Guideline Center. It is not production-ready, not a medical device, and must not be used with real patient data.
 
@@ -44,6 +44,7 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
 - `docs/V0_3_FINANCE_GYN_INTEGRATION.md`
+- `docs/V0_3_FINANCE_GYN_GUIDELINE_INTEGRATION.md`
 
 ## Safety Rules
 
@@ -291,6 +292,8 @@ npm run test:gyn:starter
 npm run test:visual:qa
 npm run test:accounts:rbac
 npm run test:finance:reports
+npm run test:guidelines
+npm run test:integrated:probes
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
@@ -404,6 +407,15 @@ npm run test:gyn:starter
 ```
 
 These use fake/demo data only. Finance remains manual with no real payment gateway, and gynecology remains recording-only with no automatic diagnosis, treatment recommendation, contraception recommendation, or prescribing.
+
+Guideline Center checks:
+
+```powershell
+npm run test:guidelines
+npm run test:integrated:probes
+```
+
+These use fake/demo text only. Do not upload real licensed guideline files. `GUIDELINE_VAULT_ENCRYPTION_KEY` must remain a local non-committed secret before any real private vault use.
 
 ## Local Backup
 

@@ -133,3 +133,5 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Local/demo fallback storage without an encryption key is not acceptable for real licensed files.
 - Key rotation, malware scanning, encrypted backup/restore proof, retention policy, and production object storage are not implemented.
 - Source registry entries are metadata only, not imported documents.
+- `GUIDELINE_VAULT_ENCRYPTION_KEY` must remain non-committed; env examples contain placeholders only.
+- Real licensed guideline files must not be uploaded until a real non-committed vault key, encrypted backups, malware scanning, retention policy, and license operations are approved.
