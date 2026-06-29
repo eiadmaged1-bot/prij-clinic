@@ -35,6 +35,12 @@ type PregnancyRecord = {
   notes?: string | null;
 };
 
+type FetusRecord = {
+  id?: string;
+  label?: string | null;
+  status?: string | null;
+};
+
 type TabConfig = {
   key: string;
   label: string;
@@ -210,7 +216,12 @@ export default function PatientFilePage() {
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
           {active.key === "pregnancy" ? (
-            <ObgynWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} />
+            <ObgynWorkspace
+              patient={patient}
+              pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]}
+              reports={related.files ?? []}
+              orders={related.orders ?? []}
+            />
           ) : null}
           {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "pregnancy" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
@@ -281,13 +292,21 @@ function ObgynWorkspace({
   return (
     <section className="obgyn-workspace">
       <div className="obgyn-print-toolbar no-print">
+        <Link className="button compact" href={`/doctor/visit?patientId=${patient.id}`}>
+          <ThreeDMedicalIcon name="encounter" size="sm" />
+          Start antenatal workflow
+        </Link>
         <button className="button secondary compact" type="button" onClick={() => window.print()}>
           <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
           Print patient summary
         </button>
         <button className="button secondary compact" type="button" onClick={() => window.print()}>
+          <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
+          Print antenatal summary
+        </button>
+        <button className="button secondary compact" type="button" onClick={() => window.print()}>
           <ThreeDMedicalIcon name="ultrasound" size="sm" tone="slate" />
-          Print ultrasound draft
+          Print ultrasound report
         </button>
       </div>
 
@@ -300,6 +319,12 @@ function ObgynWorkspace({
           </div>
           <ThreeDMedicalIcon name="pregnancy" size="lg" tone="rose" />
         </div>
+        {!activePregnancy ? (
+          <p className="empty-state">
+            <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
+            <span>Create the pregnancy episode from the Pregnancy module first, then return here for antenatal visits and ultrasound recording.</span>
+          </p>
+        ) : null}
         <div className="obgyn-metric-grid">
           <Metric label="LMP" value={formatDate(activePregnancy?.lmp)} />
           <Metric label="EDD" value={formatDate(activePregnancy?.edd)} />
@@ -312,7 +337,7 @@ function ObgynWorkspace({
         </div>
         <div className="notice">
           <strong>Important notes</strong>
-          <p className="muted">{activePregnancy?.notes || "Use this area for clinician-authored pregnancy notes only. No automatic diagnosis, growth scoring, or fetal-risk interpretation is performed."}</p>
+          <p className="muted">{activePregnancy?.notes || "Use this area for clinician-authored pregnancy notes only. The workspace records observations and does not complete clinical interpretation for the doctor."}</p>
         </div>
       </article>
 
@@ -331,17 +356,22 @@ function ObgynWorkspace({
             <div><dt>Living</dt><dd>{activePregnancy?.living ?? "Not recorded"}</dd></div>
             <div><dt>Abortions</dt><dd>{activePregnancy?.abortions ?? "Not recorded"}</dd></div>
           </dl>
+          <div className="obgyn-mini-flow">
+            <span><ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" /> Episode</span>
+            <span><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /> Previous pregnancy</span>
+            <span><ThreeDMedicalIcon name="ultrasound" size="sm" tone="slate" /> Fetus record</span>
+          </div>
           <p className="empty-state">
             <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
-            <span>Previous pregnancy details remain a structured recording area after backend merge. Do not enter real patient history in demo mode.</span>
+            <span>Record previous pregnancy details as clinician-entered history only. Use fake/demo data in this pilot environment.</span>
           </p>
         </article>
 
-        <AntenatalVisitCard />
+        <AntenatalVisitCard patient={patient} pregnancy={activePregnancy} />
       </section>
 
       <section className="obgyn-section-grid">
-        <UltrasoundReportBuilder />
+        <UltrasoundReportBuilder patient={patient} pregnancy={activePregnancy} fetuses={[]} />
         <DoctorTemplateCards />
       </section>
 
@@ -429,38 +459,144 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function AntenatalVisitCard() {
+function AntenatalVisitCard({ patient, pregnancy }: { patient: Patient; pregnancy?: PregnancyRecord }) {
+  const [status, setStatus] = useState("");
+
+  async function saveVisit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pregnancy?.id) {
+      setStatus("Create a pregnancy episode before saving an antenatal visit.");
+      return;
+    }
+
+    const token = sessionStorage.getItem("prijClinicToken");
+    const payload = formPayload(event.currentTarget, {
+      weightKg: "number",
+      pulseBpm: "number"
+    });
+    const response = await fetch(`${apiUrl}/pregnancies/${pregnancy.id}/antenatal-visits`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save the antenatal visit. Check your role and try again.");
+      return;
+    }
+
+    setStatus("Antenatal visit saved to the patient timeline.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
   return (
     <article className="panel printable-summary">
       <div className="section-heading">
         <div>
           <p className="eyebrow">Antenatal Visits</p>
-          <h2>Visit note template</h2>
-          <p className="muted">Doctor-friendly recording form. It is UI-ready and persists only when the matching patient workflow is available after backend merge.</p>
+          <h2>Visit note workflow</h2>
+          <p className="muted">Doctor-friendly recording form grouped in the order used during an antenatal follow-up.</p>
         </div>
         <ThreeDMedicalIcon name="doctor" size="sm" tone="teal" />
       </div>
-      <form className="obgyn-form-grid">
-        <label>Symptoms<textarea placeholder="Clinician-recorded symptoms" /></label>
-        <label>BP<input placeholder="Example format: 120/80" /></label>
-        <label>Weight<input type="number" min="0" step="0.1" placeholder="kg" /></label>
-        <label>Fetal heart<input placeholder="Recording only" /></label>
-        <label>Fundal height<input placeholder="cm, if recorded" /></label>
-        <label>Examination<textarea placeholder="Doctor examination notes" /></label>
-        <label>Plan<textarea placeholder="Doctor-authored plan" /></label>
-        <label>Investigations<textarea placeholder="Orders or follow-up tests" /></label>
-        <label>Next follow-up<input type="datetime-local" /></label>
+      <form className="obgyn-form-grid grouped" onSubmit={saveVisit}>
+        <fieldset className="obgyn-fieldset">
+          <legend>Visit details</legend>
+          <label>Visit date<input name="visitDate" type="date" /></label>
+          <label>Gestational age<input name="gestationalAgeDisplay" placeholder="Weeks + days" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Maternal observations</legend>
+          <label>BP<input name="bloodPressure" placeholder="Example format: 120/80" /></label>
+          <label>Weight<input name="weightKg" type="number" min="0" step="0.1" placeholder="kg" /></label>
+          <label>Pulse<input name="pulseBpm" type="number" min="0" step="1" placeholder="bpm" /></label>
+          <label>Urine protein<input name="urineProtein" placeholder="If checked" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Symptoms</legend>
+          <label>Symptoms<textarea name="symptomsText" placeholder="Clinician-recorded symptoms" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Examination</legend>
+          <label>Examination<textarea name="examinationText" placeholder="Doctor examination notes" /></label>
+          <label>Edema<input name="edema" placeholder="If recorded" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Fetal observations</legend>
+          <label>Fetal heart<input name="fetalHeartText" placeholder="Recording only" /></label>
+          <label>Fundal height<input name="fundalHeightText" placeholder="cm, if recorded" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Plan</legend>
+          <label>Plan<textarea name="planText" placeholder="Doctor-authored plan" /></label>
+          <label>Medication note<textarea name="medicationsNote" placeholder="Medication note, if any" /></label>
+          <label>Investigations<textarea name="investigationsNote" placeholder="Orders or follow-up tests" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Next follow-up</legend>
+          <label>Next follow-up date<input name="nextFollowUpDate" type="date" /></label>
+        </fieldset>
+        {status ? <p className="notice wide">{status}</p> : null}
         <div className="form-actions no-print">
-          <button className="button secondary" type="button">Save Draft</button>
-          <button className="button" type="button">Save Visit</button>
-          <Link className="button secondary" href="/patients">Return to patient file</Link>
+          <button className="button secondary" type="submit">
+            <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+            Save Draft
+          </button>
+          <button className="button" type="submit">
+            <ThreeDMedicalIcon name="calendar" size="sm" />
+            Save Visit
+          </button>
+          <Link className="button secondary" href={`/patients/${patient.id}`}>Return to patient file</Link>
         </div>
       </form>
     </article>
   );
 }
 
-function UltrasoundReportBuilder() {
+function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patient: Patient; pregnancy?: PregnancyRecord; fetuses: FetusRecord[] }) {
+  const [status, setStatus] = useState("");
+
+  async function saveUltrasound(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem("prijClinicToken");
+    const payload = {
+      patientId: patient.id,
+      ...(pregnancy?.id ? { pregnancyId: pregnancy.id } : {}),
+      ...formPayload(event.currentTarget, {
+        gestationalAgeWeeks: "number",
+        gestationalAgeDays: "number",
+        fetalHeartRateBpm: "number",
+        bpdMm: "number",
+        hcMm: "number",
+        acMm: "number",
+        flMm: "number",
+        efwGrams: "number"
+      })
+    };
+
+    const response = await fetch(`${apiUrl}/ob-ultrasounds`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save the ultrasound report. Check your role and try again.");
+      return;
+    }
+
+    setStatus("Ultrasound report saved as recording-only and added to the timeline.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
   return (
     <article className="panel printable-summary">
       <div className="section-heading">
@@ -471,24 +607,77 @@ function UltrasoundReportBuilder() {
         </div>
         <ThreeDMedicalIcon name="ultrasound" size="sm" tone="violet" />
       </div>
-      <form className="obgyn-form-grid">
-        <label>Scan type<input placeholder="Dating, anatomy, growth, follow-up" /></label>
-        <label>Indication<input placeholder="Doctor-entered indication" /></label>
-        <label>Gestational age<input placeholder="Weeks + days" /></label>
-        <label>Fetus selector<input placeholder="Singleton / A / B / C" /></label>
-        <label>Fetal presentation<input placeholder="Recording only" /></label>
-        <label>Placenta<input placeholder="Location and notes" /></label>
-        <label>Amniotic fluid<input placeholder="Recording only" /></label>
-        <label>Fetal heart<input placeholder="BPM or observed" /></label>
-        <div className="obgyn-biometry wide">
-          {["BPD", "HC", "AC", "FL", "EFW"].map((field) => (
-            <label key={field}>{field}<input placeholder="Manual measurement" /></label>
-          ))}
+      <p className="notice safety-note">
+        Measurements are recorded for clinician review. Interpretation must be completed by the doctor.
+      </p>
+      <form className="obgyn-form-grid grouped" onSubmit={saveUltrasound}>
+        <fieldset className="obgyn-fieldset">
+          <legend>Scan details</legend>
+          <label>Scan date and time<input name="performedAt" type="datetime-local" /></label>
+          <label>Scan type<input name="scanType" placeholder="Dating, anatomy, growth, follow-up" /></label>
+          <label>Indication<input name="indication" placeholder="Doctor-entered indication" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Pregnancy and fetus context</legend>
+          <label>Gestational age<input name="gestationalAgeDisplay" placeholder="Weeks + days" /></label>
+          <label>Weeks<input name="gestationalAgeWeeks" type="number" min="0" max="45" /></label>
+          <label>Days<input name="gestationalAgeDays" type="number" min="0" max="6" /></label>
+          <label>
+            Fetus selector
+            <select name="fetusId" defaultValue="">
+              <option value="">Singleton or not selected</option>
+              {fetuses.map((fetus) => (
+                <option value={fetus.id} key={fetus.id}>{fetus.label || "Fetus"}</option>
+              ))}
+            </select>
+          </label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Fetal presentation</legend>
+          <label>Presentation<input name="presentation" placeholder="Recording only" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Placenta</legend>
+          <label>Placenta<input name="placenta" placeholder="Location and notes" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Amniotic fluid</legend>
+          <label>Amniotic fluid note<input name="amnioticFluid" placeholder="Recording only" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Fetal heart</legend>
+          <label>Fetal heart note<input name="fetalHeartText" placeholder="Observed or note" /></label>
+          <label>Fetal heart bpm<input name="fetalHeartRateBpm" type="number" min="40" max="240" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Biometry recording</legend>
+          <div className="obgyn-biometry">
+            <label>BPD<input name="bpdMm" type="number" min="0" step="0.1" placeholder="mm" /></label>
+            <label>HC<input name="hcMm" type="number" min="0" step="0.1" placeholder="mm" /></label>
+            <label>AC<input name="acMm" type="number" min="0" step="0.1" placeholder="mm" /></label>
+            <label>FL<input name="flMm" type="number" min="0" step="0.1" placeholder="mm" /></label>
+            <label>EFW<input name="efwGrams" type="number" min="0" step="1" placeholder="grams" /></label>
+          </div>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Doppler note placeholder</legend>
+          <label>Doppler note<textarea name="dopplerNote" placeholder="Optional clinician note" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Impression</legend>
+          <label>Doctor-written impression<textarea name="impressionText" placeholder="Doctor-written impression only" /></label>
+        </fieldset>
+        {status ? <p className="notice wide">{status}</p> : null}
+        <div className="form-actions no-print">
+          <button className="button secondary" type="button" onClick={() => window.print()}>
+            <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+            Print view
+          </button>
+          <button className="button" type="submit">
+            <ThreeDMedicalIcon name="ultrasound" size="sm" />
+            Save ultrasound report
+          </button>
         </div>
-        <label>Doppler note<textarea placeholder="Optional clinician note" /></label>
-        <label>Impression<textarea placeholder="Doctor-written impression only" /></label>
-        <label>Report status<select defaultValue="Draft"><option>Draft</option><option>Final placeholder</option></select></label>
-        <p className="notice wide">No automatic FGR diagnosis, fetal risk scoring, percentile engine, or fetal-image interpretation is performed.</p>
       </form>
     </article>
   );
@@ -708,6 +897,24 @@ function ActionForm({
 function values(form: HTMLFormElement, keys: string[]) {
   const formData = new FormData(form);
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "").trim()]).filter(([, value]) => value));
+}
+
+function formPayload(form: HTMLFormElement, numericFields: Record<string, "number"> = {}) {
+  const formData = new FormData(form);
+  const payload: Record<string, unknown> = {};
+
+  for (const [key, raw] of formData.entries()) {
+    const value = String(raw ?? "").trim();
+    if (!value) continue;
+    if (numericFields[key]) {
+      const numberValue = Number(value);
+      if (!Number.isNaN(numberValue)) payload[key] = numberValue;
+      continue;
+    }
+    payload[key] = key === "performedAt" && value.includes("T") ? new Date(value).toISOString() : value;
+  }
+
+  return payload;
 }
 
 function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string, unknown>[] }) {
