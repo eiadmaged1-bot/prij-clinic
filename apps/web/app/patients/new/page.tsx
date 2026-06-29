@@ -13,6 +13,7 @@ type FormState = {
   firstName: string;
   lastName: string;
   sex: string;
+  patientType: string;
   dateOfBirth: string;
   phone: string;
   email: string;
@@ -24,6 +25,7 @@ const initialState: FormState = {
   firstName: "",
   lastName: "",
   sex: "",
+  patientType: "GENERAL",
   dateOfBirth: "",
   phone: "",
   email: "",
@@ -137,6 +139,15 @@ export default function NewPatientPage() {
               <option value="female">Female</option>
               <option value="male">Male</option>
               <option value="other">Other / not specified</option>
+            </select>
+          </label>
+          <label>
+            Patient type
+            <select onChange={(event) => update("patientType", event.target.value)} value={form.patientType}>
+              <option value="GENERAL">General</option>
+              <option value="OB">OB</option>
+              <option value="GYN">GYN</option>
+              <option value="WOMEN_HEALTH">Women Health</option>
             </select>
           </label>
           <label>
