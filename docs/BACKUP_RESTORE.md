@@ -63,6 +63,15 @@ npm run backup:staging
 
 The helper reads `.env.staging`, refuses to run unless `APP_ENV=staging`, starts/verifies only the staging Postgres service, and writes a timestamped SQL backup under `backups/staging/`. It does not print secrets and does not restore or delete data. The generated backup path is ignored by Git and must not be committed.
 
+For a VPS staging host, run the same helper from the checked-out repository when `.env.staging` is present:
+
+```bash
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml ps
+# PowerShell helper is for Windows/local trials. On Linux VPS, use pg_dump as shown below.
+```
+
+Linux VPS staging backup procedure:
+
 1. Confirm you are connected to the staging host, not production.
 2. Confirm the target database name and host.
 3. Create a timestamped PostgreSQL dump with no owner or ACL metadata:

@@ -2,17 +2,17 @@
 
 Date: 2026-06-29
 
-Branch: `deploy/local-staging-trial`
+Branch: `deploy/vps-staging-trial`
 
 Base tag: `v0.1-mvp-release-candidate-verified`
 
-Target tag: `v0.1-local-staging-trial`
+Target tag: `v0.1-vps-staging-trial`
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-This sprint proves the staging deployment setup locally with fake/demo data only. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This sprint prepares the VPS staging deployment trial with fake/demo data only. The previous local staging Docker trial passed. Real VPS execution remains pending until server credentials, DNS/TLS details, and staging-only secrets are available. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Staging Prep Added
 
@@ -23,6 +23,7 @@ This sprint proves the staging deployment setup locally with fake/demo data only
 - Database deployment workflows, staging backup/restore procedure, security hardening checklist, staging runbook, operations monitoring plan, and release gate checklist.
 - Local backup script verified on 2026-06-29.
 - Local staging compose trial verified API/Web Docker builds, migration deploy, explicit staging demo seed, health endpoints, staging smoke test, and staging backup helper on 2026-06-29.
+- VPS staging checklist, bootstrap script, safe deploy script, remote smoke-test variables, and VPS backup procedure are prepared for the real server trial.
 
 ## Implemented Foundation
 
@@ -70,6 +71,7 @@ npm run test:e2e:v01
 npm run test:clinical:persistence
 npm run test:visual:qa
 npm run test:staging:smoke
+npm run staging:env:check
 ```
 
 ## UI Safety State

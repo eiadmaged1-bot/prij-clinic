@@ -31,6 +31,7 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/RELEASE_GATE_CHECKLIST.md`
 - `docs/OPERATIONS_MONITORING_PLAN.md`
 - `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
+- `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
 
 ## Safety Rules
 
@@ -364,6 +365,27 @@ npm run backup:local
 
 Backups are written under ignored `backups/`. Restore is guarded and documented in `docs/BACKUP_RESTORE.md`; do not run restore unless explicitly intended for a local/dev database.
 
+## VPS Staging Trial
+
+VPS staging must use fake/demo data only. Do not enter real patient data or PHI.
+
+Prepared VPS docs/scripts:
+
+- `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+- `scripts/bootstrap-vps-staging.sh`
+- `scripts/deploy-staging.sh`
+
+Remote staging smoke test:
+
+```bash
+STAGING_BASE_URL=https://staging.example.invalid \
+STAGING_API_URL=https://staging-api.example.invalid \
+STAGING_DEMO_OWNER_LOGIN=demo.owner@prij.local \
+STAGING_DEMO_OWNER_PASSWORD='<staging-demo-password>' \
+STAGING_DEMO_TEST_PASSWORD='<staging-demo-password>' \
+npm run test:staging:smoke
+```
+
 Authenticated smoke checks use the local demo owner:
 
 ```powershell
@@ -416,3 +438,4 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/FILE_STORAGE_SECURITY.md`
 - `docs/DEPLOYMENT_READINESS.md`
 - `docs/ENVIRONMENT_STRATEGY.md`
+- `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`

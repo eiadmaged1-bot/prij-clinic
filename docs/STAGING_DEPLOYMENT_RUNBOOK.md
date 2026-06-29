@@ -28,7 +28,7 @@ npm --version
 ```bash
 git clone <REPO_URL> prij-clinic
 cd prij-clinic
-git checkout deploy/local-staging-trial
+git checkout deploy/vps-staging-trial
 ```
 
 ## 4. Configure Environment
@@ -110,6 +110,14 @@ docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.
 docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml ps
 ```
 
+For a VPS, the safe helper wraps the same commands and refuses production mode:
+
+```bash
+./scripts/deploy-staging.sh --migrate --seed-demo
+```
+
+Use `--seed-demo` only for fake/demo staging data with staging-specific passwords.
+
 Startup order:
 
 1. Postgres healthy.
@@ -136,6 +144,19 @@ From a machine allowed to reach staging:
 ```bash
 API_URL=https://staging-api.example.invalid npm run test:security:ci
 ```
+
+Remote staging smoke test:
+
+```bash
+STAGING_BASE_URL=https://staging.example.invalid \
+STAGING_API_URL=https://staging-api.example.invalid \
+STAGING_DEMO_OWNER_LOGIN=demo.owner@prij.local \
+STAGING_DEMO_OWNER_PASSWORD='<staging-demo-password>' \
+STAGING_DEMO_TEST_PASSWORD='<staging-demo-password>' \
+npm run test:staging:smoke
+```
+
+Do not commit or print real staging secrets. Prefer an ignored server `.env.staging` or temporary shell variables.
 
 For the local staging deployment trial:
 
@@ -196,3 +217,13 @@ docker compose -f docker-compose.staging.yml stop web api
 - Non-admin admin denial works.
 - Patient workflow test passes with fake data.
 - Backup procedure has been tested.
+
+## VPS Bootstrap
+
+For a fresh Ubuntu/Debian VPS, review and run:
+
+```bash
+sudo ./scripts/bootstrap-vps-staging.sh
+```
+
+The bootstrap script installs Docker/Git prerequisites, creates an app directory, and adds basic firewall rules. It does not clone the repo, write secrets, enable production, or run destructive database commands.

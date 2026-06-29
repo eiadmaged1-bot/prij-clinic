@@ -1,17 +1,18 @@
 # Next Steps
 
-The exact next recommended sprint after this local staging trial branch is:
+The exact next recommended sprint after this VPS staging trial preparation is:
 
-## VPS Staging Deployment Trial
+## Execute VPS Staging Trial + TLS Hardening
 
 Goals:
 
-- Deploy staging with fake/demo data only.
+- Run the prepared VPS deployment on a real server with fake/demo data only.
 - Use `.env.staging.example` and `docker-compose.staging.yml` with staging-only secrets.
 - Run `npm run prisma:migrate:deploy`, then staging demo seed.
 - Verify `/health`, `/health/db`, login, admin denial, patient workflow, clinical persistence, visual QA, and backup procedure.
 - Exercise rollback without dropping or resetting the database.
 - Record issues before any pilot planning.
+- Configure reverse proxy/TLS after direct-port health checks pass.
 
 ## Completed Current Sprint Scope
 

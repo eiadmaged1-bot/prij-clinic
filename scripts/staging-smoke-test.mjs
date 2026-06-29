@@ -3,11 +3,17 @@ import { existsSync, readFileSync } from "node:fs";
 const envFile = process.env.STAGING_ENV_FILE || ".env.staging";
 loadEnvFile(envFile);
 
-const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
-const WEB_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
-const ownerEmail = process.env.DEMO_OWNER_EMAIL || "demo.owner@prij.local";
-const staffPassword = process.env.DEMO_TEST_PASSWORD;
+if ((process.env.STAGING_API_URL || process.env.STAGING_BASE_URL) && process.env.APP_ENV === undefined) {
+  process.env.APP_ENV = "staging";
+}
+
+const API_URL = (process.env.STAGING_API_URL || process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
+const WEB_URL = (process.env.STAGING_BASE_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+const ownerEmail =
+  process.env.STAGING_DEMO_OWNER_LOGIN || process.env.DEMO_OWNER_EMAIL || "demo.owner@prij.local";
+const staffPassword = process.env.STAGING_DEMO_TEST_PASSWORD || process.env.DEMO_TEST_PASSWORD;
 const ownerPassword =
+  process.env.STAGING_DEMO_OWNER_PASSWORD ||
   process.env.STAGING_OWNER_PASSWORD ||
   (ownerEmail === "demo.owner@prij.local" ? staffPassword : process.env.DEMO_OWNER_PASSWORD);
 const runId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
