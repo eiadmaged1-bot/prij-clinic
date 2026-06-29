@@ -32,8 +32,9 @@ Implemented:
 - Pack-specific AI Management Snapshot headings and output limits.
 - Local Guideline Center foundation with source registry, demo text import, local chunk search, extractive/mock ask, query logs, RBAC, and audit.
 - Guideline route coverage in the shared route authorization manifest.
+- Script-assisted pilot walkthrough automation for owner, doctor, receptionist, accountant, clinical, finance, AI management, guideline, role-denial, and full demo flows.
 
 Not fully implemented:
-- Full browser walkthrough automation for every pilot role.
+- Full Playwright/real-browser click automation with screenshots.
 - Real PDF extraction.
 - Production clinical governance approval of guideline source versions.

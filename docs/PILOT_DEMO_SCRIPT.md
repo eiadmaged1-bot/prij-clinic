@@ -1,8 +1,23 @@
 # Pilot Demo Script
 
-Status: partially automated.
+Status: script-assisted automation implemented.
 
-The current automated coverage includes protocol pack validation, AI Management Snapshot examples, Guideline Center access/search/ask tests, and shared route authorization coverage. Full browser walkthrough scripts remain a follow-up item.
+The current automated coverage includes protocol pack validation, AI Management Snapshot examples, Guideline Center access/search/ask tests, shared route authorization coverage, and role-specific pilot walkthrough scripts. The walkthrough scripts fetch browser-facing pages, exercise local API flows with fake/demo data, and confirm receptionist/accountant denial for clinical AI, Protocol Atlas, and Guideline Center access.
+
+Walkthrough commands:
+
+```bash
+npm run test:pilot:owner
+npm run test:pilot:doctor
+npm run test:pilot:receptionist
+npm run test:pilot:accountant
+npm run test:pilot:clinical
+npm run test:pilot:finance
+npm run test:pilot:ai
+npm run test:pilot:guidelines
+npm run test:pilot:denials
+npm run test:pilot:demo
+```
 
 Recommended local rehearsal:
 1. Seed the local demo database.
