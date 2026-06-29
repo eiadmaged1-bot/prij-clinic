@@ -21,9 +21,38 @@ const steps = [
 
 export default function GuidedVisitPage() {
   return (
-    <Suspense fallback={<AppShell><div className="skeleton" /></AppShell>}>
+    <Suspense fallback={<GuidedVisitFallback />}>
       <GuidedVisitContent />
     </Suspense>
+  );
+}
+
+function GuidedVisitFallback() {
+  return (
+    <AppShell>
+      <section className="visit-shell">
+        <div className="visit-header">
+          <div>
+            <p className="eyebrow">Guided Visit</p>
+            <h1>Preparing visit</h1>
+            <p className="muted">Open the patient, write doctor-authored notes, then save the visit draft.</p>
+          </div>
+          <Link className="button secondary" href="/doctor">
+            <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+            Back to Doctor Mode
+          </Link>
+        </div>
+        <div className="visit-card">
+          <div className="skeleton" />
+          <div className="visit-actions">
+            <button className="button secondary" disabled type="button">
+              <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+              Save Draft
+            </button>
+          </div>
+        </div>
+      </section>
+    </AppShell>
   );
 }
 
