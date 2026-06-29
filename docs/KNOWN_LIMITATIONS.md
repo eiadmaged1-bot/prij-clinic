@@ -2,6 +2,14 @@
 
 This MVP foundation is not production-ready for real clinical operations. It is a local development foundation for review and hardening.
 
+## Staging Prep Limitations
+
+- Staging deployment files are examples and still need a real staging host, DNS/TLS setup, and secret provisioning.
+- Staging is fake/demo data only.
+- Production patient use remains blocked until legal/security/privacy launch gates pass.
+- Docker images and compose examples have not yet been exercised on a real staging server.
+- Production staff provisioning is not implemented; production seed intentionally does not create demo users.
+
 ## Release Candidate UX Limitations
 
 - The current branch verifies the integrated MVP release candidate and adds production-readiness planning.
@@ -14,8 +22,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Branch, clinic, patient, and doctor scoping now cover representative read paths and referenced-record write paths for implemented MVP modules, but production-grade policy for every future state transition is still incomplete.
 - Sensitive read audit coverage now exists for core sensitive MVP reads, but export/download and future timeline reads still need policy-specific coverage.
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
-- No backup job, encrypted backup storage, or restore-test automation is implemented yet.
-- Local backup/restore helper scripts exist, but no production backup job, encrypted backup storage, off-site backup, or formal restore-test automation is implemented yet.
+- No automated production backup job is implemented yet.
+- Local backup/restore helper scripts exist and staging backup procedure is documented, but production encrypted backup storage, off-site backup, and formal restore-test automation remain future work.
 - No secure report file/object storage is implemented. Current report records store metadata/reference text only, and the file storage security plan remains documentation.
 - Audit logs are application append-only, but database-level tamper resistance and retention controls are not implemented.
 

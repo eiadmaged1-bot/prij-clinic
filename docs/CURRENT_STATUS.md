@@ -2,15 +2,26 @@
 
 Date: 2026-06-29
 
-Branch: `release/mvp-rc-verification`
+Branch: `hardening/staging-deployment-prep`
 
-Target tag: `v0.1-mvp-release-candidate-verified`
+Base tag: `v0.1-mvp-release-candidate-verified`
+
+Target tag: `v0.1-staging-prep`
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This sprint prepares safe staging deployment with fake/demo data only. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+
+## Staging Prep Added
+
+- Environment examples for local, API, web, staging, and production placeholders.
+- Startup environment validation for required DB/JWT settings, disabled AI, stronger staging/production JWT secret, and production demo credential rejection.
+- Production seed behavior now skips demo users, `eyad` login, demo patients, demo workflow records, demo billing, and demo AI drafts.
+- API/web Dockerfiles, staging compose file, production compose example, and nginx reverse-proxy example.
+- Database deployment workflows, staging backup/restore procedure, security hardening checklist, staging runbook, operations monitoring plan, and release gate checklist.
+- Local backup script verified on 2026-06-29.
 
 ## Implemented Foundation
 

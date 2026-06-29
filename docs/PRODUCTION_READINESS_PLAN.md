@@ -2,7 +2,20 @@
 
 Date: 2026-06-29
 
-Prij Clinic V0.1 is an MVP release candidate for local/private demo review. It is not approved for real patient use. The items below are required before staging, pilot, or production handling of real clinical data.
+Prij Clinic V0.1 is a verified MVP release candidate for local/private demo review. The current sprint prepares staging deployment with fake/demo data only. It is not approved for real patient use. The items below are required before staging trial, pilot, or production handling of real clinical data.
+
+## Staging Prep Status
+
+Completed in `hardening/staging-deployment-prep`:
+
+- Placeholder-only environment examples for local, API, web, staging, and production.
+- API startup validation for required environment settings and production demo credential rejection.
+- Production minimal seed path that skips demo users and demo records.
+- Staging Docker Compose, production compose example, API/web Dockerfiles, and nginx example.
+- Database deployment workflows and migration deploy documentation.
+- Backup/restore, security hardening, staging runbook, monitoring plan, and release gate docs.
+
+Next sprint: Staging Deployment Trial.
 
 ## 1. Hosting And Environment
 
@@ -65,10 +78,10 @@ Prij Clinic V0.1 is an MVP release candidate for local/private demo review. It i
 | Gate | Required Result |
 | --- | --- |
 | Local demo gate | All local tests pass; fake-data workflow demo succeeds; no real PHI |
-| Staging gate | Demo credentials removed; HTTPS; secrets manager; backups; deploy runbook; smoke/security tests |
+| Staging gate | Fake/demo data only; staging-specific demo credentials; HTTPS; protected secrets; backups; deploy runbook; smoke/security tests |
 | Pilot gate | Legal/privacy/security signoff; consent workflow; backup restore proof; monitoring; support process |
 | Production gate | Full operational approval, audit retention, incident response, MFA, secure storage, and clinical governance |
 
 ## Next Sprint
 
-Exact next sprint: Production Hardening + Staging Deployment Prep.
+Exact next sprint: Staging Deployment Trial.

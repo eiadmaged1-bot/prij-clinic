@@ -4,6 +4,20 @@ Date: 2026-06-28
 
 Prij Clinic V0.1 is a local/private pilot foundation for demo and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
+## Staging Deployment Prep - 2026-06-29
+
+This sprint prepares a safe staging deployment path with fake/demo data only:
+
+- Added environment validation and placeholder-only local/staging/production env examples.
+- Added production guards that reject demo seed flags and local demo passwords.
+- Separated production minimal seed behavior from local/staging demo seed behavior.
+- Added API/web Dockerfiles, `docker-compose.staging.yml`, production compose example, and nginx staging reverse-proxy example.
+- Added database deployment workflow docs requiring `prisma migrate deploy` for staging/production.
+- Verified the local backup script and documented staging backup, encryption, and restore-proof procedures.
+- Added security hardening checklist, staging deployment runbook, operations monitoring plan, and release gate checklist.
+
+Staging remains fake/demo data only. Production patient use remains blocked until legal, security, privacy, backup, monitoring, restore-proof, and clinical governance gates pass.
+
 ## MVP Release Candidate Verification - 2026-06-29
 
 The MVP release candidate now integrates clinical persistence, OB/GYN core recording, patient-context workflow actions, patient timeline aggregation, release-candidate UX polish, visual QA, and production-readiness planning.

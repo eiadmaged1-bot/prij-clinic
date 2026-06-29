@@ -1,8 +1,21 @@
 # Next Steps
 
-The exact next recommended sprint after this release-candidate verification is:
+The exact next recommended sprint after this staging-prep branch is:
 
-## Production Hardening + Staging Deployment Prep
+## Staging Deployment Trial
+
+Goals:
+
+- Deploy staging with fake/demo data only.
+- Use `.env.staging.example` and `docker-compose.staging.yml` with staging-only secrets.
+- Run `npm run prisma:migrate:deploy`, then staging demo seed.
+- Verify `/health`, `/health/db`, login, admin denial, patient workflow, clinical persistence, visual QA, and backup procedure.
+- Exercise rollback without dropping or resetting the database.
+- Record issues before any pilot planning.
+
+## Completed Current Sprint Scope
+
+Production Hardening + Staging Deployment Prep covers:
 
 Goals:
 

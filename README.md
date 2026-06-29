@@ -4,7 +4,7 @@ Clinic Management System V0.1 MVP release candidate for OB/GYN and women's healt
 
 Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.1 is a local/private demo foundation and MVP release candidate. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.1 is a verified local/private MVP release candidate. This sprint prepares staging deployment with fake/demo data only. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 ## V0.1 Focused Clinic Workflow
 
@@ -26,6 +26,11 @@ Release-candidate verification and production-readiness planning are documented 
 
 - `docs/MVP_RC_VERIFICATION_CHECKLIST.md`
 - `docs/PRODUCTION_READINESS_PLAN.md`
+- `docs/STAGING_DEPLOYMENT_RUNBOOK.md`
+- `docs/SECURITY_HARDENING_CHECKLIST.md`
+- `docs/RELEASE_GATE_CHECKLIST.md`
+- `docs/OPERATIONS_MONITORING_PLAN.md`
+- `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
 
 ## Safety Rules
 
@@ -61,12 +66,15 @@ Required local variables:
 
 ```powershell
 API_PORT=3001
+APP_ENV=local
+APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=your-local-dev-secret
 JWT_EXPIRES_IN=1h
 DEMO_OWNER_EMAIL=owner@prij.local
 DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
+SEED_DEMO_DATA=true
 ```
 
 Primary local demo admin login:
@@ -77,6 +85,8 @@ Password: eyad
 ```
 
 This credential is local demo only and is forbidden outside a local/private demo database.
+
+Staging demo credentials must use different staging-only passwords. Production must set `SEED_DEMO_DATA=false` and `SEED_DEMO_OWNER=false`; production must not create `eyad` / `eyad`.
 
 Other demo accounts are local-only and use the default password `LocalDev123!` unless overridden.
 
