@@ -761,6 +761,7 @@ select:focus {
 .form-actions,
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   gap: 0.75rem;
 }
@@ -1849,6 +1850,12 @@ td span {
     gap: 0.8rem;
   }
 
+  .theme-medicolize-portal .topbar,
+  .topbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .nav-group {
     grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   }
@@ -1871,6 +1878,10 @@ td span {
   .owner-stats,
   .patient-hero {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
   }
 
   .hero-panel {
@@ -1934,7 +1945,9 @@ td span {
   .button,
   .button.large,
   .patient-action,
-  .doctor-row .button {
+  .doctor-row .button,
+  .form-actions .button,
+  .patient-list-card .button {
     width: 100%;
   }
 
@@ -1971,5 +1984,14 @@ td span {
   .doctor-row,
   .timeline-item {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .patient-list-title {
+    align-items: flex-start;
+  }
+
+  .portal-card {
+    min-height: 10.5rem;
+    padding: 1rem;
   }
 }
