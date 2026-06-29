@@ -609,7 +609,14 @@ function rankChunk(
   query: SearchGuidelinesDto
 ) {
   let score = 0;
-  for (const term of terms) if (chunk.normalizedText.includes(term)) score += 3;
+  let matches = 0;
+  for (const term of terms) {
+    if (chunk.normalizedText.includes(term)) {
+      matches += 1;
+      score += 3;
+    }
+  }
+  if (terms.length && matches === 0) return 0;
   if (query.specialty && chunk.document.specialty === query.specialty.toLowerCase()) score += 4;
   if (query.topic && chunk.document.topic === query.topic.toLowerCase()) score += 4;
   if (chunk.document.guidelineStatus === "ACTIVE") score += 2;
