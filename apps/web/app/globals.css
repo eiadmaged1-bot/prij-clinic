@@ -2291,6 +2291,67 @@ td span {
   }
 }
 
+.guideline-hero {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(232, 246, 242, 0.95), rgba(247, 250, 252, 0.96));
+  border: 1px solid rgba(20, 124, 112, 0.18);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+}
+
+.guideline-hero h1 {
+  margin: 0.2rem 0;
+}
+
+.guideline-actions {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-bottom: 1rem;
+}
+
+.guideline-card {
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  color: inherit;
+  display: grid;
+  gap: 0.45rem;
+  min-height: 9rem;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.guideline-card span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.guideline-search {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 1rem;
+}
+
+.guideline-search textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.evidence-answer {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  margin-bottom: 0.85rem;
+  padding: 1rem;
+}
+
 @media print {
   body {
     background: #ffffff;

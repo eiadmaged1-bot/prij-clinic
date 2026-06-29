@@ -1,0 +1,306 @@
+"use client";
+
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { AppShell } from "../mvp-page";
+import { useSession } from "../session";
+import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+
+type GuidelineCenterProps = {
+  view: "home" | "search" | "ask" | "sources" | "upload" | "imports" | "review" | "updates" | "private";
+};
+
+type Source = {
+  id: string;
+  name: string;
+  organization: string;
+  sourceType: string;
+  active: boolean;
+};
+
+type Document = {
+  id: string;
+  title: string;
+  organization: string;
+  specialty: string;
+  topic: string;
+  versionLabel?: string;
+  guidelineStatus: string;
+  accessLevel: string;
+  _count?: { chunks: number };
+};
+
+type SearchResult = {
+  chunkId: string;
+  title: string;
+  organization: string;
+  versionLabel?: string;
+  sectionHeading: string;
+  snippet: string;
+  citationLabel: string;
+  accessLevel: string;
+};
+
+export function GuidelineCenter({ view }: GuidelineCenterProps) {
+  const { user, status } = useSession();
+  const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
+  const canRead = Boolean(user?.permissions.includes("guidelines.read") || user?.permissions.includes("guidelines.search"));
+  const canUpload = Boolean(user?.permissions.includes("guidelines.upload"));
+  const canImport = Boolean(user?.permissions.includes("guidelines.import"));
+  const canReview = Boolean(user?.permissions.includes("guidelines.review"));
+  const canManageSources = Boolean(user?.permissions.includes("guidelines.manage_sources"));
+  const [sources, setSources] = useState<Source[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [answer, setAnswer] = useState("");
+  const [citations, setCitations] = useState<Array<{ citationLabel: string; title: string }>>([]);
+  const [message, setMessage] = useState("Ready");
+
+  useEffect(() => {
+    if (!token || !canRead) return;
+    void loadBasics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, canRead]);
+
+  async function loadBasics() {
+    const [sourceBody, documentBody] = await Promise.all([
+      apiGet("/guidelines/sources"),
+      apiGet("/guidelines/documents")
+    ]);
+    setSources(sourceBody.sources ?? []);
+    setDocuments(documentBody.documents ?? []);
+  }
+
+  async function apiGet(path: string) {
+    const response = await fetch(`${apiUrl}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : undefined });
+    if (!response.ok) return {};
+    return response.json();
+  }
+
+  async function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("Searching local library");
+    const body = await apiGet(`/guidelines/search?q=${encodeURIComponent(query)}`);
+    setResults(body.results ?? []);
+    setMessage((body.results ?? []).length ? "Results ready" : "No source found in your local library");
+  }
+
+  async function submitAsk(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("Creating local evidence summary");
+    const response = await fetch(`${apiUrl}/guidelines/ask`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ question: query })
+    });
+    const body = response.ok ? await response.json() : { answer: "No source found in your local library.", citations: [] };
+    setAnswer(body.answer);
+    setCitations(body.citations ?? []);
+    setMessage(body.warning ?? "Doctor review required. Evidence summary only.");
+  }
+
+  if (status === "loading") return <AppShell><GuidelineShell title="Guideline Center"><Empty text="Loading evidence library" /></GuidelineShell></AppShell>;
+  if (!canRead) {
+    return (
+      <AppShell>
+        <GuidelineShell title="Guideline Center">
+          <Empty text="Guideline Center is restricted to owner, admin, and doctor roles." />
+        </GuidelineShell>
+      </AppShell>
+    );
+  }
+
+  return (
+    <AppShell>
+      <GuidelineShell title={titleFor(view)} message={message}>
+        {view === "home" ? (
+          <>
+            <section className="guideline-hero">
+              <div>
+                <p className="eyebrow">Private clinical evidence library</p>
+                <h1>Guideline Center</h1>
+                <p>Evidence library only. Doctor review required.</p>
+              </div>
+              <ThreeDMedicalIcon name="files" size="lg" tone="teal" />
+            </section>
+            <section className="guideline-actions">
+              {cards(canUpload, canImport, canReview).map((card) => (
+                <Link className="guideline-card" href={card.href} key={card.href}>
+                  <ThreeDMedicalIcon name={card.icon} size="md" tone="navy" />
+                  <strong>{card.title}</strong>
+                  <span>{card.copy}</span>
+                </Link>
+              ))}
+            </section>
+            <DocumentList documents={documents.slice(0, 6)} title="Recently indexed documents" />
+          </>
+        ) : null}
+        {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} /> : null}
+        {view === "ask" ? <AskPanel query={query} setQuery={setQuery} submitAsk={submitAsk} answer={answer} citations={citations} /> : null}
+        {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
+        {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
+        {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
+        {view === "review" ? <DocumentList documents={documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW")} title="Documents needing review" /> : null}
+        {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
+        {view === "private" ? <DocumentList documents={documents.filter((item) => item.accessLevel !== "CLINICAL_TEAM")} title="Private vault" /> : null}
+      </GuidelineShell>
+    </AppShell>
+  );
+}
+
+function GuidelineShell({ title, message, children }: { title: string; message?: string; children: React.ReactNode }) {
+  return (
+    <>
+      <section className="page-header">
+        <div className="header-row">
+          <div>
+            <p className="eyebrow">Clinical Guideline Center</p>
+            <h1>{title}</h1>
+          </div>
+          <span className="badge warning">Evidence summary only</span>
+        </div>
+        <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
+      </section>
+      {children}
+    </>
+  );
+}
+
+function SearchPanel(props: {
+  query: string;
+  setQuery: (value: string) => void;
+  submitSearch: (event: FormEvent<HTMLFormElement>) => void;
+  results: SearchResult[];
+}) {
+  return (
+    <section className="panel">
+      <form className="guideline-search" onSubmit={props.submitSearch}>
+        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search local guideline text" />
+        <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
+      </form>
+      <div className="data-list">
+        {props.results.map((result) => (
+          <article className="data-row" key={result.chunkId}>
+            <div className="data-row-header"><strong>{result.title}</strong><span className="badge">{result.accessLevel}</span></div>
+            <p>{result.snippet}</p>
+            <p className="muted">{result.organization} - {result.versionLabel ?? "current"} - {result.sectionHeading}</p>
+            <span className="badge accent">{result.citationLabel}</span>
+          </article>
+        ))}
+        {!props.results.length ? <Empty text="No source found in your local library." /> : null}
+      </div>
+    </section>
+  );
+}
+
+function AskPanel(props: {
+  query: string;
+  setQuery: (value: string) => void;
+  submitAsk: (event: FormEvent<HTMLFormElement>) => void;
+  answer: string;
+  citations: Array<{ citationLabel: string; title: string }>;
+}) {
+  return (
+    <section className="panel">
+      <form className="guideline-search" onSubmit={props.submitAsk}>
+        <textarea value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Ask from indexed guideline chunks" />
+        <button className="button" type="submit"><ThreeDMedicalIcon name="ai" size="sm" />Ask Evidence Library</button>
+      </form>
+      <article className="evidence-answer">
+        <strong>Evidence summary from local library only.</strong>
+        <p>{props.answer || "No source found in your local library."}</p>
+        <p className="muted">Doctor review required. Evidence summary only.</p>
+      </article>
+      {props.citations.map((citation) => <span className="badge accent" key={citation.citationLabel}>{citation.citationLabel}</span>)}
+    </section>
+  );
+}
+
+function SourceList({ sources, canManageSources }: { sources: Source[]; canManageSources: boolean }) {
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Source registry</h2>{canManageSources ? <span className="badge">Owner tools enabled</span> : null}</div>
+      <div className="data-list">
+        {sources.map((source) => (
+          <article className="data-row" key={source.id}>
+            <div className="data-row-header"><strong>{source.organization}</strong><span className="badge">{source.sourceType}</span></div>
+            <p>{source.name}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boolean }) {
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Upload licensed PDF or text</h2><span className="badge warning">Private vault</span></div>
+      {canUpload ? (
+        <form className="form-grid">
+          <label>Title<input placeholder="Document title" /></label>
+          <label>Specialty<input placeholder="obstetrics or gynecology" /></label>
+          <label>Topic<input placeholder="Topic" /></label>
+          <label>Source<select>{sources.map((source) => <option key={source.id}>{source.organization}</option>)}</select></label>
+          <label>Access<select><option>Owner and Doctor</option><option>Owner only</option></select></label>
+          <label>File<input type="file" accept=".pdf,.txt,text/plain,application/pdf" /></label>
+          <button className="button" type="button"><ThreeDMedicalIcon name="files" size="sm" />Upload for review</button>
+        </form>
+      ) : <Empty text="Upload is restricted to authorized owner or doctor accounts." />}
+    </section>
+  );
+}
+
+function DocumentList({ documents, title }: { documents: Document[]; title: string }) {
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>{title}</h2><span className="badge">{documents.length}</span></div>
+      <div className="data-list">
+        {documents.map((document) => (
+          <article className="data-row" key={document.id}>
+            <div className="data-row-header"><strong>{document.title}</strong><span className="badge">{document.guidelineStatus}</span></div>
+            <p>{document.organization} - {document.specialty} - {document.topic}</p>
+            <p className="muted">{document.versionLabel ?? "No version label"} - {document._count?.chunks ?? 0} indexed chunks</p>
+          </article>
+        ))}
+        {!documents.length ? <Empty text="No guideline documents in this view yet." /> : null}
+      </div>
+    </section>
+  );
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>{text}</span></p>;
+}
+
+function cards(canUpload: boolean, canImport: boolean, canReview: boolean) {
+  return [
+    { href: "/guidelines/search", title: "Search Library", copy: "Find indexed sections with citations.", icon: "search" as const },
+    { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
+    { href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },
+    { href: "/guidelines/sources", title: "Sources Registry", copy: canImport ? "Manage open and restricted sources." : "Review source access types.", icon: "reports" as const },
+    { href: "/guidelines/review", title: "Needs Review", copy: canReview ? "Approve, reject, or archive imports." : "Doctor review queue.", icon: "doctor" as const },
+    { href: "/guidelines/private-vault", title: "Private Vault", copy: "Licensed local uploads stay private.", icon: "consent" as const }
+  ];
+}
+
+function titleFor(view: GuidelineCenterProps["view"]) {
+  const titles = {
+    home: "Guideline Center",
+    search: "Search Evidence Library",
+    ask: "Ask Evidence Library",
+    sources: "Sources Registry",
+    upload: "Upload Licensed PDF",
+    imports: "Import Jobs",
+    review: "Review Queue",
+    updates: "Possible Updates",
+    private: "Private Vault"
+  };
+  return titles[view];
+}
