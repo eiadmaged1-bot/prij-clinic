@@ -26,7 +26,7 @@ async function main() {
   record.pass("guided visit workflow steps are implemented");
 
   const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
-  for (const label of ["Overview", "Visits", "Prescriptions", "Orders & Reports", "Pregnancy", "Billing", "Files", "Timeline", "Start Visit"]) {
+  for (const label of ["Summary", "Pregnancy/OB", "General Gynecology", "Encounters", "Prescriptions", "Investigations", "Billing/Finance", "Files", "Timeline", "Start Visit"]) {
     if (!patientSource.includes(label)) throw new Error(`Simplified patient file label missing: ${label}`);
   }
   record.pass("patient file simplified tabs and actions are implemented");

@@ -137,10 +137,13 @@ async function main() {
   }
   const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
   for (const label of [
-    "Overview",
-    "Visits",
+    "Summary",
+    "Pregnancy/OB",
+    "General Gynecology",
+    "Encounters",
     "Prescriptions",
-    "Orders & Reports",
+    "Investigations",
+    "Billing/Finance",
     "Pregnancy Overview",
     "Antenatal Visits",
     "Visit details",
