@@ -1446,6 +1446,7 @@ td span {
   width: 2rem;
   height: 2rem;
   border-radius: 0.72rem;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 86%), 0 7px 15px rgb(15 23 42 / 10%);
 }
 
 .medical-icon-md {
@@ -1474,6 +1475,10 @@ td span {
   fill: currentColor;
   opacity: 0.1;
   stroke: none;
+}
+
+.medical-icon-sm .medical-icon-glow {
+  opacity: 0.06;
 }
 
 .medical-icon-navy {
@@ -1520,6 +1525,10 @@ td span {
 }
 
 .comfort-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   border: 0;
   border-radius: 999px;
   background: transparent;

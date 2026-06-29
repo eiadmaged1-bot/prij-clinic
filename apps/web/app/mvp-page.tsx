@@ -429,9 +429,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="topbar-actions">
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
-              <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
-                {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
-              </button>
+                <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
+                  <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
+                  {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
+                </button>
               ))}
             </div>
             {hasToken ? (
