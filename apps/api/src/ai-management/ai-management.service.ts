@@ -112,6 +112,7 @@ export class AiManagementService {
 function buildOutput(protocol: Awaited<ReturnType<AiManagementService["findByCode"]>>, dto: CreateManagementSnapshotDto) {
   const base = {
     title: protocol?.title ?? "No verified protocol matched.",
+    snapshotHeading: snapshotHeadingFor(protocol),
     statusLabel: "Draft support only - doctor review required",
     protocolCode: protocol?.code ?? null,
     implementationStatus: protocol?.implementationStatus ?? "none",
@@ -138,9 +139,23 @@ function buildOutput(protocol: Awaited<ReturnType<AiManagementService["findByCod
   return {
     ...base,
     title: protocol.title,
+    snapshotHeading: snapshotHeadingFor(protocol),
     guidelineBasedOptions: options,
-    safetyChecks: safetyChecks.length ? safetyChecks : ["Doctor review required"]
+    safetyChecks: safetyChecks.length ? safetyChecks : ["Doctor review required"],
+    limitations: Array.from(new Set([...content.limitations, ...base.limitations])).slice(0, 8)
   };
+}
+
+function snapshotHeadingFor(protocol: Awaited<ReturnType<AiManagementService["findByCode"]>> | null | undefined) {
+  const group = protocol?.specialtyGroup?.toLowerCase() ?? "";
+  const code = protocol?.code ?? "";
+  const risk = protocol?.riskLevel ?? "";
+  if (risk === "emergency" || risk === "high" && group.includes("emergency")) return "Urgent safety snapshot";
+  if (group.includes("contraception")) return "Eligibility and counseling snapshot";
+  if (group.includes("antenatal")) return "Antenatal care snapshot";
+  if (group.includes("menstrual") || code.includes("BLEEDING") || code.includes("AMENORRHEA") || code.includes("DYSMENORRHEA") || code === "PMS" || code === "PMDD") return "Gynecology management snapshot";
+  if (group.includes("early pregnancy") && (risk === "high" || risk === "emergency")) return "Urgent safety snapshot";
+  return "Management snapshot for doctor review";
 }
 
 function context(dto: CreateManagementSnapshotDto) {

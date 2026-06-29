@@ -6,6 +6,10 @@ loadRootEnv();
 
 const { PrismaClient } = require("@prisma/client");
 const { seedWomensHealthProtocols } = require("./seeds/womens-health-protocols");
+const { seedEmergencyObProtocols } = require("./seeds/womens-health-emergency-protocols");
+const { seedAubMenstrualProtocols } = require("./seeds/womens-health-aub-menstrual-protocols");
+const { seedContraceptionProtocols } = require("./seeds/womens-health-contraception-protocols");
+const { seedAntenatalRoutineProtocols } = require("./seeds/womens-health-antenatal-routine-protocols");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
@@ -550,6 +554,10 @@ async function main() {
   });
 
   await seedWomensHealthProtocols(prisma);
+  await seedEmergencyObProtocols(prisma);
+  await seedAubMenstrualProtocols(prisma);
+  await seedContraceptionProtocols(prisma);
+  await seedAntenatalRoutineProtocols(prisma);
 
   if (!seedDemoData) {
     return;

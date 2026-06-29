@@ -3,6 +3,7 @@ const PASSWORD = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
 let ownerToken = "";
 let doctorToken = "";
 let receptionToken = "";
+let accountantToken = "";
 const results = [];
 
 const pass = (label) => { results.push(["PASS", label]); console.log(`AI-MANAGEMENT PASS ${label}`); };
@@ -32,6 +33,7 @@ async function main() {
   ownerToken = await login("eyad");
   doctorToken = await login("demo.doctor@prij.local");
   receptionToken = await login("demo.reception@prij.local");
+  accountantToken = await login("demo.accountant@prij.local");
   pass("demo users login");
 
   const patient = await request("/patients", { method: "POST", body: JSON.stringify({ medicalRecordNumber: `DEMO-AIMS-${Date.now()}`, firstName: "Demo", lastName: "Snapshot", notes: "Fake local test patient only." }) });
@@ -41,6 +43,31 @@ async function main() {
   const verified = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "endometriosis", clinicalGoal: "pain control", protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" }) });
   if (!verified.response.ok || verified.body.outputJson.guidelineBasedOptions.length === 0) throw new Error("verified snapshot did not return options");
   pass("verified protocol returns management options");
+
+  const packExamples = [
+    ["ECTOPIC_RED_FLAGS", "Urgent safety snapshot"],
+    ["ABNORMAL_UTERINE_BLEEDING", "Gynecology management snapshot"],
+    ["POSTMENOPAUSAL_BLEEDING", "Gynecology management snapshot"],
+    ["CONTRACEPTION_COUNSELING", "Eligibility and counseling snapshot"],
+    ["MISSED_PILLS", "Eligibility and counseling snapshot"],
+    ["ANTENATAL_CARE_ROUTINE", "Antenatal care snapshot"],
+    ["ANEMIA_IN_PREGNANCY", "Antenatal care snapshot"]
+  ];
+  for (const [protocolCode, heading] of packExamples) {
+    const example = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: protocolCode, clinicalGoal: "doctor review", protocolCode }) }, doctorToken);
+    if (!example.response.ok) throw new Error(`${protocolCode} snapshot failed`);
+    const output = example.body.outputJson;
+    if (output.snapshotHeading !== heading) throw new Error(`${protocolCode} heading ${output.snapshotHeading} did not match ${heading}`);
+    if (output.guidelineBasedOptions.length < 1 || output.guidelineBasedOptions.length > 5) throw new Error(`${protocolCode} option count invalid`);
+    if (output.safetyChecks.length < 1 || output.safetyChecks.length > 8) throw new Error(`${protocolCode} safety check count invalid`);
+    if (!output.source?.name || output.implementationStatus !== "verified") throw new Error(`${protocolCode} source or verified status missing`);
+    if (!output.limitations.join(" ").includes("Doctor review")) throw new Error(`${protocolCode} limitations missing doctor review`);
+    const text = JSON.stringify(output).toLowerCase();
+    for (const unsafe of [" mg", "must prescribe", "definitive diagnosis", "final diagnosis", "send home", "reassure", "guaranteed"]) {
+      if (text.includes(unsafe)) throw new Error(`${protocolCode} output included unsafe phrase ${unsafe}`);
+    }
+  }
+  pass("verified packs return pack-specific safe snapshots");
 
   const catalog = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "fibroid", protocolCode: "UTERINE_FIBROIDS_CATALOG_V1" }) });
   if (!catalog.response.ok || catalog.body.outputJson.guidelineBasedOptions.length !== 0 || !catalog.body.outputJson.limitations.join(" ").includes("cannot provide management options")) throw new Error("catalog-only returned management options");
@@ -73,6 +100,10 @@ async function main() {
   const denied = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "endometriosis" }) }, receptionToken);
   if (denied.response.status !== 403) throw new Error(`receptionist got ${denied.response.status}`);
   pass("receptionist cannot create snapshot");
+
+  const accountantDenied = await request("/ai-management/snapshots", { method: "POST", body: JSON.stringify({ patientId: patient.body.id, diagnosisText: "contraception", protocolCode: "CONTRACEPTION_COUNSELING" }) }, accountantToken);
+  if (accountantDenied.response.status !== 403) throw new Error(`accountant got ${accountantDenied.response.status}`);
+  pass("accountant cannot create snapshot");
 
   const rejectedNoReason = await request(`/ai-management/snapshots/${verified.body.id}/review`, { method: "POST", body: JSON.stringify({ decision: "rejected" }) }, doctorToken);
   if (rejectedNoReason.response.status !== 400) throw new Error("reject without reason should fail");

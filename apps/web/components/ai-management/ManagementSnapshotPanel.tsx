@@ -126,6 +126,7 @@ function SnapshotResult({ snapshot, editText, onEditText, onReview, onSaveMemory
   const catalogOnly = output.implementationStatus !== "verified";
   return (
     <article className="snapshot-result">
+      <p className="eyebrow">{output.snapshotHeading ?? "Management snapshot for doctor review"}</p>
       <h3>{output.title}</h3>
       <span className="badge">{output.statusLabel}</span>
       {catalogOnly ? <p className="notice safety-note">Protocol is listed in the Women&apos;s Health Atlas, but management snapshot is not yet verified. Add a guideline source and verify protocol before using AI management options.</p> : null}

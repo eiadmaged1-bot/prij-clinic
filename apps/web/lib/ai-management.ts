@@ -56,6 +56,7 @@ export type CreateManagementSnapshotInput = {
 
 export type SnapshotOutput = {
   title: string;
+  snapshotHeading?: string;
   statusLabel: string;
   protocolCode?: string | null;
   implementationStatus: string;

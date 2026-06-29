@@ -52,7 +52,12 @@ const listLimits: Record<keyof Omit<StructuredProtocolContent, "summary" | "veri
 const unsafePatterns = [
   { pattern: /\b\d+(\.\d+)?\s*(mg|mcg|g|gram|grams|ml|iu|units?|tabs?|tablets?|caps?|capsules?)\b/i, message: "Medication dose patterns are not allowed." },
   { pattern: /\b(must|should)\s+prescribe\b/i, message: "Prescribing commands are not allowed." },
+  { pattern: /\b(automatically prescribe|prescribe automatically|start medication|start treatment)\b/i, message: "Automatic prescription or treatment language is not allowed." },
   { pattern: /\bdefinitive diagnosis\b/i, message: "Definitive diagnosis language is not allowed." },
+  { pattern: /\b(final diagnosis|diagnosis is|diagnose as|confirms diagnosis)\b/i, message: "Final diagnosis language is not allowed." },
+  { pattern: /\bfinal treatment plan\s*:/i, message: "Final treatment plan language is not allowed." },
+  { pattern: /\bsend home\b/i, message: "Unsafe discharge wording is not allowed." },
+  { pattern: /\breassur(e|ed|ance)\b/i, message: "False reassurance wording is not allowed." },
   { pattern: /\bguaranteed\b/i, message: "Guaranteed outcome language is not allowed." },
   { pattern: /\balways\b/i, message: "Always language is not allowed." }
 ];
@@ -105,6 +110,10 @@ export function validateProtocolContentForStatus(status: string, contentJson: un
 
   if (status === "verified" && content.options.length === 0) {
     errors.push("Verified protocols require at least one structured management option.");
+  }
+
+  if (status === "verified" && !flattenContent(content).join(" ").match(/\bdoctor review required\b|\breviewed by a doctor\b|\breviewed and approved by a doctor\b/i)) {
+    errors.push("Verified protocols require explicit doctor review wording.");
   }
 
   const unsafe = detectUnsafeClinicalPhrases(flattenContent(content));
