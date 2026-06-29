@@ -40,3 +40,15 @@ No output is automatically inserted into signed records, prescriptions, investig
 ## Audit
 
 Snapshot creation, doctor review, and patient memory save actions are audited. Snapshot IDs are CUIDs, so they are stored in audit metadata rather than the UUID-only `resourceId` field.
+# V0.5 Pack-Specific Snapshot Behavior
+
+AI Management Snapshot remains deterministic and local. It does not call external AI, diagnose, prescribe, dose, or create a final treatment plan.
+
+Pack headings:
+- Emergency/high risk: Urgent safety snapshot.
+- AUB/menstrual: Gynecology management snapshot.
+- Contraception: Eligibility and counseling snapshot.
+- Antenatal routine: Antenatal care snapshot.
+- Other verified protocols: Management snapshot for doctor review.
+
+Only verified protocols generate management support. Catalog-only, draft, retired, and unknown protocols remain blocked. Every output includes source/verification context, limitations, and doctor approval requirements.

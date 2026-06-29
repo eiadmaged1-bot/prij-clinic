@@ -55,3 +55,17 @@ Management options are capped at five. Safety checks are capped at eight. Medica
 ## Current Limit
 
 The atlas is a protocol coverage and verification framework. It does not include hundreds of complete verified clinical management protocols yet.
+# V0.5 Verified Packs
+
+Clean seed counts after this sprint:
+- Verified protocols before pack work: 3.
+- Verified protocols after all four packs: 73.
+- Catalog-only protocols after all four packs: 299.
+
+Added verified packs:
+- Emergency OB and early pregnancy red flags: 20 protocols.
+- AUB and menstrual disorders: 17 protocols.
+- Contraception eligibility and counseling: 17 protocols.
+- Routine antenatal care: 16 protocols.
+
+Structured content validation enforces doctor-review support, limitations, source metadata, short option/check counts, and unsafe-wording guards.

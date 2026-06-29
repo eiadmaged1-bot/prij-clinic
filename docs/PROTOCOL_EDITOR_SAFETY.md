@@ -60,3 +60,6 @@ Audit metadata stores the CUID protocol ID as `protocolId`; the UUID-only `resou
 ## Clinical Boundary
 
 The editor does not create automatic diagnosis, automatic prescribing, medication dosing, final plans, signed encounter changes, or external AI calls.
+# V0.5 Safety Continuity
+
+The verified packs use the existing structured protocol editor and audit model. Protocol mutations remain owner/admin-managed, reasoned, and audited. The AI Management layer reads verified structured content only and does not modify signed records automatically.

@@ -912,6 +912,238 @@ model ClinicalProtocol {
   @@index([riskLevel])
 }
 
+enum GuidelineSourceType {
+  OPEN_PUBLIC
+  PUBLIC_RESTRICTED
+  LICENSED_UPLOAD
+  LOGIN_REQUIRED
+  LINK_ONLY
+  DO_NOT_IMPORT
+}
+
+enum GuidelineAccessLevel {
+  OWNER_ONLY
+  OWNER_DOCTOR
+  CLINICAL_TEAM
+}
+
+enum GuidelineStatus {
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+  DRAFT_IMPORT
+  NEEDS_REVIEW
+}
+
+enum GuidelineLicenseStatus {
+  OPEN
+  CHECK_REQUIRED
+  LICENSED_PRIVATE
+  LOGIN_REQUIRED
+  LINK_ONLY
+  DO_NOT_IMPORT
+}
+
+enum GuidelineImportJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum GuidelineImportJobType {
+  OPEN_SOURCE_IMPORT
+  PRIVATE_UPLOAD
+  TEXT_EXTRACTION
+  REINDEX
+  UPDATE_CHECK
+}
+
+enum GuidelineReviewDecisionValue {
+  APPROVED
+  REJECTED
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum GuidelineAnswerMode {
+  SEARCH_ONLY
+  MOCK_RAG
+  CITATION_SUMMARY
+}
+
+model GuidelineSource {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique
+  organization String   @default("Local source registry")
+  sourceType   GuidelineSourceType @default(LINK_ONLY)
+  abbreviation String?
+  websiteUrl   String?
+  countryOrRegion String?
+  specialties  Json?
+  defaultAccessLevel GuidelineAccessLevel @default(OWNER_DOCTOR)
+  active       Boolean  @default(true)
+  status       String   @default("active")
+  notes        String?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  documents    GuidelineDocument[]
+
+  @@index([status])
+}
+
+model GuidelineDocument {
+  id             String   @id @default(uuid()) @db.Uuid
+  sourceId       String   @db.Uuid
+  title          String
+  specialty      String   @default("Women's health")
+  topic          String   @default("Guideline center")
+  subtopic       String?
+  organization   String   @default("Local Clinic Protocol")
+  guidelineStatus GuidelineStatus @default(NEEDS_REVIEW)
+  documentType   String   @default("demo_text")
+  licenseStatus  GuidelineLicenseStatus @default(CHECK_REQUIRED)
+  originalUrl    String?
+  accessLevel    GuidelineAccessLevel @default(OWNER_DOCTOR)
+  reviewStatus   String   @default("pending_governance_review")
+  citationLabel  String
+  storageRef     String?
+  importedByUserId String? @db.Uuid
+  reviewedByUserId String? @db.Uuid
+  reviewedAt     DateTime? @db.Timestamptz(3)
+  fileEncrypted  Boolean  @default(false)
+  downloadsAllowed Boolean @default(false)
+  archivedAt     DateTime? @db.Timestamptz(3)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  source         GuidelineSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  versions       GuidelineVersion[]
+  sections       GuidelineSection[]
+  importJobs     GuidelineImportJob[]
+  reviewDecisions GuidelineReviewDecision[]
+
+  @@index([sourceId])
+  @@index([reviewStatus])
+  @@index([archivedAt])
+}
+
+model GuidelineVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  versionLabel String
+  publishedYear Int?
+  sourceUrl   String?
+  status      GuidelineStatus @default(ACTIVE)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sections    GuidelineSection[]
+
+  @@index([documentId])
+  @@index([status])
+}
+
+model GuidelineSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  versionId   String?  @db.Uuid
+  heading     String
+  sectionPath String?
+  orderIndex  Int      @default(0)
+  sortOrder   Int      @default(0)
+  text        String   @default("")
+  reviewStatus String  @default("pending_governance_review")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version     GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  chunks      GuidelineChunk[]
+
+  @@index([documentId])
+  @@index([versionId])
+}
+
+model GuidelineChunk {
+  id            String   @id @default(uuid()) @db.Uuid
+  documentId    String   @db.Uuid
+  sectionId     String   @db.Uuid
+  versionId     String?  @db.Uuid
+  chunkIndex    Int
+  text          String
+  normalizedText String  @default("")
+  tokenEstimate Int?
+  citationLabel String
+  reviewStatus  String   @default("pending_governance_review")
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  section       GuidelineSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, chunkIndex])
+  @@index([citationLabel])
+  @@index([reviewStatus])
+}
+
+model GuidelineImportJob {
+  id          String   @id @default(uuid()) @db.Uuid
+  jobType     GuidelineImportJobType
+  documentId  String?  @db.Uuid
+  sourceId    String?  @db.Uuid
+  status      GuidelineImportJobStatus @default(SUCCEEDED)
+  importType  String   @default("demo_text")
+  summary     String?
+  requestedByUserId String? @db.Uuid
+  message     String?
+  resultJson  Json?
+  startedAt   DateTime? @db.Timestamptz(3)
+  finishedAt  DateTime? @db.Timestamptz(3)
+  createdByUserId String? @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  document    GuidelineDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([status])
+}
+
+model GuidelineReviewDecision {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  decision    GuidelineReviewDecisionValue
+  reason      String?
+  decidedByUserId String? @db.Uuid
+  decidedAt   DateTime? @db.Timestamptz(3)
+  reviewerUserId String? @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([decision])
+}
+
+model GuidelineQueryLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @db.Uuid
+  queryText   String
+  query       String?
+  resultCount Int      @default(0)
+  mode        String   @default("search")
+  answerMode  GuidelineAnswerMode?
+  citedChunkIds Json?
+  actorUserId String?  @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([actorUserId, createdAt])
+  @@index([mode])
+}
+
 model AIManagementSnapshot {
   id                 String   @id @default(cuid())
   patientId          String   @db.Uuid

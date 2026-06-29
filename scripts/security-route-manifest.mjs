@@ -100,7 +100,19 @@ const routeDefinitions = [
   { method: "GET", path: "/ai-management/snapshots", category: "ai-management", requiredPermission: "ai_management.read", allowedAs: "doctor", denyAs: "reception" },
   { method: "GET", path: "/ai-management/snapshots/:snapshotId", category: "ai-management", requiredPermission: "ai_management.read", allowedAs: "doctor", denyAs: "reception" },
   { method: "POST", path: "/ai-management/snapshots/:snapshotId/review", category: "ai-management", requiredPermission: "ai_management.review", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementReview", notes: "Doctor review only; does not modify signed encounter." },
-  { method: "POST", path: "/ai-management/snapshots/:approvedSnapshotId/save-memory", category: "ai-management", requiredPermission: "ai_management.memory_save", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementMemory", notes: "Memory save only after approved snapshot." }
+  { method: "POST", path: "/ai-management/snapshots/:approvedSnapshotId/save-memory", category: "ai-management", requiredPermission: "ai_management.memory_save", allowedAs: "doctor", denyAs: "reception", fixtureBody: "managementMemory", notes: "Memory save only after approved snapshot." },
+  { method: "GET", path: "/guidelines/sources", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local evidence library only; no external AI." },
+  { method: "POST", path: "/guidelines/sources", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "guidelineSource", notes: "Source registry metadata only." },
+  { method: "PATCH", path: "/guidelines/sources/:guidelineSourceId", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "guidelineSourcePatch", notes: "Source metadata update is audited." },
+  { method: "GET", path: "/guidelines/documents", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local document metadata only." },
+  { method: "GET", path: "/guidelines/documents/:guidelineDocumentId", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local document metadata and chunks only." },
+  { method: "POST", path: "/guidelines/documents/:guidelineDocumentId/review", category: "guidelines-review", requiredPermission: "guideline.review", allowedAs: "doctor", denyAs: "reception", fixtureBody: "guidelineReview", notes: "Clinical governance review action is audited." },
+  { method: "POST", path: "/guidelines/upload-demo-text", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "guidelineDemoText", notes: "Demo text only; no licensed PDFs or external AI." },
+  { method: "POST", path: "/guidelines/reindex", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Local reindex placeholder only." },
+  { method: "GET", path: "/guidelines/search?q=doctor%20review", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local citation search only." },
+  { method: "POST", path: "/guidelines/ask", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", fixtureBody: "guidelineAsk", notes: "Extractive/mock local answer only; no external AI." },
+  { method: "GET", path: "/guidelines/query-logs", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Query logs are owner/admin-managed." },
+  { method: "POST", path: "/guidelines/documents/:guidelineDocumentId/archive", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Archive action is audited." }
 ];
 
 export const routeManifest = routeDefinitions.map((route) => ({
@@ -207,7 +219,9 @@ export function substitutePath(path, ids) {
     .replace(":verifyProtocolId", ids.verifyProtocolId)
     .replace(":retireProtocolId", ids.retireProtocolId)
     .replace(":approvedSnapshotId", ids.approvedSnapshotId)
-    .replace(":snapshotId", ids.snapshotId);
+    .replace(":snapshotId", ids.snapshotId)
+    .replace(":guidelineSourceId", ids.guidelineSourceId)
+    .replace(":guidelineDocumentId", ids.guidelineDocumentId);
 }
 
 export function bodyFor(kind, ids) {
@@ -320,7 +334,17 @@ export function bodyFor(kind, ids) {
     reason: { reason: "Demo protocol status authorization check only." },
     managementSnapshot: { patientId: ids.patientId, diagnosisText: "endometriosis", protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1", clinicalGoal: "pain control" },
     managementReview: { decision: "approved" },
-    managementMemory: { memoryType: "protocol_used", title: "Demo protocol memory", valueJson: { protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" } }
+    managementMemory: { memoryType: "protocol_used", title: "Demo protocol memory", valueJson: { protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" } },
+    guidelineSource: { name: `Demo Route Guideline Source ${runId}`, abbreviation: "DRGS", notes: "Demo source metadata only. Governance review required." },
+    guidelineSourcePatch: { abbreviation: "DRG", notes: "Demo source metadata update only. Governance review required." },
+    guidelineDemoText: {
+      sourceName: "Local Clinic Protocol",
+      title: `Demo route guideline text ${runId}`,
+      citationLabel: `Demo route guideline citation ${runId}`,
+      text: "Evidence library only. Doctor review required. This local demo text supports citation search and does not diagnose, prescribe, or create a final plan."
+    },
+    guidelineReview: { decision: "REJECTED", reason: "Demo route governance review only." },
+    guidelineAsk: { question: "What does the demo text say about doctor review?" }
   };
   return bodies[kind];
 }
@@ -375,6 +399,10 @@ export async function createRouteFixtures(ownerToken) {
   const approvedSnapshot = await apiJson("POST", "/ai-management/snapshots", ownerToken, bodyFor("managementSnapshot", ids));
   ids.approvedSnapshotId = approvedSnapshot.id;
   await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
+  const guidelineSource = await apiJson("POST", "/guidelines/sources", ownerToken, bodyFor("guidelineSource", ids));
+  ids.guidelineSourceId = guidelineSource.id;
+  const guidelineDocument = await apiJson("POST", "/guidelines/upload-demo-text", ownerToken, bodyFor("guidelineDemoText", ids));
+  ids.guidelineDocumentId = guidelineDocument.id;
   return ids;
 }
 
@@ -415,6 +443,9 @@ function scopeExpectationFor(category) {
   }
   if (category === "protocol-atlas") return "Clinical protocol read route; protected by protocol_atlas.read and clinical-role RBAC.";
   if (category === "protocol-atlas-admin") return "Owner/admin-only protocol editor route; all mutations require audit reasons.";
+  if (category === "guidelines") return "Owner/admin/doctor local evidence route; receptionist/accountant denied.";
+  if (category === "guidelines-admin") return "Owner/admin-only guideline source, import, log, and archive route.";
+  if (category === "guidelines-review") return "Doctor/owner clinical governance review route; non-clinical roles denied.";
   return "Scope expectation documented in controller/service tests.";
 }
 

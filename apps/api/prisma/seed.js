@@ -111,6 +111,9 @@ const permissions = [
   "ai_draft.reject",
   "protocol_atlas.read",
   "protocol_atlas.manage",
+  "guideline.read",
+  "guideline.manage",
+  "guideline.review",
   "ai_management.request",
   "ai_management.read",
   "ai_management.review",
@@ -135,6 +138,7 @@ const permissions = [
 ];
 
 const reservedSystemOwnerPermissions = ["system_owner.manage", "developer_owner.manage"];
+const guidelineSourceRegistry = ["WHO", "NICE", "RCOG", "ACOG", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "FSRH", "Local Clinic Protocol"];
 
 const rolePermissionKeys = {
   Owner: permissions,
@@ -149,6 +153,9 @@ const rolePermissionKeys = {
     "audit.read",
     "protocol_atlas.read",
     "protocol_atlas.manage",
+    "guideline.read",
+    "guideline.manage",
+    "guideline.review",
     "ai_management.read"
   ],
   Doctor: [
@@ -195,6 +202,8 @@ const rolePermissionKeys = {
     "ai_draft.approve",
     "ai_draft.reject",
     "protocol_atlas.read",
+    "guideline.read",
+    "guideline.review",
     "ai_management.request",
     "ai_management.read",
     "ai_management.review",
@@ -264,6 +273,110 @@ function riskLevelFor(key) {
   }
 
   return "medium";
+}
+
+async function seedGuidelineCenter(prisma, demoOwner) {
+  for (const name of guidelineSourceRegistry) {
+    await prisma.guidelineSource.upsert({
+      where: { name },
+      update: { status: "active", active: true },
+      create: {
+        name,
+        organization: name,
+        sourceType: "LINK_ONLY",
+        abbreviation: name,
+        specialties: ["women_health", "obgyn"],
+        defaultAccessLevel: "OWNER_DOCTOR",
+        active: true,
+        status: "active",
+        notes: "Source registry metadata only. Imported documents require clinical governance review."
+      }
+    });
+  }
+
+  if (!seedDemoData) return;
+
+  const localSource = await prisma.guidelineSource.upsert({
+    where: { name: "Local Clinic Protocol" },
+    update: {},
+    create: {
+      name: "Local Clinic Protocol",
+      organization: "Local Clinic Protocol",
+      sourceType: "LINK_ONLY",
+      abbreviation: "LOCAL",
+      specialties: ["women_health", "obgyn"],
+      defaultAccessLevel: "OWNER_DOCTOR",
+      active: true,
+      status: "active",
+      notes: "Local demo source metadata only."
+    }
+  });
+  const existing = await prisma.guidelineDocument.findFirst({
+    where: {
+      sourceId: localSource.id,
+      title: "Demo guideline center safety text"
+    }
+  });
+  if (existing) return;
+
+  const document = await prisma.guidelineDocument.create({
+    data: {
+      sourceId: localSource.id,
+      title: "Demo guideline center safety text",
+      specialty: "Women's health",
+      topic: "Guideline center safety",
+      organization: "Local Clinic Protocol",
+      guidelineStatus: "NEEDS_REVIEW",
+      documentType: "demo_text",
+      licenseStatus: "CHECK_REQUIRED",
+      accessLevel: "OWNER_DOCTOR",
+      reviewStatus: "pending_governance_review",
+      citationLabel: "Local Clinic Protocol: Demo guideline center safety text",
+      importedByUserId: demoOwner?.id,
+      versions: { create: { versionLabel: "demo_text_v1", status: "ACTIVE" } },
+      importJobs: { create: { jobType: "TEXT_EXTRACTION", status: "SUCCEEDED", importType: "TEXT_EXTRACTION", summary: "Seeded original demo text. No external AI call.", message: "Seeded local demo import.", requestedByUserId: demoOwner?.id, createdByUserId: demoOwner?.id, startedAt: new Date(), finishedAt: new Date() } }
+    }
+  });
+
+  const section = await prisma.guidelineSection.create({
+    data: {
+      documentId: document.id,
+      heading: "Demo evidence library safety",
+      sectionPath: "Demo evidence library safety",
+      orderIndex: 1,
+      sortOrder: 1,
+      text: "Demo evidence library safety text."
+    }
+  });
+
+  const demoChunks = [
+    "The evidence library is a local extractive reference aid for doctors. It does not diagnose, prescribe, or create a final clinical plan.",
+    "When no local source is found, the system states that no source was found and requires doctor review.",
+    "Demo guideline text is original local test content and is not a substitute for licensed guideline review or clinical governance approval."
+  ];
+  for (const [index, text] of demoChunks.entries()) {
+    await prisma.guidelineChunk.create({
+      data: {
+        documentId: document.id,
+        sectionId: section.id,
+        chunkIndex: index,
+        citationLabel: "Local Clinic Protocol: Demo guideline center safety text",
+        text,
+        normalizedText: text.toLowerCase().replace(/\W+/g, " ")
+      }
+    });
+  }
+
+  await prisma.guidelineReviewDecision.create({
+    data: {
+      documentId: document.id,
+      decision: "REJECTED",
+      reason: "Seeded demo text requires clinical governance review before production.",
+      decidedByUserId: demoOwner?.id,
+      decidedAt: new Date(),
+      reviewerUserId: demoOwner?.id
+    }
+  });
 }
 
 async function hashPassword(password) {
@@ -558,6 +671,7 @@ async function main() {
   await seedAubMenstrualProtocols(prisma);
   await seedContraceptionProtocols(prisma);
   await seedAntenatalRoutineProtocols(prisma);
+  await seedGuidelineCenter(prisma, demoOwner);
 
   if (!seedDemoData) {
     return;

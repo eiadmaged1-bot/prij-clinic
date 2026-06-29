@@ -25,3 +25,15 @@ Protocol editor hardening is active:
 - every source/content/status change requires an audit reason
 - catalog-only, draft, retired, and unknown protocols generate no management advice
 - snapshot output remains deterministic and local with no external AI calls
+# V0.5 AI Management Mega Leap Status
+
+Implemented:
+- Four verified protocol packs for emergency OB/early pregnancy, AUB/menstrual disorders, contraception, and routine antenatal care.
+- Pack-specific AI Management Snapshot headings and output limits.
+- Local Guideline Center foundation with source registry, demo text import, local chunk search, extractive/mock ask, query logs, RBAC, and audit.
+- Guideline route coverage in the shared route authorization manifest.
+
+Not fully implemented:
+- Full browser walkthrough automation for every pilot role.
+- Real PDF extraction.
+- Production clinical governance approval of guideline source versions.

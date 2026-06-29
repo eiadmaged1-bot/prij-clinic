@@ -13,3 +13,10 @@
 - Draft protocol options can be stored for review but are not output in AI Management Snapshot.
 - Patient memory stores structured facts only after doctor approval.
 - Audit logs are application-level and not database-tamper-resistant.
+# V0.5 Limitations
+
+- This is not an autonomous medical device, diagnostic engine, prescribing engine, or substitute for the doctor.
+- Guideline Center import is demo text/local metadata only. Real licensed PDFs and production source packs are not committed.
+- `/guidelines/ask` is extractive/mock local search only, not generative RAG.
+- Full pilot browser walkthrough scripts are not complete in this sprint state.
+- Local route authorization tests intentionally mutate demo records; rerun seed before checking clean protocol counts.

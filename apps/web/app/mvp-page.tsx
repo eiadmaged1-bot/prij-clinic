@@ -60,6 +60,7 @@ const navGroups: NavGroup[] = [
     links: [
       ["/doctor/visit", "Guided Visit", "encounter"],
       ["/protocol-atlas", "Protocol Atlas", "ai"],
+      ["/guidelines", "Guideline Center", "reports"],
       ["/encounters", "Visits", "encounter"],
       ["/prescriptions", "Prescriptions", "prescription"],
       ["/investigations", "Orders", "investigations"],
@@ -102,6 +103,7 @@ const portalSideItems: PortalSideItem[] = [
   { label: "Calendar", icon: "calendar", href: "/calendar", badge: "Today" },
   { label: "Patients", icon: "patients", href: "/patients" },
   { label: "Lab Orders", icon: "investigations", href: "/investigations" },
+  { label: "Guidelines", icon: "reports", href: "/guidelines" },
   { label: "Finance", icon: "billing", href: "/billing" },
   { label: "Inventory", icon: "files", badge: "Later" },
   { label: "Accounts", icon: "reception", href: "/admin/accounts" },

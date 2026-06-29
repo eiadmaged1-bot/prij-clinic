@@ -56,3 +56,8 @@ Use original summaries only. Do not paste long guideline text or copyrighted gui
 Every source, alias, structured content, request-verification, verify, and retire action requires a reason and writes an audit event.
 
 Clinical protocol IDs are CUIDs. Because `AuditLog.resourceId` is UUID-only, protocol CUIDs are stored in audit metadata as `protocolId`.
+# V0.5 Verification Rules
+
+Verified protocols must have source metadata, structured content, limitations, and doctor-review wording. The validation suite blocks dose-like patterns, final diagnosis language, automatic prescribing language, and false reassurance language.
+
+If a source URL/version is uncertain, the URL remains blank and the limitations state that final clinical governance review is required before production.

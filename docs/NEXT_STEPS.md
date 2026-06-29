@@ -11,3 +11,14 @@
 9. Add richer audit UI filtering for protocol and snapshot events.
 10. Add local guideline document storage and citation metadata only after privacy and copyright review.
 11. Consider future local RAG only after privacy, consent, and clinical governance review.
+# Recommended Next Sprint
+
+1. Investigations, radiology, and lab results deepening.
+2. Consent, legal forms, and patient document archive.
+3. Additional verified protocol packs:
+   - Hypertension/preeclampsia full pathway.
+   - Early pregnancy non-emergency full pathway.
+   - Postpartum/lactation.
+   - Pelvic floor physiotherapy.
+   - Menopause.
+   - Breast health.
