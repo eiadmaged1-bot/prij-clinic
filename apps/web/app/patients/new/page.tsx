@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../../mvp-page";
+import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -62,7 +63,7 @@ export default function NewPatientPage() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(body?.message || `Patient create failed with ${response.status}.`);
+        throw new Error(body?.message || "Could not create this patient file. Please review the required fields and try again.");
       }
 
       const patient = (await response.json()) as { id: string };
@@ -88,6 +89,7 @@ export default function NewPatientPage() {
             <h1>New patient file</h1>
           </div>
           <Link className="button secondary compact" href="/patients">
+            <ThreeDMedicalIcon name="patients" size="sm" tone="slate" />
             Back to patients
           </Link>
         </div>
@@ -107,7 +109,7 @@ export default function NewPatientPage() {
 
         <form className="form-grid" onSubmit={submit}>
           <label>
-            Demo MRN
+            Demo file number
             <div className="input-action">
               <input
                 onChange={(event) => update("medicalRecordNumber", event.target.value)}
@@ -115,6 +117,7 @@ export default function NewPatientPage() {
                 value={form.medicalRecordNumber}
               />
               <button className="button secondary compact" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">
+                <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
                 Generate
               </button>
             </div>
@@ -158,9 +161,11 @@ export default function NewPatientPage() {
 
           <div className="form-actions wide">
             <button className="button" disabled={isSubmitting} type="submit">
+              <ThreeDMedicalIcon name="patients" size="sm" />
               {isSubmitting ? "Creating patient file" : "Save and open patient file"}
             </button>
             <Link className="button secondary" href="/patients">
+              <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
               Cancel
             </Link>
           </div>

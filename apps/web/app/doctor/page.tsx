@@ -101,7 +101,12 @@ export default function DoctorModePage() {
           <span className="badge accent">Simple list</span>
         </div>
         <div className="doctor-list">
-          {queue.length === 0 ? <p className="empty-state">No waiting patient is loaded. Open Patients to start a demo visit.</p> : null}
+          {queue.length === 0 ? (
+            <p className="empty-state">
+              <ThreeDMedicalIcon name="queue" size="sm" tone="slate" />
+              <span>No waiting patient is loaded. Open Patients to start a demo visit.</span>
+            </p>
+          ) : null}
           {queue.map((ticket) => (
             <Link className="doctor-row" href={ticket.patientId ? `/patients/${ticket.patientId}` : "/queue"} key={ticket.id}>
               <ThreeDMedicalIcon name="queue" size="sm" />
@@ -109,7 +114,10 @@ export default function DoctorModePage() {
                 <strong>Queue {ticket.queueNumber ?? "patient"}</strong>
                 <span>{ticket.status ?? "Waiting"} - {ticket.priority ?? "Routine"}</span>
               </div>
-              <span className="button compact secondary">Open</span>
+              <span className="button compact secondary">
+                <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+                Open
+              </span>
             </Link>
           ))}
         </div>

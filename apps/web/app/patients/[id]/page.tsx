@@ -43,9 +43,9 @@ type TimelineItem = {
 
 const moreCards: Array<[string, string, string, IconName]> = [
   ["/ultrasound", "Ultrasound", "Recording only; clinician interpretation required.", "ultrasound"],
-  ["/ai-drafts", "AI Drafts", "Doctor must review before use. No final record updates.", "ai"],
+  ["/ai-drafts", "AI Drafts", "Doctor must review before use. Nothing is added to the final record automatically.", "ai"],
   ["/consents", "Consents", "Consent foundation for demo workflows.", "consent"],
-  ["/reports", "Attachments", "Placeholder metadata only. No PHI upload.", "files"]
+  ["/reports", "Attachments", "Demo attachment records only. Private clinical file upload is disabled.", "files"]
 ];
 
 const tabs: TabConfig[] = [
@@ -55,7 +55,7 @@ const tabs: TabConfig[] = [
   { key: "orders", label: "Orders & Reports", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed." },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet." },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details." },
-  { key: "files", label: "Files", icon: "files", endpoint: "/reports", collectionKey: "reports", empty: "No report or attachment placeholder yet. Real PHI upload is disabled." },
+  { key: "files", label: "Files", icon: "files", endpoint: "/reports", collectionKey: "reports", empty: "No report or attachment record yet. Real clinical file upload is disabled." },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
   { key: "more", label: "More", icon: "settings", empty: "Additional safe sections for ultrasound, consents, and AI draft review." }
 ];
@@ -157,7 +157,7 @@ export default function PatientFilePage() {
         <div>
           <p className="eyebrow">Patient file</p>
           <h1>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</h1>
-          <p className="muted">{patient ? `${ageLabel} | MRN ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
+          <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
         </div>
         <div className="patient-primary-actions">
           <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
@@ -173,7 +173,10 @@ export default function PatientFilePage() {
       {error ? (
         <section className="panel">
           <p className="form-error">{error}</p>
-          <Link className="button" href="/login">Go to login</Link>
+          <Link className="button" href="/login">
+            <ThreeDMedicalIcon name="doctor" size="sm" />
+            Go to login
+          </Link>
         </section>
       ) : null}
 
@@ -217,7 +220,7 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
         </div>
         <dl className="profile-grid">
           <div><dt>Name</dt><dd>{patient.firstName} {patient.lastName}</dd></div>
-          <div><dt>MRN</dt><dd>{patient.medicalRecordNumber}</dd></div>
+          <div><dt>File number</dt><dd>{patient.medicalRecordNumber}</dd></div>
           <div><dt>Contact</dt><dd>{patient.phone || patient.email || "Not saved"}</dd></div>
           <div><dt>Status</dt><dd>{patient.status}</dd></div>
           <div className="wide"><dt>Notes</dt><dd>{patient.notes || "No note saved yet."}</dd></div>
@@ -227,14 +230,20 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
         <ThreeDMedicalIcon name="doctor" size="lg" />
         <h2>Next best step</h2>
         <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
-        <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>Start Visit</Link>
+        <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>
+          <ThreeDMedicalIcon name="encounter" size="sm" />
+          Start Visit
+        </Link>
       </article>
       <article className="panel">
         <div className="section-heading">
           <h2>Recent activity</h2>
           <span className="badge">{Object.values(related).flat().length} items</span>
         </div>
-        <p className="empty-state">Use the tabs above to review visits, prescriptions, orders, reports, pregnancy records, billing, files, and timeline.</p>
+        <p className="empty-state">
+          <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
+          <span>Use the tabs above to review visits, prescriptions, orders, reports, pregnancy records, billing, files, and timeline.</span>
+        </p>
       </article>
     </section>
   );
@@ -434,7 +443,12 @@ function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string
         </div>
         <ThreeDMedicalIcon name={config.icon} size="sm" />
       </div>
-      {rows.length === 0 ? <div className="empty-state">{config.empty}</div> : null}
+      {rows.length === 0 ? (
+        <div className="empty-state">
+          <ThreeDMedicalIcon name={config.icon} size="sm" tone="slate" />
+          <span>{config.empty}</span>
+        </div>
+      ) : null}
       <div className="data-list">
         {rows.map((row, index) => (
           <article className="data-row" key={String(row.id ?? index)}>
@@ -485,8 +499,8 @@ function MorePanel() {
       ))}
       <article className="module-card">
         <ThreeDMedicalIcon name="settings" size="md" tone="slate" />
-        <strong>Patient scope</strong>
-        <p className="muted">This workspace stays focused on the current patient. Internal identifiers stay hidden during normal use.</p>
+        <strong>Patient workspace</strong>
+        <p className="muted">This workspace stays focused on the current patient and keeps technical details out of the daily visit flow.</p>
       </article>
     </section>
   );

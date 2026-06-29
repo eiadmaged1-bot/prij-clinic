@@ -4,6 +4,22 @@ Date: 2026-06-28
 
 Prij Clinic V0.1 is a local/private pilot foundation for demo and engineering review. It is not production-ready, not a medical device, and must not be used with real patient data.
 
+## Release Candidate UX Polish - 2026-06-29
+
+This branch adds frontend-only polish for a doctor demo release candidate:
+
+- Larger, more readable controls and form fields.
+- Tablet/mobile stacking for the app shell, top bar, patient header, patient tabs, guided visit steps, and admin views.
+- Patient registry cards instead of a dense table-first experience.
+- Current patient header wording changed to visible file context.
+- Icon plus text treatment for primary doctor, patient, navigation, and display preference actions.
+- Refined original 3D medical icon rendering and accessibility labeling.
+- Normal dashboard wording avoids technical implementation details.
+- `npm run test:visual:qa` lightweight visual QA sweep.
+- New demo scripts for doctor, reception, owner, and mobile/tablet QA.
+
+Codex A is expected to add backend persistence and OB/GYN core integration separately before this branch becomes a merged release candidate.
+
 ## Completed Pilot Workflow
 
 V0.1 supports a demo-safe end-to-end clinic workflow:

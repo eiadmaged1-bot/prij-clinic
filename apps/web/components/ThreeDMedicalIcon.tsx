@@ -1,5 +1,7 @@
 "use client";
 
+import { useId } from "react";
+
 type IconName =
   | "dashboard"
   | "calendar"
@@ -53,15 +55,18 @@ const paths: Record<IconName, string[]> = {
 };
 
 export function ThreeDMedicalIcon({ name, label, size = "md", tone = "teal" }: ThreeDMedicalIconProps) {
+  const titleId = useId();
+
   return (
-    <span className={`medical-icon medical-icon-${size} medical-icon-${tone}`} aria-hidden={label ? undefined : true} aria-label={label} data-icon={name}>
-      <svg viewBox="0 0 24 24" role="img" focusable="false">
-        <defs>
-          <linearGradient id={`g-${name}-${tone}`} x1="4" y1="3" x2="20" y2="21">
-            <stop offset="0%" stopColor="currentColor" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="currentColor" stopOpacity="0.55" />
-          </linearGradient>
-        </defs>
+    <span
+      className={`medical-icon medical-icon-${size} medical-icon-${tone}`}
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      data-icon={name}
+      role={label ? "img" : undefined}
+    >
+      <svg viewBox="0 0 24 24" aria-labelledby={label ? titleId : undefined} aria-hidden={label ? undefined : true} focusable="false">
+        {label ? <title id={titleId}>{label}</title> : null}
         <circle cx="12" cy="12" r="9.5" className="medical-icon-glow" />
         {paths[name].map((path) => (
           <path d={path} key={path} />

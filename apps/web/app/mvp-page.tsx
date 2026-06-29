@@ -137,7 +137,7 @@ export function MvpPage({
   primaryAction
 }: MvpPageProps) {
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
-  const [status, setStatus] = useState("Not loaded");
+  const [status, setStatus] = useState("Not loaded yet");
   const [error, setError] = useState("");
   const [formState, setFormState] = useState<Record<string, string>>(() =>
     Object.fromEntries(createFields.map((field) => [field.name, field.defaultValue ?? ""]))
@@ -159,7 +159,7 @@ export function MvpPage({
     if (!endpoint) return;
 
     setError("");
-    setStatus("Loading");
+    setStatus("Loading records");
 
     try {
       const response = await fetch(`${apiUrl}${endpoint}`, {
@@ -180,10 +180,10 @@ export function MvpPage({
       const data = (await response.json()) as Record<string, unknown>;
       const collection = collectionKey ? data[collectionKey] : data;
       setRows(Array.isArray(collection) ? (collection as Record<string, unknown>[]) : [data]);
-      setStatus("Loaded");
+      setStatus("Ready");
     } catch (loadError) {
       setRows([]);
-      setStatus("Connection unavailable");
+      setStatus("Clinic service unavailable");
       setError(loadError instanceof Error ? loadError.message : "Unable to reach the clinic service.");
     }
   }
@@ -231,6 +231,7 @@ export function MvpPage({
           <div className="topbar-actions">
             {primaryAction ? (
               <Link className="button compact" href={primaryAction[0]}>
+                <ThreeDMedicalIcon name="patients" size="sm" />
                 {primaryAction[1]}
               </Link>
             ) : null}
@@ -266,12 +267,13 @@ export function MvpPage({
             </div>
             {endpoint ? (
               <button className="button secondary compact" onClick={loadRows} type="button">
+                <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
                 Refresh
               </button>
             ) : null}
           </div>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState>This workflow is create-only in the current interface.</EmptyState>}
+          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState icon="files">This page is ready for new demo entries.</EmptyState>}
         </div>
       </section>
 
@@ -299,6 +301,7 @@ export function MvpPage({
               </label>
             ))}
             <button className="button" disabled={isSubmitting} type="submit">
+              <ThreeDMedicalIcon name="files" size="sm" />
               {isSubmitting ? "Saving demo record" : "Create demo record"}
             </button>
           </form>
@@ -427,20 +430,24 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
                 <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
+                  <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
                   {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
                 </button>
               ))}
             </div>
             {hasToken ? (
               <button className="button secondary compact" onClick={logout} type="button">
+                <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
                 Logout
               </button>
             ) : (
               <Link className="button secondary compact" href="/login">
+                <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
                 Login
               </Link>
             )}
             <Link className="button secondary compact" href="/">
+              <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
               Home
             </Link>
           </div>
@@ -466,7 +473,7 @@ export function SafetyAlert() {
 }
 
 function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: string }) {
-  if (status === "Loading") {
+  if (status === "Loading records") {
     return <div className="skeleton" aria-label="Loading demo records" />;
   }
 
@@ -505,8 +512,13 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
   );
 }
 
-function EmptyState({ children }: { children: ReactNode }) {
-  return <p className="empty-state">{children}</p>;
+function EmptyState({ children, icon = "files" }: { children: ReactNode; icon?: IconName }) {
+  return (
+    <p className="empty-state">
+      <ThreeDMedicalIcon name={icon} size="sm" tone="slate" />
+      <span>{children}</span>
+    </p>
+  );
 }
 
 function rowLabel(row: Record<string, unknown>) {
@@ -514,7 +526,17 @@ function rowLabel(row: Record<string, unknown>) {
 }
 
 function labelize(value: string) {
-  return value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+  const friendly: Record<string, string> = {
+    medicalRecordNumber: "File number",
+    appointmentType: "Visit type",
+    queueNumber: "Queue number",
+    invoiceNumber: "Invoice number",
+    totalAmount: "Total",
+    draftType: "Draft type",
+    reviewStatus: "Review status"
+  };
+
+  return friendly[value] ?? value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function buildPayload(fields: Field[], state: Record<string, string>) {

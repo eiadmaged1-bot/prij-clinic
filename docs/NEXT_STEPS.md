@@ -1,43 +1,53 @@
 # Next Steps
 
-The exact next recommended sprint after the clinical persistence branch is merged with the parallel UX polish branch is:
+The exact next recommended sprint after this integration is:
 
-## MVP Release Candidate Polish + OB/GYN Depth Expansion
+## MVP Release Candidate Verification + Production-Readiness Planning
 
 Goals:
 
-- Merge the clinical persistence branch with the parallel frontend polish branch and resolve any patient-file UI conflicts carefully.
-- Polish the patient-context action forms that now create encounter, prescription, order, report, ultrasound, invoice, payment, and consent records directly from the patient file.
-- Deepen OB/GYN screens around the new pregnancy fetus and antenatal visit records without adding diagnostic automation.
-- Keep Doctor Mode simple for older doctors while preserving Owner Control Center power for owners/admins.
-- Keep all actions server-authorized, scope-checked, and audit logged.
-- Keep all demo data fake/local only.
-- Keep AI disabled, draft-only, non-diagnostic, and doctor-review-only.
+- Complete one final full local verification pass across API, web, mobile/tablet layouts, visual QA, security tests, doctor workflow, patient workflow, OB/GYN workflow, and billing demo flow.
+- Open the app manually at desktop, tablet, and phone widths using `docs/MOBILE_TABLET_QA.md`.
+- Run the owner, reception, doctor, and release-candidate demo scripts end to end.
+- Confirm patient-context actions remain operational after Codex A/B merge:
+  - guided visit save
+  - appointment
+  - queue check-in
+  - prescription
+  - investigation order
+  - report placeholder
+  - ultrasound draft
+  - invoice/payment
+  - consent
+  - timeline
+- Confirm release-candidate UX remains readable and elder-friendly after backend persistence integration.
+- Keep AI disabled, mock-only, draft-only, non-diagnostic, and doctor-review-only.
+- Keep all data fake/local/demo-only.
 
-## UX Polish Follow-Up
+## Production-Readiness Planning
 
-- Add browser screenshots for all five themes after the layout stabilizes.
-- Add mobile/tablet checks for Doctor Mode and patient file tabs.
+Do not start real production deployment until the following are designed, implemented, tested, and reviewed:
+
+- Patient-to-doctor assignment or another explicit clinical access model.
+- Production consent enforcement, legal text, signature/capture policy, and override workflow.
+- Secure PHI file storage with encryption, access control, malware scanning, audit logging, expiring links, backup policy, and retention rules.
+- Production-grade audit retention, tamper resistance, export review, and alerting.
+- Backup encryption, restore proof, operational runbooks, monitoring, incident response, and disaster recovery.
+- MFA, password reset, session/device inventory, and production security operations.
+- Payment compliance design before any real payment gateway.
+- Legal/privacy review before real patient use.
+- Any future AI provider integration must have consent, RBAC, audit, privacy, provider contract, and doctor-review controls before use.
+
+## UX Follow-Up
+
+- Improve the visual ergonomics of the new patient-context action forms.
 - Add a real patient search dropdown in the top bar that opens patient files without exposing internal IDs.
-- Add role-specific home routing so Doctor users land directly in Doctor Mode and Reception users land on front desk flow.
-- Improve the frontend ergonomics of patient-context action forms after backend persistence is stable.
+- Add role-specific home routing so Doctor users land directly in Doctor Mode and Reception users land on the front-desk flow.
+- Add screenshot-based visual regression only after the release-candidate layout stabilizes.
 
-## Admin Hardening Follow-Up
+## OB/GYN Follow-Up
 
-- Add role-by-role manual QA for the Admin Control Center.
-- Add browser-level checks for login, admin service price edit, patient creation, and patient file open.
-- Add visual regression screenshots for all themes across desktop and mobile.
-- Decide whether the saved default theme should apply before login or only after staff sign-in.
-- Add production policy design for admin correction workflows, retention, and audit tamper resistance.
-
-## Security And Production-Readiness Hardening
-
-- Add patient-to-doctor assignment or an explicit access model for doctor patient reads.
-- Add exhaustive lower-role positive-path matrices for every route and state transition.
-- Add production-grade audit retention, tamper-resistance, export review, and alerting controls.
-- Add production consent enforcement design before enforcing real consent rules.
-- Add secure PHI file storage implementation with encryption, access control, malware scanning, audit logging, and expiring links.
-- Add production backup encryption, restore proof, runbooks, monitoring, MFA, and legal/privacy review.
-- Keep AI disabled and draft-only until consent, provider privacy, RBAC, audit, and doctor-review controls are complete.
-
-Do not start production deployment until patient assignment/access policy, consent enforcement, audit retention/tamper-resistance, backup/restore proof, monitoring, MFA, legal review, and secure PHI file storage are stronger.
+- Build better screens for pregnancy fetus records and antenatal visits.
+- Add validated gestational-age display only after clinical rules are reviewed.
+- Keep ultrasound as recording-only until clinician-reviewed interpretation workflows are stronger.
+- Do not add automated FGR diagnosis, fetal risk scoring, fetal-image AI, or fake percentile engines.

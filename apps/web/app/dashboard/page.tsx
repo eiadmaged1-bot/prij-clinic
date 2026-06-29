@@ -46,7 +46,7 @@ const quickActions: Array<[string, string, string, IconName]> = [
   ["/queue", "Queue Check-in", "Move a demo patient into today's queue.", "queue"],
   ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
   ["/billing", "New Invoice", "Review demo invoices without payment gateway data.", "billing"],
-  ["/ai-drafts", "AI Draft Placeholder", "Doctor review required before any use.", "ai"]
+  ["/ai-drafts", "AI Draft Review", "Doctor review required before any use.", "ai"]
 ];
 
 const portalModules: Array<[string, string, string, string, string]> = [
@@ -147,10 +147,10 @@ export default function DashboardPage() {
             <p className="muted">A calm daily workspace: open patient, start visit, write note, prescribe, order tests, finish.</p>
           </div>
           <div className="doctor-hero-actions">
-            <Link className="button large" href="/doctor">
-              <ThreeDMedicalIcon name="doctor" size="sm" />
-              Open Doctor Mode
-            </Link>
+              <Link className="button large" href="/doctor">
+                <ThreeDMedicalIcon name="doctor" size="sm" />
+                Open Doctor Mode
+              </Link>
             <Link className="button secondary large" href="/patients">
               <ThreeDMedicalIcon name="patients" size="sm" />
               Find Patient
@@ -305,11 +305,11 @@ export default function DashboardPage() {
           </div>
           <div className="quick-grid">
             {quickActions.map(([href, label, description, icon]) => (
-              <a className="quick-card" href={href} key={href}>
+              <Link className="quick-card" href={href} key={href}>
                 <ThreeDMedicalIcon name={icon} size="md" />
                 <strong>{label}</strong>
                 <span className="muted">{description}</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -338,8 +338,8 @@ export default function DashboardPage() {
                 <dd>{user.branchId ?? "Demo scope"}</dd>
               </div>
               <div className="wide">
-                <dt>Permissions</dt>
-                <dd>{user.permissions.slice(0, 12).join(", ") || "None"}</dd>
+                <dt>Access</dt>
+                <dd>{user.permissions.length > 0 ? "Clinic access enabled for this demo role" : "No extra access shown"}</dd>
               </div>
             </dl>
           ) : (
@@ -363,8 +363,8 @@ export default function DashboardPage() {
       <section className="summary-grid">
         <Metric label="Active pregnancies" value={summary?.operational.activePregnancies ?? "-"} />
         <Metric label="Draft ultrasounds" value={summary?.operational.draftUltrasounds ?? "-"} detail="Physician interpretation required" />
-        <Metric label="Pending AI drafts" value={summary?.safety.pendingAiDrafts ?? "-"} detail="Mock-only, review required" />
-        <Metric label="AI features" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="No external provider required" />
+        <Metric label="Pending AI drafts" value={summary?.safety.pendingAiDrafts ?? "-"} detail="Draft-only, review required" />
+        <Metric label="AI features" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="External AI is off" />
       </section>
     </AppShell>
   );
