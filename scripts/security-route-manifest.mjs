@@ -64,6 +64,22 @@ const routeDefinitions = [
   { method: "GET", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.read", allowedAs: "owner", denyAs: "accountant" },
   { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.manage", allowedAs: "owner", denyAs: "accountant", fixtureBody: "obUltrasoundPatch" },
   { method: "PATCH", path: "/ob-ultrasounds/:obUltrasoundId/review", category: "ob-ultrasound", requiredPermission: "ob_ultrasound.manage", allowedAs: "owner", denyAs: "accountant", notes: "No FGR or other automatic diagnosis." },
+  { method: "GET", path: "/calculators/formulas", category: "calculators", requiredPermission: "calculator.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/calculators/formulas/BMI", category: "calculators", requiredPermission: "calculator.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "POST", path: "/calculators/calculate", category: "calculators", requiredPermission: "calculator.calculate", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "calculator", notes: "Verified handler only; no eval or diagnosis." },
+  { method: "GET", path: "/calculators/history", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/calculators/history/patient/:patientId", category: "calculators", requiredPermission: "calculator.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "POST", path: "/calculators/history/:calculationId/review", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "calculatorReview" },
+  { method: "POST", path: "/calculators/history/:calculationId/void", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "reason" },
+  { method: "POST", path: "/calculators/ob/dating/calculate", category: "calculators", requiredPermission: "calculator.calculate", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "obDating", notes: "Dating candidate only until doctor review." },
+  { method: "GET", path: "/calculators/ob/patient/:patientId/dating", category: "calculators", requiredPermission: "calculator.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/calculators/ob/patient/:patientId/current", category: "calculators", requiredPermission: "calculator.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "POST", path: "/calculators/ob/dating/:datingAssessmentId/set-best", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "reason" },
+  { method: "POST", path: "/calculators/ob/dating/:datingAssessmentId/lock", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "reason" },
+  { method: "POST", path: "/calculators/ob/dating/:datingAssessmentId/change-locked", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "reason" },
+  { method: "POST", path: "/calculators/ob/dating/:datingAssessmentId/void", category: "calculators", requiredPermission: "calculator.review", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "reason" },
+  { method: "GET", path: "/admin/calculators", category: "calculator-admin", requiredPermission: "calculator.manage", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/admin/calculators/BMI", category: "calculator-admin", requiredPermission: "calculator.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "formulaMetadata", notes: "Metadata-only; unsafe dynamic code editing is not exposed." },
   { method: "POST", path: "/billing/invoices", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "invoice", notes: "No payment gateway." },
   { method: "GET", path: "/billing/invoices", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
   { method: "GET", path: "/billing/invoices/:invoiceId", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
@@ -196,6 +212,8 @@ export function substitutePath(path, ids) {
     .replace(":reportId", ids.reportId)
     .replace(":pregnancyId", ids.pregnancyId)
     .replace(":obUltrasoundId", ids.obUltrasoundId)
+    .replace(":calculationId", ids.calculationId)
+    .replace(":datingAssessmentId", ids.datingAssessmentId)
     .replace(":draftInvoiceId", ids.draftInvoiceId)
     .replace(":voidInvoiceId", ids.voidInvoiceId)
     .replace(":invoiceId", ids.invoiceId)
@@ -278,6 +296,10 @@ export function bodyFor(kind, ids) {
       impressionText: "Demo OB ultrasound note only. No diagnostic automation."
     },
     obUltrasoundPatch: { impressionText: "Demo OB ultrasound update only. No diagnosis generated." },
+    calculator: { formulaCode: "BMI", patientId: ids.patientId, input: { weightKg: 70, heightCm: 170 }, sourceContext: "calculator_hub" },
+    calculatorReview: { notes: "Demo calculator review authorization check only." },
+    obDating: { patientId: ids.patientId, pregnancyEpisodeId: ids.pregnancyId, datingSource: "LMP", lmpDate: "2026-01-01" },
+    formulaMetadata: { sourceName: "WHO BMI arithmetic definition", sourceVersion: "local-handler-v1", active: true, reason: "Demo formula registry authorization check only." },
     invoice: {
       patientId: ids.patientId,
       invoiceNumber: `DEMO-ROUTE-INV-${runId}`,
@@ -345,6 +367,10 @@ export async function createRouteFixtures(ownerToken) {
   ids.pregnancyId = pregnancy.id;
   const ultrasound = await apiJson("POST", "/ob-ultrasounds", ownerToken, bodyFor("obUltrasound", ids));
   ids.obUltrasoundId = ultrasound.id;
+  const calculation = await apiJson("POST", "/calculators/calculate", ownerToken, bodyFor("calculator", ids));
+  ids.calculationId = calculation.history.id;
+  const dating = await apiJson("POST", "/calculators/ob/dating/calculate", ownerToken, bodyFor("obDating", ids));
+  ids.datingAssessmentId = dating.id;
   const invoice = await apiJson("POST", "/billing/invoices", ownerToken, bodyFor("invoice", ids));
   ids.invoiceId = invoice.id;
   const draftInvoice = await apiJson("POST", "/billing/invoices", ownerToken, bodyFor("invoice", ids));
@@ -413,6 +439,8 @@ function scopeExpectationFor(category) {
   if (["patients", "consents", "queue", "reports", "pregnancies", "ob-ultrasound", "billing", "ai-drafts", "dashboard", "ai-management"].includes(category)) {
     return "Branch-scoped for non-owner/non-admin users where branchId or patient branch is available.";
   }
+  if (category === "calculators") return "Clinical calculator route; patient-linked calculations are branch-scoped and clinical-role RBAC protected.";
+  if (category === "calculator-admin") return "Owner/admin-only formula registry route; changes require reason and audit.";
   if (category === "protocol-atlas") return "Clinical protocol read route; protected by protocol_atlas.read and clinical-role RBAC.";
   if (category === "protocol-atlas-admin") return "Owner/admin-only protocol editor route; all mutations require audit reasons.";
   return "Scope expectation documented in controller/service tests.";

@@ -127,10 +127,10 @@ export class CalculatorsService {
       actorUserId: user.id,
       action: "CALCULATION_REVIEWED",
       resourceType: "patient_calculation",
-      resourceId: reviewed.id,
+      resourceId: reviewed.patientId,
       branchId: reviewed.patient?.branchId,
       severity: "high",
-      metadataJson: { patientId: reviewed.patientId, formulaCode: reviewed.formula.code }
+      metadataJson: { calculationId: reviewed.id, patientId: reviewed.patientId, formulaCode: reviewed.formula.code }
     });
     return reviewed;
   }
@@ -147,11 +147,11 @@ export class CalculatorsService {
       actorUserId: user.id,
       action: "CALCULATION_VOIDED",
       resourceType: "patient_calculation",
-      resourceId: voided.id,
+      resourceId: voided.patientId,
       branchId: voided.patient?.branchId,
       severity: "high",
       reason: dto.reason.trim(),
-      metadataJson: { patientId: voided.patientId, formulaCode: voided.formula.code }
+      metadataJson: { calculationId: voided.id, patientId: voided.patientId, formulaCode: voided.formula.code }
     });
     return voided;
   }
@@ -175,10 +175,10 @@ export class CalculatorsService {
       actorUserId: user.id,
       action: "calculator_formula.updated",
       resourceType: "calculator_formula",
-      resourceId: updated.id,
+      resourceId: null,
       severity: "high",
       reason,
-      metadataJson: { code, changedFields: Object.keys(dto).filter((key) => key !== "reason") }
+      metadataJson: { formulaId: updated.id, code, changedFields: Object.keys(dto).filter((key) => key !== "reason") }
     });
     return publicFormula(updated);
   }
@@ -207,10 +207,11 @@ export class CalculatorsService {
       actorUserId: args.user.id,
       action: "CALCULATION_CREATED",
       resourceType: "patient_calculation",
-      resourceId: saved.id,
+      resourceId: saved.patientId,
       branchId: args.branchId ?? (saved as any).patient?.branchId,
       severity: "high",
       metadataJson: {
+        calculationId: saved.id,
         patientId: saved.patientId,
         pregnancyEpisodeId: saved.pregnancyEpisodeId,
         formulaCode: (saved as any).formula.code,

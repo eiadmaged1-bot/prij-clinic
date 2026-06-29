@@ -60,10 +60,10 @@ export class ObDatingService {
       actorUserId: user.id,
       action: "OB_DATING_ASSESSMENT_CREATED",
       resourceType: "pregnancy_dating_assessment",
-      resourceId: assessment.id,
+      resourceId: patient.id,
       branchId: patient.branchId,
       severity: "high",
-      metadataJson: { patientId: patient.id, pregnancyEpisodeId: pregnancy.id, datingSource: dto.datingSource, calculatedEdd: candidate.output.edd }
+      metadataJson: { assessmentId: assessment.id, patientId: patient.id, pregnancyEpisodeId: pregnancy.id, datingSource: dto.datingSource, calculatedEdd: candidate.output.edd }
     });
 
     return assessment;
@@ -116,11 +116,11 @@ export class ObDatingService {
       actorUserId: user.id,
       action: "OB_BEST_EDD_SET",
       resourceType: "pregnancy_dating_assessment",
-      resourceId: id,
+      resourceId: updated.patientId,
       branchId: updated.patient.branchId,
       severity: "high",
       reason: dto.reason?.trim() || null,
-      metadataJson: { patientId: updated.patientId, pregnancyEpisodeId: updated.pregnancyEpisodeId, calculatedEdd: updated.calculatedEdd.toISOString().slice(0, 10) }
+      metadataJson: { assessmentId: id, patientId: updated.patientId, pregnancyEpisodeId: updated.pregnancyEpisodeId, calculatedEdd: updated.calculatedEdd.toISOString().slice(0, 10) }
     });
     return updated;
   }
@@ -136,11 +136,11 @@ export class ObDatingService {
       actorUserId: user.id,
       action: "CALCULATION_LOCKED",
       resourceType: "pregnancy_dating_assessment",
-      resourceId: id,
+      resourceId: locked.patientId,
       branchId: best.patient.branchId,
       severity: "high",
       reason: dto.reason?.trim() || null,
-      metadataJson: { patientId: locked.patientId, pregnancyEpisodeId: locked.pregnancyEpisodeId }
+      metadataJson: { assessmentId: id, patientId: locked.patientId, pregnancyEpisodeId: locked.pregnancyEpisodeId }
     });
     return locked;
   }
@@ -179,11 +179,11 @@ export class ObDatingService {
       actorUserId: user.id,
       action: "OB_LOCKED_EDD_CHANGED",
       resourceType: "pregnancy_dating_assessment",
-      resourceId: replacement.id,
+      resourceId: replacement.patientId,
       branchId: (replacement as any).patient.branchId,
       severity: "high",
       reason,
-      metadataJson: { patientId: replacement.patientId, previousAssessmentId: existing.id }
+      metadataJson: { assessmentId: replacement.id, patientId: replacement.patientId, previousAssessmentId: existing.id }
     });
     return replacement;
   }
@@ -199,11 +199,11 @@ export class ObDatingService {
       actorUserId: user.id,
       action: "OB_DATING_VOIDED",
       resourceType: "pregnancy_dating_assessment",
-      resourceId: id,
+      resourceId: voided.patientId,
       branchId: voided.patient.branchId,
       severity: "high",
       reason: dto.reason.trim(),
-      metadataJson: { patientId: existing.patientId, pregnancyEpisodeId: existing.pregnancyEpisodeId }
+      metadataJson: { assessmentId: id, patientId: existing.patientId, pregnancyEpisodeId: existing.pregnancyEpisodeId }
     });
     return voided;
   }
