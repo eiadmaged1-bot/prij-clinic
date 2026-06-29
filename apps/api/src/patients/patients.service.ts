@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -355,7 +355,9 @@ export class PatientsService {
 
   async createInvoice(id: string, dto: PatientContextInvoiceDto, user: AuthUser) {
     const patient = await this.get(id, user);
-    const totals = calculateTotals(dto.items, dto.discountAmount ?? 0, 0);
+    assertDiscountAllowed(dto.discountAmount ?? 0, dto.discountReason, user);
+    const items = await resolvePatientInvoiceItems(this.prisma, dto.items);
+    const totals = calculateTotals(items, dto.discountAmount ?? 0, 0);
     const invoice = await this.prisma.invoice.create({
       data: {
         patientId: id,
@@ -368,11 +370,38 @@ export class PatientsService {
         balanceAmount: totals.balance,
         notes: clean(dto.notes),
         createdByUserId: user.id,
-        items: { create: dto.items.map((item) => ({ description: item.description.trim(), quantity: item.quantity ?? 1, unitAmount: money(item.unitAmount), lineAmount: money(item.unitAmount).mul(item.quantity ?? 1) })) }
+        items: { create: items.map((item) => invoiceItemCreate(item)) }
       },
       include: { items: true, payments: true, patient: true }
     });
-    await this.audit.record({ actorUserId: user.id, action: "invoice.created", resourceType: "invoice", resourceId: invoice.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, totalAmount: invoice.totalAmount.toString(), source: "patient_file" } });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "invoice.created",
+      resourceType: "invoice",
+      resourceId: invoice.id,
+      branchId: patient.branchId,
+      severity: "high",
+      reason: totals.discount.greaterThan(0) ? dto.discountReason?.trim() : undefined,
+      metadataJson: {
+        patientId: id,
+        totalAmount: invoice.totalAmount.toString(),
+        discountAmount: invoice.discountAmount.toString(),
+        source: "patient_file",
+        serviceItemIds: items.map((item) => item.serviceItemId).filter(Boolean)
+      }
+    });
+    if (totals.discount.greaterThan(0)) {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "invoice.discount_applied",
+        resourceType: "invoice",
+        resourceId: invoice.id,
+        branchId: patient.branchId,
+        severity: "high",
+        reason: dto.discountReason?.trim(),
+        metadataJson: { patientId: id, source: "patient_file", discountAmount: invoice.discountAmount.toString() }
+      });
+    }
     return invoice;
   }
 
@@ -457,6 +486,62 @@ function calculateTotals(items: Array<{ quantity?: number; unitAmount: number }>
   const total = subtotal.sub(discount);
   const paid = money(paidAmount);
   return { subtotal, discount, total, paid, balance: Prisma.Decimal.max(total.sub(paid), 0) };
+}
+
+type PatientInvoiceInputItem = {
+  serviceItemId?: string | null;
+  description: string;
+  quantity: number;
+  unitAmount: number;
+};
+
+async function resolvePatientInvoiceItems(
+  prisma: PrismaService,
+  items: Array<{ serviceItemId?: string; description?: string; quantity?: number; unitAmount?: number }>
+): Promise<PatientInvoiceInputItem[]> {
+  const resolved: PatientInvoiceInputItem[] = [];
+  for (const item of items) {
+    const quantity = item.quantity ?? 1;
+    if (item.serviceItemId) {
+      const service = await prisma.serviceItem.findFirst({ where: { id: item.serviceItemId, active: true } });
+      if (!service) throw new BadRequestException("Selected service is not active or was not found.");
+      resolved.push({
+        serviceItemId: service.id,
+        description: item.description?.trim() || service.name,
+        quantity,
+        unitAmount: Number(service.price)
+      });
+      continue;
+    }
+
+    if (!item.description?.trim() || item.unitAmount === undefined) {
+      throw new BadRequestException("Manual invoice items require a service name and price.");
+    }
+    resolved.push({ description: item.description.trim(), quantity, unitAmount: item.unitAmount });
+  }
+
+  return resolved;
+}
+
+function invoiceItemCreate(item: PatientInvoiceInputItem) {
+  const unitAmount = money(item.unitAmount);
+  return {
+    serviceItemId: item.serviceItemId ?? null,
+    description: item.description,
+    quantity: item.quantity,
+    unitAmount,
+    lineAmount: unitAmount.mul(item.quantity)
+  };
+}
+
+function assertDiscountAllowed(discountAmount: number, reason: string | undefined, user: AuthUser) {
+  if (discountAmount <= 0) return;
+  if (!user.permissions.includes("billing.adjust")) {
+    throw new ForbiddenException("Discounts require billing adjustment permission.");
+  }
+  if (!reason?.trim()) {
+    throw new BadRequestException("Discount reason is required.");
+  }
 }
 
 function paymentRollup(totalAmount: Prisma.Decimal, amountPaid: Prisma.Decimal) {

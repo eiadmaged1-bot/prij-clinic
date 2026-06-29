@@ -422,7 +422,10 @@ export class RbacService {
         name: dto.name.trim(),
         category: dto.category.trim(),
         price: money(dto.price),
-        currency: (dto.currency || "EGP").trim().toUpperCase()
+        currency: (dto.currency || "EGP").trim().toUpperCase(),
+        active: dto.active ?? true,
+        costAmount: dto.costAmount === undefined ? null : money(dto.costAmount),
+        doctorShareAmount: dto.doctorShareAmount === undefined ? null : money(dto.doctorShareAmount)
       }
     });
 
@@ -433,7 +436,14 @@ export class RbacService {
       resourceId: service.id,
       branchId: user?.branchId,
       severity: "high",
-      metadataJson: { code: service.code, price: service.price.toString(), currency: service.currency }
+      metadataJson: {
+        code: service.code,
+        price: service.price.toString(),
+        currency: service.currency,
+        active: service.active,
+        hasCostPlaceholder: service.costAmount !== null,
+        hasDoctorSharePlaceholder: service.doctorShareAmount !== null
+      }
     });
 
     return service;
@@ -450,7 +460,9 @@ export class RbacService {
         ...(dto.category !== undefined ? { category: dto.category.trim() } : {}),
         ...(dto.price !== undefined ? { price: money(dto.price) } : {}),
         ...(dto.currency !== undefined ? { currency: dto.currency.trim().toUpperCase() } : {}),
-        ...(dto.active !== undefined ? { active: dto.active } : {})
+        ...(dto.active !== undefined ? { active: dto.active } : {}),
+        ...(dto.costAmount !== undefined ? { costAmount: money(dto.costAmount) } : {}),
+        ...(dto.doctorShareAmount !== undefined ? { doctorShareAmount: money(dto.doctorShareAmount) } : {})
       }
     });
 
@@ -466,7 +478,9 @@ export class RbacService {
         changedFields: Object.keys(dto),
         fromPrice: existing.price.toString(),
         toPrice: service.price.toString(),
-        active: service.active
+        active: service.active,
+        hasCostPlaceholder: service.costAmount !== null,
+        hasDoctorSharePlaceholder: service.doctorShareAmount !== null
       }
     });
 

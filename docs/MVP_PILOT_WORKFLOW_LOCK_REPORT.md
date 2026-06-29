@@ -14,6 +14,10 @@ The MVP pilot flow now supports:
 Owner login -> patient file -> doctor workflow -> OB/GYN pregnancy workspace -> antenatal visit -> ultrasound report -> timeline -> print -> role-safe account behavior
 ```
 
+## Finance Deepening Note
+
+The follow-up finance/report sprint adds MVP pilot finance depth on top of this locked workflow: service catalog placeholders, catalog-linked invoice lines, manual payments, reason-required refunds and voids, daily closing, patient statements, owner finance reports, print placeholders, and audit coverage. This remains fake/demo data only with no real payment gateway, no insurance/TPA, and no full accounting ledger.
+
 The patient file is the central workflow surface. The Pregnancy tab contains Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, Follow-up, and print actions.
 
 ## Demo After Stable Accounts

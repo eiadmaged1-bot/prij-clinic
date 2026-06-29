@@ -918,6 +918,11 @@ function formPayload(form: HTMLFormElement, numericFields: Record<string, "numbe
 }
 
 function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string, unknown>[] }) {
+  const isBilling = config.key === "billing";
+  const statementTotal = isBilling ? rows.reduce((sum, row) => sum + Number(row.totalAmount ?? 0), 0) : 0;
+  const statementPaid = isBilling ? rows.reduce((sum, row) => sum + Number(row.amountPaid ?? 0), 0) : 0;
+  const statementBalance = isBilling ? rows.reduce((sum, row) => sum + Number(row.balanceAmount ?? 0), 0) : 0;
+
   return (
     <section className="panel">
       <div className="section-heading">
@@ -925,8 +930,23 @@ function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string
           <h2>{config.label}</h2>
           <p className="muted">Only this patient&apos;s records are shown here.</p>
         </div>
-        <ThreeDMedicalIcon name={config.icon} size="sm" />
+        {isBilling ? (
+          <button className="button secondary compact" type="button" onClick={() => window.print()}>
+            <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
+            Print statement
+          </button>
+        ) : (
+          <ThreeDMedicalIcon name={config.icon} size="sm" />
+        )}
       </div>
+      {isBilling ? (
+        <dl className="profile-grid printable-summary">
+          <div><dt>Invoices</dt><dd>{rows.length}</dd></div>
+          <div><dt>Total</dt><dd>{statementTotal.toFixed(2)}</dd></div>
+          <div><dt>Paid</dt><dd>{statementPaid.toFixed(2)}</dd></div>
+          <div><dt>Balance</dt><dd>{statementBalance.toFixed(2)}</dd></div>
+        </dl>
+      ) : null}
       {rows.length === 0 ? (
         <div className="empty-state">
           <ThreeDMedicalIcon name={config.icon} size="sm" tone="slate" />

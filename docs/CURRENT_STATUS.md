@@ -59,6 +59,7 @@ Frontend/reporting UX preserved from Codex B:
 - Scope filtering: branch scope for non-owner/non-admin reads and referenced-record writes where supported; doctor scope for doctor-owned records where relevant.
 - Audit: append-only audit table and metadata-only audit hooks for implemented create/update/status/sign/review/payment and sensitive read actions.
 - MVP modules: patients, appointments, queue, encounters, prescriptions, investigations, reports, pregnancies, OB ultrasound, billing, payments, dashboard, consents, admin, and AI draft placeholders.
+- Finance deepening now covers service catalog placeholders, catalog-linked invoice lines, discount permission checks, manual payments, refund/reversal patterns, invoice voids, daily closing, patient statements, owner finance reports, and print/export placeholders.
 - Admin Control Center: local admin login `eyad` / `eyad`, users/roles overview, service catalog and price editing, system safety status, audit viewer, and reason-required override endpoints.
 - Theme system: Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations appearances.
 - Accounts/session hardening: `/auth/me` driven app identity, persistent user menu, reliable logout, login already-signed-in state, `/admin/accounts`, permission presets/toggles, and protected `eyad` System Owner metadata.
@@ -75,7 +76,7 @@ Frontend/reporting UX preserved from Codex B:
 - OB ultrasound and pregnancy records do not calculate diagnoses, fetal risk, FGR, or fetal-image analysis.
 - OB/GYN UX labels measurements as recording-only and requires clinician interpretation.
 - Antenatal and ultrasound UX records measurements/observations only; clinician interpretation remains required.
-- Payment records are demo metadata only and do not use a real payment gateway.
+- Payment records are demo metadata only and do not use a real payment gateway. Refunds and voids are reason-required and audited.
 - Report/file workflows remain metadata/placeholder only; no PHI upload is enabled.
 - The protected `eyad` account is the only seeded System Owner. Reserved System Owner permissions cannot be granted to other accounts through normal UI/API flows.
 

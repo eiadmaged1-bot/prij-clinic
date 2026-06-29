@@ -23,6 +23,22 @@ export class CreateServiceItemDto {
   @IsString()
   @MaxLength(8)
   currency?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  costAmount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  doctorShareAmount?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class UpdateServiceItemDto {
@@ -50,6 +66,18 @@ export class UpdateServiceItemDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  costAmount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  doctorShareAmount?: number;
 }
 
 export class AdminOverrideDto {

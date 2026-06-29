@@ -80,9 +80,15 @@ All endpoints below require JWT authentication. Permission names match the imple
 | `GET` | `/billing/invoices/:id` | `billing.read` |
 | `PATCH` | `/billing/invoices/:id` | `billing.manage` |
 | `POST` | `/billing/invoices/:id/issue` | `billing.manage` |
+| `POST` | `/billing/invoices/:id/void` | `billing.void` |
+| `GET` | `/billing/services` | `billing.read` |
+| `GET` | `/billing/patients/:patientId/statement` | `billing.read` |
+| `GET` | `/billing/daily-closing` | `billing.report` |
+| `GET` | `/billing/reports/finance` | `billing.report` |
 | `POST` | `/billing/payments` | `payment.manage` |
 | `GET` | `/billing/payments` | `billing.read` |
 | `POST` | `/billing/payments/:id/reverse` | `billing.void` |
+| `POST` | `/billing/payments/:id/refund` | `billing.void` |
 | `GET` | `/dashboard/summary` | `dashboard.read` |
 | `POST` | `/ai-drafts` | `ai_draft.request` |
 | `GET` | `/ai-drafts` | `ai_draft.read` |

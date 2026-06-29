@@ -66,10 +66,13 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Billing
 
-- Invoice/payment flows are foundational only.
-- Service catalog and price editing exist for local demo configuration, but patient-context invoices currently use manually entered line items rather than a complete catalog picker.
-- Refunds, invoice void reason workflow, discount approval workflow, and payment gateway integrations are not implemented.
+- Invoice/payment flows are MVP pilot workflows only.
+- Service catalog and price editing support active service selection, cost placeholders, and doctor share placeholders, but they are not a production pricing governance system.
+- Refunds, invoice voids, and discounts are permission-controlled and audited, but dual approval is not implemented.
+- Daily closing, patient statements, and owner finance reports are operational summaries, not a full accounting ledger.
+- Print/export is placeholder/browser-based; audited production export is not implemented.
 - Payment records must remain metadata-only and must not store card numbers, CVV, payment tokens, or gateway secrets.
+- Payment gateway integrations are not implemented.
 
 ## Admin Control
 

@@ -69,9 +69,15 @@ const routeDefinitions = [
   { method: "GET", path: "/billing/invoices/:invoiceId", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
   { method: "PATCH", path: "/billing/invoices/:invoiceId", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "invoicePatch" },
   { method: "POST", path: "/billing/invoices/:draftInvoiceId/issue", category: "billing", requiredPermission: "billing.manage", allowedAs: "owner", denyAs: "doctor" },
+  { method: "POST", path: "/billing/invoices/:voidInvoiceId/void", category: "billing", requiredPermission: "billing.void", allowedAs: "owner", denyAs: "doctor", fixtureBody: "voidInvoice" },
+  { method: "GET", path: "/billing/services", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "GET", path: "/billing/patients/:patientId/statement", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
+  { method: "GET", path: "/billing/daily-closing", category: "billing", requiredPermission: "billing.report", allowedAs: "owner", denyAs: "doctor" },
+  { method: "GET", path: "/billing/reports/finance", category: "billing", requiredPermission: "billing.report", allowedAs: "owner", denyAs: "doctor" },
   { method: "POST", path: "/billing/payments", category: "billing", requiredPermission: "payment.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "payment", notes: "Cash demo payment only; no card data." },
   { method: "GET", path: "/billing/payments", category: "billing", requiredPermission: "billing.read", allowedAs: "owner", denyAs: "doctor" },
   { method: "POST", path: "/billing/payments/:paymentId/reverse", category: "billing", requiredPermission: "billing.void", allowedAs: "owner", denyAs: "doctor", fixtureBody: "reversePayment" },
+  { method: "POST", path: "/billing/payments/:refundPaymentId/refund", category: "billing", requiredPermission: "billing.void", allowedAs: "owner", denyAs: "doctor", fixtureBody: "refundPayment" },
   { method: "GET", path: "/dashboard/summary", category: "dashboard", requiredPermission: "dashboard.read", allowedAs: "owner", denyAs: "doctor" },
   { method: "POST", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.request", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiDraft", notes: "Disabled/mock-only placeholder." },
   { method: "GET", path: "/ai-drafts", category: "ai-drafts", requiredPermission: "ai_draft.read", allowedAs: "owner", denyAs: "nurse" },
@@ -173,7 +179,9 @@ export function substitutePath(path, ids) {
     .replace(":pregnancyId", ids.pregnancyId)
     .replace(":obUltrasoundId", ids.obUltrasoundId)
     .replace(":draftInvoiceId", ids.draftInvoiceId)
+    .replace(":voidInvoiceId", ids.voidInvoiceId)
     .replace(":invoiceId", ids.invoiceId)
+    .replace(":refundPaymentId", ids.refundPaymentId)
     .replace(":paymentId", ids.paymentId)
     .replace(":aiDraftId", ids.aiDraftId);
 }
@@ -255,6 +263,8 @@ export function bodyFor(kind, ids) {
     invoicePatch: { notes: "Demo invoice update only." },
     payment: { invoiceId: ids.invoiceId, method: "cash", amount: 10, referenceNote: "Demo cash payment only." },
     reversePayment: { reason: "Demo reversal authorization check only." },
+    refundPayment: { reason: "Demo refund authorization check only." },
+    voidInvoice: { reason: "Demo invoice void authorization check only." },
     appearance: { defaultTheme: "clinic-premium", allowUserThemeOverride: true },
     aiDraft: {
       draftType: "encounter_summary",
@@ -291,8 +301,12 @@ export async function createRouteFixtures(ownerToken) {
   ids.invoiceId = invoice.id;
   const draftInvoice = await apiJson("POST", "/billing/invoices", ownerToken, bodyFor("invoice", ids));
   ids.draftInvoiceId = draftInvoice.id;
+  const voidInvoice = await apiJson("POST", "/billing/invoices", ownerToken, bodyFor("invoice", ids));
+  ids.voidInvoiceId = voidInvoice.id;
   const payment = await apiJson("POST", "/billing/payments", ownerToken, bodyFor("payment", ids));
   ids.paymentId = payment.id;
+  const refundPayment = await apiJson("POST", "/billing/payments", ownerToken, bodyFor("payment", ids));
+  ids.refundPaymentId = refundPayment.id;
   const aiDraft = await apiJson("POST", "/ai-drafts", ownerToken, bodyFor("aiDraft", ids));
   ids.aiDraftId = aiDraft.id;
   return ids;

@@ -367,9 +367,14 @@ export class PatientContextUltrasoundDto {
 }
 
 export class PatientContextInvoiceItemDto {
+  @IsOptional()
+  @IsUUID()
+  serviceItemId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(180)
-  description!: string;
+  description?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -378,10 +383,11 @@ export class PatientContextInvoiceItemDto {
   @Max(999)
   quantity?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  unitAmount!: number;
+  unitAmount?: number;
 }
 
 export class PatientContextInvoiceDto {
@@ -390,6 +396,11 @@ export class PatientContextInvoiceDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   discountAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  discountReason?: string;
 
   @IsOptional()
   @IsString()
