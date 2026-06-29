@@ -65,6 +65,28 @@ async function main() {
   }
   record.pass("elder-friendly visual preferences are present");
 
+  const protocolAdminSource = await readFile("apps/web/app/admin/protocol-atlas/page.tsx", "utf8");
+  for (const label of ["Structured Protocol Editor", "Source metadata", "Aliases", "Structured content", "Doctor preview after verification", "Verify protocol"]) {
+    if (!protocolAdminSource.includes(label)) throw new Error(`Protocol editor missing label: ${label}`);
+  }
+  for (const forbidden of ["contentJson", "Prisma", "raw JSON editor"]) {
+    if (protocolAdminSource.includes(forbidden)) throw new Error(`Protocol editor exposes technical wording: ${forbidden}`);
+  }
+  if (!protocolAdminSource.includes("disabled={!canVerify}")) throw new Error("Verify button is not gated by requirements.");
+  record.pass("admin structured protocol editor renders safely");
+
+  const protocolBrowserSource = await readFile("apps/web/components/protocol-atlas/ProtocolAtlasBrowser.tsx", "utf8");
+  for (const label of ["Verified only", "Verified snapshot available", "Listed in the atlas, but management snapshot is not verified yet", "status-count-row"]) {
+    if (!protocolBrowserSource.includes(label)) throw new Error(`Protocol atlas browser missing safety/filter label: ${label}`);
+  }
+  record.pass("protocol atlas browser includes counts filters and safety messages");
+
+  const aiPanelSource = await readFile("apps/web/components/ai-management/ManagementSnapshotPanel.tsx", "utf8");
+  if (!aiPanelSource.includes("Draft support only") || !aiPanelSource.includes("doctor must verify and approve")) {
+    throw new Error("AI Snapshot panel safety wording missing.");
+  }
+  record.pass("AI Snapshot panel safety wording remains visible");
+
   const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
   const admin = adminLogin.token;
   if (!admin) throw new Error("eyad login did not return token.");
@@ -79,7 +101,7 @@ async function main() {
     notes: "Doctor-friendly UI test patient only."
   });
 
-  const pages = ["/login", "/dashboard", "/doctor", "/doctor/visit", "/patients", "/patients/new", `/patients/${patient.id}`, "/admin", "/admin/appearance"];
+  const pages = ["/login", "/dashboard", "/doctor", "/doctor/visit", "/patients", "/patients/new", `/patients/${patient.id}`, "/protocol-atlas", "/admin", "/admin/appearance", "/admin/protocol-atlas"];
   for (const page of pages) {
     const response = await fetch(`${webUrl}${page}`);
     if (response.status !== 200) throw new Error(`${page} returned ${response.status}`);

@@ -155,6 +155,8 @@ http://localhost:3000/guidelines
 http://localhost:3000/guidelines/search
 http://localhost:3000/guidelines/ask
 http://localhost:3000/guidelines/upload
+http://localhost:3000/protocol-atlas
+http://localhost:3000/admin/protocol-atlas
 ```
 
 Recommended demo flow:
@@ -255,6 +257,24 @@ GET  /ai-drafts
 GET  /guidelines/documents/:id/view
 GET  /guidelines/documents/:id/download
 PATCH /guidelines/documents/:id/file-access-settings
+GET  /protocol-atlas
+GET  /protocol-atlas/groups
+GET  /protocol-atlas/:id
+GET  /protocol-atlas/by-code/:code
+POST /protocol-atlas/search
+PATCH /protocol-atlas/:id/status
+GET  /protocol-atlas/:id/editor
+PATCH /protocol-atlas/:id/source
+PATCH /protocol-atlas/:id/aliases
+PATCH /protocol-atlas/:id/structured-content
+POST /protocol-atlas/:id/request-verification
+POST /protocol-atlas/:id/verify
+POST /protocol-atlas/:id/retire
+POST /ai-management/snapshots
+GET  /ai-management/snapshots
+GET  /ai-management/snapshots/:id
+POST /ai-management/snapshots/:id/review
+POST /ai-management/snapshots/:id/save-memory
 ```
 
 ## Verification

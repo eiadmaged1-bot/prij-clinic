@@ -22,7 +22,8 @@ const normalPages = [
   "/ultrasound",
   "/billing",
   "/consents",
-  "/ai-drafts"
+  "/ai-drafts",
+  "/protocol-atlas"
 ];
 
 const blockedWords = [
@@ -50,7 +51,8 @@ const requiredText = {
   "/patients/new": ["New patient file", "Save and open patient file"],
   "/admin": ["Owner Control Center", "Access Overview"],
   "/admin/appearance": ["Appearance", "Set as default"],
-  "/admin/accounts": ["Accounts", "Create account", "Permission"]
+  "/admin/accounts": ["Accounts", "Create account", "Permission"],
+  "/admin/protocol-atlas": ["Structured Protocol Editor", "Raw JSON editing is blocked"]
 };
 
 async function fetchHtml(page) {
@@ -113,13 +115,24 @@ async function main() {
     notes: "Visual QA demo patient only."
   });
 
-  const pages = [...normalPages, `/patients/${patient.id}`, "/admin", "/admin/appearance", "/admin/accounts"];
+  const pages = [...normalPages, `/patients/${patient.id}`, "/admin", "/admin/appearance", "/admin/accounts", "/admin/protocol-atlas"];
   for (const page of pages) {
     const html = await fetchHtml(page);
     assertLayout(page, html);
     if (!page.startsWith("/admin")) assertNoTechnicalText(page, html);
   }
   record.pass("normal pages return 200 with app layout and friendly visible wording");
+
+  const protocolHtml = await fetchHtml("/protocol-atlas");
+  for (const label of ["Protocol Atlas", "Verified only", "Catalog-only", "Doctor review required"]) {
+    if (!visibleText(protocolHtml).includes(label)) throw new Error(`Protocol atlas page missing ${label}.`);
+  }
+  assertNoTechnicalText("/protocol-atlas", protocolHtml);
+  const adminProtocolHtml = await fetchHtml("/admin/protocol-atlas");
+  for (const forbidden of ["contentJson", "Prisma", "endpoint", "model"]) {
+    if (visibleText(adminProtocolHtml).includes(forbidden)) throw new Error(`Admin protocol editor shows technical wording: ${forbidden}.`);
+  }
+  record.pass("protocol and AI safety screens avoid code-like text");
 
   const doctorHtml = await fetchHtml("/doctor");
   for (const label of ["Open Patient", "Start Visit", "Waiting patients"]) {

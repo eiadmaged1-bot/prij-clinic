@@ -2093,6 +2093,114 @@ button.obgyn-template-card {
   box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
 }
 
+.protocol-atlas,
+.management-panel,
+.snapshot-result {
+  display: grid;
+  gap: 1rem;
+}
+
+.protocol-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+}
+
+.filter-row,
+.status-count-row,
+.protocol-editor-layout .form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.filter-row label {
+  min-width: 12rem;
+}
+
+.protocol-editor-layout .stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.protocol-editor-layout h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.protocol-group-grid,
+.protocol-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.85rem;
+}
+
+.protocol-group-card,
+.protocol-card,
+.snapshot-result {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 1rem;
+}
+
+.protocol-group-card {
+  display: grid;
+  gap: 0.35rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.protocol-group-card span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.protocol-status-verified {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.protocol-status-draft {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.protocol-status-catalog_only {
+  background: #eef2ff;
+  color: #4338ca;
+}
+
+.management-form label:has(textarea),
+.snapshot-result label {
+  grid-column: 1 / -1;
+}
+
+.snapshot-section {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.snapshot-section ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.snapshot-source {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.75rem;
+}
+
+.text-left {
+  text-align: left;
+}
+
 :root[data-theme="dark-navy"] input,
 :root[data-theme="dark-navy"] textarea,
 :root[data-theme="dark-navy"] select,

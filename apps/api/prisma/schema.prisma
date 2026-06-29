@@ -88,6 +88,9 @@ model User {
   requestedGuidelineImportJobs GuidelineImportJob[] @relation("GuidelineImportJobsRequestedBy")
   guidelineReviewDecisions GuidelineReviewDecision[] @relation("GuidelineReviewDecisionsDecidedBy")
   guidelineQueryLogs GuidelineQueryLog[] @relation("GuidelineQueryLogsUser")
+  createdManagementSnapshots AIManagementSnapshot[] @relation("AIManagementSnapshotsCreatedBy")
+  reviewedManagementSnapshots AIManagementSnapshot[] @relation("AIManagementSnapshotsReviewedBy")
+  approvedClinicalMemories PatientClinicalMemory[] @relation("PatientClinicalMemoriesApprovedBy")
   capturedConsentRecords ConsentRecord[] @relation("ConsentRecordsCapturedBy")
   updatedSystemSettings SystemSetting[] @relation("SystemSettingsUpdatedBy")
 
@@ -170,6 +173,8 @@ model Patient {
   invoices             Invoice[]
   payments             Payment[]
   aiDrafts             AiDraft[]
+  aiManagementSnapshots AIManagementSnapshot[]
+  clinicalMemories     PatientClinicalMemory[]
   consentRecords       ConsentRecord[]
 
   @@index([branchId])
@@ -316,6 +321,7 @@ model Encounter {
   gynecologyVisits GynecologyVisit[]
   obUltrasounds   ObUltrasound[]
   aiDrafts        AiDraft[]
+  aiManagementSnapshots AIManagementSnapshot[]
 
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
@@ -1180,6 +1186,89 @@ model GuidelineQueryLog {
   @@index([specialty])
   @@index([topic])
   @@index([answerMode])
+}
+
+model ClinicalProtocol {
+  id                   String   @id @default(cuid())
+  code                 String   @unique
+  title                String
+  specialtyGroup       String
+  condition            String
+  aliases              Json
+  bodySystem           String?
+  clinicalArea         String?
+  protocolType         String   @default("management_snapshot")
+  implementationStatus String   @default("catalog_only")
+  riskLevel            String   @default("medium")
+  sourceName           String
+  sourceYear           Int?
+  sourceUrl            String?
+  sourceVersion        String?
+  contentJson          Json
+  safetyJson           Json?
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  managementSnapshots  AIManagementSnapshot[]
+
+  @@index([specialtyGroup])
+  @@index([condition])
+  @@index([implementationStatus])
+  @@index([riskLevel])
+}
+
+model AIManagementSnapshot {
+  id                 String   @id @default(cuid())
+  patientId          String   @db.Uuid
+  encounterId        String?  @db.Uuid
+  protocolId         String?
+  diagnosisText      String
+  clinicalGoal       String?
+  inputContextJson   Json
+  outputJson         Json
+  status             String   @default("draft")
+  doctorDecision     String?
+  doctorEditedPlan   String?
+  reviewedByUserId   String?  @db.Uuid
+  reviewedAt         DateTime? @db.Timestamptz(3)
+  createdByUserId    String   @db.Uuid
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  patient            Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter          Encounter? @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  protocol           ClinicalProtocol? @relation(fields: [protocolId], references: [id], onDelete: SetNull)
+  createdByUser      User     @relation("AIManagementSnapshotsCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewedByUser     User?    @relation("AIManagementSnapshotsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  clinicalMemories   PatientClinicalMemory[]
+
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([protocolId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@index([reviewedByUserId])
+}
+
+model PatientClinicalMemory {
+  id               String   @id @default(cuid())
+  patientId        String   @db.Uuid
+  memoryType       String
+  title            String
+  valueJson        Json
+  sourceSnapshotId String?
+  approvedByUserId String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  sourceSnapshot   AIManagementSnapshot? @relation(fields: [sourceSnapshotId], references: [id], onDelete: SetNull)
+  approvedByUser   User     @relation("PatientClinicalMemoriesApprovedBy", fields: [approvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, createdAt])
+  @@index([memoryType])
+  @@index([sourceSnapshotId])
+  @@index([approvedByUserId])
 }
 
 model Role {

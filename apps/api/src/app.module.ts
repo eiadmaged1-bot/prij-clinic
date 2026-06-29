@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AiDraftsModule } from "./ai-drafts/ai-drafts.module";
+import { AiManagementModule } from "./ai-management/ai-management.module";
 import { AuditModule } from "./audit/audit.module";
 import { AppointmentsModule } from "./appointments/appointments.module";
 import { AuthModule } from "./auth/auth.module";
@@ -15,6 +16,7 @@ import { PatientsModule } from "./patients/patients.module";
 import { PregnancyModule } from "./pregnancy/pregnancy.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PrescriptionsModule } from "./prescriptions/prescriptions.module";
+import { ProtocolAtlasModule } from "./protocol-atlas/protocol-atlas.module";
 import { QueueModule } from "./queue/queue.module";
 import { RbacModule } from "./rbac/rbac.module";
 import { ReportsModule } from "./reports/reports.module";
@@ -41,7 +43,9 @@ import { UsersModule } from "./users/users.module";
     PregnancyModule,
     BillingModule,
     DashboardModule,
-    AiDraftsModule
+    AiDraftsModule,
+    ProtocolAtlasModule,
+    AiManagementModule
   ]
 })
 export class AppModule {}

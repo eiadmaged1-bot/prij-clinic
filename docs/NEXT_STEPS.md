@@ -1,82 +1,49 @@
 # Next Steps
 
-The exact next recommended sprint after v0.3 Finance + General Gynecology + Secure Guideline Center Integration is:
+The exact next branch after this v0.4 protocol + finance + gynecology + guideline integration is:
 
-## Pilot Demo Data + Browser Walkthrough Hardening
+```text
+leap/e-medication-herbal-safety-engine
+```
 
-Goals:
-
-- Prepare a clean fake/demo walkthrough dataset covering Owner, Doctor, Receptionist, Accountant, and patient-file roles.
-- Add a checked-in script-assisted browser walkthrough for login, patient list, patient file tabs, Pregnancy/OB, General Gynecology, Billing/Finance, Guideline Center, private vault denial, timeline, print summaries, finance reports, daily closing, and role denials.
-- Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
-- Keep the current integrated patient file as the pilot surface; avoid new large modules.
-- Keep all data fake/demo-only.
-- Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, no PHI uploads, no real payment gateway, and no automatic gynecology treatment or prescribing.
-- Run the full local verification suite, including `npm run test:finance:reports`, `npm run test:gyn:starter`, `npm run test:guidelines`, `npm run test:integrated:probes`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
-
-## General Gynecology Walkthrough Hardening
+## Medication And Herbal Safety Engine
 
 Goals:
 
-- Rehearse the fake/demo patient flow from Doctor Mode into the patient-file Gynecology tab.
-- Verify general gynecology visit creation, timeline event display, and browser print summary in the real demo browser.
-- Tighten labels and empty states for the abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception starter templates.
-- Keep all templates recording-only and doctor-authored.
-- Keep no automatic diagnosis, no diagnostic recommendations, no automatic treatment plan, no contraception recommendation engine, and no automatic prescribing.
-- Run the full local verification suite, including `npm run test:gyn:starter`, `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
+- Add medication and herbal safety foundations only after the current protocol integration is stable.
+- Keep all medication behavior doctor-led and review-only.
+- Do not implement autonomous prescribing.
+- Do not implement autonomous diagnosis or treatment selection.
+- Keep safety outputs as warnings, checks, or draft support that require doctor review.
+- Use fake/demo data only in seeds, tests, and docs.
+- Preserve RBAC, audit logs, route guards, protected `eyad` System Owner rules, guideline vault security, finance access separation, and protocol editor protections.
 
-## Then Finance/Reports Hardening
+## Protocol Follow-Up Work
 
-Goals:
+- Verify Emergency OB red flags protocol pack.
+- Verify AUB protocol pack.
+- Verify early pregnancy bleeding and ectopic protocol pack.
+- Verify preeclampsia and hypertension protocol pack.
+- Verify contraception protocol pack.
+- Verify antenatal routine protocol pack.
+- Verify postpartum protocol pack.
+- Verify pelvic floor physiotherapy protocol pack.
+- Add richer audit UI filtering for protocol and snapshot events.
+- Keep protocol content short and structured unless a copyright/privacy review approves local guideline storage.
 
-- Rehearse finance workflows with fake pilot data across Owner, Reception, and Accountant roles.
-- Decide discount approval policy, refund approval policy, and whether dual approval is needed.
-- Add production export controls only after access control, audit, and privacy review.
-- Keep files metadata-only until secure PHI storage is implemented.
-- Defer accounting ledger, taxes, e-invoicing, insurance/TPA, and payment gateway work.
+## Guideline Center Follow-Up
 
-## Then Home Server Dry Run Or VPS Trial
-
-When infrastructure is ready:
-
-- Use the prepared local/home-server runbooks or VPS staging scripts.
-- Use fake/demo data only.
-- Use staging-only secrets.
-- Run `npm run prisma:migrate:deploy`, then explicit fake/demo seed.
-- Verify `/health`, `/health/db`, login, admin denial, patient workflow, OB/GYN core depth, clinical persistence, visual QA, staging smoke, and backup procedure.
-- Exercise rollback without dropping or resetting the database.
-- Configure reverse proxy/TLS before broader review or any internet exposure.
-
-## Then Account Security Deepening
-
-Goals:
-
-- Add MFA planning and implementation for Owner/Admin and doctor accounts.
-- Add production password reset/change flow and force-change-after-temporary-password behavior.
-- Add session/device inventory and server-side session revocation.
-- Review production role design separately from demo presets.
-- Keep `eyad` local/private demo only unless a separate production owner provisioning policy approves otherwise.
-
-## Then Specialty Depth
-
-Goals:
-
-- Extend only one specialty slice at a time after walkthrough hardening.
-- Candidate slices: fertility/IVF, menopause, colposcopy, preventive screening, urogynecology, or deeper antenatal reporting.
-- Keep all new clinical behavior recording-only until clinical owner review.
-
-## Then Safe AI Assistant
-
-Goals:
-
-- Keep AI disabled until a separate safety approval sprint.
-- Add only draft-only, doctor-reviewed assistant behavior.
-- Require consent, RBAC, audit, prompt-injection protection, provider/privacy review, and doctor approval before any external AI use.
-- Prohibit AI diagnosis, prescribing, signing, final-record updates, RBAC bypass, consent bypass, and doctor-approval bypass.
+- Configure and operationally test a non-committed `GUIDELINE_VAULT_ENCRYPTION_KEY`.
+- Keep `GUIDELINE_VAULT_ENCRYPTION_KEY` as a placeholder in committed examples only.
+- Do not use real licensed files until a real non-committed vault key and encrypted backup/restore proof are configured.
+- Add backup and restore proof for encrypted guideline files and database metadata together.
+- Add upload malware scanning and file type inspection beyond browser MIME hints.
+- Add key rotation and encrypted-storage incident procedures.
+- Add official source adapters, scheduled update checks, richer search, and better PDF page mapping only after license, privacy, and access review.
 
 ## Production-Readiness Planning
 
-The production-readiness plan is documented in `docs/PRODUCTION_READINESS_PLAN.md`. Do not start real production deployment until the following are designed, implemented, tested, and reviewed:
+Do not start real production deployment until the following are designed, implemented, tested, and reviewed:
 
 - Patient-to-doctor assignment or another explicit clinical access model.
 - Production consent enforcement, legal text, signature/capture policy, and override workflow.
@@ -87,24 +54,3 @@ The production-readiness plan is documented in `docs/PRODUCTION_READINESS_PLAN.m
 - Payment compliance design before any real payment gateway.
 - Legal/privacy review before real patient use.
 - Any future AI provider integration must have consent, RBAC, audit, privacy, provider contract, and doctor-review controls before use.
-
-## Guideline Center Next Steps
-
-The authorized private-vault viewer/download workflow is now implemented for local/demo use. Recommended next integration steps before real licensed material is used:
-
-Future guideline work:
-
-- Configure and operationally test a non-committed `GUIDELINE_VAULT_ENCRYPTION_KEY`.
-- Keep `GUIDELINE_VAULT_ENCRYPTION_KEY` as a placeholder in committed examples only.
-- Do not use real licensed files until a real non-committed vault key and encrypted backup/restore proof are configured.
-- Add backup and restore proof for encrypted guideline files and database metadata together.
-- Add upload malware scanning and file type inspection beyond browser MIME hints.
-- Add key rotation and encrypted-storage incident procedures.
-- Official source adapters per organization.
-- Scheduled update checks.
-- Real full-text search or pgvector.
-- Local embeddings and optional local LLM.
-- Optional OpenAI mode only after explicit safety design.
-- Rich guideline comparison.
-- Better PDF page mapping.
-- Production object storage only after license, privacy, and access review.

@@ -5,6 +5,7 @@ const { loadRootEnv } = require("./env");
 loadRootEnv();
 
 const { PrismaClient } = require("@prisma/client");
+const { seedWomensHealthProtocols } = require("./seeds/womens-health-protocols");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
@@ -112,6 +113,12 @@ const permissions = [
   "ai_draft.review",
   "ai_draft.approve",
   "ai_draft.reject",
+  "protocol_atlas.read",
+  "protocol_atlas.manage",
+  "ai_management.request",
+  "ai_management.read",
+  "ai_management.review",
+  "ai_management.memory_save",
   "user.read",
   "user.manage",
   "role.read",
@@ -145,7 +152,10 @@ const rolePermissionKeys = {
     "branch.manage",
     "audit.read",
     "guidelines.read",
-    "guidelines.search"
+    "guidelines.search",
+    "protocol_atlas.read",
+    "protocol_atlas.manage",
+    "ai_management.read"
   ],
   Doctor: [
     "patient.read",
@@ -192,7 +202,12 @@ const rolePermissionKeys = {
     "ai_draft.read",
     "ai_draft.review",
     "ai_draft.approve",
-    "ai_draft.reject"
+    "ai_draft.reject",
+    "protocol_atlas.read",
+    "ai_management.request",
+    "ai_management.read",
+    "ai_management.review",
+    "ai_management.memory_save"
   ],
   Nurse: [
     "patient.read",
@@ -582,6 +597,8 @@ async function main() {
       updatedByUserId: demoOwner?.id
     }
   });
+
+  await seedWomensHealthProtocols(prisma);
 
   if (!seedDemoData) {
     return;
