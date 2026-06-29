@@ -321,6 +321,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { user, status, isAdmin, logout } = useSession();
   const isDoctor = Boolean(user?.roles.includes("Doctor"));
   const canOpenAdmin = isAdmin;
+  const canOpenGuidelines = Boolean(
+    user?.permissions.includes("guidelines.read") || user?.permissions.includes("guidelines.search")
+  );
+  const visibleNavGroups = navGroups.map((group) =>
+    group.title === "Clinical" && canOpenGuidelines
+      ? { ...group, links: [...group.links, ["/guidelines", "Evidence Library", "reports"] as [string, string, IconName]] }
+      : group
+  );
 
   useEffect(() => {
     setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
@@ -373,7 +381,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               )}
           </nav>
         ) : (
-          [...navGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
+          [...visibleNavGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
             <nav className="nav-group" key={group.title} aria-label={group.title}>
               <div className="nav-group-title">{group.title}</div>
               {group.links

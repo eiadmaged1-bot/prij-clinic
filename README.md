@@ -4,7 +4,9 @@ Clinic Management System V0.3 integrated MVP pilot workflow for OB/GYN, general 
 
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, and general gynecology starter. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, general gynecology starter, and secure Clinical Guideline Center. It is not production-ready, not a medical device, and must not be used with real patient data.
+
+The local Clinical Guideline Center supports owner/admin/doctor evidence-library workflows, source registry metadata, private licensed upload storage, local text extraction/chunking, citation search, and mock/local RAG answers from indexed chunks only. It does not call external AI providers and does not modify clinical records.
 
 The locked pilot flow is:
 
@@ -82,6 +84,8 @@ APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=your-local-dev-secret
 JWT_EXPIRES_IN=1h
+GUIDELINE_VAULT_ENCRYPTION_KEY=
+GUIDELINE_VAULT_ENCRYPTION_KEY_ID=local-dev-key
 DEMO_OWNER_EMAIL=owner@prij.local
 DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
@@ -146,6 +150,10 @@ http://localhost:3000/ultrasound
 http://localhost:3000/billing
 http://localhost:3000/consents
 http://localhost:3000/ai-drafts
+http://localhost:3000/guidelines
+http://localhost:3000/guidelines/search
+http://localhost:3000/guidelines/ask
+http://localhost:3000/guidelines/upload
 ```
 
 Recommended demo flow:
@@ -243,6 +251,9 @@ GET  /billing/patients/:patientId/statement
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
+GET  /guidelines/documents/:id/view
+GET  /guidelines/documents/:id/download
+PATCH /guidelines/documents/:id/file-access-settings
 ```
 
 ## Verification

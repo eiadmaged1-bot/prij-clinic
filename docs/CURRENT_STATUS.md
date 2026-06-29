@@ -104,3 +104,39 @@ Before commit, ensure these are not staged:
 - Local database files
 - Screenshots
 - Secrets, API keys, tokens, or patient data
+
+## Guideline Auto-Librarian Update
+
+Branch: `leap/c-guideline-auto-librarian`
+
+Added local Clinical Guideline Center foundation:
+
+- Prisma guideline/evidence library models.
+- Guideline permissions for Owner/Admin/Doctor workflows.
+- Receptionist, Nurse, and Accountant blocked by default.
+- Backend source/document/upload/import/search/ask/review/archive/job/update-check/query-log endpoints.
+- Seeded source registry metadata only.
+- Private local storage guard.
+- Frontend `/guidelines/*` pages.
+- Local automation scripts and `npm run test:guidelines`.
+
+Still local/demo only. Do not use real patient data or real licensed guideline files in this repository.
+
+## Guideline Secure Vault Hardening Update
+
+Branch: `hardening/guideline-secure-vault`
+
+Added private guideline file hardening:
+
+- Authorized viewer endpoint: `GET /guidelines/documents/:id/view`.
+- Owner-controlled download endpoint: `GET /guidelines/documents/:id/download`.
+- Owner-only download setting endpoint: `PATCH /guidelines/documents/:id/file-access-settings`.
+- Server-side access checks for every private file action.
+- Receptionist and Accountant users blocked from guideline file view/download.
+- Archived private guideline files restricted to owner file access.
+- File access audit events for allowed and denied view/download attempts.
+- Frontend private vault actions for secure viewer, download when allowed, access level, license status, and last access indicator.
+- No raw local file paths returned to the frontend.
+- AES-256-GCM local encryption for new uploads when `GUIDELINE_VAULT_ENCRYPTION_KEY` is configured.
+
+Still local/demo only. Do not upload real paid or licensed guideline PDFs until encryption keys, backup/restore, malware scanning, retention, and license operations are reviewed.
