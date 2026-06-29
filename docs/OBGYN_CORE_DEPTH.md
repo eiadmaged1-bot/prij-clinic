@@ -54,9 +54,23 @@ Run with the API started against fake/demo seed data:
 ```powershell
 npm run test:obgyn:core
 npm run test:clinical:persistence
+npm run test:doctor:ux
+npm run test:visual:qa
 ```
 
 The OB/GYN core test creates fake/demo records only, verifies role denial, checks timeline entries, checks audit events, and rejects forbidden diagnostic interpretation text in ultrasound responses.
+
+## Pilot Workflow UX
+
+The patient-file Pregnancy tab is the pilot workspace for the doctor flow. It now presents:
+
+- Pregnancy Overview with the primary antenatal workflow action.
+- Obstetric History recording summary.
+- Antenatal visit form grouped by visit details, maternal observations, symptoms, examination, fetal observations, plan, and next follow-up.
+- OB ultrasound report builder grouped by scan details, pregnancy/fetus context, presentation, placenta, amniotic fluid, fetal heart, biometry recording, Doppler note, and doctor-written impression.
+- Patient, antenatal, and ultrasound browser print actions.
+
+These forms remain recording-only and do not add automatic interpretation.
 
 ## Future Items
 

@@ -1,18 +1,19 @@
 # Next Steps
 
-The exact next recommended sprint after this integration is:
+The exact next recommended sprint after the MVP pilot workflow lock is:
 
-## OB/GYN v0.2 Verification + Workflow Polish
+## Pilot Demo Data + Browser Walkthrough Hardening
 
 Goals:
 
-- Verify the merged Codex A backend depth and Codex B OB/GYN browser UX together.
-- Confirm pregnancy episode, previous pregnancy history, fetus/multiple pregnancy records, antenatal visits, ultrasound drafts, reports, investigations, and timeline events appear cleanly inside the patient file.
-- Wire any remaining UI form gaps to the new backend APIs without changing schema unless a separate backend sprint approves it.
+- Prepare a clean fake/demo walkthrough dataset for owner, doctor, receptionist, and patient file flows.
+- Add a script-assisted browser walkthrough for login, patient file, pregnancy workspace, antenatal visit, ultrasound report, timeline, print, theme switch, and non-admin account denial.
+- Keep the current patient OB/GYN workspace as the pilot surface; avoid new large modules.
+- Tighten labels, empty states, and print formatting discovered during real demo rehearsal.
 - Keep all ultrasound, Doppler, fetal biometry, risk flags, and pregnancy history behavior recording-only.
 - Keep all data fake/demo-only.
 - Keep no automatic diagnosis, no FGR diagnosis, no fetal risk scoring, no fake percentile engine, no fetal-image AI, no real AI calls, and no PHI uploads.
-- Run the full local verification suite, including `npm run test:obgyn:core`.
+- Run the full local verification suite, including `npm run test:obgyn:core`, `npm run test:accounts:rbac`, and visual QA.
 
 ## Then Home Server Dry Run Or VPS Trial
 

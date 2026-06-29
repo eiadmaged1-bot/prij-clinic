@@ -39,8 +39,10 @@ This credential is for local/private demo use only.
 8. Save only demo draft text. The doctor remains responsible for clinical content.
 9. Return to the patient Pregnancy tab to review the OB/GYN workspace.
 10. Show Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, and Follow-up.
-11. Show the OB ultrasound report builder and explain that all measurements are recording-only.
-12. Use browser print actions for patient summary, antenatal visit summary, and ultrasound report draft.
+11. Show the antenatal visit workflow groups: visit details, maternal observations, symptoms, examination, fetal observations, plan, and next follow-up.
+12. Show the OB ultrasound report builder groups: scan details, pregnancy/fetus context, presentation, placenta, amniotic fluid, fetal heart, biometry recording, Doppler note, and impression.
+13. Explain that all measurements and notes are recording-only and clinician interpretation is required.
+14. Use browser print actions for patient summary, antenatal visit summary, and ultrasound report.
 
 ## Display Comfort
 
@@ -71,6 +73,6 @@ Use `docs/MVP_RC_VERIFICATION_CHECKLIST.md` to run the final local demo path:
 4. Patient file timeline across appointments, queue, encounter, prescription, orders/reports, OB/GYN, finance, consent, and AI draft placeholder records.
 5. Admin/RBAC checks proving non-admins cannot access Admin or Appearance controls.
 
-Production planning is documented in `docs/PRODUCTION_READINESS_PLAN.md`. The exact next sprint is Production Hardening + Staging Deployment Prep.
+Production planning is documented in `docs/PRODUCTION_READINESS_PLAN.md`. The exact next sprint is Pilot Demo Data + Browser Walkthrough Hardening.
 
 OB/GYN browser workflow details are documented in `docs/OBGYN_UX_GUIDE.md`.

@@ -30,7 +30,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:visual:qa` is a lightweight page sweep. It checks status, layout markers, friendly wording, and protected appearance settings, but it is not a full screenshot comparison suite.
 - Mobile/tablet QA is improved for demo acceptance, but production device certification, accessibility audit, and full browser matrix testing remain future work.
 - Patient file tabs show patient-scoped related records where current APIs support it; deeper specialty screens and production charting workflows remain future work.
-- OB/GYN patient workspace UX is now present, but final merge verification must prove every backend field appears correctly after integration.
+- OB/GYN patient workspace UX is now polished for the MVP pilot flow, but it remains a demo workflow and not a complete specialty EHR chart.
 
 ## Security And Privacy
 
@@ -60,7 +60,9 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Prescription approval is represented by a sign action in the MVP foundation and needs final doctor-approval semantics before production use.
 - Investigation result review and report review are foundational only.
 - OB ultrasound records support raw recording fields for scan type, indication, fetus link, biometry, EFW, Doppler note, and doctor-written impression, but they do not provide diagnostic automation.
-- OB/GYN records include previous pregnancy history, fetus/multiple pregnancy records, deeper antenatal visits, and pregnancy timeline events, but remain recording-only.
+- OB/GYN records include previous pregnancy history, fetus/multiple pregnancy records, deeper antenatal visits, ultrasound reports, and pregnancy timeline events, but remain recording-only.
+- The patient-file antenatal visit form saves only when a pregnancy episode exists for the patient.
+- Ultrasound print output is browser print styling only; it is not a signed production report format.
 
 ## Billing
 

@@ -1,10 +1,16 @@
 # Prij Clinic
 
-Clinic Management System V0.1 MVP release candidate for OB/GYN and women's health.
+Clinic Management System V0.2 MVP pilot workflow lock for OB/GYN and women's health.
 
-Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.1 is a verified local/private MVP release candidate. This sprint prepares staging deployment with fake/demo data only. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.2 is a verified local/private MVP pilot workflow lock. It is not production-ready, not a medical device, and must not be used with real patient data.
+
+The locked pilot flow is:
+
+```text
+Owner login -> patient file -> doctor workflow -> OB/GYN pregnancy workspace -> antenatal visit -> ultrasound report -> timeline -> print -> role-safe account behavior
+```
 
 ## V0.1 Focused Clinic Workflow
 
@@ -24,6 +30,7 @@ Every UI surface remains demo/local only: no real patient data, no real payment 
 
 Release-candidate verification and production-readiness planning are documented in:
 
+- `docs/MVP_PILOT_WORKFLOW_LOCK_REPORT.md`
 - `docs/MVP_RC_VERIFICATION_CHECKLIST.md`
 - `docs/PRODUCTION_READINESS_PLAN.md`
 - `docs/STAGING_DEPLOYMENT_RUNBOOK.md`

@@ -36,36 +36,31 @@ The dashboard is recording-only. It does not calculate risk, diagnose fetal grow
 
 ## Antenatal Visit Form
 
-The antenatal visit card gives the doctor a readable form with:
+The antenatal visit card gives the doctor a readable form grouped as:
 
-- symptoms
-- BP
-- weight
-- fetal heart
-- fundal height
-- examination
-- plan
-- investigations
-- next follow-up
+- Visit details.
+- Maternal observations.
+- Symptoms.
+- Examination.
+- Fetal observations.
+- Plan.
+- Next follow-up.
 
-The form is UI-ready for the parallel backend merge. Until matching persistence is available in the merged branch, it should be treated as a guided browser template.
+When a pregnancy episode exists, Save Draft / Save Visit records the antenatal visit through the pregnancy antenatal visit API and the event appears in the patient timeline. If no pregnancy episode exists, the form tells the user to create one first.
 
 ## Ultrasound Report Builder
 
 The ultrasound report builder includes:
 
-- scan type
-- indication
-- gestational age
-- fetus selector
-- fetal presentation
-- placenta
-- amniotic fluid
-- fetal heart
-- BPD, HC, AC, FL, EFW recording fields
-- Doppler note
-- doctor-written impression
-- draft/final placeholder status
+- Scan details.
+- Pregnancy and fetus context.
+- Fetal presentation.
+- Placenta.
+- Amniotic fluid.
+- Fetal heart.
+- Biometry recording for BPD, HC, AC, FL, and EFW.
+- Doppler note placeholder.
+- Doctor-written impression.
 
 Measurements are recorded for clinician review. Interpretation must be completed by the doctor.
 
@@ -83,7 +78,7 @@ Browser print styling is available for:
 
 - patient summary
 - antenatal visit summary
-- ultrasound report draft
+- ultrasound report
 - linked report summaries
 
 Use the print buttons in the patient OB/GYN workspace. No generated PDF library or PHI file upload is introduced.
