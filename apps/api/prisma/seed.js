@@ -8,6 +8,23 @@ const { PrismaClient } = require("@prisma/client");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
+const appEnv = process.env.APP_ENV || process.env.NODE_ENV || "local";
+const isProduction = appEnv === "production" || process.env.NODE_ENV === "production";
+const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA !== "false";
+
+if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true")) {
+  throw new Error("Production seed refuses demo data. Set SEED_DEMO_DATA=false and SEED_DEMO_OWNER=false.");
+}
+
+for (const [name, value] of Object.entries({
+  DEMO_OWNER_PASSWORD: process.env.DEMO_OWNER_PASSWORD,
+  DEMO_ADMIN_PASSWORD: process.env.DEMO_ADMIN_PASSWORD,
+  DEMO_TEST_PASSWORD: process.env.DEMO_TEST_PASSWORD
+})) {
+  if (isProduction && (value === "eyad" || value === "LocalDev123!")) {
+    throw new Error(`${name} uses a local demo password and is forbidden in production.`);
+  }
+}
 
 const roles = [
   ["Owner", "Demo-only owner role for clinic governance and Sprint 1 setup."],
@@ -318,7 +335,7 @@ async function main() {
 
   let demoOwner = null;
 
-  if (process.env.SEED_DEMO_OWNER !== "false") {
+  if (seedDemoData && process.env.SEED_DEMO_OWNER !== "false") {
     const email = process.env.DEMO_OWNER_EMAIL || "owner@prij.local";
     const password = process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
 
@@ -362,109 +379,96 @@ async function main() {
     demoOwner = owner;
   }
 
-  const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
-  const localAdmin = await prisma.user.upsert({
-    where: { email: "eyad.admin@prij.local" },
-    update: {
-      loginId: "eyad",
-      displayName: "Eyad Admin",
-      status: "active",
-      branchId: mainBranch.id,
-      passwordHash: await hashPassword(localAdminPassword),
-      failedLoginCount: 0,
-      lockedUntil: null
-    },
-    create: {
-      email: "eyad.admin@prij.local",
-      loginId: "eyad",
-      displayName: "Eyad Admin",
-      status: "active",
-      branchId: mainBranch.id,
-      passwordHash: await hashPassword(localAdminPassword)
-    }
-  });
-
-  await prisma.userRole.upsert({
-    where: {
-      userId_roleId_branchId: {
-        userId: localAdmin.id,
-        roleId: roleByName.get("Owner").id,
-        branchId: mainBranch.id
-      }
-    },
-    update: {},
-    create: {
-      userId: localAdmin.id,
-      roleId: roleByName.get("Owner").id,
-      branchId: mainBranch.id,
-      createdByUserId: demoOwner?.id
-    }
-  });
-
-  if (!demoOwner) {
-    demoOwner = localAdmin;
-  }
-
-  const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
-  const demoUsers = [
-    ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
-    ["demo.doctor@prij.local", "Demo Doctor User", "Doctor", mainBranch.id],
-    ["demo.reception@prij.local", "Demo Reception User", "Receptionist", mainBranch.id],
-    ["demo.accountant@prij.local", "Demo Accountant User", "Accountant", mainBranch.id],
-    ["demo.nurse@prij.local", "Demo Nurse User", "Nurse", branchB.id]
-  ];
-
-  for (const [email, displayName, roleName, branchId] of demoUsers) {
-    const user = await prisma.user.upsert({
-      where: { email },
+  if (seedDemoData) {
+    const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
+    const localAdmin = await prisma.user.upsert({
+      where: { email: "eyad.admin@prij.local" },
       update: {
-        displayName,
+        loginId: "eyad",
+        displayName: "Eyad Admin",
         status: "active",
-        branchId,
-        passwordHash: await hashPassword(demoPassword),
+        branchId: mainBranch.id,
+        passwordHash: await hashPassword(localAdminPassword),
         failedLoginCount: 0,
         lockedUntil: null
       },
       create: {
-        email,
-        displayName,
+        email: "eyad.admin@prij.local",
+        loginId: "eyad",
+        displayName: "Eyad Admin",
         status: "active",
-        branchId,
-        passwordHash: await hashPassword(demoPassword)
+        branchId: mainBranch.id,
+        passwordHash: await hashPassword(localAdminPassword)
       }
     });
 
     await prisma.userRole.upsert({
       where: {
         userId_roleId_branchId: {
-          userId: user.id,
-          roleId: roleByName.get(roleName).id,
-          branchId
+          userId: localAdmin.id,
+          roleId: roleByName.get("Owner").id,
+          branchId: mainBranch.id
         }
       },
       update: {},
       create: {
-        userId: user.id,
-        roleId: roleByName.get(roleName).id,
-        branchId,
+        userId: localAdmin.id,
+        roleId: roleByName.get("Owner").id,
+        branchId: mainBranch.id,
         createdByUserId: demoOwner?.id
       }
     });
-  }
 
-  const serviceItems = [
-    ["CONSULT-GYN", "Gynecology consultation", "Consultation", "500.00", "EGP"],
-    ["US-OB-BASIC", "OB ultrasound basic", "Ultrasound", "750.00", "EGP"],
-    ["LAB-PANEL-DEMO", "Demo lab panel", "Investigations", "350.00", "EGP"],
-    ["FOLLOW-UP", "Follow-up visit", "Consultation", "300.00", "EGP"]
-  ];
+    if (!demoOwner) {
+      demoOwner = localAdmin;
+    }
 
-  for (const [code, name, category, price, currency] of serviceItems) {
-    await prisma.serviceItem.upsert({
-      where: { code },
-      update: { name, category, price, currency, active: true },
-      create: { code, name, category, price, currency, active: true }
-    });
+    const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
+    const demoUsers = [
+      ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
+      ["demo.doctor@prij.local", "Demo Doctor User", "Doctor", mainBranch.id],
+      ["demo.reception@prij.local", "Demo Reception User", "Receptionist", mainBranch.id],
+      ["demo.accountant@prij.local", "Demo Accountant User", "Accountant", mainBranch.id],
+      ["demo.nurse@prij.local", "Demo Nurse User", "Nurse", branchB.id]
+    ];
+
+    for (const [email, displayName, roleName, branchId] of demoUsers) {
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {
+          displayName,
+          status: "active",
+          branchId,
+          passwordHash: await hashPassword(demoPassword),
+          failedLoginCount: 0,
+          lockedUntil: null
+        },
+        create: {
+          email,
+          displayName,
+          status: "active",
+          branchId,
+          passwordHash: await hashPassword(demoPassword)
+        }
+      });
+
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId_branchId: {
+            userId: user.id,
+            roleId: roleByName.get(roleName).id,
+            branchId
+          }
+        },
+        update: {},
+        create: {
+          userId: user.id,
+          roleId: roleByName.get(roleName).id,
+          branchId,
+          createdByUserId: demoOwner?.id
+        }
+      });
+    }
   }
 
   await prisma.systemSetting.upsert({
@@ -484,6 +488,25 @@ async function main() {
       updatedByUserId: demoOwner?.id
     }
   });
+
+  if (!seedDemoData) {
+    return;
+  }
+
+  const serviceItems = [
+    ["CONSULT-GYN", "Gynecology consultation", "Consultation", "500.00", "EGP"],
+    ["US-OB-BASIC", "OB ultrasound basic", "Ultrasound", "750.00", "EGP"],
+    ["LAB-PANEL-DEMO", "Demo lab panel", "Investigations", "350.00", "EGP"],
+    ["FOLLOW-UP", "Follow-up visit", "Consultation", "300.00", "EGP"]
+  ];
+
+  for (const [code, name, category, price, currency] of serviceItems) {
+    await prisma.serviceItem.upsert({
+      where: { code },
+      update: { name, category, price, currency, active: true },
+      create: { code, name, category, price, currency, active: true }
+    });
+  }
 
   const demoPatientA = await prisma.patient.upsert({
     where: { medicalRecordNumber: "DEMO-MRN-001" },
