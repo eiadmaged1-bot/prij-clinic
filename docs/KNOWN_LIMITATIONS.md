@@ -7,7 +7,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Staging deployment files are examples and still need a real staging host, DNS/TLS setup, and secret provisioning.
 - Staging is fake/demo data only.
 - Production patient use remains blocked until legal/security/privacy launch gates pass.
-- Docker images and compose examples have not yet been exercised on a real staging server.
+- Docker images and compose examples have been exercised locally through the local staging trial, but not yet on a real staging server.
 - Production staff provisioning is not implemented; production seed intentionally does not create demo users.
 
 ## Release Candidate UX Limitations
@@ -23,7 +23,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Sensitive read audit coverage now exists for core sensitive MVP reads, but export/download and future timeline reads still need policy-specific coverage.
 - MFA, password reset, session revocation, device/session inventory, and full throttling policy are not implemented.
 - No automated production backup job is implemented yet.
-- Local backup/restore helper scripts exist and staging backup procedure is documented, but production encrypted backup storage, off-site backup, and formal restore-test automation remain future work.
+- Local backup/restore helper scripts and a local staging backup helper exist, but production encrypted backup storage, off-site backup, and formal restore-test automation remain future work.
 - No secure report file/object storage is implemented. Current report records store metadata/reference text only, and the file storage security plan remains documentation.
 - Audit logs are application append-only, but database-level tamper resistance and retention controls are not implemented.
 
@@ -87,5 +87,5 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Deployment
 
 - V0.1 is local/private pilot software only.
-- Production deployment, staging hardening, secrets management, monitoring, HTTPS policy, MFA, secure file storage, backup encryption, restore proof, and legal/privacy review remain future work.
+- Local staging deployment has been proven with fake/demo data only, but VPS staging deployment, production deployment, staging hardening, secrets management, monitoring, HTTPS policy, MFA, secure file storage, backup encryption, restore proof, and legal/privacy review remain future work.
 - The production-readiness plan exists in `docs/PRODUCTION_READINESS_PLAN.md`, but implementation of those gates is not complete.

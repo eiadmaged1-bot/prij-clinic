@@ -2,17 +2,17 @@
 
 Date: 2026-06-29
 
-Branch: `hardening/staging-deployment-prep`
+Branch: `deploy/local-staging-trial`
 
 Base tag: `v0.1-mvp-release-candidate-verified`
 
-Target tag: `v0.1-staging-prep`
+Target tag: `v0.1-local-staging-trial`
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-This sprint prepares safe staging deployment with fake/demo data only. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This sprint proves the staging deployment setup locally with fake/demo data only. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Staging Prep Added
 
@@ -22,6 +22,7 @@ This sprint prepares safe staging deployment with fake/demo data only. It is not
 - API/web Dockerfiles, staging compose file, production compose example, and nginx reverse-proxy example.
 - Database deployment workflows, staging backup/restore procedure, security hardening checklist, staging runbook, operations monitoring plan, and release gate checklist.
 - Local backup script verified on 2026-06-29.
+- Local staging compose trial verified API/Web Docker builds, migration deploy, explicit staging demo seed, health endpoints, staging smoke test, and staging backup helper on 2026-06-29.
 
 ## Implemented Foundation
 
@@ -68,6 +69,7 @@ npm run test:doctor:ux
 npm run test:e2e:v01
 npm run test:clinical:persistence
 npm run test:visual:qa
+npm run test:staging:smoke
 ```
 
 ## UI Safety State

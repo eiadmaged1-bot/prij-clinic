@@ -28,7 +28,7 @@ npm --version
 ```bash
 git clone <REPO_URL> prij-clinic
 cd prij-clinic
-git checkout hardening/staging-deployment-prep
+git checkout deploy/local-staging-trial
 ```
 
 ## 4. Configure Environment
@@ -64,6 +64,12 @@ npm run staging:env:check
 
 The checker confirms required staging values are present, AI is disabled, demo seed is intentional, local default demo passwords are not used, and the staging JWT secret is long enough. It does not print secret values.
 
+When running compose locally for the staging trial, pass the ignored env file and an isolated project name:
+
+```powershell
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml up -d postgres
+```
+
 ## 5. Start Database
 
 ```bash
@@ -78,7 +84,7 @@ Wait until the database healthcheck is healthy.
 Run migration deploy, not migration dev:
 
 ```bash
-docker compose -f docker-compose.staging.yml run --rm api npm run prisma:migrate:deploy
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml run --rm api npm run prisma:migrate:deploy
 ```
 
 Stop if a command asks to reset data.
@@ -88,7 +94,7 @@ Stop if a command asks to reset data.
 Staging may use fake/demo data only:
 
 ```bash
-docker compose -f docker-compose.staging.yml run --rm api npm run prisma:seed
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml run --rm api npm run prisma:seed
 ```
 
 Confirm:
@@ -100,8 +106,8 @@ Confirm:
 ## 8. Start API and Web
 
 ```bash
-docker compose -f docker-compose.staging.yml up -d --build api web
-docker compose -f docker-compose.staging.yml ps
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml up -d --build api web
+docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.staging.yml ps
 ```
 
 Startup order:
@@ -129,6 +135,12 @@ From a machine allowed to reach staging:
 
 ```bash
 API_URL=https://staging-api.example.invalid npm run test:security:ci
+```
+
+For the local staging deployment trial:
+
+```powershell
+npm run test:staging:smoke
 ```
 
 For local browser-facing checks, set:

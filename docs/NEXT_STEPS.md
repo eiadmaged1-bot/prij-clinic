@@ -1,8 +1,8 @@
 # Next Steps
 
-The exact next recommended sprint after this staging-prep branch is:
+The exact next recommended sprint after this local staging trial branch is:
 
-## Staging Deployment Trial
+## VPS Staging Deployment Trial
 
 Goals:
 
@@ -14,6 +14,19 @@ Goals:
 - Record issues before any pilot planning.
 
 ## Completed Current Sprint Scope
+
+Local Staging Deployment Trial covers:
+
+- Created and checked a local `.env.staging` workflow without committing secrets.
+- Built API and Web staging Docker images locally.
+- Ran local staging compose with isolated project `prij-clinic-staging`.
+- Ran Prisma migrate deploy and explicit staging demo seed in the API container.
+- Verified API/Web/Postgres health and local web reachability.
+- Added and passed `npm run test:staging:smoke`.
+- Added and verified `npm run backup:staging` for a non-destructive staging SQL backup.
+- Documented restore as a checklist only; no destructive restore was run against the active local staging database.
+
+## Previous Sprint Scope
 
 Production Hardening + Staging Deployment Prep covers:
 
