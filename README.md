@@ -146,6 +146,8 @@ http://localhost:3000/ultrasound
 http://localhost:3000/billing
 http://localhost:3000/consents
 http://localhost:3000/ai-drafts
+http://localhost:3000/protocol-atlas
+http://localhost:3000/admin/protocol-atlas
 ```
 
 Recommended demo flow:
@@ -243,6 +245,9 @@ GET  /billing/patients/:patientId/statement
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
+GET  /protocol-atlas
+POST /protocol-atlas/search
+POST /ai-management/snapshots
 ```
 
 ## Verification
