@@ -2,17 +2,17 @@
 
 Date: 2026-06-29
 
-Branch: `deploy/vps-staging-trial`
+Branch: `leap/a-obgyn-core-depth`
 
 Base tag: `v0.1-mvp-release-candidate-verified`
 
-Target tag: `v0.1-vps-staging-trial`
+Target tag: pending
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-This sprint prepares the VPS staging deployment trial with fake/demo data only. The previous local staging Docker trial passed. Real VPS execution remains pending until server credentials, DNS/TLS details, and staging-only secrets are available. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This sprint deepens the OB/GYN backend with fake/demo data only. It builds on the verified local/VPS staging-prep baseline. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Staging Prep Added
 
@@ -38,7 +38,7 @@ This sprint prepares the VPS staging deployment trial with fake/demo data only. 
 - Guided visit persistence: `/doctor/visit?patientId=...` creates or updates a structured encounter draft with complaint, history, examination, assessment/impression, and plan text.
 - Patient-context workflow actions: `/patients/:id` can create appointment, queue check-in, encounter, prescription, investigation order, report placeholder, ultrasound draft, invoice, payment, and consent records with the patient carried automatically.
 - Patient timeline aggregation: `GET /patients/:id/timeline` aggregates available patient journey events across core MVP records.
-- OB/GYN core persistence: pregnancy episodes support living, abortions, and dating method fields, plus fetus records and antenatal visits for recording-only pregnancy follow-up.
+- OB/GYN core persistence: pregnancy episodes support living, abortions, LMP/EDD, dating method, active/inactive/ended-style statuses, recording-only risk flags, previous pregnancy history, fetus/multiple pregnancy records, deeper antenatal visits, OB ultrasound recording fields, and OB timeline events.
 - Visual QA: `npm run test:visual:qa` checks friendly UI wording, layout availability, patient-file tabs, doctor cards, and admin appearance protection.
 - Clinical persistence QA: `npm run test:clinical:persistence` checks patient-context workflow creation, signed encounter edit protection, OB/GYN recording-only behavior, timeline aggregation, and audit entries.
 - Release-candidate verification planning: `docs/MVP_RC_VERIFICATION_CHECKLIST.md` and `docs/PRODUCTION_READINESS_PLAN.md` define the final demo checks and the gates before staging, pilot, or production.
@@ -69,6 +69,7 @@ npm run test:theme:ui
 npm run test:doctor:ux
 npm run test:e2e:v01
 npm run test:clinical:persistence
+npm run test:obgyn:core
 npm run test:visual:qa
 npm run test:staging:smoke
 npm run staging:env:check

@@ -1,20 +1,30 @@
 # Next Steps
 
-The exact next recommended sprint after this VPS staging trial preparation is:
+The exact next recommended sprint after the OB/GYN backend depth branch is:
 
-## Execute VPS Staging Trial + TLS Hardening
+## OB/GYN UX Integration + VPS Staging Re-Verification
 
 Goals:
 
-- Run the prepared VPS deployment on a real server with fake/demo data only.
-- Use `.env.staging.example` and `docker-compose.staging.yml` with staging-only secrets.
-- Run `npm run prisma:migrate:deploy`, then staging demo seed.
-- Verify `/health`, `/health/db`, login, admin denial, patient workflow, clinical persistence, visual QA, and backup procedure.
-- Exercise rollback without dropping or resetting the database.
-- Record issues before any pilot planning.
-- Configure reverse proxy/TLS after direct-port health checks pass.
+- Wire frontend OB/GYN forms to the new previous pregnancy, fetus, antenatal visit, and ultrasound recording APIs.
+- Re-run staging migrations and fake/demo seed after merging backend and frontend OB/GYN branches.
+- Verify `/health`, `/health/db`, login, admin denial, patient workflow, OB/GYN core depth, clinical persistence, visual QA, and backup procedure.
+- Keep all ultrasound, Doppler, risk flag, and pregnancy history behavior recording-only.
+- Continue VPS staging/TLS work with fake/demo data only after merge.
 
 ## Completed Current Sprint Scope
+
+OB/GYN Core Depth Backend covers:
+
+- Pregnancy episode depth with recording-only risk flags and active/inactive/ended-style status support.
+- Previous pregnancy history create/list APIs.
+- Fetus and multiple pregnancy create/list/update APIs.
+- Deeper antenatal visit recording fields.
+- Deeper OB ultrasound recording fields linked to patient, pregnancy, fetus, and encounter.
+- Patient timeline integration for OB/GYN depth events.
+- Dedicated `npm run test:obgyn:core` API workflow test.
+
+## Previous Sprint Scope
 
 Local Staging Deployment Trial covers:
 
@@ -27,7 +37,7 @@ Local Staging Deployment Trial covers:
 - Added and verified `npm run backup:staging` for a non-destructive staging SQL backup.
 - Documented restore as a checklist only; no destructive restore was run against the active local staging database.
 
-## Previous Sprint Scope
+## Production Hardening Scope
 
 Production Hardening + Staging Deployment Prep covers:
 

@@ -43,8 +43,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Signed encounter correction/versioning is not implemented.
 - Prescription approval is represented by a sign action in the MVP foundation and needs final doctor-approval semantics before production use.
 - Investigation result review and report review are foundational only.
-- OB ultrasound records do not provide diagnostic automation and must not be interpreted as automated clinical decision support.
-- OB/GYN core records now include pregnancy episode fields, fetus records, and antenatal visits, but no validated growth-chart engine, fetal risk scoring, or automated interpretation is implemented.
+- OB ultrasound records now support raw recording fields for scan type, indication, fetus link, biometry, EFW, Doppler note, and doctor-written impression, but they do not provide diagnostic automation and must not be interpreted as automated clinical decision support.
+- OB/GYN core records now include previous pregnancy history, fetus/multiple pregnancy records, deeper antenatal visits, and pregnancy timeline events, but no validated growth-chart engine, fetal risk scoring, automatic FGR diagnosis, fake percentile engine, DICOM/PACS workflow, or automated interpretation is implemented.
 
 ## Billing
 
@@ -83,6 +83,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 - `npm run test:clinical:persistence` covers patient-context clinical persistence, OB/GYN core recording, patient timeline aggregation, patient finance basics, audit assertions, and signed encounter edit protection for fake/demo records only.
+- `npm run test:obgyn:core` covers pregnancy episode depth, previous pregnancy history, fetus/multiple pregnancy records, antenatal visit depth, OB ultrasound recording fields, timeline entries, audit entries, unauthorized-role denial, and no diagnostic ultrasound behavior for fake/demo records only.
 
 ## Deployment
 

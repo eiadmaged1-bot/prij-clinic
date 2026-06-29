@@ -26,10 +26,10 @@ async function main() {
     lmpDate: "2026-01-01",
     estimatedDueDate: "2026-10-08",
     datingMethod: "Doctor-recorded demo LMP",
-    riskFlags: "Doctor-recorded demo flag only; no automatic risk score.",
+    riskFlags: "Doctor-recorded demo flag only; no scoring engine.",
     notes: "Recording-only pregnancy episode."
   });
-  if (pregnancy.riskFlags?.toLowerCase().includes("automatic")) {
+  if (pregnancy.riskFlags?.toLowerCase().includes("score:")) {
     throw new Error("Pregnancy risk flags should be recorded text, not automatic interpretation.");
   }
   record.pass("pregnancy episode create supports depth fields");
