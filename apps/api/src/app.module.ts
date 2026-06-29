@@ -7,12 +7,14 @@ import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { GynecologyModule } from "./gynecology/gynecology.module";
 import { HealthModule } from "./health/health.module";
 import { GuidelinesModule } from "./guidelines/guidelines.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
 import { PatientsModule } from "./patients/patients.module";
+import { MedicationsModule } from "./medications/medications.module";
 import { PregnancyModule } from "./pregnancy/pregnancy.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { PrescriptionsModule } from "./prescriptions/prescriptions.module";
@@ -43,6 +45,8 @@ import { UsersModule } from "./users/users.module";
     PregnancyModule,
     BillingModule,
     DashboardModule,
+    MedicationsModule,
+    DrugMarketModule,
     AiDraftsModule,
     ProtocolAtlasModule,
     AiManagementModule
