@@ -4,6 +4,8 @@ Clinic Management System V0.2 MVP pilot workflow lock for OB/GYN and women's hea
 
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
+Current branch adds a local Clinical Guideline Center for owner/admin/doctor evidence-library workflows. It supports source registry metadata, private licensed upload storage, local text extraction/chunking, citation search, and mock/local RAG answers from indexed chunks only. It does not call external AI providers and does not modify clinical records.
+
 V0.2 is a verified local/private MVP pilot workflow lock. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 The locked pilot flow is:
@@ -143,6 +145,10 @@ http://localhost:3000/ultrasound
 http://localhost:3000/billing
 http://localhost:3000/consents
 http://localhost:3000/ai-drafts
+http://localhost:3000/guidelines
+http://localhost:3000/guidelines/search
+http://localhost:3000/guidelines/ask
+http://localhost:3000/guidelines/upload
 ```
 
 Recommended demo flow:

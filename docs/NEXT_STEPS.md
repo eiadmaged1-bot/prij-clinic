@@ -68,3 +68,18 @@ The production-readiness plan is documented in `docs/PRODUCTION_READINESS_PLAN.m
 - Payment compliance design before any real payment gateway.
 - Legal/privacy review before real patient use.
 - Any future AI provider integration must have consent, RBAC, audit, privacy, provider contract, and doctor-review controls before use.
+
+## Guideline Center Next Steps
+
+Recommended next integration step: add an authorized document viewer/download workflow with explicit owner/doctor access checks, file access audit logs, and encrypted storage design before any real licensed material is used.
+
+Future guideline work:
+
+- Official source adapters per organization.
+- Scheduled update checks.
+- Real full-text search or pgvector.
+- Local embeddings and optional local LLM.
+- Optional OpenAI mode only after explicit safety design.
+- Rich guideline comparison.
+- Better PDF page mapping.
+- Encrypted file storage and backup restore tests.

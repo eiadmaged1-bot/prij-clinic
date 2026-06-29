@@ -117,3 +117,20 @@ Before commit, ensure these are not staged:
 - Local database files
 - Screenshots
 - Secrets, API keys, tokens, or patient data
+
+## Guideline Auto-Librarian Update
+
+Branch: `leap/c-guideline-auto-librarian`
+
+Added local Clinical Guideline Center foundation:
+
+- Prisma guideline/evidence library models.
+- Guideline permissions for Owner/Admin/Doctor workflows.
+- Receptionist, Nurse, and Accountant blocked by default.
+- Backend source/document/upload/import/search/ask/review/archive/job/update-check/query-log endpoints.
+- Seeded source registry metadata only.
+- Private local storage guard.
+- Frontend `/guidelines/*` pages.
+- Local automation scripts and `npm run test:guidelines`.
+
+Still local/demo only. Do not use real patient data or real licensed guideline files in this repository.

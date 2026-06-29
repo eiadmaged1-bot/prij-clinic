@@ -96,3 +96,14 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
 - `npm run test:clinical:persistence` covers patient-context clinical persistence, OB/GYN core recording, patient timeline aggregation, patient finance basics, audit assertions, and signed encounter edit protection for fake/demo records only.
 - `npm run test:obgyn:core` covers pregnancy episode depth, previous pregnancy history, fetus/multiple pregnancy records, antenatal visit depth, OB ultrasound recording fields, timeline entries, audit entries, unauthorized-role denial, and no diagnostic ultrasound behavior for fake/demo records only.
+
+## Guideline Center Limitations
+
+- PDF extraction is basic and may lose tables, page numbers, and formatting.
+- Local ranking is keyword overlap, not semantic search.
+- `embeddingJson` is reserved for future use.
+- No pgvector extension is installed.
+- No local LLM or external AI provider is called.
+- No automatic update replacement is implemented.
+- Private file storage is local and not encrypted yet.
+- Source registry entries are metadata only, not imported documents.
