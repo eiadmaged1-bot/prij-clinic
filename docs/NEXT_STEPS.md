@@ -1,5 +1,22 @@
 # Next Steps
 
+## Integration After Branch B
+
+1. Merge with Codex A backend persistence work and resolve any patient-context API differences.
+2. Re-run frontend checks after integration:
+
+```powershell
+npm run typecheck
+npm run build
+npm run test:theme:ui
+npm run test:doctor:ux
+npm run test:visual:qa
+```
+
+3. Re-run DB-backed workflow tests only after Codex A confirms database state is ready.
+4. Do one manual pass at 390px, 768px, 1024px, and desktop widths using `docs/MOBILE_TABLET_QA.md`.
+5. Keep AI disabled and draft-only until consent, provider privacy, audit, access rules, and doctor-review controls are complete.
+
 The exact next recommended sprint after the doctor-friendly UX reset is:
 
 ## MVP Release Candidate Polish + OB/GYN Depth Expansion

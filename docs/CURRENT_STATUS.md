@@ -2,9 +2,21 @@
 
 Date: 2026-06-29
 
-Branch: `ux/doctor-friendly-3d-icons-reset`
+Branch: `leap/b-rc-polish-mobile-visual-qa`
 
-Target tag: `v0.1-doctor-friendly-ux`
+Target tag: pending merged release candidate
+
+## Release Candidate UX Update
+
+- Frontend-only doctor demo polish is complete on this branch.
+- Patient registry now uses readable patient cards with large open-file actions instead of a table-first experience.
+- Shared CSS improves tablet/mobile stacking, touch target sizes, tab scrolling, form action wrapping, and patient header readability.
+- Doctor Mode, Guided Visit, patient file actions, empty states, and display preference controls keep icons paired with text.
+- Normal dashboard wording avoids raw access-rule lists and technical implementation labels.
+- `npm run test:visual:qa` adds a lightweight page sweep for app layout, friendly wording, doctor cards, patient-file tabs, and admin appearance protection.
+- New release-candidate docs cover doctor, reception, owner, and mobile/tablet demo flows.
+
+Codex A is expected to integrate backend persistence, Prisma/schema, OB/GYN core, patient-context APIs, and DB-heavy tests separately.
 
 ## Status Summary
 
