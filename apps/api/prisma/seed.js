@@ -5,6 +5,7 @@ const { loadRootEnv } = require("./env");
 loadRootEnv();
 
 const { PrismaClient } = require("@prisma/client");
+const { seedCalculatorFormulas } = require("./seeds/calculator-formulas");
 const { seedWomensHealthProtocols } = require("./seeds/womens-health-protocols");
 
 const scrypt = promisify(crypto.scrypt);
@@ -111,6 +112,10 @@ const permissions = [
   "ai_management.read",
   "ai_management.review",
   "ai_management.memory_save",
+  "calculator.read",
+  "calculator.calculate",
+  "calculator.review",
+  "calculator.manage",
   "user.read",
   "user.manage",
   "role.read",
@@ -143,6 +148,8 @@ const rolePermissionKeys = {
     "clinic_settings.manage",
     "branch.manage",
     "audit.read",
+    "calculator.read",
+    "calculator.manage",
     "protocol_atlas.read",
     "protocol_atlas.manage",
     "ai_management.read"
@@ -185,6 +192,9 @@ const rolePermissionKeys = {
     "pregnancy.manage",
     "ob_ultrasound.read",
     "ob_ultrasound.manage",
+    "calculator.read",
+    "calculator.calculate",
+    "calculator.review",
     "ai_draft.request",
     "ai_draft.read",
     "ai_draft.review",
@@ -549,6 +559,7 @@ async function main() {
     }
   });
 
+  await seedCalculatorFormulas(prisma);
   await seedWomensHealthProtocols(prisma);
 
   if (!seedDemoData) {
