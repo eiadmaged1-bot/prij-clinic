@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../mvp-page";
+import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -74,6 +75,7 @@ export default function PatientsPage() {
             <h1>Patient files</h1>
           </div>
           <Link className="button" href="/patients/new">
+            <ThreeDMedicalIcon name="patients" size="sm" />
             New Patient File
           </Link>
         </div>
@@ -89,6 +91,7 @@ export default function PatientsPage() {
             <p className="muted">Status: {status}</p>
           </div>
           <button className="button secondary compact" onClick={loadPatients} type="button">
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
             Refresh
           </button>
         </div>
@@ -118,36 +121,35 @@ export default function PatientsPage() {
         ) : null}
 
         {filtered.length > 0 ? (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Patient file</th>
-                  <th>MRN</th>
-                  <th>Status</th>
-                  <th>Contact</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((patient) => (
-                  <tr key={patient.id}>
-                    <td>
+          <div className="data-list">
+            {filtered.map((patient) => (
+              <article className="data-row patient-list-card" key={patient.id}>
+                <div className="data-row-header">
+                  <div className="patient-list-title">
+                    <ThreeDMedicalIcon name="patients" size="sm" />
+                    <div>
                       <strong>{patient.firstName} {patient.lastName}</strong>
                       <span className="muted">{patient.sex || "Sex not set"} {patient.dateOfBirth ? `- ${patient.dateOfBirth.slice(0, 10)}` : ""}</span>
-                    </td>
-                    <td>{patient.medicalRecordNumber}</td>
-                    <td><span className="badge">{patient.status}</span></td>
-                    <td>{patient.phone || patient.email || "No contact saved"}</td>
-                    <td>
-                      <Link className="button secondary compact" href={`/patients/${patient.id}`}>
-                        Open file
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <span className="badge">{patient.status}</span>
+                </div>
+                <dl>
+                  <div>
+                    <dt>File number</dt>
+                    <dd>{patient.medicalRecordNumber}</dd>
+                  </div>
+                  <div>
+                    <dt>Contact</dt>
+                    <dd>{patient.phone || patient.email || "No contact saved"}</dd>
+                  </div>
+                </dl>
+                <Link className="button secondary" href={`/patients/${patient.id}`}>
+                  <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+                  Open file
+                </Link>
+              </article>
+            ))}
           </div>
         ) : null}
       </section>

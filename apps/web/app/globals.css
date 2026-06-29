@@ -161,6 +161,10 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -214,7 +218,7 @@ label {
   display: grid;
   gap: 0.45rem;
   color: var(--muted-strong);
-  font-size: 0.85rem;
+  font-size: 0.92rem;
   font-weight: 750;
 }
 
@@ -226,7 +230,8 @@ select {
   border-radius: var(--radius-sm);
   background: #ffffff;
   color: var(--foreground);
-  padding: 0.78rem 0.9rem;
+  min-height: 2.9rem;
+  padding: 0.82rem 0.95rem;
   transition:
     border-color 140ms ease,
     box-shadow 140ms ease,
@@ -399,11 +404,11 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 2.45rem;
+  min-height: 2.75rem;
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: #dcebf0;
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 720;
   padding: 0.65rem 0.75rem;
   transition:
@@ -484,9 +489,10 @@ select:focus {
 
 .button {
   display: inline-flex;
-  min-height: 2.55rem;
+  min-height: 2.85rem;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--accent);
@@ -533,8 +539,8 @@ select:focus {
 
 .button.compact,
 .compact {
-  min-height: 2.15rem;
-  padding: 0.45rem 0.7rem;
+  min-height: 2.55rem;
+  padding: 0.55rem 0.8rem;
 }
 
 .badge {
@@ -577,6 +583,13 @@ select:focus {
   color: var(--muted-strong);
   line-height: 1.5;
   padding: 0.85rem 1rem;
+}
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.25rem;
 }
 
 .alert {
@@ -806,11 +819,34 @@ code {
   padding: 1rem;
 }
 
+.data-row:hover {
+  border-color: var(--border-strong);
+}
+
 .data-row-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.patient-list-card {
+  align-content: start;
+}
+
+.patient-list-card .button {
+  width: fit-content;
+}
+
+.patient-list-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.patient-list-title span {
+  display: block;
 }
 
 .data-row dl,
@@ -906,7 +942,7 @@ td span {
 }
 
 .tab-button {
-  min-height: 2.35rem;
+  min-height: 2.75rem;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #ffffff;
@@ -1406,9 +1442,9 @@ td span {
 }
 
 .medical-icon-sm {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 0.8rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.72rem;
 }
 
 .medical-icon-md {
@@ -1423,13 +1459,14 @@ td span {
 }
 
 .medical-icon svg {
-  width: 72%;
-  height: 72%;
+  width: 70%;
+  height: 70%;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
 }
 
 .medical-icon .medical-icon-glow {
@@ -1473,6 +1510,7 @@ td span {
 
 .comfort-switch {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: 0.25rem;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1486,9 +1524,10 @@ td span {
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 800;
-  padding: 0.45rem 0.65rem;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.7rem;
 }
 
 .comfort-switch button.active {
@@ -1539,6 +1578,11 @@ td span {
   padding: 1.25rem;
 }
 
+.doctor-hero > div:first-child {
+  display: grid;
+  gap: 0.45rem;
+}
+
 .doctor-hero h1,
 .patient-simple-hero h1 {
   font-size: clamp(2rem, 4vw, 3.4rem);
@@ -1573,6 +1617,11 @@ td span {
   padding: 1.25rem;
 }
 
+.doctor-focus-card .button,
+.next-step-card .button {
+  width: fit-content;
+}
+
 .doctor-focus-card strong {
   font-size: 2.1rem;
 }
@@ -1591,6 +1640,12 @@ td span {
   border-radius: var(--radius-md);
   background: var(--surface);
   padding: 0.85rem;
+}
+
+.doctor-row strong,
+.timeline-item strong,
+.data-row strong {
+  color: var(--foreground);
 }
 
 .doctor-row span:not(.button) {
@@ -1653,7 +1708,8 @@ td span {
   background: var(--surface);
   cursor: pointer;
   font-weight: 850;
-  padding: 0.75rem;
+  min-height: 3.25rem;
+  padding: 0.8rem;
   text-align: left;
 }
 
@@ -1696,7 +1752,8 @@ td span {
   box-shadow: var(--shadow-sm);
   color: var(--foreground);
   font-weight: 850;
-  padding: 0.55rem 0.85rem;
+  min-height: 2.85rem;
+  padding: 0.62rem 0.9rem;
 }
 
 .patient-tabs.simple .tab-button {
@@ -1780,6 +1837,40 @@ td span {
   .sidebar {
     position: static;
     height: auto;
+    max-height: none;
+  }
+
+  .theme-medicolize-portal.app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-medicolize-portal .sidebar,
+  .sidebar {
+    gap: 0.8rem;
+  }
+
+  .nav-group {
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  .nav-group-title {
+    grid-column: 1 / -1;
+  }
+
+  .owner-hero,
+  .doctor-hero,
+  .patient-simple-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-hero-actions,
+  .patient-primary-actions {
+    justify-content: flex-start;
+  }
+
+  .owner-stats,
+  .patient-hero {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .hero-panel {
@@ -1797,7 +1888,20 @@ td span {
 @media (max-width: 640px) {
   .page,
   .app-main {
-    padding: 1rem;
+    padding: 0.85rem;
+  }
+
+  h1,
+  .page-header h1,
+  .doctor-hero h1,
+  .patient-simple-hero h1,
+  .owner-hero h1 {
+    font-size: 2rem;
+    line-height: 1.08;
+  }
+
+  .sidebar {
+    padding: 0.85rem;
   }
 
   .hero-shell,
@@ -1821,7 +1925,51 @@ td span {
   .module-grid,
   .form-grid,
   .data-row dl,
-  .profile-grid {
+  .profile-grid,
+  .owner-stats,
+  .patient-hero {
     grid-template-columns: 1fr;
+  }
+
+  .button,
+  .button.large,
+  .patient-action,
+  .doctor-row .button {
+    width: 100%;
+  }
+
+  .comfort-switch {
+    width: 100%;
+  }
+
+  .comfort-switch button {
+    flex: 1 1 6rem;
+  }
+
+  .input-action {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-tabs,
+  .owner-tabs,
+  .visit-progress {
+    display: flex;
+    flex-wrap: nowrap;
+    margin-inline: -0.15rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scroll-snap-type: x proximity;
+  }
+
+  .patient-tabs .tab-button,
+  .owner-tab,
+  .visit-progress button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .doctor-row,
+  .timeline-item {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 }

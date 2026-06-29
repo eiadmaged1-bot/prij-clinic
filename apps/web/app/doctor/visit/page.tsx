@@ -37,6 +37,7 @@ export default function GuidedVisitPage() {
             <p className="muted">{current[1]}</p>
           </div>
           <Link className="button secondary" href="/doctor">
+            <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
             Back to Doctor Mode
           </Link>
         </div>
@@ -63,17 +64,21 @@ export default function GuidedVisitPage() {
           {saved ? <p className="notice success">{saved}</p> : null}
           <div className="visit-actions">
             <button className="button secondary" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))} type="button">
+              <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
               Previous
             </button>
             <button className="button secondary" type="submit">
+              <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
               Save Draft
             </button>
             {step < steps.length - 1 ? (
               <button className="button" onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))} type="button">
+                <ThreeDMedicalIcon name="timeline" size="sm" />
                 Next
               </button>
             ) : (
               <Link className="button" href="/patients">
+                <ThreeDMedicalIcon name="patients" size="sm" />
                 Finish Visit
               </Link>
             )}
