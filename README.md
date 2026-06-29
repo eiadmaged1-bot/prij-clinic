@@ -145,8 +145,10 @@ http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
 http://localhost:3000/billing
 http://localhost:3000/consents
+http://localhost:3000/calculators
 http://localhost:3000/ai-drafts
 http://localhost:3000/protocol-atlas
+http://localhost:3000/admin/calculators
 http://localhost:3000/admin/protocol-atlas
 ```
 
@@ -245,6 +247,14 @@ GET  /billing/patients/:patientId/statement
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
+GET  /calculators/formulas
+POST /calculators/calculate
+GET  /calculators/history/patient/:patientId
+POST /calculators/ob/dating/calculate
+GET  /calculators/ob/patient/:patientId/current
+POST /calculators/ob/dating/:id/set-best
+POST /calculators/ob/dating/:id/lock
+GET  /admin/calculators
 GET  /protocol-atlas
 GET  /protocol-atlas/groups
 GET  /protocol-atlas/:id
@@ -300,6 +310,8 @@ npm run test:gyn:starter
 npm run test:visual:qa
 npm run test:accounts:rbac
 npm run test:finance:reports
+npm run test:calculators
+npm run test:ob-dating
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
