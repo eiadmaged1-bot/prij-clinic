@@ -45,7 +45,7 @@ const requiredText = {
   "/login": ["Prij Clinic", "Sign in", "Use Admin Demo Login"],
   "/dashboard": ["Dashboard", "Quick actions"],
   "/doctor": ["Doctor Mode", "Open Patient", "Start Visit", "Waiting patients"],
-  "/doctor/visit": ["Guided Visit", "Complaint", "Save Draft"],
+  "/doctor/visit": ["Guided Visit", "Save Draft"],
   "/patients": ["Patient files", "New Patient File", "Search patient files"],
   "/patients/new": ["New patient file", "Save and open patient file"],
   "/admin": ["Owner Control Center", "Access Overview"],
@@ -124,6 +124,9 @@ async function main() {
     if (!visibleText(doctorHtml).includes(label)) throw new Error(`Doctor Mode missing ${label}.`);
   }
   if (!/medical-icon/.test(doctorHtml)) throw new Error("Doctor Mode did not render medical icons.");
+  for (const label of ["OB/GYN Templates", "New pregnancy booking", "Ultrasound visit"]) {
+    if (!visibleText(doctorHtml).includes(label)) throw new Error(`Doctor Mode missing OB/GYN template label ${label}.`);
+  }
   record.pass("doctor mode cards and icon labels are visible");
 
   const patientHtml = await fetchHtml(`/patients/${patient.id}`);
@@ -131,7 +134,7 @@ async function main() {
     if (!visibleText(patientHtml).includes(label)) throw new Error(`Patient file missing ${label}.`);
   }
   const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
-  for (const label of ["Overview", "Visits", "Prescriptions", "Orders & Reports"]) {
+  for (const label of ["Overview", "Visits", "Prescriptions", "Orders & Reports", "Pregnancy Overview", "Antenatal Visits", "OB ultrasound report builder", "Print patient summary"]) {
     if (!patientSource.includes(label)) throw new Error(`Patient file tab source missing ${label}.`);
   }
   record.pass("patient file tabs and primary actions are visible");

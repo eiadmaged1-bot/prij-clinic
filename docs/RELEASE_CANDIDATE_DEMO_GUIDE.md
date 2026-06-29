@@ -37,6 +37,10 @@ This credential is for local/private demo use only.
 6. Use the patient tabs for Overview, Visits, Prescriptions, Orders & Reports, Pregnancy, Billing, Files, and Timeline.
 7. Open Guided Visit and move through Complaint, History, Examination, Impression, Prescription, Orders, Follow-up, and Finish Visit.
 8. Save only demo draft text. The doctor remains responsible for clinical content.
+9. Return to the patient Pregnancy tab to review the OB/GYN workspace.
+10. Show Pregnancy Overview, Obstetric History, Antenatal Visits, Ultrasound, Investigations, Reports, and Follow-up.
+11. Show the OB ultrasound report builder and explain that all measurements are recording-only.
+12. Use browser print actions for patient summary, antenatal visit summary, and ultrasound report draft.
 
 ## Display Comfort
 
@@ -55,6 +59,7 @@ The top bar has Comfort, Large, and Compact display controls.
 - No real payment gateway is connected.
 - Real report/private clinical file upload is disabled.
 - Admin and appearance tools remain owner/admin-only.
+- OB/GYN print views are browser demo summaries only and are not production medical stationery.
 
 ## Operational Verification
 
@@ -67,3 +72,5 @@ Use `docs/MVP_RC_VERIFICATION_CHECKLIST.md` to run the final local demo path:
 5. Admin/RBAC checks proving non-admins cannot access Admin or Appearance controls.
 
 Production planning is documented in `docs/PRODUCTION_READINESS_PLAN.md`. The exact next sprint is Production Hardening + Staging Deployment Prep.
+
+OB/GYN browser workflow details are documented in `docs/OBGYN_UX_GUIDE.md`.
