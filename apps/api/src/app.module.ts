@@ -8,6 +8,7 @@ import { ConsentsModule } from "./consents/consents.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { HealthModule } from "./health/health.module";
+import { GuidelinesModule } from "./guidelines/guidelines.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
 import { PatientsModule } from "./patients/patients.module";
 import { PregnancyModule } from "./pregnancy/pregnancy.module";
@@ -22,6 +23,7 @@ import { UsersModule } from "./users/users.module";
   imports: [
     PrismaModule,
     HealthModule,
+    GuidelinesModule,
     UsersModule,
     AuthModule,
     RbacModule,
