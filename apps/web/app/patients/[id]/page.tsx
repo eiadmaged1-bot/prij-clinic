@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -31,14 +31,15 @@ type TabConfig = {
   empty: string;
 };
 
-const patientActions: Array<[string, string, IconName]> = [
-  ["/appointments", "Appointment", "calendar"],
-  ["/queue", "Check In", "queue"],
-  ["/prescriptions", "Prescription", "prescription"],
-  ["/investigations", "Order Tests", "investigations"],
-  ["/billing", "Invoice", "billing"],
-  ["/consents", "Consent", "consent"]
-];
+type TimelineItem = {
+  dateTime: string;
+  type: string;
+  title: string;
+  status: string;
+  description: string;
+  actor?: string;
+  href?: string;
+};
 
 const moreCards: Array<[string, string, string, IconName]> = [
   ["/ultrasound", "Ultrasound", "Recording only; clinician interpretation required.", "ultrasound"],
@@ -65,7 +66,9 @@ export default function PatientFilePage() {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [error, setError] = useState("");
+  const [actionStatus, setActionStatus] = useState("");
 
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const ageLabel = patient?.dateOfBirth ? `${patient.dateOfBirth.slice(0, 10)}` : "Age not set";
@@ -107,9 +110,43 @@ export default function PatientFilePage() {
           })
       );
       setRelated(Object.fromEntries(pairs));
+      try {
+        const timelineResponse = await fetch(`${apiUrl}/patients/${patientId}/timeline`, {
+          credentials: "include",
+          headers: token ? { authorization: `Bearer ${token}` } : undefined
+        });
+        if (timelineResponse.ok) {
+          const timelineData = await timelineResponse.json() as { items?: TimelineItem[] };
+          setTimelineItems(timelineData.items ?? []);
+        }
+      } catch {
+        setTimelineItems([]);
+      }
     };
     void load();
   }, [patientId]);
+
+  async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    setActionStatus("Saving");
+    const response = await fetch(`${apiUrl}/patients/${patientId}/${endpoint}`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setActionStatus("Could not save this patient action. Check your role and try again.");
+      return;
+    }
+
+    setActionStatus("Saved to this patient file.");
+    window.setTimeout(() => window.location.reload(), 500);
+  }
 
   return (
     <AppShell>
@@ -123,7 +160,7 @@ export default function PatientFilePage() {
           <p className="muted">{patient ? `${ageLabel} | MRN ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
         </div>
         <div className="patient-primary-actions">
-          <Link className="button large" href="/doctor/visit">
+          <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
             <ThreeDMedicalIcon name="encounter" size="sm" />
             Start Visit
           </Link>
@@ -142,14 +179,7 @@ export default function PatientFilePage() {
 
       {patient ? (
         <>
-          <section className="patient-action-strip" aria-label="Patient actions">
-            {patientActions.map(([href, label, icon]) => (
-              <Link className="patient-action" href={href} key={label}>
-                <ThreeDMedicalIcon name={icon as IconName} size="sm" />
-                <span>{label}</span>
-              </Link>
-            ))}
-          </section>
+          <PatientActionPanel patientId={patient.id} onSubmit={submitPatientAction} status={actionStatus} related={related} />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
             {tabs.map((tab) => (
@@ -161,7 +191,7 @@ export default function PatientFilePage() {
           </section>
 
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
-          {active.key === "timeline" ? <Timeline related={related} patient={patient} /> : null}
+          {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
           {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
@@ -197,7 +227,7 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
         <ThreeDMedicalIcon name="doctor" size="lg" />
         <h2>Next best step</h2>
         <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
-        <Link className="button large" href="/doctor/visit">Start Visit</Link>
+        <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>Start Visit</Link>
       </article>
       <article className="panel">
         <div className="section-heading">
@@ -208,6 +238,190 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
       </article>
     </section>
   );
+}
+
+function PatientActionPanel({
+  onSubmit,
+  status,
+  related
+}: {
+  patientId: string;
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+  status: string;
+  related: Record<string, Record<string, unknown>[]>;
+}) {
+  const [open, setOpen] = useState("appointment");
+  const invoices = related.billing ?? [];
+  const actions: Array<[string, string, IconName]> = [
+    ["appointment", "Appointment", "calendar"],
+    ["queue", "Check In", "queue"],
+    ["prescription", "Prescription", "prescription"],
+    ["order", "Order Tests", "investigations"],
+    ["report", "Report", "reports"],
+    ["ultrasound", "Ultrasound", "ultrasound"],
+    ["invoice", "Invoice", "billing"],
+    ["payment", "Payment", "billing"],
+    ["consent", "Consent", "consent"]
+  ];
+
+  function handleSubmit(endpoint: string, buildPayload: (form: HTMLFormElement) => Record<string, unknown>) {
+    return (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void onSubmit(endpoint, buildPayload(event.currentTarget));
+    };
+  }
+
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <h2>Patient actions</h2>
+          <p className="muted">These actions save directly to this patient file. No patient re-selection is needed.</p>
+        </div>
+        {status ? <span className="badge">{status}</span> : null}
+      </div>
+      <div className="patient-action-strip" aria-label="Patient actions">
+        {actions.map(([key, label, icon]) => (
+          <button className={`patient-action ${open === key ? "active" : ""}`} key={key} onClick={() => setOpen(key)} type="button">
+            <ThreeDMedicalIcon name={icon as IconName} size="sm" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {open === "appointment" ? (
+        <ActionForm
+          fields={[
+            ["startAt", "Start time", "datetime-local", true],
+            ["endAt", "End time", "datetime-local", true],
+            ["appointmentType", "Visit type", "text", false]
+          ]}
+          onSubmit={handleSubmit("appointments", (form) => values(form, ["startAt", "endAt", "appointmentType"]))}
+          submitLabel="Book appointment"
+        />
+      ) : null}
+
+      {open === "queue" ? (
+        <form className="form-grid" onSubmit={handleSubmit("queue-check-in", () => ({}))}>
+          <p className="muted">Check this patient into today&apos;s waiting queue.</p>
+          <button className="button" type="submit">Check in patient</button>
+        </form>
+      ) : null}
+
+      {open === "prescription" ? (
+        <ActionForm
+          fields={[
+            ["medicationName", "Medicine", "text", true],
+            ["dose", "Dose", "text", false],
+            ["frequency", "Frequency", "text", false],
+            ["instructions", "Instructions", "text", false]
+          ]}
+          onSubmit={handleSubmit("prescriptions", (form) => ({ items: [values(form, ["medicationName", "dose", "frequency", "instructions"])] }))}
+          submitLabel="Add prescription"
+        />
+      ) : null}
+
+      {open === "order" ? (
+        <ActionForm
+          fields={[
+            ["testName", "Requested test or service", "text", true],
+            ["instructions", "Clinical reason", "text", false]
+          ]}
+          onSubmit={handleSubmit("investigations", (form) => ({ priority: "routine", items: [{ category: "laboratory", ...values(form, ["testName", "instructions"]) }] }))}
+          submitLabel="Order test"
+        />
+      ) : null}
+
+      {open === "report" ? (
+        <ActionForm
+          fields={[
+            ["title", "Report title", "text", true],
+            ["resultSummary", "Summary", "text", false]
+          ]}
+          onSubmit={handleSubmit("reports", (form) => ({ category: "other", ...values(form, ["title", "resultSummary"]) }))}
+          submitLabel="Create report"
+        />
+      ) : null}
+
+      {open === "ultrasound" ? (
+        <ActionForm
+          fields={[["impressionText", "Doctor-written impression", "text", false]]}
+          note="Recording only. The app does not diagnose fetal growth or risk."
+          onSubmit={handleSubmit("ultrasounds", (form) => values(form, ["impressionText"]))}
+          submitLabel="Create ultrasound draft"
+        />
+      ) : null}
+
+      {open === "invoice" ? (
+        <ActionForm
+          fields={[
+            ["description", "Service", "text", true],
+            ["unitAmount", "Price", "number", true],
+            ["quantity", "Quantity", "number", false]
+          ]}
+          onSubmit={handleSubmit("invoices", (form) => {
+            const item = values(form, ["description", "unitAmount", "quantity"]);
+            return { items: [{ ...item, unitAmount: Number(item.unitAmount), quantity: Number(item.quantity || 1) }] };
+          })}
+          submitLabel="Create invoice"
+        />
+      ) : null}
+
+      {open === "payment" ? (
+        <form className="form-grid" onSubmit={handleSubmit("payments", (form) => ({ ...values(form, ["invoiceId", "amount", "referenceNote"]), method: "cash", amount: Number(new FormData(form).get("amount") || 0) }))}>
+          <label>
+            Invoice
+            <select name="invoiceId" required>
+              <option value="">Select invoice</option>
+              {invoices.map((invoice) => (
+                <option key={String(invoice.id)} value={String(invoice.id)}>{String(invoice.invoiceNumber ?? "Invoice")}</option>
+              ))}
+            </select>
+          </label>
+          <label>Amount<input name="amount" required type="number" min="0" step="0.01" /></label>
+          <label>Reference note<input name="referenceNote" /></label>
+          <button className="button" type="submit">Record payment</button>
+        </form>
+      ) : null}
+
+      {open === "consent" ? (
+        <form className="form-grid" onSubmit={handleSubmit("consents", () => ({ consentType: "treatment", status: "granted", notes: "Local demo consent placeholder." }))}>
+          <p className="muted">Record a local demo treatment consent placeholder. Real legal text is not included.</p>
+          <button className="button" type="submit">Record consent</button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+function ActionForm({
+  fields,
+  note,
+  onSubmit,
+  submitLabel
+}: {
+  fields: Array<[string, string, "text" | "datetime-local" | "number", boolean]>;
+  note?: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  submitLabel: string;
+}) {
+  return (
+    <form className="form-grid" onSubmit={onSubmit}>
+      {note ? <p className="muted">{note}</p> : null}
+      {fields.map(([name, label, type, required]) => (
+        <label key={name}>
+          {label}
+          <input name={name} required={required} type={type} min={type === "number" ? "0" : undefined} step={type === "number" ? "0.01" : undefined} />
+        </label>
+      ))}
+      <button className="button" type="submit">{submitLabel}</button>
+    </form>
+  );
+}
+
+function values(form: HTMLFormElement, keys: string[]) {
+  const formData = new FormData(form);
+  return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "").trim()]).filter(([, value]) => value));
 }
 
 function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string, unknown>[] }) {
@@ -236,28 +450,21 @@ function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string
   );
 }
 
-function Timeline({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
-  const items = [
-    { title: "Patient file opened", detail: `MRN ${patient.medicalRecordNumber}`, icon: "patients" as IconName },
-    ...Object.entries(related).flatMap(([key, rows]) => rows.map((row) => ({
-      title: labelize(key),
-      detail: String(row.title ?? row.invoiceNumber ?? row.appointmentType ?? row.status ?? "Patient activity"),
-      icon: timelineIcon(key)
-    })))
-  ];
+function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] }) {
+  const displayItems = items.length > 0 ? items : [{ title: "Patient file opened", description: `MRN ${patient.medicalRecordNumber}`, type: "patients", status: patient.status, dateTime: new Date().toISOString() }];
   return (
     <section className="panel">
       <div className="section-heading">
         <h2>Timeline</h2>
-        <span className="badge">{items.length} items</span>
+        <span className="badge">{displayItems.length} items</span>
       </div>
       <div className="timeline-list">
-        {items.map((item, index) => (
+        {displayItems.map((item, index) => (
           <article className="timeline-item" key={`${item.title}-${index}`}>
-            <ThreeDMedicalIcon name={item.icon} size="sm" />
+            <ThreeDMedicalIcon name={timelineIcon(item.type)} size="sm" />
             <div>
               <strong>{item.title}</strong>
-              <p className="muted">{item.detail}</p>
+              <p className="muted">{item.description} - {item.status}</p>
             </div>
           </article>
         ))}
@@ -285,15 +492,13 @@ function MorePanel() {
   );
 }
 
-function labelize(value: string) {
-  return value.replace(/-/g, " ").replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
-}
-
 function timelineIcon(key: string): IconName {
-  if (key.includes("visit")) return "encounter";
+  if (key.includes("visit") || key.includes("encounter")) return "encounter";
   if (key.includes("prescription")) return "prescription";
-  if (key.includes("order")) return "investigations";
-  if (key.includes("billing")) return "billing";
+  if (key.includes("order") || key.includes("investigation")) return "investigations";
+  if (key.includes("billing") || key.includes("invoice") || key.includes("payment")) return "billing";
   if (key.includes("pregnancy")) return "pregnancy";
+  if (key.includes("ultrasound")) return "ultrasound";
+  if (key.includes("consent")) return "consent";
   return "timeline";
 }

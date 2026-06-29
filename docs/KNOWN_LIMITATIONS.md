@@ -22,18 +22,19 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 
 ## Clinical Workflow
 
-- Patient profile timeline is simplified and patient-focused, but still aggregates only the records available through current MVP APIs.
-- Doctor Mode and Guided Visit are UX foundations. The guided visit flow does not yet save each step directly into a full structured encounter from the browser.
+- Patient profile timeline is patient-focused and now aggregates available MVP records through a backend endpoint, but it is still not a production medical chronology, amendment ledger, or legal chart timeline.
+- Doctor Mode and Guided Visit now persist structured encounter draft fields from the browser when opened from a patient file, but they are still a V0.1 demo workflow and not a complete specialty EHR note builder.
 - Consent records now exist as a V0.1 foundation, but production legal text, signature capture, consent override workflow, and full server-side consent enforcement are not implemented.
 - Signed encounter correction/versioning is not implemented.
 - Prescription approval is represented by a sign action in the MVP foundation and needs final doctor-approval semantics before production use.
 - Investigation result review and report review are foundational only.
 - OB ultrasound records do not provide diagnostic automation and must not be interpreted as automated clinical decision support.
+- OB/GYN core records now include pregnancy episode fields, fetus records, and antenatal visits, but no validated growth-chart engine, fetal risk scoring, or automated interpretation is implemented.
 
 ## Billing
 
 - Invoice/payment flows are foundational only.
-- Service catalog and price editing now exist for local demo configuration, but invoices do not yet automatically pull service prices into invoice items.
+- Service catalog and price editing now exist for local demo configuration, but patient-context invoices currently use manually entered line items rather than a complete catalog picker.
 - Refunds, invoice void reason workflow, discount approval workflow, and payment gateway integrations are not implemented.
 - Payment records must remain metadata-only and must not store card numbers, CVV, payment tokens, or gateway secrets.
 
@@ -66,6 +67,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Doctor UX tests cover the 3D icon registry, Doctor Mode labels, guided visit steps, simplified patient file tabs, comfort controls, non-admin admin denial, and major doctor-friendly page availability.
 - Expanded tests use seeded owner access as the positive control. They do not yet prove every allowed lower-role path for every route and state transition.
 - `npm run test:e2e:v01` covers a fake/demo happy path only. It does not prove clinical correctness, legal consent compliance, payment compliance, production security, or medical-device readiness.
+- `npm run test:clinical:persistence` covers patient-context clinical persistence, OB/GYN core recording, patient timeline aggregation, patient finance basics, audit assertions, and signed encounter edit protection for fake/demo records only.
 
 ## Deployment
 

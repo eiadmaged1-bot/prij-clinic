@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
 import { ObUltrasoundStatus, PregnancyStatus } from "@prisma/client";
 
 export class CreatePregnancyDto {
@@ -22,12 +22,29 @@ export class CreatePregnancyDto {
   para?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  living?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  abortions?: number;
+
+  @IsOptional()
   @IsDateString()
   lmpDate?: string;
 
   @IsOptional()
   @IsDateString()
   estimatedDueDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  datingMethod?: string;
 
   @IsOptional()
   @IsString()
@@ -58,12 +75,29 @@ export class UpdatePregnancyDto {
   para?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  living?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  abortions?: number;
+
+  @IsOptional()
   @IsDateString()
   lmpDate?: string;
 
   @IsOptional()
   @IsDateString()
   estimatedDueDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  datingMethod?: string;
 
   @IsOptional()
   @IsString()
@@ -185,4 +219,71 @@ export class UpdateObUltrasoundDto {
   @IsString()
   @MaxLength(2000)
   impressionText?: string;
+}
+
+export class CreatePregnancyFetusDto {
+  @IsString()
+  @MaxLength(40)
+  label!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  chorionicity?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  amnionicity?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+}
+
+export class CreateAntenatalVisitDto {
+  @IsOptional()
+  @IsDateString()
+  visitDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  gestationalAgeDisplay?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  bloodPressure?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(300)
+  weightKg?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  symptomsText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  fetalHeartText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  planText?: string;
+
+  @IsOptional()
+  @IsDateString()
+  nextFollowUpDate?: string;
 }

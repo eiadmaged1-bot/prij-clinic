@@ -5,7 +5,14 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceEncounter, assertCanReferencePatient, assertCanReferencePregnancy } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateObUltrasoundDto, CreatePregnancyDto, UpdateObUltrasoundDto, UpdatePregnancyDto } from "./dto";
+import {
+  CreateAntenatalVisitDto,
+  CreateObUltrasoundDto,
+  CreatePregnancyDto,
+  CreatePregnancyFetusDto,
+  UpdateObUltrasoundDto,
+  UpdatePregnancyDto
+} from "./dto";
 
 @Injectable()
 export class PregnancyService {
@@ -25,8 +32,11 @@ export class PregnancyService {
           status: dto.status ?? "active",
           gravida: dto.gravida,
           para: dto.para,
+          living: dto.living,
+          abortions: dto.abortions,
           lmpDate: toDate(dto.lmpDate),
           estimatedDueDate: toDate(dto.estimatedDueDate),
+          datingMethod: clean(dto.datingMethod),
           riskLevel: clean(dto.riskLevel),
           notes: clean(dto.notes),
           createdByUserId: user.id
@@ -98,8 +108,11 @@ export class PregnancyService {
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.gravida !== undefined) data.gravida = dto.gravida;
     if (dto.para !== undefined) data.para = dto.para;
+    if (dto.living !== undefined) data.living = dto.living;
+    if (dto.abortions !== undefined) data.abortions = dto.abortions;
     if (dto.lmpDate !== undefined) data.lmpDate = toDate(dto.lmpDate);
     if (dto.estimatedDueDate !== undefined) data.estimatedDueDate = toDate(dto.estimatedDueDate);
+    if (dto.datingMethod !== undefined) data.datingMethod = clean(dto.datingMethod);
     if (dto.riskLevel !== undefined) data.riskLevel = clean(dto.riskLevel);
     if (dto.notes !== undefined) data.notes = clean(dto.notes);
 
@@ -119,6 +132,64 @@ export class PregnancyService {
     });
 
     return pregnancy;
+  }
+
+  async createFetus(pregnancyId: string, dto: CreatePregnancyFetusDto, user: AuthUser) {
+    const pregnancy = await this.getPregnancy(pregnancyId, user);
+    const fetus = await this.prisma.pregnancyFetus.create({
+      data: {
+        pregnancyId,
+        label: dto.label.trim(),
+        chorionicity: clean(dto.chorionicity),
+        amnionicity: clean(dto.amnionicity),
+        status: clean(dto.status) ?? "active",
+        notes: clean(dto.notes)
+      }
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "pregnancy_fetus.created",
+      resourceType: "pregnancy_fetus",
+      resourceId: fetus.id,
+      branchId: pregnancy.branchId,
+      severity: "high",
+      metadataJson: { patientId: pregnancy.patientId, pregnancyId, label: fetus.label }
+    });
+
+    return fetus;
+  }
+
+  async createAntenatalVisit(pregnancyId: string, dto: CreateAntenatalVisitDto, user: AuthUser) {
+    const pregnancy = await this.getPregnancy(pregnancyId, user);
+    const visit = await this.prisma.antenatalVisit.create({
+      data: {
+        branchId: pregnancy.branchId,
+        patientId: pregnancy.patientId,
+        pregnancyId,
+        visitDate: toDate(dto.visitDate) ?? new Date(),
+        gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
+        bloodPressure: clean(dto.bloodPressure),
+        weightKg: dto.weightKg !== undefined ? new Prisma.Decimal(dto.weightKg).toDecimalPlaces(2) : null,
+        symptomsText: clean(dto.symptomsText),
+        fetalHeartText: clean(dto.fetalHeartText),
+        planText: clean(dto.planText),
+        nextFollowUpDate: toDate(dto.nextFollowUpDate),
+        createdByUserId: user.id
+      }
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "antenatal_visit.created",
+      resourceType: "antenatal_visit",
+      resourceId: visit.id,
+      branchId: pregnancy.branchId,
+      severity: "high",
+      metadataJson: { patientId: pregnancy.patientId, pregnancyId, safety: "recording_only" }
+    });
+
+    return visit;
   }
 
   async createObUltrasound(dto: CreateObUltrasoundDto, user: AuthUser) {
@@ -295,6 +366,8 @@ export class PregnancyService {
 
 const pregnancyIncludes = {
   patient: true,
+  fetuses: true,
+  antenatalVisits: true,
   obUltrasounds: true
 } satisfies Prisma.PregnancyInclude;
 

@@ -1,15 +1,15 @@
 # Next Steps
 
-The exact next recommended sprint after the doctor-friendly UX reset is:
+The exact next recommended sprint after the clinical persistence branch is merged with the parallel UX polish branch is:
 
 ## MVP Release Candidate Polish + OB/GYN Depth Expansion
 
 Goals:
 
-- Convert the guided visit UI from a front-end workflow shell into patient-context forms that create encounter, prescription, order, report, and billing records directly from the patient file.
-- Add OB/GYN depth for pregnancy episodes, antenatal visits, ultrasound draft recording, and clinician-only interpretation workflow.
+- Merge the clinical persistence branch with the parallel frontend polish branch and resolve any patient-file UI conflicts carefully.
+- Polish the patient-context action forms that now create encounter, prescription, order, report, ultrasound, invoice, payment, and consent records directly from the patient file.
+- Deepen OB/GYN screens around the new pregnancy fetus and antenatal visit records without adding diagnostic automation.
 - Keep Doctor Mode simple for older doctors while preserving Owner Control Center power for owners/admins.
-- Add patient-file-native action forms so users no longer copy patient references between module pages.
 - Keep all actions server-authorized, scope-checked, and audit logged.
 - Keep all demo data fake/local only.
 - Keep AI disabled, draft-only, non-diagnostic, and doctor-review-only.
@@ -20,6 +20,7 @@ Goals:
 - Add mobile/tablet checks for Doctor Mode and patient file tabs.
 - Add a real patient search dropdown in the top bar that opens patient files without exposing internal IDs.
 - Add role-specific home routing so Doctor users land directly in Doctor Mode and Reception users land on front desk flow.
+- Improve the frontend ergonomics of patient-context action forms after backend persistence is stable.
 
 ## Admin Hardening Follow-Up
 

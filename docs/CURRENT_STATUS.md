@@ -2,9 +2,9 @@
 
 Date: 2026-06-29
 
-Branch: `ux/doctor-friendly-3d-icons-reset`
+Branch: `leap/a-clinical-persistence-obgyn-core`
 
-Target tag: `v0.1-doctor-friendly-ux`
+Integration branch only. No final release tag in this parallel-agent sprint.
 
 ## Status Summary
 
@@ -24,6 +24,10 @@ The V0.1 pilot foundation is a locally runnable, GitHub-backed, CI-tested demo f
 - Theme system: Original Premium, Clinic Portal, Incision Portal, Minimal Clean, and Compact Operations appearances.
 - Doctor-friendly mode: `/doctor` provides a large, simple daily doctor workspace focused on waiting patients, today's visits, and the next clinical action.
 - Guided visit flow: `/doctor/visit` presents large step-by-step sections for complaint, history, examination, impression, prescription, orders, follow-up, and finish.
+- Guided visit persistence: opening `/doctor/visit?patientId=...` now creates or updates a structured encounter draft with complaint, history, examination, assessment/impression, and plan text through server-side encounter APIs.
+- Patient-context workflow actions: `/patients/:id` can create appointment, queue check-in, encounter, prescription, investigation order, report placeholder, ultrasound draft, invoice, payment, and consent records with the patient carried automatically.
+- Patient timeline aggregation: `GET /patients/:id/timeline` aggregates patient-created, appointment, queue, encounter, prescription, investigation, report, pregnancy, antenatal visit, ultrasound, invoice, payment, and consent events into one patient journey.
+- OB/GYN core persistence depth: pregnancy episodes now support living, abortions, and dating method fields, plus fetus records and antenatal visits for recording-only pregnancy follow-up.
 - 3D medical icon system: reusable original SVG/CSS icons support navigation, patient tabs, doctor actions, and empty states.
 - Elder-friendly display preferences: Comfort, Large, and Compact display modes are available from the app top bar and stored per browser.
 - Admin Appearance Settings: admin-only appearance page and protected settings API for local demo default theme changes with audit entries.
@@ -74,6 +78,7 @@ npm run test:security:ci
 npm run test:security:expanded
 npm run test:admin:control
 npm run test:theme:ui
+npm run test:clinical:persistence
 npm run test:e2e:v01
 ```
 
@@ -99,6 +104,7 @@ Login -> Dashboard -> Patients -> New Patient File -> Save and open patient file
 - AI draft UI remains disabled, draft-only, and doctor-review-only.
 - Doctor Mode keeps admin, finance-heavy, and configuration-heavy surfaces out of the default doctor workflow while backend RBAC remains the source of truth.
 - Patient file tabs are simplified to Overview, Visits, Prescriptions, Orders & Reports, Pregnancy, Billing, Files, Timeline, and More.
+- Patient file action forms post directly to patient-scoped APIs and return friendly save/error messages instead of asking staff to copy patient references into global module forms.
 - Normal-user UI copy was cleaned to avoid developer wording such as stack traces, raw JSON, endpoint labels, and framework/database terms.
 - OB ultrasound UI states that physician interpretation is required and does not provide automatic FGR or other diagnoses.
 

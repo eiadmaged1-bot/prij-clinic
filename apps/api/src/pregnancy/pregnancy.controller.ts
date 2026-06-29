@@ -4,7 +4,14 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CreateObUltrasoundDto, CreatePregnancyDto, UpdateObUltrasoundDto, UpdatePregnancyDto } from "./dto";
+import {
+  CreateAntenatalVisitDto,
+  CreateObUltrasoundDto,
+  CreatePregnancyDto,
+  CreatePregnancyFetusDto,
+  UpdateObUltrasoundDto,
+  UpdatePregnancyDto
+} from "./dto";
 import { PregnancyService } from "./pregnancy.service";
 
 @Controller()
@@ -34,6 +41,18 @@ export class PregnancyController {
   @Permissions("pregnancy.manage")
   updatePregnancy(@Param("id") id: string, @Body() dto: UpdatePregnancyDto, @CurrentUser() user: AuthUser) {
     return this.pregnancy.updatePregnancy(id, dto, user);
+  }
+
+  @Post("pregnancies/:id/fetuses")
+  @Permissions("pregnancy.manage")
+  createFetus(@Param("id") id: string, @Body() dto: CreatePregnancyFetusDto, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.createFetus(id, dto, user);
+  }
+
+  @Post("pregnancies/:id/antenatal-visits")
+  @Permissions("pregnancy.manage")
+  createAntenatalVisit(@Param("id") id: string, @Body() dto: CreateAntenatalVisitDto, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.createAntenatalVisit(id, dto, user);
   }
 
   @Post("ob-ultrasounds")

@@ -25,6 +25,7 @@ model Branch {
   queueTickets   QueueTicket[]
   reports        Report[]
   pregnancies    Pregnancy[]
+  antenatalVisits AntenatalVisit[]
   obUltrasounds  ObUltrasound[]
   invoices       Invoice[]
   payments       Payment[]
@@ -144,6 +145,7 @@ model Patient {
   investigationOrders  InvestigationOrder[]
   reports              Report[]
   pregnancies          Pregnancy[]
+  antenatalVisits      AntenatalVisit[]
   obUltrasounds        ObUltrasound[]
   invoices             Invoice[]
   payments             Payment[]
@@ -487,8 +489,11 @@ model Pregnancy {
   status               PregnancyStatus @default(active)
   gravida              Int?
   para                 Int?
+  living               Int?
+  abortions            Int?
   lmpDate              DateTime?       @db.Date
   estimatedDueDate     DateTime?       @db.Date
+  datingMethod         String?
   riskLevel            String?
   notes                String?
   createdByUserId      String?         @db.Uuid
@@ -498,11 +503,56 @@ model Pregnancy {
   branch               Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
   patient              Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
   createdByUser        User?           @relation("PregnanciesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  fetuses              PregnancyFetus[]
+  antenatalVisits      AntenatalVisit[]
   obUltrasounds        ObUltrasound[]
 
   @@index([branchId])
   @@index([patientId, createdAt])
   @@index([status])
+}
+
+model PregnancyFetus {
+  id                   String     @id @default(uuid()) @db.Uuid
+  pregnancyId          String     @db.Uuid
+  label                String
+  chorionicity         String?
+  amnionicity          String?
+  status               String     @default("active")
+  notes                String?
+  createdAt            DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime   @updatedAt @db.Timestamptz(3)
+
+  pregnancy            Pregnancy  @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([pregnancyId])
+  @@index([status])
+}
+
+model AntenatalVisit {
+  id                    String     @id @default(uuid()) @db.Uuid
+  branchId              String?    @db.Uuid
+  patientId             String     @db.Uuid
+  pregnancyId           String     @db.Uuid
+  visitDate             DateTime   @db.Date
+  gestationalAgeDisplay String?
+  bloodPressure         String?
+  weightKg              Decimal?   @db.Decimal(6, 2)
+  symptomsText          String?
+  fetalHeartText        String?
+  planText              String?
+  nextFollowUpDate      DateTime?  @db.Date
+  createdByUserId       String?    @db.Uuid
+  createdAt             DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime   @updatedAt @db.Timestamptz(3)
+
+  branch                Branch?    @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  patient               Patient    @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  pregnancy             Pregnancy  @relation(fields: [pregnancyId], references: [id], onDelete: Cascade)
+
+  @@index([branchId])
+  @@index([patientId, visitDate])
+  @@index([pregnancyId, visitDate])
 }
 
 model ObUltrasound {

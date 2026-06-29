@@ -22,6 +22,12 @@ The doctor-friendly UX reset adds:
 
 Login -> Doctor Mode -> open patient -> guided visit steps -> simplified patient file tabs -> large actions with 3D medical icons.
 
+The clinical persistence branch adds:
+
+Patient file -> patient-context appointment/check-in -> guided encounter draft persistence -> prescription/order/report/ultrasound draft -> invoice/payment -> consent -> patient timeline aggregation.
+
+It also adds OB/GYN core recording depth for pregnancy episode dating fields, fetus records, and antenatal visit records. These are recording-only clinical data structures and do not provide automated diagnosis or fetal risk interpretation.
+
 ## Included Modules
 
 - Auth, demo login, JWT bearer/cookie support.
@@ -35,6 +41,9 @@ Login -> Doctor Mode -> open patient -> guided visit steps -> simplified patient
 - Doctor Mode and Guided Visit pages for older-doctor-friendly daily use.
 - Original 3D-style medical icon component used in navigation, patient tabs, doctor actions, and empty states.
 - Comfort, Large, and Compact display preferences.
+- Patient-context workflow APIs under `/patients/:id/...` for appointments, queue check-in, encounters, prescriptions, investigations, report placeholders, ultrasound drafts, invoices, payments, and consents.
+- Aggregated patient timeline endpoint for the available MVP record types.
+- OB/GYN core persistence for fetus records and antenatal visits linked to pregnancy episodes.
 - Consent record foundation.
 - Disabled draft-only AI placeholders.
 - Local backup/restore helper scripts.
@@ -70,6 +79,7 @@ npm run test:security:expanded
 npm run test:admin:control
 npm run test:theme:ui
 npm run test:doctor:ux
+npm run test:clinical:persistence
 npm run test:e2e:v01
 ```
 
@@ -82,4 +92,5 @@ npm run test:e2e:v01
 - Backup scripts are local helpers, not production backup infrastructure.
 - Audit logs are application append-only but not tamper-resistant.
 - Service catalog prices are editable from Admin, but invoice line items are not yet automatically generated from the catalog.
+- Patient-context action forms are functional V0.1 workflow forms; they still need release-candidate UI polish from the parallel frontend branch.
 - MFA, monitoring, legal review, production deployment, and operational runbooks remain future work.
