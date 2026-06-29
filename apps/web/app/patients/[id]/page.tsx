@@ -85,13 +85,13 @@ const moreCards: Array<[string, string, string, IconName]> = [
 ];
 
 const tabs: TabConfig[] = [
-  { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
-  { key: "visits", label: "Visits", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready." },
+  { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
+  { key: "pregnancy", label: "Pregnancy/OB", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet." },
+  { key: "gynecology", label: "General Gynecology", icon: "doctor", endpoint: "/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet. Start with a recording-only template." },
+  { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready." },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit." },
-  { key: "orders", label: "Orders & Reports", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed." },
-  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet. Start with a recording-only template." },
-  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet." },
-  { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details." },
+  { key: "orders", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed." },
+  { key: "billing", label: "Billing/Finance", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details." },
   { key: "files", label: "Files", icon: "files", endpoint: "/reports", collectionKey: "reports", empty: "No report or attachment record yet. Real clinical file upload is disabled." },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
   { key: "more", label: "More", icon: "settings", empty: "Additional safe sections for ultrasound, consents, and AI draft review." }
@@ -1284,11 +1284,11 @@ function MorePanel() {
 }
 
 function timelineIcon(key: string): IconName {
+  if (key.includes("gynecology")) return "doctor";
   if (key.includes("visit") || key.includes("encounter")) return "encounter";
   if (key.includes("prescription")) return "prescription";
   if (key.includes("order") || key.includes("investigation")) return "investigations";
   if (key.includes("billing") || key.includes("invoice") || key.includes("payment")) return "billing";
-  if (key.includes("gynecology")) return "doctor";
   if (key.includes("pregnancy")) return "pregnancy";
   if (key.includes("ultrasound")) return "ultrasound";
   if (key.includes("consent")) return "consent";
