@@ -105,5 +105,7 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - No pgvector extension is installed.
 - No local LLM or external AI provider is called.
 - No automatic update replacement is implemented.
-- Private file storage is local and not encrypted yet.
+- Private file storage is local. New uploads are encrypted only when `GUIDELINE_VAULT_ENCRYPTION_KEY` is configured.
+- Local/demo fallback storage without an encryption key is not acceptable for real licensed files.
+- Key rotation, malware scanning, encrypted backup/restore proof, retention policy, and production object storage are not implemented.
 - Source registry entries are metadata only, not imported documents.

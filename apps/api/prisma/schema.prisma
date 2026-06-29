@@ -910,6 +910,11 @@ model GuidelineDocument {
   fileName            String?
   fileMimeType        String?
   fileSha256          String?
+  fileEncrypted        Boolean                  @default(false)
+  fileEncryptionKeyId  String?
+  fileEncryptionIv     String?
+  fileEncryptionTag    String?
+  downloadsAllowed     Boolean                  @default(false)
   importedByUserId    String?                  @db.Uuid
   reviewedByUserId    String?                  @db.Uuid
   reviewedAt          DateTime?                @db.Timestamptz(3)
@@ -934,6 +939,7 @@ model GuidelineDocument {
   @@index([licenseStatus])
   @@index([fileSha256])
   @@index([accessLevel])
+  @@index([downloadsAllowed])
 }
 
 model GuidelineVersion {

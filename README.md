@@ -81,6 +81,8 @@ APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=your-local-dev-secret
 JWT_EXPIRES_IN=1h
+GUIDELINE_VAULT_ENCRYPTION_KEY=
+GUIDELINE_VAULT_ENCRYPTION_KEY_ID=local-dev-key
 DEMO_OWNER_EMAIL=owner@prij.local
 DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
@@ -239,6 +241,9 @@ GET  /billing/invoices
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
+GET  /guidelines/documents/:id/view
+GET  /guidelines/documents/:id/download
+PATCH /guidelines/documents/:id/file-access-settings
 ```
 
 ## Verification

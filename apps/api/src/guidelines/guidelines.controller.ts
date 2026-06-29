@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
+import type { Response } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -7,6 +8,7 @@ import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import { AskGuidelineDto } from "./dto/ask-guideline.dto";
 import { CreateGuidelineSourceDto } from "./dto/create-guideline-source.dto";
+import { FileAccessSettingsDto } from "./dto/file-access-settings.dto";
 import { ImportUrlDto } from "./dto/import-url.dto";
 import { ReviewGuidelineDto } from "./dto/review-guideline.dto";
 import { SearchGuidelinesDto } from "./dto/search-guidelines.dto";
@@ -66,6 +68,29 @@ export class GuidelinesController {
   @Permissions("guidelines.review")
   updateDocument(@Param("id") id: string, @Body() dto: Partial<UploadGuidelineDto>, @CurrentUser() user: AuthUser) {
     return this.guidelines.updateDocument(id, dto, user);
+  }
+
+  @Get("documents/:id/view")
+  async viewDocument(@Param("id") id: string, @CurrentUser() user: AuthUser, @Res() response: Response) {
+    const file = await this.guidelines.viewDocumentFile(id, user);
+    response.setHeader("content-type", file.mimeType);
+    response.setHeader("content-disposition", `${file.disposition}; filename="${file.fileName}"`);
+    response.setHeader("x-guideline-vault", "application-streamed");
+    response.send(file.buffer);
+  }
+
+  @Get("documents/:id/download")
+  async downloadDocument(@Param("id") id: string, @CurrentUser() user: AuthUser, @Res() response: Response) {
+    const file = await this.guidelines.downloadDocumentFile(id, user);
+    response.setHeader("content-type", file.mimeType);
+    response.setHeader("content-disposition", `${file.disposition}; filename="${file.fileName}"`);
+    response.setHeader("x-guideline-vault", "application-streamed");
+    response.send(file.buffer);
+  }
+
+  @Patch("documents/:id/file-access-settings")
+  updateFileAccessSettings(@Param("id") id: string, @Body() dto: FileAccessSettingsDto, @CurrentUser() user: AuthUser) {
+    return this.guidelines.updateFileAccessSettings(id, dto, user);
   }
 
   @Post("documents/:id/review")

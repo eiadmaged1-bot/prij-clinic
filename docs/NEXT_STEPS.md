@@ -71,10 +71,14 @@ The production-readiness plan is documented in `docs/PRODUCTION_READINESS_PLAN.m
 
 ## Guideline Center Next Steps
 
-Recommended next integration step: add an authorized document viewer/download workflow with explicit owner/doctor access checks, file access audit logs, and encrypted storage design before any real licensed material is used.
+The authorized private-vault viewer/download workflow is now implemented for local/demo use. Recommended next integration steps before real licensed material is used:
 
 Future guideline work:
 
+- Configure and operationally test a non-committed `GUIDELINE_VAULT_ENCRYPTION_KEY`.
+- Add backup and restore proof for encrypted guideline files and database metadata together.
+- Add upload malware scanning and file type inspection beyond browser MIME hints.
+- Add key rotation and encrypted-storage incident procedures.
 - Official source adapters per organization.
 - Scheduled update checks.
 - Real full-text search or pgvector.
@@ -82,4 +86,4 @@ Future guideline work:
 - Optional OpenAI mode only after explicit safety design.
 - Rich guideline comparison.
 - Better PDF page mapping.
-- Encrypted file storage and backup restore tests.
+- Production object storage only after license, privacy, and access review.

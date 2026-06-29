@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
@@ -28,7 +28,13 @@ type Document = {
   topic: string;
   versionLabel?: string;
   guidelineStatus: string;
+  licenseStatus: string;
   accessLevel: string;
+  downloadsAllowed: boolean;
+  fileEncrypted?: boolean;
+  fileName?: string;
+  fileMimeType?: string;
+  lastFileAccess?: { action: string; at: string } | null;
   _count?: { chunks: number };
 };
 
@@ -44,13 +50,13 @@ type SearchResult = {
 };
 
 export function GuidelineCenter({ view }: GuidelineCenterProps) {
-  const { user, status } = useSession();
-  const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
+  const { user, status, token } = useSession();
   const canRead = Boolean(user?.permissions.includes("guidelines.read") || user?.permissions.includes("guidelines.search"));
   const canUpload = Boolean(user?.permissions.includes("guidelines.upload"));
   const canImport = Boolean(user?.permissions.includes("guidelines.import"));
   const canReview = Boolean(user?.permissions.includes("guidelines.review"));
   const canManageSources = Boolean(user?.permissions.includes("guidelines.manage_sources"));
+  const canManagePrivate = Boolean(user?.roles.includes("Owner") || user?.permissions.includes("guidelines.manage_private"));
   const [sources, setSources] = useState<Source[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [query, setQuery] = useState("");
@@ -105,6 +111,45 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     setMessage(body.warning ?? "Doctor review required. Evidence summary only.");
   }
 
+  async function openSecureFile(document: Document, action: "view" | "download") {
+    setMessage(action === "view" ? "Opening secure viewer" : "Preparing secure download");
+    const response = await fetch(`${apiUrl}/guidelines/documents/${document.id}/${action}`, {
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    });
+    if (!response.ok) {
+      setMessage(action === "download" ? "Download is not allowed for this document" : "Secure viewer access was denied");
+      await loadBasics();
+      return;
+    }
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    if (action === "view") {
+      window.open(objectUrl, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+    } else {
+      const anchor = window.document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = document.fileName || `${document.title}.txt`;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    }
+    setMessage("Access audited");
+    await loadBasics();
+  }
+
+  async function setDownloadsAllowed(document: Document, downloadsAllowed: boolean) {
+    const response = await fetch(`${apiUrl}/guidelines/documents/${document.id}/file-access-settings`, {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ downloadsAllowed })
+    });
+    setMessage(response.ok ? "Download setting updated and audited" : "Only the owner can change download settings");
+    await loadBasics();
+  }
+
   if (status === "loading") return <AppShell><GuidelineShell title="Guideline Center"><Empty text="Loading evidence library" /></GuidelineShell></AppShell>;
   if (!canRead) {
     return (
@@ -148,7 +193,14 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
         {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
         {view === "review" ? <DocumentList documents={documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW")} title="Documents needing review" /> : null}
         {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
-        {view === "private" ? <DocumentList documents={documents.filter((item) => item.accessLevel !== "CLINICAL_TEAM")} title="Private vault" /> : null}
+        {view === "private" ? (
+          <PrivateVault
+            canManagePrivate={canManagePrivate}
+            documents={documents.filter((item) => item.accessLevel !== "CLINICAL_TEAM")}
+            openSecureFile={openSecureFile}
+            setDownloadsAllowed={setDownloadsAllowed}
+          />
+        ) : null}
       </GuidelineShell>
     </AppShell>
   );
@@ -275,6 +327,68 @@ function DocumentList({ documents, title }: { documents: Document[]; title: stri
   );
 }
 
+function PrivateVault({
+  documents,
+  canManagePrivate,
+  openSecureFile,
+  setDownloadsAllowed
+}: {
+  documents: Document[];
+  canManagePrivate: boolean;
+  openSecureFile: (document: Document, action: "view" | "download") => Promise<void>;
+  setDownloadsAllowed: (document: Document, downloadsAllowed: boolean) => Promise<void>;
+}) {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <h2>Private vault</h2>
+        <span className="badge warning">Access audited</span>
+      </div>
+      <div className="data-list">
+        {documents.map((document) => (
+          <article className="data-row" key={document.id}>
+            <div className="data-row-header">
+              <strong>{document.title}</strong>
+              <span className="badge">{document.guidelineStatus}</span>
+            </div>
+            <p>{document.organization} - {document.specialty} - {document.topic}</p>
+            <div className="guideline-meta-grid">
+              <span><strong>Access level</strong>{friendlyAccess(document.accessLevel)}</span>
+              <span><strong>License status</strong>{friendlyLicense(document.licenseStatus)}</span>
+              <span><strong>Storage</strong>{document.fileEncrypted ? "Encrypted locally" : "Local demo storage"}</span>
+              <span><strong>Last access</strong>{lastAccessText(document.lastFileAccess)}</span>
+            </div>
+            <div className="guideline-file-actions">
+              <button className="button" type="button" onClick={() => void openSecureFile(document, "view")}>
+                <ThreeDMedicalIcon name="files" size="sm" />Open secure viewer
+              </button>
+              {document.downloadsAllowed ? (
+                <button className="button secondary" type="button" onClick={() => void openSecureFile(document, "download")}>
+                  <ThreeDMedicalIcon name="reports" size="sm" />Download
+                </button>
+              ) : (
+                <span className="badge warning">Downloads disabled by owner</span>
+              )}
+              {canManagePrivate ? (
+                <label className="toggle-line">
+                  <input
+                    checked={document.downloadsAllowed}
+                    onChange={(event) => void setDownloadsAllowed(document, event.target.checked)}
+                    type="checkbox"
+                  />
+                  Allow downloads
+                </label>
+              ) : null}
+            </div>
+            <p className="muted">Private file access is checked by the server and recorded in the audit log.</p>
+          </article>
+        ))}
+        {!documents.length ? <Empty text="No private guideline documents in this vault yet." /> : null}
+      </div>
+    </section>
+  );
+}
+
 function Empty({ text }: { text: string }) {
   return <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>{text}</span></p>;
 }
@@ -303,4 +417,27 @@ function titleFor(view: GuidelineCenterProps["view"]) {
     private: "Private Vault"
   };
   return titles[view];
+}
+
+function friendlyAccess(value: string) {
+  if (value === "OWNER_ONLY") return "Owner only";
+  if (value === "OWNER_DOCTOR") return "Owner and doctors";
+  if (value === "CLINICAL_TEAM") return "Clinical team";
+  return "Restricted";
+}
+
+function friendlyLicense(value: string) {
+  if (value === "LICENSED_PRIVATE") return "Licensed private";
+  if (value === "OPEN") return "Open";
+  if (value === "CHECK_REQUIRED") return "License check required";
+  if (value === "LOGIN_REQUIRED") return "Login required";
+  if (value === "LINK_ONLY") return "Link only";
+  if (value === "DO_NOT_IMPORT") return "Do not import";
+  return "Restricted";
+}
+
+function lastAccessText(value?: { action: string; at: string } | null) {
+  if (!value) return "No file access yet";
+  const label = value.action === "downloaded" ? "Downloaded" : "Viewed";
+  return `${label} ${new Date(value.at).toLocaleString()}`;
 }

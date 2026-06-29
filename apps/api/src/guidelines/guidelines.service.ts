@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import {
   GuidelineAccessLevel,
   GuidelineAnswerMode,
@@ -9,8 +9,9 @@ import {
   GuidelineStatus,
   Prisma
 } from "@prisma/client";
-import { mkdir, writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -32,6 +33,18 @@ type UploadedGuidelineFile = {
   buffer: Buffer;
   mimetype: string;
   originalname: string;
+};
+type FileAction = "view" | "download";
+type FileAccessDecision = {
+  allowed: boolean;
+  reason?: string;
+};
+type StoredFilePayload = {
+  buffer: Buffer;
+  encrypted: boolean;
+  encryptionKeyId?: string | null;
+  encryptionIv?: string | null;
+  encryptionTag?: string | null;
 };
 
 @Injectable()
@@ -87,7 +100,7 @@ export class GuidelinesService {
       take: 100,
       include: { source: true, _count: { select: { chunks: true, sections: true } } }
     });
-    return { documents: documents.map(safeDocument) };
+    return { documents: await this.withLastFileAccess(documents.map(safeDocument)) };
   }
 
   async getDocument(id: string, user: AuthUser) {
@@ -108,6 +121,51 @@ export class GuidelinesService {
       resourceId: document.id,
       severity: "medium",
       metadataJson: { title: document.title, accessLevel: document.accessLevel }
+    });
+    return this.withLastFileAccess(safeDocument(document));
+  }
+
+  async viewDocumentFile(id: string, user: AuthUser) {
+    return this.documentFileResponse(id, user, "view");
+  }
+
+  async downloadDocumentFile(id: string, user: AuthUser) {
+    return this.documentFileResponse(id, user, "download");
+  }
+
+  async updateFileAccessSettings(id: string, dto: { downloadsAllowed?: boolean }, user: AuthUser) {
+    if (!isOwner(user)) {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "guideline.file_access_settings_denied",
+        resourceType: "guideline_document",
+        resourceId: id,
+        severity: "high",
+        metadataJson: { reason: "owner_only_setting" }
+      });
+      throw new ForbiddenException("Only the owner can change private vault file access settings.");
+    }
+    const existing = await this.prisma.guidelineDocument.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("Guideline document not found.");
+    const document = await this.prisma.guidelineDocument.update({
+      where: { id },
+      data: { downloadsAllowed: dto.downloadsAllowed === true },
+      include: {
+        source: true,
+        _count: { select: { chunks: true, sections: true } }
+      }
+    });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "guideline.file_access_settings_updated",
+      resourceType: "guideline_document",
+      resourceId: id,
+      severity: "high",
+      metadataJson: {
+        downloadsAllowed: document.downloadsAllowed,
+        accessLevel: document.accessLevel,
+        licenseStatus: document.licenseStatus
+      }
     });
     return safeDocument(document);
   }
@@ -156,7 +214,8 @@ export class GuidelinesService {
     const extension = extname(file.originalname) || (file.mimetype === "application/pdf" ? ".pdf" : ".txt");
     const fileName = `${hash}${extension}`;
     const localFilePath = join(storageRoot, fileName);
-    await writeFile(localFilePath, file.buffer);
+    const storedFile = encryptForVault(file.buffer);
+    await writeFile(localFilePath, storedFile.buffer);
 
     const job = await this.createJob("PRIVATE_UPLOAD", "RUNNING", user, {
       sourceId: source.id,
@@ -179,6 +238,10 @@ export class GuidelinesService {
         fileMimeType: file.mimetype,
         fileSha256: hash,
         localFilePath,
+        fileEncrypted: storedFile.encrypted,
+        fileEncryptionKeyId: storedFile.encryptionKeyId,
+        fileEncryptionIv: storedFile.encryptionIv,
+        fileEncryptionTag: storedFile.encryptionTag,
         importedByUserId: user.id,
         text: extractedText
       });
@@ -189,7 +252,13 @@ export class GuidelinesService {
         resourceType: "guideline_document",
         resourceId: document.id,
         severity: "high",
-        metadataJson: { fileMimeType: file.mimetype, fileSha256: hash, accessLevel: document.accessLevel }
+        metadataJson: {
+          fileMimeType: file.mimetype,
+          fileSha256: hash,
+          accessLevel: document.accessLevel,
+          encryptedAtRest: document.fileEncrypted,
+          downloadsAllowed: document.downloadsAllowed
+        }
       });
       return { document: safeDocument(document), importJobId: job.id };
     } catch (error) {
@@ -438,6 +507,10 @@ export class GuidelinesService {
     fileName?: string;
     fileMimeType?: string;
     fileSha256?: string;
+    fileEncrypted?: boolean;
+    fileEncryptionKeyId?: string | null;
+    fileEncryptionIv?: string | null;
+    fileEncryptionTag?: string | null;
     importedByUserId?: string;
     text: string;
   }) {
@@ -458,6 +531,10 @@ export class GuidelinesService {
         fileName: input.fileName,
         fileMimeType: input.fileMimeType,
         fileSha256: input.fileSha256,
+        fileEncrypted: input.fileEncrypted ?? false,
+        fileEncryptionKeyId: input.fileEncryptionKeyId,
+        fileEncryptionIv: input.fileEncryptionIv,
+        fileEncryptionTag: input.fileEncryptionTag,
         importedByUserId: input.importedByUserId,
         accessLevel: input.accessLevel
       }
@@ -567,6 +644,167 @@ export class GuidelinesService {
     if (user.roles.includes("Doctor")) return { accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] } };
     return { accessLevel: "CLINICAL_TEAM" };
   }
+
+  private async documentFileResponse(id: string, user: AuthUser, action: FileAction) {
+    const document = await this.prisma.guidelineDocument.findUnique({
+      where: { id },
+      include: {
+        source: true,
+        reviewDecisions: { orderBy: { decidedAt: "desc" }, take: 1 },
+        _count: { select: { chunks: true, sections: true } }
+      }
+    });
+
+    if (!document) {
+      await this.auditFileAccess(user, action, id, false, "not_found");
+      throw new NotFoundException("Guideline document not found.");
+    }
+
+    const decision = this.canAccessDocumentFile(document, user, action);
+    if (!decision.allowed) {
+      await this.auditFileAccess(user, action, id, false, decision.reason ?? "denied", document);
+      throw new ForbiddenException("Guideline file access is not allowed.");
+    }
+
+    if (!document.localFilePath) {
+      await this.auditFileAccess(user, action, id, false, "no_local_file", document);
+      throw new NotFoundException("No private guideline file is stored for this document.");
+    }
+
+    const path = resolve(document.localFilePath);
+    if (!isPathInsideVault(path)) {
+      await this.auditFileAccess(user, action, id, false, "unsafe_storage_reference", document);
+      throw new ForbiddenException("Guideline file storage reference is not allowed.");
+    }
+
+    try {
+      await stat(path);
+    } catch {
+      await this.auditFileAccess(user, action, id, false, "file_missing", document);
+      throw new NotFoundException("Guideline file is not available in secure storage.");
+    }
+
+    const stored = await readFile(path);
+    let buffer: Buffer;
+    try {
+      buffer = document.fileEncrypted
+        ? decryptFromVault(stored, {
+            keyId: document.fileEncryptionKeyId,
+            iv: document.fileEncryptionIv,
+            tag: document.fileEncryptionTag
+          })
+        : stored;
+    } catch (error) {
+      await this.auditFileAccess(user, action, id, false, "encryption_unavailable", document);
+      throw error;
+    }
+
+    await this.auditFileAccess(user, action, id, true, "allowed", document);
+
+    const textPreview = action === "view" && document.fileMimeType === "text/plain";
+    return {
+      buffer,
+      fileName: safeDownloadName(document.fileName ?? `${document.title}.txt`),
+      mimeType: textPreview ? "text/plain; charset=utf-8" : document.fileMimeType ?? "application/octet-stream",
+      disposition: action === "download" ? "attachment" : "inline",
+      document: safeDocument(document),
+      encryptedAtRest: document.fileEncrypted
+    };
+  }
+
+  private canAccessDocumentFile(
+    document: { accessLevel: GuidelineAccessLevel; guidelineStatus: GuidelineStatus; downloadsAllowed: boolean },
+    user: AuthUser,
+    action: FileAction
+  ): FileAccessDecision {
+    if (!user.permissions.includes("guidelines.read") && !user.permissions.includes("guidelines.search")) {
+      return { allowed: false, reason: "missing_guideline_permission" };
+    }
+    if (action === "download" && !document.downloadsAllowed) {
+      return { allowed: false, reason: "downloads_disabled_by_owner" };
+    }
+    if (document.guidelineStatus === "ARCHIVED") {
+      return { allowed: isOwner(user), reason: isOwner(user) ? undefined : "archived_owner_only" };
+    }
+    if (document.accessLevel === "OWNER_ONLY") {
+      return { allowed: isOwner(user), reason: isOwner(user) ? undefined : "owner_only" };
+    }
+    if (document.accessLevel === "OWNER_DOCTOR") {
+      return { allowed: isOwner(user) || user.roles.includes("Doctor"), reason: "owner_doctor_only" };
+    }
+    if (document.accessLevel === "CLINICAL_TEAM") {
+      return { allowed: isOwner(user) || user.roles.includes("Doctor") || user.roles.includes("Nurse"), reason: "clinical_team_only" };
+    }
+    return { allowed: false, reason: "unknown_access_level" };
+  }
+
+  private auditFileAccess(
+    user: AuthUser,
+    action: FileAction,
+    documentId: string,
+    allowed: boolean,
+    reason: string,
+    document?: {
+      accessLevel: GuidelineAccessLevel;
+      guidelineStatus: GuidelineStatus;
+      licenseStatus: GuidelineLicenseStatus;
+      downloadsAllowed: boolean;
+      fileEncrypted: boolean;
+      fileMimeType: string | null;
+    }
+  ) {
+    return this.audit.record({
+      actorUserId: user.id,
+      action: `guideline.file_${action}_${allowed ? "allowed" : "denied"}`,
+      resourceType: "guideline_document",
+      resourceId: documentId,
+      severity: allowed ? "medium" : "high",
+      metadataJson: {
+        outcome: allowed ? "allowed" : "denied",
+        reason,
+        accessLevel: document?.accessLevel,
+        guidelineStatus: document?.guidelineStatus,
+        licenseStatus: document?.licenseStatus,
+        downloadsAllowed: document?.downloadsAllowed,
+        encryptedAtRest: document?.fileEncrypted,
+        fileMimeType: document?.fileMimeType
+      }
+    });
+  }
+
+  private async withLastFileAccess<T extends { id: string }>(documents: T[]): Promise<Array<T & { lastFileAccess?: unknown }>>;
+  private async withLastFileAccess<T extends { id: string }>(document: T): Promise<T & { lastFileAccess?: unknown }>;
+  private async withLastFileAccess<T extends { id: string }>(input: T | T[]) {
+    const documents = Array.isArray(input) ? input : [input];
+    if (!documents.length) return input;
+    const ids = documents.map((document) => document.id);
+    const logs = await this.prisma.auditLog.findMany({
+      where: {
+        resourceType: "guideline_document",
+        resourceId: { in: ids },
+        action: { in: ["guideline.file_view_allowed", "guideline.file_download_allowed"] }
+      },
+      orderBy: { createdAt: "desc" },
+      take: Math.max(ids.length * 2, 20),
+      select: { resourceId: true, action: true, createdAt: true }
+    });
+    const byDocument = new Map<string, { action: string; createdAt: Date }>();
+    for (const log of logs) {
+      if (log.resourceId && !byDocument.has(log.resourceId)) {
+        byDocument.set(log.resourceId, { action: log.action, createdAt: log.createdAt });
+      }
+    }
+    const mapped = documents.map((document) => ({
+      ...document,
+      lastFileAccess: byDocument.get(document.id)
+        ? {
+            action: byDocument.get(document.id)?.action === "guideline.file_download_allowed" ? "downloaded" : "viewed",
+            at: byDocument.get(document.id)?.createdAt
+          }
+        : null
+    }));
+    return Array.isArray(input) ? mapped : mapped[0];
+  }
 }
 
 function sourceData(dto: CreateGuidelineSourceDto | UpdateGuidelineSourceDto, partial = false) {
@@ -590,6 +828,63 @@ function sourceData(dto: CreateGuidelineSourceDto | UpdateGuidelineSourceDto, pa
 function safeDocument<T extends { localFilePath?: string | null }>(document: T) {
   const { localFilePath: _localFilePath, ...safe } = document;
   return safe;
+}
+
+function isOwner(user: AuthUser) {
+  return user.roles.includes("Owner") || user.permissions.includes("guidelines.manage_private");
+}
+
+function vaultRoot() {
+  return resolve(process.cwd(), "storage", "guidelines", "private");
+}
+
+function isPathInsideVault(path: string) {
+  const relativePath = relative(vaultRoot(), path);
+  return relativePath === "" || Boolean(relativePath && !relativePath.startsWith("..") && !isAbsolute(relativePath));
+}
+
+function safeDownloadName(value: string) {
+  return basename(value).replace(/[^\w.\- ]/g, "_") || "guideline-document";
+}
+
+function encryptForVault(buffer: Buffer): StoredFilePayload {
+  const key = guidelineVaultKey();
+  if (!key) return { buffer, encrypted: false };
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
+  return {
+    buffer: encrypted,
+    encrypted: true,
+    encryptionKeyId: process.env.GUIDELINE_VAULT_ENCRYPTION_KEY_ID || "local-dev-key",
+    encryptionIv: iv.toString("base64"),
+    encryptionTag: cipher.getAuthTag().toString("base64")
+  };
+}
+
+function decryptFromVault(buffer: Buffer, metadata: { keyId?: string | null; iv?: string | null; tag?: string | null }) {
+  const key = guidelineVaultKey();
+  if (!key || !metadata.iv || !metadata.tag) {
+    throw new ServiceUnavailableException("Guideline vault encryption key is not configured.");
+  }
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(metadata.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(metadata.tag, "base64"));
+  return Buffer.concat([decipher.update(buffer), decipher.final()]);
+}
+
+function guidelineVaultKey() {
+  const value = process.env.GUIDELINE_VAULT_ENCRYPTION_KEY?.trim();
+  if (!value) return null;
+  const candidates = [
+    Buffer.from(value, "base64"),
+    /^[\da-f]{64}$/i.test(value) ? Buffer.from(value, "hex") : Buffer.alloc(0),
+    Buffer.from(value, "utf8")
+  ];
+  const key = candidates.find((candidate) => candidate.length === 32);
+  if (!key) {
+    throw new ServiceUnavailableException("GUIDELINE_VAULT_ENCRYPTION_KEY must resolve to 32 bytes.");
+  }
+  return key;
 }
 
 function clean(value?: string | null) {

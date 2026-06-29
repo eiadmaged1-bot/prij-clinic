@@ -15,6 +15,7 @@ async function main() {
   const owner = await login("eyad", "eyad");
   const doctor = await login("demo.doctor@prij.local", process.env.DEMO_TEST_PASSWORD || "LocalDev123!");
   const reception = await login("demo.reception@prij.local", process.env.DEMO_TEST_PASSWORD || "LocalDev123!");
+  const accountant = await login("demo.accountant@prij.local", process.env.DEMO_TEST_PASSWORD || "LocalDev123!");
   checks.push("demo users login");
 
   const sources = await apiJson("GET", "/guidelines/sources", owner);
@@ -57,6 +58,8 @@ async function main() {
   assert(upload.document?.id, "demo guideline upload did not return a document");
   assert(upload.document.accessLevel === "OWNER_DOCTOR", "private upload did not default to owner-doctor access");
   assert(upload.document._count?.chunks > 0, "upload did not create indexed chunks");
+  assert(!JSON.stringify(upload.document).includes("localFilePath"), "upload response exposed local file path");
+  assert(!JSON.stringify(upload.document).includes("storage"), "upload response exposed storage path");
   checks.push("private demo text upload indexed");
 
   const review = await apiJson("POST", `/guidelines/documents/${upload.document.id}/review`, owner, {
@@ -95,6 +98,53 @@ async function main() {
   assert(privateDenied.status === 403, "receptionist direct private document access must be denied");
   checks.push("private document direct access blocked");
 
+  const listedDocuments = await apiJson("GET", "/guidelines/documents", owner);
+  assert(!JSON.stringify(listedDocuments).includes("localFilePath"), "document list exposed local file path");
+  assert(!JSON.stringify(listedDocuments).includes("storage"), "document list exposed storage path");
+  checks.push("local storage paths are not exposed");
+
+  const ownerView = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, owner);
+  assert(ownerView.status === 200 && String(ownerView.body).includes("Demo guideline sample"), "owner could not view private document");
+  const doctorView = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, doctor);
+  assert(doctorView.status === 200 && String(doctorView.body).includes("Demo guideline sample"), "doctor could not view owner-doctor document");
+  checks.push("owner and doctor can view authorized private document");
+
+  const receptionistViewDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, reception);
+  assert(receptionistViewDenied.status === 403, "receptionist private file view must be denied");
+  const accountantViewDenied = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/view`, accountant);
+  assert(accountantViewDenied.status === 403, "accountant private file view must be denied");
+  checks.push("receptionist and accountant blocked from guideline files");
+
+  const disabledDownload = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/download`, owner);
+  assert(disabledDownload.status === 403, "download must be blocked when disabled");
+  const doctorSettingsDenied = await apiRequest("PATCH", `/guidelines/documents/${upload.document.id}/file-access-settings`, doctor, {
+    downloadsAllowed: true
+  });
+  assert(doctorSettingsDenied.status === 403, "doctor must not change private download settings");
+  const enabledDownloadSettings = await apiJson("PATCH", `/guidelines/documents/${upload.document.id}/file-access-settings`, owner, {
+    downloadsAllowed: true
+  });
+  assert(enabledDownloadSettings.downloadsAllowed === true, "owner could not enable downloads");
+  const enabledDownload = await apiRequest("GET", `/guidelines/documents/${upload.document.id}/download`, doctor);
+  assert(enabledDownload.status === 200 && String(enabledDownload.body).includes("Demo guideline sample"), "authorized download did not work after owner enabled it");
+  checks.push("download control enforced by owner setting");
+
+  const ownerOnlyUpload = await uploadDemoGuideline(owner, { accessLevel: "OWNER_ONLY", titleSuffix: "owner only" });
+  const ownerOnlyDoctorView = await apiRequest("GET", `/guidelines/documents/${ownerOnlyUpload.document.id}/view`, doctor);
+  assert(ownerOnlyDoctorView.status === 403, "doctor must not view owner-only private document");
+  checks.push("owner-only guideline file blocks doctor");
+
+  const archiveUpload = await uploadDemoGuideline(owner, { titleSuffix: "archive access" });
+  await apiJson("POST", `/guidelines/documents/${archiveUpload.document.id}/archive`, owner, {
+    decision: "ARCHIVED",
+    reason: "Demo archive access rule test."
+  });
+  const archivedDoctorView = await apiRequest("GET", `/guidelines/documents/${archiveUpload.document.id}/view`, doctor);
+  assert(archivedDoctorView.status === 403, "doctor must not view archived private document");
+  const archivedOwnerView = await apiRequest("GET", `/guidelines/documents/${archiveUpload.document.id}/view`, owner);
+  assert(archivedOwnerView.status === 200, "owner should retain audited archived-document access");
+  checks.push("archived guideline file access follows owner-only rule");
+
   await expectReachable(`${WEB_URL}/guidelines`, "guideline center page");
   await expectReachable(`${WEB_URL}/guidelines/search`, "guideline search page");
   await expectReachable(`${WEB_URL}/guidelines/ask`, "guideline ask page");
@@ -110,8 +160,19 @@ async function main() {
   assert(!/openai|langchain|anthropic/i.test(serviceSource), "guideline service must not call external AI libraries");
   checks.push("no external AI dependency in guideline service");
 
-  const audit = await apiJson("GET", "/audit?limit=100", owner);
-  for (const action of ["guideline.uploaded", "guideline.reviewed", "guideline.search", "guideline.ask", "guideline.import_refused"]) {
+  const audit = await apiJson("GET", "/audit?limit=300", owner);
+  for (const action of [
+    "guideline.uploaded",
+    "guideline.reviewed",
+    "guideline.search",
+    "guideline.ask",
+    "guideline.import_refused",
+    "guideline.file_view_allowed",
+    "guideline.file_view_denied",
+    "guideline.file_download_allowed",
+    "guideline.file_download_denied",
+    "guideline.file_access_settings_updated"
+  ]) {
     assert(audit.auditLogs?.some((entry) => entry.action === action), `missing audit action ${action}`);
   }
   checks.push("guideline actions audited");
@@ -120,19 +181,21 @@ async function main() {
   console.log(`GUIDELINES SUMMARY PASS ${checks.length} WARN 0 FAIL 0`);
 }
 
-async function uploadDemoGuideline(token) {
+async function uploadDemoGuideline(token, options = {}) {
   const form = new FormData();
+  const uploadId = `${runId}-${options.titleSuffix || "default"}-${Math.floor(Math.random() * 100000)}`;
   const text = [
     "Demo guideline sample - not clinical use.",
-    `Demo run identifier ${runId}.`,
+    `Demo run identifier ${uploadId}.`,
     "This local evidence library test text discusses demo antenatal follow up and documentation review.",
     "Doctor review is required before using any evidence summary."
   ].join(" ");
-  form.append("file", new Blob([text], { type: "text/plain" }), `demo-guideline-${runId}.txt`);
-  form.append("title", `Demo guideline sample ${runId}`);
+  form.append("file", new Blob([text], { type: "text/plain" }), `demo-guideline-${uploadId}.txt`);
+  form.append("title", `Demo guideline sample ${options.titleSuffix || runId}`);
   form.append("sourceOrganization", "Private Demo Source");
   form.append("specialty", "obstetrics");
   form.append("topic", "antenatal follow up");
+  if (options.accessLevel) form.append("accessLevel", options.accessLevel);
   const response = await fetch(`${API_URL}/guidelines/upload`, {
     method: "POST",
     headers: { authorization: `Bearer ${token}` },
