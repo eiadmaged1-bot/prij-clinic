@@ -695,6 +695,7 @@ model Invoice {
 model InvoiceItem {
   id          String   @id @default(uuid()) @db.Uuid
   invoiceId   String   @db.Uuid
+  serviceItemId String? @db.Uuid
   description String
   quantity    Int      @default(1)
   unitAmount  Decimal  @db.Decimal(12, 2)
@@ -702,8 +703,10 @@ model InvoiceItem {
   notes       String?
 
   invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  serviceItem ServiceItem? @relation(fields: [serviceItemId], references: [id], onDelete: SetNull)
 
   @@index([invoiceId])
+  @@index([serviceItemId])
 }
 
 model Payment {
@@ -736,15 +739,18 @@ model Payment {
 }
 
 model ServiceItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  code      String   @unique
-  name      String
-  category  String
-  price     Decimal  @db.Decimal(12, 2)
-  currency  String   @default("EGP")
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  id                String        @id @default(uuid()) @db.Uuid
+  code              String        @unique
+  name              String
+  category          String
+  price             Decimal       @db.Decimal(12, 2)
+  currency          String        @default("EGP")
+  active            Boolean       @default(true)
+  costAmount        Decimal?      @db.Decimal(12, 2)
+  doctorShareAmount Decimal?      @db.Decimal(12, 2)
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(3)
+  invoiceItems      InvoiceItem[]
 
   @@index([category])
   @@index([active])

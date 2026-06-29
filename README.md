@@ -2,7 +2,7 @@
 
 Clinic Management System V0.2 MVP pilot workflow lock for OB/GYN and women's health.
 
-Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
 V0.2 is a verified local/private MVP pilot workflow lock. It is not production-ready, not a medical device, and must not be used with real patient data.
 
@@ -23,6 +23,7 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Open the patient file and work from that patient-scoped workspace.
 - Use module pages only for their focused workflow: appointments, queue, encounters, prescriptions, investigations, reports, pregnancy/ultrasound, billing, consents, and AI draft placeholders.
 - Use Admin Control Center for local demo settings, staff/role visibility, service prices, safe overrides, system status, audit review, and appearance settings.
+- Use Billing for catalog-linked invoices, manual payments, refunds/voids, daily closing, patient statements, and owner finance reports without a real payment gateway.
 - Doctors can use Doctor Mode for a simpler daily workflow: open patient, start visit, write note, prescribe, order tests, finish, and move to the next patient.
 - Patient files now use simplified tabs, large actions, and 3D-style medical icons for older-doctor-friendly recognition.
 
@@ -230,6 +231,10 @@ GET  /reports
 GET  /pregnancies
 GET  /ob-ultrasounds
 GET  /billing/invoices
+GET  /billing/services
+GET  /billing/daily-closing
+GET  /billing/reports/finance
+GET  /billing/patients/:patientId/statement
 GET  /billing/payments
 GET  /dashboard/summary
 GET  /ai-drafts
@@ -268,6 +273,7 @@ npm run test:e2e:v01
 npm run test:clinical:persistence
 npm run test:visual:qa
 npm run test:accounts:rbac
+npm run test:finance:reports
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.

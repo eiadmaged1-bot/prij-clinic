@@ -3,9 +3,14 @@ import { IsArray, IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, I
 import { InvoiceStatus, PaymentMethod } from "@prisma/client";
 
 export class CreateInvoiceItemDto {
+  @IsOptional()
+  @IsUUID()
+  serviceItemId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(180)
-  description!: string;
+  description?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -14,10 +19,11 @@ export class CreateInvoiceItemDto {
   @Max(999)
   quantity?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  unitAmount!: number;
+  unitAmount?: number;
 
   @IsOptional()
   @IsString()
@@ -47,6 +53,11 @@ export class CreateInvoiceDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   discountAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  discountReason?: string;
 
   @IsOptional()
   @IsString()
@@ -81,6 +92,11 @@ export class UpdateInvoiceDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  discountReason?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   notes?: string;
 }
 
@@ -107,6 +123,12 @@ export class CreatePaymentDto {
 }
 
 export class ReversePaymentDto {
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}
+
+export class VoidInvoiceDto {
   @IsString()
   @MaxLength(500)
   reason!: string;

@@ -14,6 +14,8 @@ type ServiceItem = {
   price: string;
   currency: string;
   active: boolean;
+  costAmount?: string | null;
+  doctorShareAmount?: string | null;
 };
 
 type SafeUser = {
@@ -41,7 +43,9 @@ const emptyService = {
   name: "",
   category: "Consultation",
   price: "0",
-  currency: "EGP"
+  currency: "EGP",
+  costAmount: "",
+  doctorShareAmount: ""
 };
 
 export default function AdminPage() {
@@ -106,7 +110,12 @@ export default function AdminPage() {
         method: "POST",
         credentials: "include",
         headers,
-        body: JSON.stringify({ ...form, price: Number(form.price) })
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          costAmount: form.costAmount ? Number(form.costAmount) : undefined,
+          doctorShareAmount: form.doctorShareAmount ? Number(form.doctorShareAmount) : undefined
+        })
       });
       if (!response.ok) throw new Error("Could not save service.");
       setForm(emptyService);
@@ -126,7 +135,9 @@ export default function AdminPage() {
       headers,
       body: JSON.stringify({
         ...patch,
-        ...(patch.price !== undefined ? { price: Number(patch.price) } : {})
+        ...(patch.price !== undefined ? { price: Number(patch.price) } : {}),
+        ...(patch.costAmount !== undefined ? { costAmount: patch.costAmount === "" ? undefined : Number(patch.costAmount) } : {}),
+        ...(patch.doctorShareAmount !== undefined ? { doctorShareAmount: patch.doctorShareAmount === "" ? undefined : Number(patch.doctorShareAmount) } : {})
       })
     });
     if (!response.ok) {
@@ -181,7 +192,7 @@ export default function AdminPage() {
         {[
           ["Clinic Profile", "Clinic name, branch identity, and contact details are planned for a guarded settings flow."],
           ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
-          ["Billing Settings", "Service catalog prices are active now. Taxes, discounts, and gateways remain future work."],
+          ["Billing Settings", "Service prices, cost placeholders, and doctor share placeholders are active now. Taxes and gateways remain future work."],
           ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
           ["Feature Flags", "AI stays disabled and draft-only. Future flags must remain audited and owner-controlled."],
           ["Safety Settings", "Audit logs cannot be deleted and signed records cannot be silently hard-deleted."]
@@ -198,7 +209,7 @@ export default function AdminPage() {
           <div className="section-heading">
             <div>
               <h2>Service Catalog and Prices</h2>
-              <p className="muted">Add services, edit prices, and deactivate services. No payment gateway is connected.</p>
+              <p className="muted">Add services, edit prices, set finance placeholders, and deactivate services. No payment gateway is connected.</p>
             </div>
             <span className="badge accent">Audited</span>
           </div>
@@ -218,6 +229,14 @@ export default function AdminPage() {
             <label>
               Price
               <input min="0" onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} required type="number" value={form.price} />
+            </label>
+            <label>
+              Cost placeholder
+              <input min="0" onChange={(event) => setForm((current) => ({ ...current, costAmount: event.target.value }))} type="number" value={form.costAmount} />
+            </label>
+            <label>
+              Doctor share placeholder
+              <input min="0" onChange={(event) => setForm((current) => ({ ...current, doctorShareAmount: event.target.value }))} type="number" value={form.doctorShareAmount} />
             </label>
             <button className="button wide" type="submit">Add service</button>
           </form>
@@ -240,6 +259,30 @@ export default function AdminPage() {
                       onBlur={(event) => {
                         if (event.target.value !== String(service.price)) {
                           void updateService(service, { price: event.target.value });
+                        }
+                      }}
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    Cost
+                    <input
+                      defaultValue={service.costAmount ? String(service.costAmount) : ""}
+                      onBlur={(event) => {
+                        if (event.target.value !== String(service.costAmount ?? "")) {
+                          void updateService(service, { costAmount: event.target.value } as Partial<ServiceItem>);
+                        }
+                      }}
+                      type="number"
+                    />
+                  </label>
+                  <label>
+                    Doctor share
+                    <input
+                      defaultValue={service.doctorShareAmount ? String(service.doctorShareAmount) : ""}
+                      onBlur={(event) => {
+                        if (event.target.value !== String(service.doctorShareAmount ?? "")) {
+                          void updateService(service, { doctorShareAmount: event.target.value } as Partial<ServiceItem>);
                         }
                       }}
                       type="number"

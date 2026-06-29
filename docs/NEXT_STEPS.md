@@ -37,14 +37,15 @@ Goals:
 - Review production role design separately from demo presets.
 - Keep `eyad` local/private demo only unless a separate production owner provisioning policy approves otherwise.
 
-## Then Finance/Reports Deepening
+## Then Finance/Reports Hardening
 
 Goals:
 
-- Improve service catalog selection inside patient-context invoices.
-- Add better invoice line item UX and safer void/reversal review.
-- Deepen report review workflow while keeping files metadata-only until secure PHI storage is implemented.
-- Add print/export controls only after access control, audit, and privacy review.
+- Rehearse finance workflows with fake pilot data across Owner, Reception, and Accountant roles.
+- Decide discount approval policy, refund approval policy, and whether dual approval is needed.
+- Add production export controls only after access control, audit, and privacy review.
+- Keep files metadata-only until secure PHI storage is implemented.
+- Defer accounting ledger, taxes, e-invoicing, insurance/TPA, and payment gateway work.
 
 ## Then Safe AI Assistant
 

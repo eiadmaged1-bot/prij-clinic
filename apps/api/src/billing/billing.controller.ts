@@ -5,7 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import { BillingService } from "./billing.service";
-import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto } from "./dto";
+import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VoidInvoiceDto } from "./dto";
 
 @Controller("billing")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -22,6 +22,24 @@ export class BillingController {
   @Permissions("billing.read")
   async listInvoices(@CurrentUser() user: AuthUser) {
     return { invoices: await this.billing.listInvoices(user) };
+  }
+
+  @Get("services")
+  @Permissions("billing.read")
+  async listActiveServices(@CurrentUser() user: AuthUser) {
+    return { services: await this.billing.listActiveServices(user) };
+  }
+
+  @Get("daily-closing")
+  @Permissions("billing.report")
+  dailyClosing(@CurrentUser() user: AuthUser) {
+    return this.billing.dailyClosing(user);
+  }
+
+  @Get("reports/finance")
+  @Permissions("billing.report")
+  financeReports(@CurrentUser() user: AuthUser) {
+    return this.billing.financeReports(user);
   }
 
   @Get("invoices/:id")
@@ -42,6 +60,18 @@ export class BillingController {
     return this.billing.issueInvoice(id, user);
   }
 
+  @Post("invoices/:id/void")
+  @Permissions("billing.void")
+  voidInvoice(@Param("id") id: string, @Body() dto: VoidInvoiceDto, @CurrentUser() user: AuthUser) {
+    return this.billing.voidInvoice(id, dto, user);
+  }
+
+  @Get("patients/:patientId/statement")
+  @Permissions("billing.read")
+  patientStatement(@Param("patientId") patientId: string, @CurrentUser() user: AuthUser) {
+    return this.billing.patientStatement(patientId, user);
+  }
+
   @Post("payments")
   @Permissions("payment.manage")
   createPayment(@Body() dto: CreatePaymentDto, @CurrentUser() user: AuthUser) {
@@ -58,5 +88,11 @@ export class BillingController {
   @Permissions("billing.void")
   reversePayment(@Param("id") id: string, @Body() dto: ReversePaymentDto, @CurrentUser() user: AuthUser) {
     return this.billing.reversePayment(id, dto, user);
+  }
+
+  @Post("payments/:id/refund")
+  @Permissions("billing.void")
+  refundPayment(@Param("id") id: string, @Body() dto: ReversePaymentDto, @CurrentUser() user: AuthUser) {
+    return this.billing.refundPayment(id, dto, user);
   }
 }
