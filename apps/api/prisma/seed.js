@@ -242,6 +242,21 @@ const rolePermissionKeys = {
   ]
 };
 
+const guidelineSources = [
+  ["WHO Guideline Registry", "WHO", "https://www.who.int/publications/guidelines", "OPEN_PUBLIC", "Global", ["obstetrics", "gynecology", "general medicine"], "Registry only. Import only direct public documents when license and access allow."],
+  ["NICE Guidance", "NICE", "https://www.nice.org.uk/guidance", "PUBLIC_RESTRICTED", "United Kingdom", ["obstetrics", "gynecology", "general medicine"], "Public guidance registry. Check reuse terms before importing content."],
+  ["RCOG Guidance", "RCOG", "https://www.rcog.org.uk/guidance/", "PUBLIC_RESTRICTED", "United Kingdom", ["obstetrics", "gynecology"], "Registry only. Some content or reuse may require review."],
+  ["ACOG Clinical Guidance", "ACOG", "https://www.acog.org/clinical", "PUBLIC_RESTRICTED", "United States", ["obstetrics", "gynecology"], "Registry only. Do not bypass member, login, or subscription access."],
+  ["FIGO Guidance", "FIGO", "https://www.figo.org/resources", "OPEN_PUBLIC", "Global", ["obstetrics", "gynecology"], "Registry only. Import direct public resources only after access review."],
+  ["ESHRE Guidelines", "ESHRE", "https://www.eshre.eu/Guidelines-and-Legal/Guidelines", "PUBLIC_RESTRICTED", "Europe", ["fertility", "gynecology"], "Registry only. Check guideline license and reuse terms before import."],
+  ["ASRM Practice Guidance", "ASRM", "https://www.asrm.org/practice-guidance/", "PUBLIC_RESTRICTED", "United States", ["fertility", "gynecology"], "Registry only. Some materials may be restricted."],
+  ["SMFM Publications and Guidelines", "SMFM", "https://www.smfm.org/publications", "PUBLIC_RESTRICTED", "United States", ["obstetrics"], "Registry only. Check public access and reuse before import."],
+  ["CDC Guidelines", "CDC", "https://www.cdc.gov/guidelines/", "OPEN_PUBLIC", "United States", ["obstetrics", "gynecology", "general medicine"], "Registry only. Import direct public documents only."],
+  ["SOGC Guidelines", "SOGC", "https://www.sogc.org/en/content/featured-news/Clinical-Practice-Guidelines.aspx", "PUBLIC_RESTRICTED", "Canada", ["obstetrics", "gynecology"], "Registry only. Check access and reuse terms before import."],
+  ["WSES Guidelines", "WSES", "https://www.wses.org.uk/scientific-resources/guidelines", "OPEN_PUBLIC", "Global", ["surgery", "general medicine"], "Registry only. Surgical guideline source for cross-specialty context."],
+  ["SAGES Guidelines", "SAGES", "https://www.sages.org/publications/guidelines/", "PUBLIC_RESTRICTED", "United States", ["surgery", "gynecology"], "Registry only. Check public access and reuse before import."]
+];
+
 function describePermission(key) {
   const [area, action] = key.split(".");
 
@@ -351,6 +366,27 @@ async function main() {
           permissionId: permission.id
         }
       });
+    }
+  }
+
+  for (const [name, organization, websiteUrl, sourceType, countryOrRegion, specialties, notes] of guidelineSources) {
+    const existing = await prisma.guidelineSource.findFirst({ where: { name, organization } });
+    const data = {
+      name,
+      organization,
+      websiteUrl,
+      sourceType,
+      countryOrRegion,
+      specialties,
+      defaultAccessLevel: "OWNER_DOCTOR",
+      notes,
+      active: true
+    };
+
+    if (existing) {
+      await prisma.guidelineSource.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.guidelineSource.create({ data });
     }
   }
 
