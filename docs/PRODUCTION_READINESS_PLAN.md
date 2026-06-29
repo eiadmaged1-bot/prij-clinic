@@ -2,7 +2,7 @@
 
 Date: 2026-06-29
 
-Prij Clinic V0.1 is a verified MVP release candidate for local/private demo review. The current sprint prepares staging deployment with fake/demo data only. It is not approved for real patient use. The items below are required before staging trial, pilot, or production handling of real clinical data.
+Prij Clinic V0.1 is a verified MVP release candidate for local/private demo review. The current path is local-first operation with future home-server or VPS staging options using fake/demo data only. It is not approved for real patient use. The items below are required before staging trial, pilot, or production handling of real clinical data.
 
 ## Staging Prep Status
 
@@ -15,11 +15,12 @@ Completed in `hardening/staging-deployment-prep`:
 - Database deployment workflows and migration deploy documentation.
 - Backup/restore, security hardening, staging runbook, monitoring plan, and release gate docs.
 
-Next sprint: Staging Deployment Trial.
+Current deployment decision: VPS staging is prepared but deferred until a real server is available. Home-server readiness is documented as a local/LAN fake-data option. Next sprint should be Home Server Dry Run, Real VPS Trial, or OB/GYN Depth Expansion if deployment remains deferred.
 
 ## 1. Hosting And Environment
 
 - Define separate local, CI, staging, pilot, and production environments.
+- Treat local laptop and home-server deployments as staging/demo-only until production gates pass.
 - Use HTTPS and a real domain for staging/pilot/production.
 - Keep `.env` files out of Git and move production secrets to a secrets manager or hardened environment-variable system.
 - Remove local demo credentials from any non-local seed path.
@@ -78,10 +79,15 @@ Next sprint: Staging Deployment Trial.
 | Gate | Required Result |
 | --- | --- |
 | Local demo gate | All local tests pass; fake-data workflow demo succeeds; no real PHI |
+| Home-server dry-run gate | LAN-only fake/demo data; Docker compose works; migrate deploy; explicit demo seed; health checks; staging smoke; backup and restore-drill plan |
 | Staging gate | Fake/demo data only; staging-specific demo credentials; HTTPS; protected secrets; backups; deploy runbook; smoke/security tests |
 | Pilot gate | Legal/privacy/security signoff; consent workflow; backup restore proof; monitoring; support process |
 | Production gate | Full operational approval, audit retention, incident response, MFA, secure storage, and clinical governance |
 
 ## Next Sprint
 
-Exact next sprint: Staging Deployment Trial.
+Exact next sprint options:
+
+1. Home Server Dry Run
+2. Real VPS Trial
+3. OB/GYN Depth Expansion if deployment remains deferred

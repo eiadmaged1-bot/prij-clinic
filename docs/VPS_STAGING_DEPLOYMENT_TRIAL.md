@@ -4,6 +4,12 @@ Date: 2026-06-29
 
 This checklist is for a real VPS staging deployment using fake/demo data only. It is not production approval and must not be used with real patient data, PHI files, real AI providers, or real payment gateways.
 
+## Current Decision
+
+VPS staging is prepared but deferred. No real VPS execution has been completed because no VPS is currently available, and no VPS completion tag should be created until a real server trial is executed and verified.
+
+The active path is now local-first operation and home-server readiness. VPS remains a future option for serious online staging after server access, DNS/TLS, staging-only secrets, backup procedure, and smoke tests are available.
+
 ## Trial Metadata
 
 | Item | Value |
@@ -17,8 +23,9 @@ This checklist is for a real VPS staging deployment using fake/demo data only. I
 | Firewall status | Pending VPS execution |
 | Domain/subdomain | `<staging.example.invalid>` |
 | TLS status | Pending; direct HTTP ports acceptable only for initial fake-data smoke |
-| Repository branch | `deploy/vps-staging-trial` |
+| Repository branch | `deploy/vps-staging-trial` or later deployment-readiness branch |
 | Base local trial tag | `v0.1-local-staging-trial` |
+| VPS completion tag | Deferred; do not create until real VPS execution passes |
 
 ## Deployment Status
 
@@ -95,7 +102,9 @@ docker compose --env-file .env.staging -p prij-clinic-staging -f docker-compose.
 
 ## Known Issues
 
-- Real VPS deployment was not executed unless server credentials are provided.
+- Real VPS deployment was not executed because server credentials and target host are not available.
+- The VPS trial is deferred, not failed. Continue with local/home-server readiness until a server is chosen.
+- Do not create `v0.1-vps-staging-trial` or any equivalent VPS success tag until real VPS execution passes.
 - TLS/domain setup is pending until DNS and reverse proxy are configured.
 - Staging remains fake/demo data only.
 - Production remains blocked by `docs/PRODUCTION_READINESS_PLAN.md`, `docs/SECURITY_HARDENING_CHECKLIST.md`, and `docs/RELEASE_GATE_CHECKLIST.md`.

@@ -2,17 +2,17 @@
 
 Date: 2026-06-29
 
-Branch: `deploy/vps-staging-trial`
+Branch: `deploy/local-home-server-readiness`
 
 Base tag: `v0.1-mvp-release-candidate-verified`
 
-Target tag: `v0.1-vps-staging-trial`
+Target tag: `v0.1-local-home-server-ready`
 
 ## Status Summary
 
 Prij Clinic V0.1 is now a verified local/private MVP release-candidate foundation. It combines operational clinical persistence and OB/GYN core data recording with release-candidate UX polish, mobile/tablet improvements, visual QA, and demo documentation.
 
-This sprint prepares the VPS staging deployment trial with fake/demo data only. The previous local staging Docker trial passed. Real VPS execution remains pending until server credentials, DNS/TLS details, and staging-only secrets are available. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
+This sprint shifts the deployment path to local-first operation and future home-server readiness with fake/demo data only. The previous local staging Docker trial passed. VPS staging docs and scripts are prepared, but real VPS execution is deferred until a server is available. It is not production-ready and must not be used with real patient data, real payment data, PHI report files, real AI provider access, or live clinical workflows.
 
 ## Staging Prep Added
 
@@ -23,7 +23,15 @@ This sprint prepares the VPS staging deployment trial with fake/demo data only. 
 - Database deployment workflows, staging backup/restore procedure, security hardening checklist, staging runbook, operations monitoring plan, and release gate checklist.
 - Local backup script verified on 2026-06-29.
 - Local staging compose trial verified API/Web Docker builds, migration deploy, explicit staging demo seed, health endpoints, staging smoke test, and staging backup helper on 2026-06-29.
-- VPS staging checklist, bootstrap script, safe deploy script, remote smoke-test variables, and VPS backup procedure are prepared for the real server trial.
+- VPS staging checklist, bootstrap script, safe deploy script, remote smoke-test variables, and VPS backup procedure are prepared for a future real server trial.
+- Home-server deployment plan, local server runbook, and deployment decision matrix now define local laptop, old home PC server, rented VPS, and future professional hosting options.
+
+## Deployment Decision
+
+- Active path: local staging and home-server readiness.
+- VPS status: prepared but deferred; do not create a VPS success tag until a real VPS trial passes.
+- Home server status: planned option for LAN-only fake-data operation before any internet exposure.
+- Production status: blocked until legal, privacy, security, backup, monitoring, and clinical governance gates pass.
 
 ## Implemented Foundation
 
@@ -73,6 +81,8 @@ npm run test:visual:qa
 npm run test:staging:smoke
 npm run staging:env:check
 ```
+
+For a local/home server, follow `docs/LOCAL_SERVER_RUNBOOK.md`. For choosing between laptop, home server, VPS, and professional hosting, use `docs/DEPLOYMENT_DECISION_MATRIX.md`.
 
 ## UI Safety State
 

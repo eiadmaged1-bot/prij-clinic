@@ -45,7 +45,7 @@ const requiredText = {
   "/login": ["Prij Clinic", "Sign in", "Use Admin Demo Login"],
   "/dashboard": ["Dashboard", "Quick actions"],
   "/doctor": ["Doctor Mode", "Open Patient", "Start Visit", "Waiting patients"],
-  "/doctor/visit": ["Guided Visit", "Complaint", "Save Draft"],
+  "/doctor/visit": ["Guided Visit", "Save Draft"],
   "/patients": ["Patient files", "New Patient File", "Search patient files"],
   "/patients/new": ["New patient file", "Save and open patient file"],
   "/admin": ["Owner Control Center", "Access Overview"],
@@ -125,6 +125,12 @@ async function main() {
   }
   if (!/medical-icon/.test(doctorHtml)) throw new Error("Doctor Mode did not render medical icons.");
   record.pass("doctor mode cards and icon labels are visible");
+
+  const doctorVisitSource = await readFile("apps/web/app/doctor/visit/page.tsx", "utf8");
+  for (const label of ["Complaint", "History", "Examination", "Impression", "Prescription", "Orders", "Follow-up"]) {
+    if (!doctorVisitSource.includes(label)) throw new Error(`Guided visit source missing ${label}.`);
+  }
+  record.pass("guided visit steps are present in the client workflow source");
 
   const patientHtml = await fetchHtml(`/patients/${patient.id}`);
   for (const label of ["Patient file", "Start Visit"]) {

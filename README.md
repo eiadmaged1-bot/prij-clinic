@@ -4,7 +4,7 @@ Clinic Management System V0.1 MVP release candidate for OB/GYN and women's healt
 
 Current foundation includes auth, RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, pregnancy records, OB ultrasound records, billing, payments, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.1 is a verified local/private MVP release candidate. This sprint prepares staging deployment with fake/demo data only. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.1 is a verified local/private MVP release candidate. The current path is local-first operation with future home-server or VPS staging options using fake/demo data only. It is not production-ready, not a medical device, and must not be used with real patient data.
 
 ## V0.1 Focused Clinic Workflow
 
@@ -32,6 +32,9 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/OPERATIONS_MONITORING_PLAN.md`
 - `docs/DATABASE_DEPLOYMENT_WORKFLOWS.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+- `docs/HOME_SERVER_DEPLOYMENT_PLAN.md`
+- `docs/LOCAL_SERVER_RUNBOOK.md`
+- `docs/DEPLOYMENT_DECISION_MATRIX.md`
 
 ## Safety Rules
 
@@ -365,9 +368,29 @@ npm run backup:local
 
 Backups are written under ignored `backups/`. Restore is guarded and documented in `docs/BACKUP_RESTORE.md`; do not run restore unless explicitly intended for a local/dev database.
 
+## Local/Home Server And VPS Options
+
+Missing VPS access is not a blocker. The active path is local staging and home-server readiness with fake/demo data only.
+
+Deployment decision docs:
+
+- `docs/HOME_SERVER_DEPLOYMENT_PLAN.md`
+- `docs/LOCAL_SERVER_RUNBOOK.md`
+- `docs/DEPLOYMENT_DECISION_MATRIX.md`
+- `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+
+Current recommendation:
+
+1. Keep using local staging for fake/demo verification.
+2. If an old PC is available, run a LAN-only Home Server Dry Run.
+3. Use VPS staging later when a real server, domain/TLS plan, staging-only secrets, backup procedure, and smoke tests are ready.
+4. Do not use real patient data until production readiness gates pass.
+
 ## VPS Staging Trial
 
 VPS staging must use fake/demo data only. Do not enter real patient data or PHI.
+
+VPS staging is prepared but deferred. Do not create a VPS success tag until a real VPS execution passes.
 
 Prepared VPS docs/scripts:
 

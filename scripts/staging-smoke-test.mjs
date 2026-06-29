@@ -94,7 +94,7 @@ async function main() {
 }
 
 async function expectReachable(url, label) {
-  const response = await fetch(url, { headers: { Accept: "text/html,application/json" } });
+  const response = await fetchWithRetry(url, { headers: { Accept: "text/html,application/json" } });
   if (!response.ok) {
     throw new Error(`${label} returned ${response.status}.`);
   }
@@ -102,12 +102,26 @@ async function expectReachable(url, label) {
 }
 
 async function expectJson(url, label, predicate) {
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  const response = await fetchWithRetry(url, { headers: { Accept: "application/json" } });
   const body = await parseBody(response);
   if (!response.ok || !predicate(body)) {
     throw new Error(`${label} failed with ${response.status}: ${JSON.stringify(body)}`);
   }
   checks.push(label);
+}
+
+async function fetchWithRetry(url, options, attempts = 12) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok || attempt === attempts) return response;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2500));
+  }
+  throw lastError ?? new Error(`Unable to reach ${url}`);
 }
 
 async function login(email, password, label) {

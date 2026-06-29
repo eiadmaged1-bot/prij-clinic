@@ -1,10 +1,30 @@
 # Next Steps
 
-The exact next recommended sprint after this VPS staging trial preparation is:
+The project is now following a local-first deployment path. VPS staging is prepared but deferred until a real server is available. Missing VPS access is no longer a blocker.
 
-## Execute VPS Staging Trial + TLS Hardening
+## Exact Next Sprint Options
 
-Goals:
+Choose one:
+
+1. **Home Server Dry Run**
+   - Use an old PC or current PC as a LAN-only server with fake/demo data.
+   - Follow `docs/LOCAL_SERVER_RUNBOOK.md`.
+   - Verify Docker compose, migrations, explicit demo seed, health checks, staging smoke, and backup.
+   - Do not expose the server to the internet until firewall, TLS, backup, and monitoring are reviewed.
+
+2. **Real VPS Trial**
+   - Use the prepared VPS scripts/docs when a server is available.
+   - Run the deployment with fake/demo data only.
+   - Configure staging-only secrets, migrate deploy, explicit demo seed, health checks, smoke tests, backup, and rollback.
+   - Create a VPS success tag only after the real server trial passes.
+
+3. **OB/GYN Depth Expansion**
+   - If deployment remains deferred, improve pregnancy, antenatal visit, ultrasound recording, and clinician-authored reporting depth.
+   - Do not add diagnostic fetal-image AI, automated FGR diagnosis, fake percentile engines, or real AI providers.
+
+## Future VPS Staging Trial + TLS Hardening
+
+Goals when a VPS is available:
 
 - Run the prepared VPS deployment on a real server with fake/demo data only.
 - Use `.env.staging.example` and `docker-compose.staging.yml` with staging-only secrets.

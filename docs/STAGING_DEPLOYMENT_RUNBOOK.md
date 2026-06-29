@@ -4,6 +4,8 @@ Date: 2026-06-29
 
 Staging is for fake/demo data only. Do not enter real patient data, PHI files, real payment details, or real external AI credentials.
 
+Current deployment direction: local-first. The local staging trial passed, VPS staging is prepared but deferred, and home-server readiness is documented in `docs/HOME_SERVER_DEPLOYMENT_PLAN.md` and `docs/LOCAL_SERVER_RUNBOOK.md`.
+
 ## 1. Provision Server
 
 - Provision a staging server: `<STAGING_SERVER>`.
@@ -28,8 +30,10 @@ npm --version
 ```bash
 git clone <REPO_URL> prij-clinic
 cd prij-clinic
-git checkout deploy/vps-staging-trial
+git checkout deploy/local-home-server-readiness
 ```
+
+For a future VPS execution, checkout the approved deployment branch or tag selected for that trial. Do not create a VPS success tag until the real server trial passes.
 
 ## 4. Configure Environment
 
@@ -227,3 +231,20 @@ sudo ./scripts/bootstrap-vps-staging.sh
 ```
 
 The bootstrap script installs Docker/Git prerequisites, creates an app directory, and adds basic firewall rules. It does not clone the repo, write secrets, enable production, or run destructive database commands.
+
+## Local/Home Server Path
+
+For an old PC or current PC used as a local clinic server, use `docs/LOCAL_SERVER_RUNBOOK.md`.
+
+Recommended local-first sequence:
+
+1. Keep the server LAN-only.
+2. Configure `.env.staging` manually from `.env.staging.example`.
+3. Run `npm run staging:env:check`.
+4. Start `docker-compose.staging.yml`.
+5. Run `npm run prisma:migrate:deploy` inside the API container.
+6. Run explicit fake/demo seed only.
+7. Run health checks and `npm run test:staging:smoke`.
+8. Run backup and a restore drill in a disposable database.
+
+Do not expose the home server to the internet until firewall, HTTPS, backups, monitoring, and security review are complete.

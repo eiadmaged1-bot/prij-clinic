@@ -5,6 +5,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Staging Prep Limitations
 
 - Staging deployment files are examples and still need a real staging host, DNS/TLS setup, and secret provisioning.
+- VPS staging is prepared but deferred; no VPS success tag should be created until a real server trial passes.
+- Home-server operation is now documented as a local/LAN fake-data option, but it has not yet been run as a dedicated home-server dry run.
 - Staging is fake/demo data only.
 - Production patient use remains blocked until legal/security/privacy launch gates pass.
 - Docker images and compose examples have been exercised locally through the local staging trial, but not yet on a real staging server.
@@ -87,5 +89,9 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 ## Deployment
 
 - V0.1 is local/private pilot software only.
-- Local staging deployment has been proven with fake/demo data only, but VPS staging deployment, production deployment, staging hardening, secrets management, monitoring, HTTPS policy, MFA, secure file storage, backup encryption, restore proof, and legal/privacy review remain future work.
+- Local staging deployment has been proven with fake/demo data only.
+- VPS staging deployment is prepared but deferred until a real server is available.
+- Home-server deployment is a planned local/LAN option and still needs a dry run on actual hardware.
+- Internet-exposed home-server use requires firewall review, HTTPS, DNS/DDNS or static IP planning, CGNAT review, backups, monitoring, and security hardening before any broader demo.
+- Production deployment, staging hardening, secrets management, monitoring, HTTPS policy, MFA, secure file storage, backup encryption, restore proof, and legal/privacy review remain future work.
 - The production-readiness plan exists in `docs/PRODUCTION_READINESS_PLAN.md`, but implementation of those gates is not complete.
