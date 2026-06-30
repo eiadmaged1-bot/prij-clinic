@@ -85,6 +85,10 @@ export class DrugMarketController {
   @Permissions("drug_market.verify")
   retireVariant(@Param("id") id: string, @Body() dto: Record<string, string>, @CurrentUser() user: AuthUser) { return this.market.retireVariant(id, dto, user); }
 
+  @Post("variants/verify-batch")
+  @Permissions("drug_market.verify")
+  verifyBatch(@Body() dto: { countryCode?: string; sourceCode?: string; limit?: number; reason?: string; confirmation?: string }, @CurrentUser() user: AuthUser) { return this.market.verifyBatch(dto, user); }
+
   @Post("import/upload")
   @Permissions("drug_market.import")
   upload(@Body() dto: { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string }, @CurrentUser() user: AuthUser) { return this.importService.importRows(dto, user); }
@@ -131,7 +135,14 @@ export class DrugMarketController {
 
   @Get("review-queue")
   @Permissions("drug_market.review_queue")
-  reviewQueue() { return this.market.reviewQueue(); }
+  reviewQueue(
+    @Query("countryCode") countryCode?: string,
+    @Query("sourceCode") sourceCode?: string,
+    @Query("status") status?: string,
+    @Query("confidence") confidence?: string,
+    @Query("missing") missing?: string,
+    @Query("highConfidence") highConfidence?: string
+  ) { return this.market.reviewQueue({ countryCode, sourceCode, status, confidence, missing, highConfidence }); }
 
   @Post("review-queue/:id/resolve")
   @Permissions("drug_market.review_queue")

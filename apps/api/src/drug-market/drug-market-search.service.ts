@@ -51,6 +51,10 @@ export class DrugMarketSearchService {
       orderBy: { tradeName: "asc" }
     });
 
+    const sourceIds = [...new Set(products.flatMap((product) => product.variants.map((variant) => variant.sourceId)).filter((id): id is string => Boolean(id)))];
+    const sources = sourceIds.length ? await this.prisma.drugMarketSource.findMany({ where: { id: { in: sourceIds } } }) : [];
+    const sourceById = new Map(sources.map((source) => [source.id, source]));
+
     await this.prisma.drugMarketSearchLog.create({
       data: {
         userId: user?.id,
@@ -88,8 +92,12 @@ export class DrugMarketSearchService {
           currency: variant.currency,
           sourceFetchedAt: variant.sourceFetchedAt,
           sourcePublishedAt: variant.sourcePublishedAt,
+          sourceCode: variant.sourceId ? sourceById.get(variant.sourceId)?.code ?? null : null,
+          sourceName: variant.sourceId ? sourceById.get(variant.sourceId)?.name ?? null : null,
+          sourceFreshnessStatus: variant.sourceId ? sourceById.get(variant.sourceId)?.sourceFreshnessStatus ?? null : null,
           parserConfidence: variant.parserConfidence,
           verificationStatus: variant.verificationStatus,
+          trustStatus: variant.verificationStatus === "verified" ? "verified" : "needs_review",
           isDemo: variant.isDemo
         }))
       }))

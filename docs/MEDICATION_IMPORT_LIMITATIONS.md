@@ -1,20 +1,18 @@
 # Medication Import Limitations
 
-Current limitations:
-- Qatar MOPH official XLSX candidate returned HTML rather than a file from the official server.
-- Kuwait MOH PDF candidate failed to fetch.
-- Saudi SFDA needs a stable official public export or endpoint before live import.
-- Egypt requires owner-provided official files or one explicit targeted lookup at a time.
-- PDF parsing is best effort and review-gated.
-
-The system does not use retail metadata, unofficial mirrors, pharmacy stock/order/cart/checkout pages, protected-source bypasses, or external AI calls.
-
-Official listed prices are source metadata only. They are not live shelf prices, dispensing instructions, or patient advice.
-# v0.8.2 Import Limitations
-
-- Bahrain and Oman rows are imported as official market/reference metadata only and remain review-gated.
-- Qatar MOPH discovery still failed because official HTML did not expose a supported XLSX link.
-- Kuwait MOH PDF fetch still failed from the official candidate.
+Current limitations after Batch 1:
+- Oman rows are preserved and review-gated, but the current PDF parser confidence remains low at 0.59. Batch verification is blocked until parser confidence is defensibly improved or rows are manually reviewed.
+- Qatar MOPH discovery still did not expose a supported public XLSX link.
+- Kuwait MOH official PDF candidate fetch still failed.
 - Saudi SFDA public HTML timed out or was not safely parseable.
-- Egypt remains official file upload plus targeted lookup only; bulk enumeration is not allowed.
-- No pharmacy stock, cart, checkout, purchase path, or retail metadata is used.
+- Egypt remains official file upload plus targeted lookup only. No enumeration, CAPTCHA/session bypass, or protected-source bypass is allowed.
+- UAE requires approved API access or official upload.
+
+Blocked source classes:
+- retail metadata
+- pharmacy stock/order/cart/checkout/purchase pages
+- third-party mirrors
+- login/CAPTCHA/paywall/API-approval bypasses
+- external AI calls
+
+Official/source price is source metadata only, not a live shelf price or dispensing instruction.

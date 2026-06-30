@@ -12,6 +12,11 @@ try {
   if (result.sourceSnapshots < 1) failures.push("Bahrain source snapshot is missing.");
   if (result.sourceFileHashRuns < 1) failures.push("Bahrain source file hash metadata is missing.");
   if (result.missing.tradeOrGeneric > 0) failures.push("Bahrain rows missing both trade and generic names.");
+  if (result.missing.officialRowJson > 0) failures.push("Bahrain rows missing official row JSON.");
+  if (result.missing.parserConfidence > 0) failures.push("Bahrain rows missing parser confidence.");
+  if (result.missing.priceCurrency > 0) failures.push("Bahrain price rows missing currency.");
+  if (result.unsafeMetadataRows > 0) failures.push("Bahrain rows contain unsafe dosing or purchase wording.");
+  if (result.stockOrderCheckoutFields > 0) failures.push("Bahrain raw fields contain stock/order/checkout/purchase wording.");
   if (failures.length) {
     for (const failure of failures) console.error(`FAIL ${failure}`);
     process.exitCode = 1;

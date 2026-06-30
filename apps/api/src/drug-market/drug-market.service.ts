@@ -97,7 +97,34 @@ export class DrugMarketService {
       }
     });
     if (!product) throw new BadRequestException("Product not found.");
-    return { ...product, badges: compactCountryBadges(product.availabilities) };
+    const sourceIds = [...new Set(product.variants.map((variant) => variant.sourceId).filter((sourceId): sourceId is string => Boolean(sourceId)))];
+    const importRunIds = [...new Set(product.variants.map((variant) => variant.importRunId).filter((runId): runId is string => Boolean(runId)))];
+    const [sources, runs] = await Promise.all([
+      sourceIds.length ? this.prisma.drugMarketSource.findMany({ where: { id: { in: sourceIds } } }) : [],
+      importRunIds.length ? this.prisma.drugMarketImportRun.findMany({ where: { id: { in: importRunIds } } }) : []
+    ]);
+    const sourceById = new Map(sources.map((source) => [source.id, source]));
+    const runById = new Map(runs.map((run) => [run.id, run]));
+    return {
+      ...product,
+      variants: product.variants.map((variant) => {
+        const source = variant.sourceId ? sourceById.get(variant.sourceId) : null;
+        const run = variant.importRunId ? runById.get(variant.importRunId) : null;
+        return {
+          ...variant,
+          sourceCode: source?.code ?? null,
+          sourceName: source?.name ?? null,
+          sourceFreshnessStatus: source?.sourceFreshnessStatus ?? null,
+          latestSourceLabel: source?.latestSourceLabel ?? null,
+          latestSourcePublishedAt: source?.latestSourcePublishedAt ?? null,
+          sourceFileHash: run?.sourceFileSha256 ?? null,
+          sourceFileName: run?.sourceFileName ?? null,
+          hasOfficialRowJson: Boolean(variant.officialRowJson),
+          officialRowJson: undefined
+        };
+      }),
+      badges: compactCountryBadges(product.availabilities)
+    };
   }
 
   variants(productId?: string) {
@@ -138,6 +165,54 @@ export class DrugMarketService {
     await this.resolveOpenVariantReviewItems(variant.id, "retired", reason);
     await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_retired", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high", reason });
     return variant;
+  }
+
+  async verifyBatch(dto: { countryCode?: string; sourceCode?: string; limit?: number; reason?: string; confirmation?: string }, user: AuthUser) {
+    const reason = requiredDecisionReason({ reason: dto.reason ?? "" });
+    const countryCode = String(dto.countryCode ?? "").trim().toUpperCase();
+    const sourceCode = String(dto.sourceCode ?? "").trim();
+    if (!countryCode) throw new BadRequestException("Country is required for bulk verification.");
+    if (!sourceCode) throw new BadRequestException("Source is required for bulk verification.");
+    const limit = Math.max(1, Math.min(Number(dto.limit ?? 100) || 100, 1000));
+    if (limit > 100 && dto.confirmation !== `VERIFY ${countryCode} ${sourceCode} ${limit}`) {
+      throw new BadRequestException("Large verification batches require the confirmation phrase.");
+    }
+    const source = await this.prisma.drugMarketSource.findUnique({ where: { code: sourceCode } });
+    if (!source) throw new BadRequestException("Official source not found.");
+    const candidates = await this.prisma.drugMarketVariant.findMany({
+      where: {
+        countryCode,
+        sourceId: source.id,
+        isDemo: false,
+        verificationStatus: { in: ["needs_review", "imported"] }
+      },
+      orderBy: [{ tradeName: "asc" }],
+      take: 5000
+    });
+    const duplicateKeys = duplicateRiskKeys(candidates);
+    const selected = candidates.filter((variant) => isHighConfidenceOfficialCandidate(variant, duplicateKeys)).slice(0, limit);
+    for (const variant of selected) {
+      await this.prisma.drugMarketVariant.update({ where: { id: variant.id }, data: { verificationStatus: "verified" } });
+      await this.resolveOpenVariantReviewItems(variant.id, "verified", reason);
+      await this.badges.recomputeProduct(variant.productId);
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "drug_market.variant_verified",
+        resourceType: "drug_market_variant",
+        resourceId: variant.id,
+        severity: "high",
+        reason,
+        metadataJson: { countryCode, sourceCode, bulk: true, highConfidenceOnly: true, limit }
+      });
+    }
+    return {
+      countryCode,
+      sourceCode,
+      requestedLimit: limit,
+      highConfidenceCandidates: candidates.filter((variant) => isHighConfidenceOfficialCandidate(variant, duplicateKeys)).length,
+      verified: selected.length,
+      skippedLowConfidenceOrIncomplete: Math.max(0, candidates.length - selected.length)
+    };
   }
 
   availability(productId: string) {
@@ -231,25 +306,46 @@ export class DrugMarketService {
     });
   }
 
-  async reviewQueue() {
-    const items = await this.prisma.drugMarketManualReviewQueue.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
+  async reviewQueue(filters: { countryCode?: string; sourceCode?: string; status?: string; confidence?: string; missing?: string; highConfidence?: string } = {}) {
+    const status = filters.status?.trim() || undefined;
+    const items = await this.prisma.drugMarketManualReviewQueue.findMany({
+      where: { ...(status ? { status } : {}) },
+      orderBy: { createdAt: "desc" },
+      take: 1000
+    });
     const variantIds = items.map((item) => item.variantId).filter((id): id is string => Boolean(id));
+    const source = filters.sourceCode ? await this.prisma.drugMarketSource.findUnique({ where: { code: filters.sourceCode } }) : null;
     const variants = variantIds.length
       ? await this.prisma.drugMarketVariant.findMany({
-          where: { id: { in: variantIds } },
+          where: {
+            id: { in: variantIds },
+            ...(filters.countryCode ? { countryCode: filters.countryCode.trim().toUpperCase() } : {}),
+            ...(source?.id ? { sourceId: source.id } : {})
+          },
           include: { product: true }
         })
       : [];
+    const duplicateKeys = duplicateRiskKeys(variants);
     const variantById = new Map(variants.map((variant) => [variant.id, variant]));
     return items.map((item) => {
       const variant = item.variantId ? variantById.get(item.variantId) : null;
+      if (variantIds.length && item.variantId && !variant) return null;
+      if (variant && filters.confidence === "low" && Number(variant.parserConfidence ?? 0) >= 0.65) return null;
+      if (variant && filters.confidence === "high" && Number(variant.parserConfidence ?? 0) < 0.65) return null;
+      if (variant && filters.highConfidence === "true" && !isHighConfidenceOfficialCandidate(variant, duplicateKeys)) return null;
+      if (variant && filters.missing && !missingFieldKeys(variant).includes(filters.missing)) return null;
       return {
         ...item,
+        highConfidenceCandidate: variant ? isHighConfidenceOfficialCandidate(variant, duplicateKeys) : false,
+        missingFields: variant ? missingFieldKeys(variant) : [],
+        duplicateRisk: variant ? duplicateKeys.has(duplicateKey(variant)) : false,
         variant: variant
           ? {
               id: variant.id,
               productId: variant.productId,
               countryCode: variant.countryCode,
+              sourceId: variant.sourceId,
+              importRunId: variant.importRunId,
               tradeName: variant.tradeName,
               genericName: variant.genericName,
               strengthText: variant.strengthText,
@@ -263,11 +359,14 @@ export class DrugMarketService {
               verificationStatus: variant.verificationStatus,
               parserConfidence: variant.parserConfidence,
               sourceFetchedAt: variant.sourceFetchedAt,
+              sourcePublishedAt: variant.sourcePublishedAt,
+              sourceRowHash: variant.sourceRowHash,
+              hasOfficialRowJson: Boolean(variant.officialRowJson),
               productTradeName: variant.product.tradeName
             }
           : null
       };
-    });
+    }).filter(Boolean);
   }
 
   resolveReviewQueue(id: string, dto: Record<string, string>, user: AuthUser) {
@@ -319,4 +418,47 @@ function requiredDecisionReason(dto: Record<string, string>) {
   const reason = String(dto.reason ?? dto.note ?? "").trim();
   if (reason.length < 3) throw new BadRequestException("A review decision reason is required.");
   return reason;
+}
+
+function isHighConfidenceOfficialCandidate(variant: { verificationStatus: string; tradeName: string | null; genericName: string | null; sourceId: string | null; importRunId: string | null; officialRowJson: unknown; sourceRowHash: string | null; parserConfidence: number | null; }, duplicateKeys: Set<string>) {
+  return (
+    ["needs_review", "imported"].includes(variant.verificationStatus) &&
+    Boolean(variant.tradeName || variant.genericName) &&
+    Boolean(variant.sourceId && variant.importRunId && variant.officialRowJson && variant.sourceRowHash) &&
+    Number(variant.parserConfidence ?? 0) >= 0.65 &&
+    !duplicateKeys.has(duplicateKey(variant))
+  );
+}
+
+function missingFieldKeys(variant: { genericName: string | null; strengthText?: string | null; dosageForm?: string | null; officialPriceAmount?: unknown; officialPriceText?: string | null; priceText?: string | null; registrationNumber?: string | null; sourceId?: string | null; importRunId?: string | null; officialRowJson?: unknown; sourceRowHash?: string | null }) {
+  const missing: string[] = [];
+  if (!variant.genericName) missing.push("missing_generic");
+  if (!variant.strengthText) missing.push("missing_strength");
+  if (!variant.dosageForm) missing.push("missing_dosage_form");
+  if (!(variant.officialPriceAmount || variant.officialPriceText || variant.priceText)) missing.push("missing_price");
+  if (!variant.registrationNumber) missing.push("registration_number_missing");
+  if (!variant.sourceId && !variant.importRunId) missing.push("missing_source_metadata");
+  if (!variant.officialRowJson) missing.push("missing_official_row_json");
+  if (!variant.sourceRowHash) missing.push("missing_source_row_hash");
+  return missing;
+}
+
+function duplicateRiskKeys(variants: Array<{ countryCode: string; registrationNumber: string | null; tradeName: string | null; genericName: string | null; strengthText?: string | null; dosageForm?: string | null }>) {
+  const counts = new Map<string, number>();
+  for (const variant of variants) {
+    const key = duplicateKey(variant);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key));
+}
+
+function duplicateKey(variant: { countryCode?: string | null; registrationNumber?: string | null; tradeName?: string | null; genericName?: string | null; strengthText?: string | null; dosageForm?: string | null }) {
+  return [
+    variant.countryCode ?? "",
+    variant.registrationNumber ?? "",
+    variant.tradeName ?? "",
+    variant.genericName ?? "",
+    variant.strengthText ?? "",
+    variant.dosageForm ?? ""
+  ].join("|").toLowerCase();
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { searchMedications, listDrugFamilies, runMedicationSafetyCheck, type MedicationResult } from "../../lib/medications";
 import {
@@ -13,6 +13,7 @@ import {
   rejectDrugMarketVariant,
   retireDrugMarketVariant,
   verifyDrugMarketVariant,
+  verifyDrugMarketBatch,
   type DrugMarketProduct
 } from "../../lib/drug-market";
 
@@ -183,17 +184,18 @@ export function DrugMarketSearchBox() {
 }
 
 export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }) {
+  const verified = product.variantSummary?.some((variant) => variant.verificationStatus === "verified");
   return (
     <article className="data-row">
       <div className="data-row-header">
         <strong>{product.tradeName}</strong>
-        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source metadata</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
+        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Verified official row" : "Needs review"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
         <div><dt>Drug family</dt><dd>{product.family || "Not listed"}</dd></div>
         <div><dt>Variants</dt><dd><StrengthVariantList variants={product.variantSummary ?? []} /></dd></div>
-        <div><dt>Review status</dt><dd>{product.verificationStatus ?? "needs review"}</dd></div>
+        <div><dt>Review status</dt><dd>{verified ? "verified row present" : product.verificationStatus ?? "needs review"}</dd></div>
         <div><dt>Source freshness</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not imported yet"}</dd></div>
       </dl>
       <Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link>
@@ -212,7 +214,7 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
         <article className="data-row" key={String(variant.id)}>
           <div className="data-row-header">
             <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source row</span>}</span>
-            <span className="badge">{String(variant.verificationStatus ?? "needs_review")}</span>
+            <span className={variant.verificationStatus === "verified" ? "badge accent" : "badge warning"}>{variant.verificationStatus === "verified" ? "Verified" : "Needs review"}</span>
           </div>
           <strong>{String(variant.countryCode)} · {String(variant.strengthText ?? "variant")}</strong>
           <p className="muted">{[variant.dosageForm, variant.route, variant.packageText, variant.registrationNumber].filter(Boolean).join(" · ")}</p>
@@ -220,9 +222,14 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
             <div><dt>Manufacturer</dt><dd>{String(variant.manufacturer ?? "Not listed")}</dd></div>
             <div><dt>Marketing company</dt><dd>{String(variant.marketingCompany ?? "Not listed")}</dd></div>
             <div><dt>ATC/class</dt><dd>{String(variant.atcCode ?? "Not listed")}</dd></div>
-            <div><dt>Official listed price</dt><dd>{formatPrice(variant)}</dd></div>
-            <div><dt>Source date</dt><dd>{formatDate(String(variant.sourcePublishedAt ?? variant.sourceFetchedAt ?? ""))}</dd></div>
+            <div><dt>Official/source price</dt><dd>{formatPrice(variant)}</dd></div>
+            <div><dt>Source</dt><dd>{String(variant.sourceCode ?? variant.sourceName ?? "Not listed")}</dd></div>
+            <div><dt>Source file hash</dt><dd>{String(variant.sourceFileHash ?? "Not listed")}</dd></div>
+            <div><dt>Source fetched</dt><dd>{formatDate(String(variant.sourceFetchedAt ?? ""))}</dd></div>
+            <div><dt>Source published label/date</dt><dd>{String(variant.latestSourceLabel ?? "") || formatDate(String(variant.latestSourcePublishedAt ?? variant.sourcePublishedAt ?? ""))}</dd></div>
+            <div><dt>Source freshness</dt><dd>{String(variant.sourceFreshnessStatus ?? "unknown")}</dd></div>
             <div><dt>Parser confidence</dt><dd>{formatConfidence(variant.parserConfidence)}</dd></div>
+            <div><dt>Protected official fields</dt><dd>{variant.hasOfficialRowJson ? "Available in admin review details" : "Not captured"}</dd></div>
           </dl>
         </article>
       ))}
@@ -234,8 +241,8 @@ export function AvailabilitySummary({ availabilities }: { availabilities: Array<
   return <p className="muted">{availabilities.map((item) => `${item.countryCode}: ${item.variantCount}`).join(" · ") || "No availability summary yet"}</p>;
 }
 
-export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null; officialPriceText?: string | null; currency?: string | null }> }) {
-  return <span>{variants.map((variant) => `${variant.countryCode} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""}${variant.officialPriceText ? ` - source price ${variant.officialPriceText} ${variant.currency ?? ""}` : ""}`.trim()).join(", ") || "No variants listed"}</span>;
+export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null; officialPriceText?: string | null; currency?: string | null; verificationStatus?: string | null; sourceCode?: string | null }> }) {
+  return <span>{variants.map((variant) => `${variant.countryCode} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""}${variant.officialPriceText ? ` - official/source price ${variant.officialPriceText} ${variant.currency ?? ""}` : ""} ${variant.verificationStatus === "verified" ? "Verified" : "Needs review"} ${variant.sourceCode ?? ""}`.trim()).join(", ") || "No variants listed"}</span>;
 }
 
 export function DrugMarketImportPanel() {
@@ -296,16 +303,45 @@ export function SourceConnectorPanel() {
 export function ReviewQueuePanel() {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [reason, setReason] = useState("Reviewed against official source metadata");
+  const [countryCode, setCountryCode] = useState("");
+  const [sourceCode, setSourceCode] = useState("");
+  const [reviewStatus, setReviewStatus] = useState("open");
+  const [confidence, setConfidence] = useState("");
+  const [missing, setMissing] = useState("");
+  const [highConfidenceOnly, setHighConfidenceOnly] = useState(false);
+  const [batchLimit, setBatchLimit] = useState(100);
   const [status, setStatus] = useState("Loading review queue");
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
-      const data = await listDrugMarketReviewQueue();
+      const data = await listDrugMarketReviewQueue({
+        countryCode,
+        sourceCode,
+        status: reviewStatus,
+        confidence,
+        missing,
+        highConfidence: highConfidenceOnly ? "true" : ""
+      });
       const rows = Array.isArray(data) ? data as Array<Record<string, unknown>> : [];
       setItems(rows);
       setStatus(`${rows.filter((item) => item.status === "open").length} open review item(s)`);
     } catch {
       setStatus("Review queue requires admin access");
+    }
+  }, [confidence, countryCode, highConfidenceOnly, missing, reviewStatus, sourceCode]);
+
+  async function verifyBatch() {
+    if (!countryCode || !sourceCode || reason.trim().length < 3) {
+      setStatus("Choose country, source, and reason before batch verification");
+      return;
+    }
+    setStatus("Running high-confidence batch verification");
+    try {
+      const result = await verifyDrugMarketBatch({ countryCode, sourceCode, limit: batchLimit, reason });
+      setStatus(`Batch verified ${String((result as Record<string, unknown>).verified ?? 0)} row(s)`);
+      await load();
+    } catch {
+      setStatus("Batch verification was denied or found no eligible rows");
     }
   }
 
@@ -325,14 +361,51 @@ export function ReviewQueuePanel() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [load]);
 
   return (
     <section className="panel">
       <div className="section-heading"><h2>Review Queue</h2><span className="badge warning">Reason required</span></div>
       <p className="muted">{status}</p>
       <form className="inline-form" onSubmit={(event) => event.preventDefault()}>
+        <select value={countryCode} onChange={(event) => setCountryCode(event.target.value)}>
+          <option value="">All countries</option>
+          <option value="BHR">Bahrain</option>
+          <option value="OMN">Oman</option>
+          <option value="QAT">Qatar</option>
+          <option value="KWT">Kuwait</option>
+          <option value="KSA">Saudi</option>
+          <option value="EG">Egypt</option>
+          <option value="UAE">UAE</option>
+        </select>
+        <input value={sourceCode} onChange={(event) => setSourceCode(event.target.value)} placeholder="Source code" />
+        <input value="" readOnly placeholder="Import run filter appears in row preview" />
+        <select value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value)}>
+          <option value="open">Open</option>
+          <option value="verified">Verified</option>
+          <option value="rejected">Rejected</option>
+          <option value="retired">Retired</option>
+        </select>
+        <select value={confidence} onChange={(event) => setConfidence(event.target.value)}>
+          <option value="">All confidence</option>
+          <option value="high">High confidence</option>
+          <option value="low">Low confidence</option>
+        </select>
+        <select value={missing} onChange={(event) => setMissing(event.target.value)}>
+          <option value="">All fields</option>
+          <option value="missing_generic">Missing generic</option>
+          <option value="missing_strength">Missing strength</option>
+          <option value="missing_dosage_form">Missing dosage form</option>
+          <option value="missing_price">Missing price</option>
+          <option value="registration_number_missing">Registration missing</option>
+        </select>
         <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Review decision reason" />
+        <label><input checked={highConfidenceOnly} onChange={(event) => setHighConfidenceOnly(event.target.checked)} type="checkbox" /> High-confidence candidates</label>
+        <button className="button secondary compact" onClick={() => void load()} type="button">Apply</button>
+      </form>
+      <form className="inline-form" onSubmit={(event) => event.preventDefault()}>
+        <input min={1} max={1000} type="number" value={batchLimit} onChange={(event) => setBatchLimit(Number(event.target.value) || 100)} />
+        <button className="button compact" onClick={() => void verifyBatch()} type="button">Verify high-confidence batch</button>
       </form>
       <div className="data-list">
         {items.slice(0, 100).map((item) => {
@@ -344,13 +417,16 @@ export function ReviewQueuePanel() {
                 <span className="badge">{String(item.status ?? "open")}</span>
               </div>
               <p className="muted">{String(item.reason ?? "Official row requires review")}</p>
+              <p className="muted">{item.highConfidenceCandidate ? "High-confidence candidate" : "Low-confidence or incomplete candidate"} · Missing: {((item.missingFields as string[]) ?? []).join(", ") || "none flagged"}</p>
               <dl>
                 <div><dt>Country</dt><dd>{String(variant?.countryCode ?? "Not listed")}</dd></div>
+                <div><dt>Import run</dt><dd>{String(variant?.importRunId ?? "Not listed")}</dd></div>
                 <div><dt>Generic</dt><dd>{String(variant?.genericName ?? "Not listed")}</dd></div>
                 <div><dt>Strength/form</dt><dd>{[variant?.strengthText, variant?.dosageForm, variant?.route].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
                 <div><dt>Registration</dt><dd>{String(variant?.registrationNumber ?? "Not listed")}</dd></div>
                 <div><dt>Official/source price</dt><dd>{formatPrice(variant ?? {})}</dd></div>
                 <div><dt>Parser confidence</dt><dd>{formatConfidence(variant?.parserConfidence)}</dd></div>
+                <div><dt>Official row fields</dt><dd>{variant?.hasOfficialRowJson ? "Protected admin drawer available" : "Not captured"}</dd></div>
               </dl>
               <div className="toolbar">
                 {variant?.productId ? <Link className="button secondary compact" href={`/drug-market/products/${String(variant.productId)}`}>Open profile</Link> : null}

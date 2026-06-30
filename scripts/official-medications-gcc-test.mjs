@@ -12,13 +12,19 @@ const omanSource = await prisma.drugMarketSource.findUnique({ where: { code: "OM
 assert(Boolean(bahrainSource), "Bahrain NHRA source exists");
 assert(Boolean(omanSource), "Oman MOH price-list source exists");
 
-const [bhrRows, bhrProducts, bhrNeedsReview, bhrReviewItems, omnRows, omnNeedsReview, omnReviewItems, demoRows, fakeFallbackRows] = await Promise.all([
+const [bhrRows, bhrProducts, bhrNeedsReview, bhrVerified, bhrRejected, bhrRetired, bhrReviewItems, omnRows, omnNeedsReview, omnVerified, omnRejected, omnRetired, omnReviewItems, demoRows, fakeFallbackRows] = await Promise.all([
   prisma.drugMarketVariant.count({ where: { sourceId: bahrainSource?.id, isDemo: false } }),
   prisma.drugMarketProduct.count({ where: { isDemo: false, variants: { some: { sourceId: bahrainSource?.id, isDemo: false } } } }),
   prisma.drugMarketVariant.count({ where: { sourceId: bahrainSource?.id, isDemo: false, verificationStatus: "needs_review" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: bahrainSource?.id, isDemo: false, verificationStatus: "verified" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: bahrainSource?.id, isDemo: false, verificationStatus: "rejected" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: bahrainSource?.id, isDemo: false, verificationStatus: "retired" } }),
   countSourceReviewItems(bahrainSource?.id),
   prisma.drugMarketVariant.count({ where: { sourceId: omanSource?.id, isDemo: false } }),
   prisma.drugMarketVariant.count({ where: { sourceId: omanSource?.id, isDemo: false, verificationStatus: "needs_review" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: omanSource?.id, isDemo: false, verificationStatus: "verified" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: omanSource?.id, isDemo: false, verificationStatus: "rejected" } }),
+  prisma.drugMarketVariant.count({ where: { sourceId: omanSource?.id, isDemo: false, verificationStatus: "retired" } }),
   countSourceReviewItems(omanSource?.id),
   prisma.drugMarketVariant.count({ where: { isDemo: true } }),
   prisma.drugMarketVariant.count({ where: { isDemo: false, registrationNumber: { startsWith: "DEMO-" } } })
@@ -26,11 +32,11 @@ const [bhrRows, bhrProducts, bhrNeedsReview, bhrReviewItems, omnRows, omnNeedsRe
 
 assert(bhrRows === 3169, "Bahrain 3169 real NHRA rows are preserved");
 assert(bhrProducts === 1850, "Bahrain product count remains 1850");
-assert(bhrNeedsReview === 3169, "Bahrain imported rows remain needs_review");
-assert(bhrReviewItems === 3169, "Bahrain review queue covers every review-gated row");
+assert(bhrNeedsReview + bhrVerified + bhrRejected + bhrRetired === bhrRows, "Bahrain rows are accounted for by review status");
+assert(bhrReviewItems === bhrNeedsReview, "Bahrain review queue covers every open review-gated row");
 assert(omnRows > 0, "Oman official MOH import has real rows");
-assert(omnNeedsReview === omnRows, "Oman imported rows remain needs_review");
-assert(omnReviewItems === omnRows, "Oman review queue covers every review-gated row");
+assert(omnNeedsReview + omnVerified + omnRejected + omnRetired === omnRows, "Oman rows are accounted for by review status");
+assert(omnReviewItems === omnNeedsReview, "Oman review queue covers every open review-gated row");
 assert(demoRows >= 1, "demo rows exist but are excluded from real counts");
 assert(fakeFallbackRows === 0, "no fake fallback DEMO rows are counted as real");
 

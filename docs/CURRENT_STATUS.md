@@ -1,15 +1,20 @@
 # Current Status
 
-v0.8.2 turns the first Bahrain real import into a reviewable official medication workflow.
+Medication verification Batch 1 is implemented.
 
-Medication real-data status on 2026-06-30:
-- Bahrain NHRA: 3,169 real official rows preserved, 1,850 product groups, 3,169 open review items.
-- Oman MOH: 5,100 real official rows imported from the official MOH products-with-prices PDF, 5,100 open review items.
-- Qatar MOPH: failed; official HTML did not expose a supported XLSX link.
-- Kuwait MOH: failed; official PDF candidate fetch failed.
-- Saudi SFDA: failed; official public HTML timed out or was not safely parseable.
-- Egypt EDA: official file upload or targeted lookup only.
+Counts after Batch 1:
+- Bahrain NHRA: 3,169 real rows, 100 verified, 3,069 needs review.
+- Oman MOH: 5,100 real rows, 0 verified, 5,100 needs review.
+- Total real official rows: 8,269.
+- Demo rows excluded: 23.
+- Rejected/retired rows: 0/0.
 
-Total real official rows: 8,269. Demo rows are hidden by default and excluded from real coverage.
+Review queue:
+- Groups by country, source, import run, parser confidence, missing fields, duplicate risk, registration number, and candidate confidence.
+- Admin/Owner can verify, reject, or retire selected rows with a reason.
+- Batch verification is high-confidence-only and reason-required.
 
-The clinic system remains local/demo and must not be used with real patient data.
+Safety:
+- Medication data remains market/reference metadata only.
+- Doctor approval remains mandatory.
+- No autonomous prescribing, patient dosing instructions, stock/order/checkout, retail scraping, or external AI calls.
