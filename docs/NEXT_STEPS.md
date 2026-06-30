@@ -15,3 +15,10 @@ Master Source-of-Truth Audit.
 7. Add backup/restore proof for database metadata plus any encrypted guideline or uploaded files.
 
 Do not use real patient data until production privacy, security, clinical governance, backup, incident response, and legal reviews are complete.
+# Premium UI Next Steps
+
+- Continue replacing generic MVP record pages with workflow-specific pages.
+- Move the full `AppShell` implementation from `mvp-page.tsx` into the new shell component boundary.
+- Use the patient workspace component boundary for smaller patient subpanels.
+- Add browser screenshot QA for each theme and density once Playwright is available.
+- Consider Radix primitives only where native controls are not sufficient.

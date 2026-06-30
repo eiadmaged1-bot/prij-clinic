@@ -13,3 +13,9 @@ V0.6 master-unified is a local/private integration branch for calculator/AI mega
 - V0.6 shell/theme/demo-data hotfix seed records are intentionally small demo references. They prove UI visibility and route behavior only; they are not clinically complete or production validated.
 - Drug Market strength/form fields remain market metadata only. The UI must not present them as patient dosing or self-medication instructions.
 - Guideline demo chunks are short local placeholders for citation/search testing. They are not licensed guideline reproductions and are not clinical advice.
+# Premium UI Known Limitations
+
+- Some generic workflow pages still use the shared MVP page pattern and need deeper product-specific redesign.
+- Theme previews are lightweight local previews, not full screenshot previews.
+- Density is browser-local; the backend appearance setting currently stores global theme preference only.
+- The current 3D icon system uses local CSS/SVG badges, not external 3D asset files.

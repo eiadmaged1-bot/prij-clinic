@@ -212,8 +212,18 @@ Theme and appearance controls:
 1. Sign in as `eyad` / `eyad`.
 2. Open `Admin`.
 3. Open `Appearance`.
-4. Choose Original Premium, Clinic Portal, Incision Portal, Minimal Clean, or Compact Operations.
+4. Choose Luxury Clinic, Medicolize Portal, Incision Clean, Compact Operations, Senior Doctor Large, or Dark Navy.
 5. Use `Use here` for this browser, or `Set as default` to save the local demo default.
+
+Density controls support Compact, Comfort, Large, and Magnified modes. Density changes layout scale only; it must not hide tabs, routes, or authorized actions.
+
+Premium UI checks:
+
+```powershell
+npm run test:ui:premium
+npm run test:theme:consistency
+npm run test:icons:ui
+```
 
 The Admin and Appearance navigation is hidden for non-admin staff. The server also protects the appearance settings API with admin permissions, and setting changes are audited.
 

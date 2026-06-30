@@ -30,3 +30,8 @@ Receptionist/accountant roles must remain blocked from clinical decision-support
 - Guideline Center demo seed data now includes source registry entries plus local/demo antenatal, PCOS, and endometriosis indexed documents and citations.
 - Drug Market demo seed data now includes EG, KSA, UAE, YEM, Gulf, and multi-strength product/variant examples with compact badge behavior.
 - All added data is demo/reference metadata only and is not a production clinical database.
+# Premium UI Rescue Status
+
+Date: 2026-06-30
+
+The UI foundation now includes a premium theme registry, four density modes, a local 3D icon system, admin appearance controls, and premium UI regression scripts. Clinical safety, RBAC, audit behavior, demo-only data, and AI draft-only boundaries remain unchanged.
