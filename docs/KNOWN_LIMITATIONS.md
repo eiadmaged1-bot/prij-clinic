@@ -1,5 +1,14 @@
 # Known Limitations
 
+## V0.7 Workflow Spine Limitations
+
+- Patient document archive is metadata-only.
+- No real PHI file storage, OCR, DICOM/PACS, external lab integration, patient portal, WhatsApp reminders, insurance/TPA, e-signature provider, payment gateway, or HL7/FHIR integration.
+- Consent templates and demo signatures are placeholders and not legal production consent.
+- Critical/abnormal flags are workflow flags only, not diagnosis.
+- No automatic diagnosis, report interpretation, treatment recommendation, or AI final clinical note.
+- Browser print views are not legal stationery or certified exports.
+
 This MVP foundation is not production-ready for real clinical operations. It is a local development and demo foundation for review, hardening, and fake-data workflow validation.
 
 ## Safety Boundaries

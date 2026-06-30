@@ -21,7 +21,15 @@ export class DashboardService {
       draftUltrasounds,
       openInvoices,
       paymentTotals,
-      pendingAiDrafts
+      pendingAiDrafts,
+      pendingResultReview,
+      criticalUnreviewedResults,
+      openReferrals,
+      openTasks,
+      missingConsents,
+      documentsAwaitingReview,
+      orderedInvestigationsToday,
+      followUpsDue
     ] = await Promise.all([
       this.prisma.appointment.count({ where: { startAt: { gte: today, lt: tomorrow }, ...branchScope(user) } }),
       this.prisma.queueTicket.count({ where: { status: "waiting", ...branchScope(user) } }),
@@ -34,6 +42,15 @@ export class DashboardService {
         _sum: { amount: true }
       }),
       this.prisma.aiDraft.count({ where: { status: "pending_doctor_review", ...branchScope(user) } })
+      ,
+      this.prisma.investigationResult.count({ where: { reviewStatus: "pending_review", ...branchScope(user) } }),
+      this.prisma.investigationResult.count({ where: { criticalFlag: true, reviewStatus: { in: ["pending_review", "needs_follow_up"] }, ...branchScope(user) } }),
+      this.prisma.referral.count({ where: { status: { in: ["draft", "sent", "accepted"] }, ...branchScope(user) } }),
+      this.prisma.patientTask.count({ where: { status: { in: ["open", "in_progress"] }, ...branchScope(user) } }),
+      this.prisma.consentRecord.count({ where: { status: { in: ["unknown", "declined"] }, patient: branchScope(user) } }),
+      this.prisma.patientDocument.count({ where: { status: { in: ["draft_metadata", "active"] }, ...branchScope(user) } }),
+      this.prisma.investigationOrder.count({ where: { requestedAt: { gte: today, lt: tomorrow }, ...patientBranchScopeForDashboard(user) } }),
+      this.prisma.patientTask.count({ where: { taskType: "schedule_follow_up", dueAt: { lte: tomorrow }, status: { in: ["open", "in_progress"] }, ...branchScope(user) } })
     ]);
 
     return {
@@ -52,7 +69,22 @@ export class DashboardService {
         aiEnabled: false,
         clinicalDraftsRequireDoctorReview: true,
         pendingAiDrafts
+      },
+      workflow: {
+        pendingResultReview,
+        criticalUnreviewedResults,
+        openReferrals,
+        openTasks,
+        missingConsents,
+        documentsAwaitingReview,
+        orderedInvestigationsToday,
+        followUpsDue
       }
     };
   }
+}
+
+function patientBranchScopeForDashboard(user: AuthUser) {
+  if (user.roles.includes("Owner") || user.roles.includes("Admin")) return {};
+  return { patient: { branchId: user.branchId ?? "00000000-0000-0000-0000-000000000000" } };
 }

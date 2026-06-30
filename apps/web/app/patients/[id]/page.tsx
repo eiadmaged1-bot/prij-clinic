@@ -92,18 +92,24 @@ const tabs: TabConfig[] = [
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
   { key: "orders", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed.", permissions: ["investigation.read"] },
+  { key: "results", label: "Results", icon: "reports", endpoint: "/patients/:patientId/investigation-results", collectionKey: "investigationResults", empty: "No result metadata yet. Doctor review required.", permissions: ["investigation.result_read"] },
   { key: "files", label: "Reports", icon: "reports", endpoint: "/reports", collectionKey: "reports", empty: "No report record yet. Add report metadata only after doctor review.", permissions: ["report.read"] },
+  { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet. Measurements stay recording-only until clinician review.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
-  { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents", collectionKey: "consents", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage"] },
+  { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents?patientId=:patientId", collectionKey: "consentRecords", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage", "consent_template.read"] },
+  { key: "referrals", label: "Referrals", icon: "reports", endpoint: "/patients/:patientId/referrals", collectionKey: "referrals", empty: "No referral tracked yet.", permissions: ["referral.read"] },
+  { key: "tasks", label: "Tasks", icon: "queue", endpoint: "/patients/:patientId/tasks", collectionKey: "patientTasks", empty: "No open patient tasks.", permissions: ["patient_task.read"] },
+  { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] },
   { key: "ai-snapshot", label: "AI Drafts", icon: "ai", empty: "No management snapshot yet. Doctor review is required.", permissions: ["ai_management.request", "ai_management.read"] },
   { key: "protocol-atlas", label: "Protocol Atlas", icon: "ai", empty: "Protocol links appear here.", permissions: ["protocol_atlas.read"] },
   { key: "calculators", label: "Calculators", icon: "investigations", empty: "Calculator history appears here.", permissions: ["calculator.read", "calculator.calculate"] },
   { key: "medications", label: "Medications", icon: "prescription", endpoint: "", empty: "No active medication list entry yet.", permissions: ["patient_medications.read"] },
   { key: "allergies", label: "Allergies", icon: "consent", endpoint: "", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
-  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." }
+  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
+  { key: "print-packet", label: "Print Packet", icon: "reports", empty: "Print-friendly visit packet." }
 ];
 
 const relatedLoaders: TabConfig[] = [
@@ -171,7 +177,8 @@ export default function PatientFilePage() {
           .filter((tab) => tab.endpoint)
           .map(async (tab) => {
             try {
-              const response = await fetch(`${apiUrl}${tab.endpoint}`, {
+              const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
+              const response = await fetch(`${apiUrl}${endpoint}`, {
                 credentials: "include",
                 headers: token ? { authorization: `Bearer ${token}` } : undefined
               });
@@ -179,7 +186,7 @@ export default function PatientFilePage() {
               const data = await response.json() as Record<string, unknown>;
               const collection = tab.collectionKey ? data[tab.collectionKey] : data;
               const list = Array.isArray(collection) ? collection as Record<string, unknown>[] : [];
-              return [tab.key, list.filter((row) => row.patientId === patientId)] as const;
+              return [tab.key, endpoint.includes(`/patients/${encodeURIComponent(patientId)}`) || endpoint.includes(`patientId=${encodeURIComponent(patientId)}`) ? list : list.filter((row) => row.patientId === patientId)] as const;
             } catch {
               return [tab.key, []] as const;
             }
@@ -274,6 +281,7 @@ export default function PatientFilePage() {
           {active.key === "medical" ? <MedicalPanel patient={patient} related={related} /> : null}
           {active.key === "clinical" ? <ClinicalPanel patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
+          {active.key === "print-packet" ? <PrintPacketPanel patient={patient} related={related} timelineItems={timelineItems} /> : null}
           {active.key === "ai-snapshot" ? <ManagementSnapshotPanel patientId={patient.id} /> : null}
           {active.key === "protocol-atlas" ? <ProtocolAtlasPanel /> : null}
           {active.key === "calculators" ? <CalculatorsPanel patient={patient} /> : null}
@@ -292,7 +300,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "medication-safety" ? (
+          {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "medication-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -304,6 +312,12 @@ export default function PatientFilePage() {
 }
 
 function Overview({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
+  const pendingResults = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
+  const criticalResults = (related.results ?? []).filter((row) => row.criticalFlag === true && String(row.reviewStatus ?? "") !== "reviewed").length;
+  const missingConsents = (related.consents ?? []).filter((row) => ["unknown", "declined"].includes(String(row.status ?? ""))).length;
+  const openTasks = (related.tasks ?? []).filter((row) => ["open", "in_progress"].includes(String(row.status ?? ""))).length;
+  const unreviewedDocuments = (related.documents ?? []).filter((row) => ["draft_metadata", "active"].includes(String(row.status ?? ""))).length;
+
   return (
     <section className="doctor-friendly-grid">
       <article className="panel">
@@ -336,12 +350,25 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
           <h2>Recent activity</h2>
           <span className="badge">{Object.values(related).flat().length} items</span>
         </div>
-        <p className="empty-state">
-          <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
-          <span>Use the tabs above to review visits, prescriptions, orders, reports, pregnancy records, billing, files, and timeline.</span>
-        </p>
+        <div className="workflow-mini-grid">
+          <MiniCount label="Pending results" value={pendingResults} />
+          <MiniCount label="Critical unreviewed" value={criticalResults} tone={criticalResults ? "warning" : ""} />
+          <MiniCount label="Missing consents" value={missingConsents} />
+          <MiniCount label="Open tasks" value={openTasks} />
+          <MiniCount label="Unreviewed documents" value={unreviewedDocuments} />
+          <MiniCount label="Follow-up" value={(related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up").length} />
+        </div>
       </article>
     </section>
+  );
+}
+
+function MiniCount({ label, value, tone = "" }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className={`metric-card compact ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   );
 }
 
@@ -1442,12 +1469,65 @@ function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] 
   );
 }
 
+function PrintPacketPanel({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
+  const sections: Array<[string, Record<string, unknown>[]]> = [
+    ["Investigation orders", related.orders ?? []],
+    ["Reviewed results", (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "reviewed")],
+    ["Documents index", related.documents ?? []],
+    ["Consents", related.consents ?? []],
+    ["Referrals", related.referrals ?? []],
+    ["Follow-up tasks", related.tasks ?? []],
+    ["Pregnancy and OB summary", related.pregnancy ?? []]
+  ];
+
+  return (
+    <section className="panel printable-summary">
+      <div className="section-heading no-print">
+        <div>
+          <h2>Patient visit packet</h2>
+          <p className="muted">Browser print only. No PDF generation and no production stationery claim.</p>
+        </div>
+        <button className="button" type="button" onClick={() => window.print()}>
+          <ThreeDMedicalIcon name="reports" size="sm" />
+          Print packet
+        </button>
+      </div>
+      <div className="print-packet">
+        <h2>{patient.firstName} {patient.lastName}</h2>
+        <p>File {patient.medicalRecordNumber} | {patient.patientType ?? "General"} | Demo/local packet</p>
+        <p>Document archive is metadata-only in this demo. Doctor review required. No automatic interpretation.</p>
+        {sections.map(([title, rows]) => (
+          <section key={title}>
+            <h3>{title}</h3>
+            {rows.length ? rows.slice(0, 12).map((row, index) => (
+              <p key={String(row.id ?? index)}>
+                <strong>{String(row.title ?? row.reason ?? row.testName ?? row.status ?? "Record")}</strong>{" "}
+                <span>{String(row.reviewStatus ?? row.status ?? row.category ?? "")}</span>
+              </p>
+            )) : <p>No records in this section.</p>}
+          </section>
+        ))}
+        <section>
+          <h3>Timeline</h3>
+          {timelineItems.slice(0, 20).map((item, index) => (
+            <p key={`${item.title}-${index}`}>{item.title}: {item.description}</p>
+          ))}
+        </section>
+      </div>
+    </section>
+  );
+}
+
 function timelineIcon(key: string): IconName {
   if (key.includes("gynecology")) return "doctor";
   if (key.includes("visit") || key.includes("encounter")) return "encounter";
   if (key.includes("prescription")) return "prescription";
   if (key.includes("order") || key.includes("investigation")) return "investigations";
   if (key.includes("billing") || key.includes("invoice") || key.includes("payment")) return "billing";
+  if (key.includes("document")) return "files";
+  if (key.includes("referral")) return "reports";
+  if (key.includes("task")) return "queue";
+  if (key.includes("note")) return "doctor";
   if (key.includes("pregnancy")) return "pregnancy";
   if (key.includes("ultrasound")) return "ultrasound";
   if (key.includes("consent")) return "consent";

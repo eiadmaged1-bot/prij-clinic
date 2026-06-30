@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { InvoiceStatus, Prisma } from "@prisma/client";
+import { InvoiceStatus, PatientInternalNoteVisibility, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import {
@@ -10,7 +10,7 @@ import {
   assertCanReferencePregnancy,
   assertCanReferenceUserInBranch
 } from "../auth/reference-scope";
-import { branchScope, doctorScope } from "../auth/scope";
+import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreatePatientDto,
@@ -129,7 +129,12 @@ export class PatientsService {
       obUltrasounds,
       invoices,
       payments,
-      consentRecords
+      consentRecords,
+      investigationResults,
+      patientDocuments,
+      referrals,
+      patientTasks,
+      patientInternalNotes
     ] = await Promise.all([
       this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { doctor: true } }),
       this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user) } }),
@@ -145,7 +150,12 @@ export class PatientsService {
       this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user) }, include: { reviewedByUser: true } }),
       this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true } }),
       this.prisma.payment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { recordedByUser: true } }),
-      this.prisma.consentRecord.findMany({ where: { patientId: id }, include: { capturedByUser: true } })
+      this.prisma.consentRecord.findMany({ where: { patientId: id }, include: { capturedByUser: true } }),
+      this.prisma.investigationResult.findMany({ where: { patientId: id, ...branchScope(user) } }),
+      this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user) } }),
+      this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user) } }),
+      this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user) } }),
+      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user) } })
     ]);
 
     const items = [
@@ -165,7 +175,12 @@ export class PatientsService {
       ...obUltrasounds.map((item) => timelineItem(item.performedAt, "ultrasound", item.status === "draft" ? "Ultrasound draft recorded" : "Ultrasound study recorded", item.status, item.scanType ?? "Recording only; clinician interpretation required", item.reviewedByUser?.displayName, "/ultrasound")),
       ...invoices.map((item) => timelineItem(item.createdAt, "invoice", "Invoice created", item.status, `Balance ${item.balanceAmount.toString()}`, item.createdByUser?.displayName, "/billing")),
       ...payments.map((item) => timelineItem(item.paidAt, "payment", "Payment recorded", item.status, `${item.method} ${item.amount.toString()}`, item.recordedByUser?.displayName, "/billing")),
-      ...consentRecords.map((item) => timelineItem(item.capturedAt, "consent", "Consent recorded", item.status, item.consentType.replaceAll("_", " "), item.capturedByUser?.displayName, "/consents"))
+      ...consentRecords.map((item) => timelineItem(item.capturedAt, "consent", "Consent recorded", item.status, item.consentType.replaceAll("_", " "), item.capturedByUser?.displayName, "/consents")),
+      ...investigationResults.map((item) => timelineItem(item.createdAt, "investigation_result", item.criticalFlag ? "Critical result metadata recorded" : "Result metadata recorded", item.reviewStatus, item.title, undefined, "/investigations")),
+      ...patientDocuments.map((item) => timelineItem(item.createdAt, "patient_document", "Document archived", item.status, `${item.title} (${item.storageMode})`, undefined, `/patients/${patient.id}`)),
+      ...referrals.map((item) => timelineItem(item.createdAt, "referral", "Referral created", item.status, item.reason, undefined, "/referrals")),
+      ...patientTasks.map((item) => timelineItem(item.createdAt, "patient_task", "Patient task created", item.status, item.title, undefined, "/tasks")),
+      ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`))
     ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
 
     await this.audit.record({
@@ -482,6 +497,15 @@ export class PatientsService {
 
 function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string) {
   return { dateTime: dateTime.toISOString(), type, title, status, description, actor, href };
+}
+
+function internalNoteVisibilityWhere(user: AuthUser): Prisma.PatientInternalNoteWhereInput {
+  if (isOwnerOrAdmin(user)) return {};
+  const allowed: PatientInternalNoteVisibility[] = ["internal_all"];
+  if (user.permissions.includes("patient_internal_note.clinical_read")) allowed.push("clinical_only");
+  if (user.permissions.includes("patient_internal_note.admin_read")) allowed.push("admin_only");
+  if (user.permissions.includes("patient_internal_note.finance_read")) allowed.push("finance_only");
+  return { visibility: { in: allowed } };
 }
 
 function gynecologyTimelineTitle(templateType: string) {

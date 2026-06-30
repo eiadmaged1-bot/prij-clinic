@@ -2,6 +2,8 @@
 
 Clinic Management System V0.6 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine, and drug-market metadata workflows.
 
+V0.7 clinic workflow spine adds investigation result metadata, critical-result acknowledgement, metadata-only patient document archive, consent templates/demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packets. It remains local/demo only and must not be used with real patient data or PHI files.
+
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.
 
 V0.6 is a unified local/private integration of the AI Management Mega Leap branch, Medical Calculator Suite branch, and Medication Intelligence Engine branch. It is not production-ready, not a medical device, and must not be used with real patient data.
@@ -171,6 +173,9 @@ http://localhost:3000/encounters
 http://localhost:3000/prescriptions
 http://localhost:3000/investigations
 http://localhost:3000/reports
+http://localhost:3000/documents
+http://localhost:3000/referrals
+http://localhost:3000/tasks
 http://localhost:3000/pregnancies
 http://localhost:3000/ultrasound
 http://localhost:3000/billing
