@@ -285,10 +285,14 @@ export function classifyVariant(variant, duplicateKeys = new Set(), sourceById =
   const duplicateRisk = duplicateKeys.has(duplicateKey(variant));
   const hasCoreName = Boolean(variant.tradeName || variant.genericName);
   const hasSourceMetadata = Boolean(variant.sourceId && variant.importRunId && variant.officialRowJson && variant.sourceRowHash);
+  const hasStructuredMarketField = Boolean(variant.genericName || variant.strengthText || variant.dosageForm || variant.packageText || variant.registrationNumber);
+  const hasBlockedCommerceFields = hasCommerceFieldKey(variant.officialRowJson ?? {});
   const highConfidenceCandidate = (
     reviewableStatuses.includes(variant.verificationStatus) &&
     hasCoreName &&
     hasSourceMetadata &&
+    hasStructuredMarketField &&
+    !hasBlockedCommerceFields &&
     !duplicateRisk &&
     Number.isFinite(parserConfidence) &&
     parserConfidence >= highConfidenceThreshold
@@ -315,6 +319,7 @@ function buildReviewReason(variant, duplicateKeys) {
   if (!variant.dosageForm) reasons.push("missing dosage form");
   if (!variant.sourceId && !variant.importRunId) reasons.push("missing source metadata");
   if ((variant.officialPriceAmount || variant.officialPriceText || variant.priceText) && !variant.currency) reasons.push("missing price currency");
+  if ((variant.officialPriceAmount || variant.officialPriceText || variant.priceText) && !variant.genericName && !variant.strengthText && !variant.dosageForm && !variant.packageText && !variant.registrationNumber) reasons.push("price-only row");
   if (Number(variant.parserConfidence ?? 0) < 0.65) reasons.push("low parser confidence");
   if (duplicateKeys.has(duplicateKey(variant))) reasons.push("duplicate risk");
   return `${variant.countryCode}: ${reasons.join("; ")}.`;

@@ -420,11 +420,13 @@ function requiredDecisionReason(dto: Record<string, string>) {
   return reason;
 }
 
-function isHighConfidenceOfficialCandidate(variant: { verificationStatus: string; tradeName: string | null; genericName: string | null; sourceId: string | null; importRunId: string | null; officialRowJson: unknown; sourceRowHash: string | null; parserConfidence: number | null; }, duplicateKeys: Set<string>) {
+function isHighConfidenceOfficialCandidate(variant: { verificationStatus: string; tradeName: string | null; genericName: string | null; strengthText?: string | null; dosageForm?: string | null; packageText?: string | null; registrationNumber?: string | null; sourceId: string | null; importRunId: string | null; officialRowJson: unknown; sourceRowHash: string | null; parserConfidence: number | null; }, duplicateKeys: Set<string>) {
   return (
     ["needs_review", "imported"].includes(variant.verificationStatus) &&
     Boolean(variant.tradeName || variant.genericName) &&
     Boolean(variant.sourceId && variant.importRunId && variant.officialRowJson && variant.sourceRowHash) &&
+    Boolean(variant.genericName || variant.strengthText || variant.dosageForm || variant.packageText || variant.registrationNumber) &&
+    !hasCommerceFieldKey(variant.officialRowJson) &&
     Number(variant.parserConfidence ?? 0) >= 0.65 &&
     !duplicateKeys.has(duplicateKey(variant))
   );
@@ -461,4 +463,13 @@ function duplicateKey(variant: { countryCode?: string | null; registrationNumber
     variant.strengthText ?? "",
     variant.dosageForm ?? ""
   ].join("|").toLowerCase();
+}
+
+function hasCommerceFieldKey(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+    if (/^(stock|stockStatus|branchStock|order|checkout|cart|purchase|availability)$/i.test(key)) return true;
+    if (nested && typeof nested === "object" && hasCommerceFieldKey(nested)) return true;
+  }
+  return false;
 }

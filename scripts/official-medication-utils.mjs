@@ -111,7 +111,7 @@ export function rowHash(row, countryCode) {
   return createHash("sha256").update(`${countryCode}|${JSON.stringify(row)}`).digest("hex");
 }
 
-export function parseOfficialFile(filePath) {
+export async function parseOfficialFile(filePath, sourceCode = "") {
   const absolute = resolve(filePath);
   if (!existsSync(absolute) || !statSync(absolute).isFile()) throw new Error(`Official source file not found: ${filePath}`);
   const extension = extname(absolute).toLowerCase();
@@ -128,7 +128,7 @@ export function parseOfficialFile(filePath) {
     return { fileName: basename(absolute), fileSha256: sha256Buffer(buffer), rows: parseXlsxRows(buffer), parserName: "generic-official-xlsx" };
   }
   if (extension === ".pdf") {
-    return { fileName: basename(absolute), fileSha256: sha256Buffer(buffer), rows: parsePdfLikeText(buffer.toString("latin1")), parserName: "generic-official-pdf-text" };
+    return { fileName: basename(absolute), fileSha256: sha256Buffer(buffer), rows: parsePdfLikeText(await extractPdfText(buffer), sourceCode), parserName: "generic-official-pdf-text" };
   }
   throw new Error(`${extension || "file"} parsing is not supported for official imports.`);
 }
@@ -150,7 +150,7 @@ export async function executeOfficialImport({ countryCode, sourceCode, mode = "l
   let parsed;
   let snapshot = {};
   if (file) {
-    parsed = parseOfficialFile(file);
+    parsed = await parseOfficialFile(file, source.code);
     snapshot = { sourceUrl: source.officialUrl ?? source.websiteUrl, finalUrl: source.officialUrl ?? source.websiteUrl, fetchedAt: new Date(), filePath: resolve(file) };
   } else {
     const downloaded = await discoverAndFetchOfficialSource(source, { maxPages });
@@ -306,7 +306,7 @@ function parseXlsxRows(buffer) {
 }
 
 function parsePdfLikeText(text, sourceCode = "") {
-  if (sourceCode.startsWith("OMAN_MOH_")) return parseOmanPricePdfText(text);
+  if (sourceCode.startsWith("OMAN_MOH_")) return parseOmanPricePdfTextV2(text);
   return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
     const price = line.match(/\b\d+(?:\.\d{1,3})?\b/g)?.at(-1) ?? "";
     const words = line.replace(/\s+/g, " ").trim();
@@ -350,6 +350,231 @@ function parseOmanPricePdfText(text) {
       rawBlockText: blockText
     };
   }).filter((row) => row["Product Name"] && row.Price);
+}
+
+function parseOmanPricePdfTextV2(text) {
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const rows = [];
+  let current = null;
+  for (const line of lines) {
+    if (isOmanNoiseLine(line)) continue;
+    const registrationNumber = omanRegistrationToken(line);
+    if (registrationNumber) {
+      if (current) rows.push(current);
+      current = { registrationNumber, block: [line] };
+    } else if (current) {
+      current.block.push(line);
+    }
+    if (current && isOmanPriceLine(line)) {
+      rows.push(current);
+      current = null;
+    }
+  }
+  if (current) rows.push(current);
+  const structuredRows = rows.map(omanStructuredRowFromBlock).filter((row) => row["Product Name"] && row.Price);
+  const legacyRows = parseOmanPricePdfText(text).map(enrichOmanLegacyRow).filter((row) => row["Product Name"] && row.Price);
+  return structuredRows.length >= legacyRows.length ? structuredRows : legacyRows;
+}
+
+function enrichOmanLegacyRow(row) {
+  const rawBlockText = row.rawBlockText || row.lineText || "";
+  const registrationNumber = row.registrationNumber;
+  const sourceRowHashRaw = {
+    registrationNumber: row.registrationNumber,
+    "Product Name": row["Product Name"],
+    "Trade Name": row["Trade Name"],
+    Price: row.Price,
+    currency: row.currency,
+    lineText: row.lineText,
+    rawBlockText: row.rawBlockText
+  };
+  const withoutRegistration = cleanOmanText(rawBlockText.replace(new RegExp(`^${escapeRegExp(registrationNumber)}\\s+`, "i"), ""));
+  const segment = cleanOmanText(withoutRegistration.split(/\s(?=(?:[A-Z]?\d{4,}[A-Z]?|\d+[A-Z]|1R|V)\s+)/i)[0] || withoutRegistration);
+  const prices = [...segment.matchAll(/\b\d+(?:\.\d{1,3})\b/g)].map((match) => match[0]);
+  const price = prices.at(-1) || row.Price || "";
+  const block = [`${registrationNumber} ${segment}`];
+  if (price && !isOmanPriceLine(segment)) block.push(price);
+  const structured = omanStructuredRowFromBlock({ registrationNumber, block });
+  return {
+    ...row,
+    ...structured,
+    Price: price,
+    currency: price ? "OMR" : row.currency,
+    lineText: rawBlockText,
+    rawBlockText,
+    __sourceRowHashRaw: sourceRowHashRaw
+  };
+}
+
+function isOmanNoiseLine(line) {
+  return /^(regn\.|for search press|--\s*\d+\s+of\s+\d+\s*--)/i.test(line)
+    || /^(رقم التسجيل|االسم التجاري|حجم العبوة|المادة الفعالة|الوكيل|اسم المصنع|السعر)$/i.test(line);
+}
+
+function omanRegistrationToken(line) {
+  const match = line.match(/^((?:[A-Z]?\d{4,}[A-Z]?|\d+[A-Z]|1R|V))\s+(.+)$/i);
+  if (!match) return null;
+  if (/^(?:ML|MG|GM|MCG|IU|TAB|CAP|VIAL|AMPOULE|BOTTLE|SACHET|TUBE|DOSE)$/i.test(match[1])) return null;
+  return match[1].toUpperCase();
+}
+
+function isOmanPriceLine(line) {
+  return /^\d+(?:\.\d{1,3})$/.test(line);
+}
+
+function omanStructuredRowFromBlock(row) {
+  const rawBlockText = row.block.join(" ");
+  const price = row.block.findLast((line) => isOmanPriceLine(line)) ?? "";
+  const contentLines = row.block.slice();
+  if (contentLines.length && isOmanPriceLine(contentLines.at(-1))) contentLines.pop();
+  if (!contentLines.length) return {};
+  contentLines[0] = contentLines[0].replace(new RegExp(`^${escapeRegExp(row.registrationNumber)}\\s+`, "i"), "").trim();
+  if (contentLines.length === 1 && contentLines[0].length > 60) {
+    const split = splitOmanOneLineProduct(contentLines[0], price);
+    return omanStructuredRowFromParts(row, split.tradeText, split.remainingText, price);
+  }
+  const tradeParts = [];
+  while (contentLines.length) {
+    const next = contentLines[0];
+    tradeParts.push(next);
+    contentLines.shift();
+    if (tradeParts.length >= 4 || hasDosageFormText(next) || hasPackText(next) || hasStrengthText(next)) break;
+    if (contentLines[0] && hasPackText(contentLines[0])) break;
+  }
+  const tradeText = cleanOmanText(tradeParts.join(" "));
+  const remainingText = cleanOmanText(contentLines.join(" "));
+  return omanStructuredRowFromParts(row, tradeText, remainingText, price);
+}
+
+function omanStructuredRowFromParts(row, tradeText, remainingText, price) {
+  const rawBlockText = row.block.join(" ");
+  const allProductText = cleanOmanText(`${tradeText} ${remainingText}`);
+  const dosageForm = extractDosageForm(allProductText);
+  const strengthText = extractStrength(allProductText);
+  const packageText = extractPack(allProductText);
+  const genericName = extractOmanActiveText(remainingText, packageText);
+  const company = extractOmanCompany(remainingText);
+  return {
+    registrationNumber: row.registrationNumber,
+    "Product Name": tradeText,
+    "Trade Name": tradeText,
+    "Generic Name": genericName,
+    "Strength Text": strengthText,
+    "Dosage Form": dosageForm,
+    Package: packageText,
+    Manufacturer: company.manufacturer,
+    "Marketing Company": company.agent,
+    Price: price,
+    currency: price ? "OMR" : "",
+    lineText: rawBlockText,
+    rawBlockText,
+    parsedBlockLines: row.block
+  };
+}
+
+function splitOmanOneLineProduct(line, price) {
+  let text = cleanOmanText(line);
+  if (price) text = cleanOmanText(text.replace(new RegExp(`\\s${escapeRegExp(price)}$`), ""));
+  const packMatch = matchPackWithIndex(text);
+  if (!packMatch) {
+    return { tradeText: text, remainingText: "" };
+  }
+  const tradeText = cleanOmanText(text.slice(0, packMatch.index));
+  const remainingText = cleanOmanText(text.slice(packMatch.index));
+  return { tradeText, remainingText };
+}
+
+function matchPackWithIndex(value) {
+  const patterns = [
+    /\b\d+\s*x\s*\d+\s*(?:tab|tabs|cap|caps|vial|vials|ampoule|ampoules|sachet|sachets|bottle|bottles)\b/i,
+    /\b\d+\s*x\s*\d+\s*(?:ml|gm|g)\b/i,
+    /\b\d+\s*(?:dose|doses|vial|vials|ampoule|ampoules|bottle|bottles|sachet|sachets|tube|tubes)\b/i,
+    /\b\d+['’]s\b/i
+  ];
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (match) return { text: cleanOmanText(match[0]), index: match.index ?? 0 };
+  }
+  return null;
+}
+
+function cleanOmanText(value) {
+  return String(value ?? "").replace(/\s+/g, " ").replace(/\s+([),])/g, "$1").replace(/[(]\s+/g, "(").trim();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function hasDosageFormText(value) {
+  return /\b(tablets?|tabs?|capsules?|caps?|syrup|suspension|solution|vials?|ampoules?|injection|infusion|drops?|cream|ointment|gel|suppositor(?:y|ies)|pessar(?:y|ies)|vaginal tablet|inhaler|spray|patch|sachets?|powder)\b/i.test(value);
+}
+
+function hasPackText(value) {
+  return /\b\d+\s*x\s*\d+|\b\d+['’]?s\b|\b\d+\s*(?:ml|gm|g|vial|ampoule|tab|cap|dose|bottle|sachet|tube)s?\b/i.test(value);
+}
+
+function hasStrengthText(value) {
+  return /\b\d+(?:\.\d+)?\s*(?:mg|g|gm|mcg|microgram|iu|units?|mg\/ml|mg\/\s*\d+\s*ml|mg\/5ml|%|w\/v|mcg\/ml|mmol\/l)\b|(?:\d+(?:\.\d+)?\s*\/\s*)+\d+(?:\.\d+)?\s*(?:mg|ml|mcg|iu)\b/i.test(value);
+}
+
+function extractDosageForm(value) {
+  const forms = [
+    ["vaginal tablet", /\bvaginal\s+tablets?\b/i],
+    ["tablet", /\b(?:tablets?|tabs?)\b/i],
+    ["capsule", /\b(?:capsules?|caps?)\b/i],
+    ["syrup", /\bsyrup\b/i],
+    ["suspension", /\bsuspension\b/i],
+    ["solution", /\bsolution\b/i],
+    ["vial", /\bvials?\b/i],
+    ["ampoule", /\bampoules?\b/i],
+    ["injection", /\binjection\b/i],
+    ["drops", /\bdrops?\b/i],
+    ["cream", /\bcream\b/i],
+    ["ointment", /\bointment\b/i],
+    ["gel", /\bgel\b/i],
+    ["suppository", /\bsuppositor(?:y|ies)\b/i],
+    ["pessary", /\bpessar(?:y|ies)\b/i],
+    ["inhaler", /\binhaler\b/i],
+    ["spray", /\bspray\b/i],
+    ["patch", /\bpatch\b/i],
+    ["sachet", /\bsachets?\b/i],
+    ["powder", /\bpowder\b/i],
+    ["infusion", /\binfusion\b/i]
+  ];
+  return forms.find(([, pattern]) => pattern.test(value))?.[0] ?? null;
+}
+
+function extractStrength(value) {
+  const matches = [...String(value).matchAll(/\b(?:\d+(?:\.\d+)?\s*\/\s*)*\d+(?:\.\d+)?\s*(?:mg\/\s*\d+\s*ml|mg\/ml|mg\/5ml|mcg\/ml|mg|mcg|microgram|g|gm|iu|units?|%|w\/v|mmol\/l)\b/gi)]
+    .map((match) => cleanOmanText(match[0].replace(/\s*\/\s*/g, "/")));
+  return [...new Set(matches)].slice(0, 3).join(" + ") || null;
+}
+
+function extractPack(value) {
+  return matchPackWithIndex(value)?.text ?? null;
+}
+
+function extractOmanActiveText(remainingText, packageText) {
+  let text = remainingText;
+  if (packageText) text = text.replace(packageText, " ");
+  const stop = text.search(/\b(?:Muscat|Ebin|Ibn|Al\s+[A-Z]|Scientific|Capital|Waleed|Mazoon|Modern|National|Oman|Salalah|Ruwi|Nizwa)\b.*\b(?:Pharmacy|Stores|L\.L\.C|LLC)\b/i);
+  if (stop >= 0) text = text.slice(0, stop);
+  text = cleanOmanText(text);
+  if (!text || text.length > 160) return null;
+  return text;
+}
+
+function extractOmanCompany(remainingText) {
+  const agentMatch = remainingText.match(/\b((?:Muscat|Ebin Rushed|Ibn Sina|Al [A-Z][A-Za-z]+|Scientific|Capital|Waleed|Mazoon|Modern|National|Oman|Salalah|Ruwi|Nizwa)[A-Za-z &.]*?(?:Pharmacy|Stores)(?:\s*&\s*Stores)?(?:\s*L\.L\.C)?)\b/i);
+  const agent = agentMatch ? cleanOmanText(agentMatch[1]) : null;
+  let manufacturer = null;
+  if (agentMatch) {
+    manufacturer = cleanOmanText(remainingText.slice(agentMatch.index + agentMatch[0].length));
+    manufacturer = manufacturer.replace(/\b\d+(?:\.\d{1,3})?\b$/, "").trim() || null;
+    if (manufacturer && manufacturer.length > 120) manufacturer = null;
+  }
+  return { agent, manufacturer };
 }
 
 async function extractPdfText(buffer) {
@@ -440,6 +665,7 @@ export async function recordBlockedRun(source, status, message) {
 }
 
 export function normalizeOfficialRow(row, countryCode) {
+  const { __sourceRowHashRaw, ...officialRaw } = row;
   const normalizedCountryCode = String(pick(row, ["countryCode", "Country", "Country Code"]) || countryCode || "").toUpperCase();
   const tradeName = pick(row, ["tradeName", "Trade Name", "Product Name", "Medicine Name", "MEDICINE NAME", "Name", "Brand Name", "DRUG NAME"]);
   const genericName = pick(row, ["genericName", "Generic Name", "Scientific Name", "Active Ingredient", "ACTIVE SUBSTANCES", "Ingredient"]);
@@ -469,7 +695,8 @@ export function normalizeOfficialRow(row, countryCode) {
     officialPriceAmount: parseAmount(priceText),
     currency: pick(row, ["currency", "Currency"]) || countryCurrency[normalizedCountryCode] || null,
     parserConfidence: confidence({ tradeName, genericName, strengthText, dosageForm, packageText, registrationNumber, priceText }),
-    raw: row
+    raw: officialRaw,
+    rawHashInput: __sourceRowHashRaw ?? officialRaw
   };
 }
 
@@ -652,7 +879,7 @@ async function upsertProduct(row, fetchedAt) {
 }
 
 async function upsertVariant(productId, row, importRunId, sourceId, fetchedAt) {
-  const sourceRowHash = rowHash(row.raw, row.countryCode);
+  const sourceRowHash = rowHash(row.rawHashInput ?? row.raw, row.countryCode);
   const existing = await prisma.drugMarketVariant.findUnique({ where: { countryCode_sourceRowHash: { countryCode: row.countryCode, sourceRowHash } } });
   if (existing?.verificationStatus === "verified") {
     await prisma.drugMarketManualReviewQueue.create({
