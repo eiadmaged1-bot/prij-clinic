@@ -213,12 +213,14 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
       {variants.map((variant) => (
         <article className="data-row" key={String(variant.id)}>
           <div className="data-row-header">
-            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source row</span>}</span>
+            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source row</span>} <CountryBadge label={String(variant.countryCode ?? "Unknown")} /></span>
             <span className={variant.verificationStatus === "verified" ? "badge accent" : "badge warning"}>{variant.verificationStatus === "verified" ? "Verified" : "Needs review"}</span>
           </div>
           <strong>{String(variant.countryCode)} · {String(variant.strengthText ?? "variant")}</strong>
           <p className="muted">{[variant.dosageForm, variant.route, variant.packageText, variant.registrationNumber].filter(Boolean).join(" · ")}</p>
           <dl>
+            <div><dt>Generic/scientific name</dt><dd>{String(variant.genericName ?? "Not listed")}</dd></div>
+            <div><dt>Strength/form/pack</dt><dd>{[variant.strengthText, variant.dosageForm, variant.packageText].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
             <div><dt>Manufacturer</dt><dd>{String(variant.manufacturer ?? "Not listed")}</dd></div>
             <div><dt>Marketing company</dt><dd>{String(variant.marketingCompany ?? "Not listed")}</dd></div>
             <div><dt>ATC/class</dt><dd>{String(variant.atcCode ?? "Not listed")}</dd></div>
@@ -285,6 +287,8 @@ export function DrugMarketCoverageDashboard() {
               <div><dt>Rejected/retired</dt><dd>{String(row.rowsRejected ?? 0)} / {String(row.rowsRetired ?? 0)}</dd></div>
               <div><dt>Demo rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
               <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
+              <div><dt>Parser confidence</dt><dd>{formatConfidence(row.parserConfidenceAverage)}</dd></div>
+              <div><dt>Confidence buckets</dt><dd>{formatConfidenceBuckets(row.parserConfidenceDistribution)}</dd></div>
               <div><dt>Next action</dt><dd>{String(row.requiredNextAction ?? "Review source status")}</dd></div>
             </dl>
           </article>
@@ -302,6 +306,7 @@ export function SourceConnectorPanel() {
 
 export function ReviewQueuePanel() {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
+  const [sources, setSources] = useState<Array<Record<string, unknown>>>([]);
   const [reason, setReason] = useState("Reviewed against official source metadata");
   const [countryCode, setCountryCode] = useState("");
   const [sourceCode, setSourceCode] = useState("");
@@ -362,6 +367,7 @@ export function ReviewQueuePanel() {
   }
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void listDrugMarketSources().then((data) => setSources(Array.isArray(data) ? data as Array<Record<string, unknown>> : [])).catch(() => setSources([])); }, []);
 
   return (
     <section className="panel">
@@ -378,7 +384,10 @@ export function ReviewQueuePanel() {
           <option value="EG">Egypt</option>
           <option value="UAE">UAE</option>
         </select>
-        <input value={sourceCode} onChange={(event) => setSourceCode(event.target.value)} placeholder="Source code" />
+        <select value={sourceCode} onChange={(event) => setSourceCode(event.target.value)}>
+          <option value="">All sources</option>
+          {sources.map((source) => <option key={String(source.code)} value={String(source.code)}>{String(source.countryCode ?? "ALL")} - {String(source.code)}</option>)}
+        </select>
         <input value="" readOnly placeholder="Import run filter appears in row preview" />
         <select value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value)}>
           <option value="open">Open</option>
@@ -427,6 +436,7 @@ export function ReviewQueuePanel() {
                 <div><dt>Official/source price</dt><dd>{formatPrice(variant ?? {})}</dd></div>
                 <div><dt>Parser confidence</dt><dd>{formatConfidence(variant?.parserConfidence)}</dd></div>
                 <div><dt>Official row fields</dt><dd>{variant?.hasOfficialRowJson ? "Protected admin drawer available" : "Not captured"}</dd></div>
+                <div><dt>Row preview</dt><dd>{[variant?.countryCode, variant?.sourceRowHash ? "row hash captured" : "", variant?.sourceFetchedAt ? "source fetched" : ""].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
               </dl>
               <div className="toolbar">
                 {variant?.productId ? <Link className="button secondary compact" href={`/drug-market/products/${String(variant.productId)}`}>Open profile</Link> : null}
@@ -473,4 +483,10 @@ function formatPrice(variant: Record<string, unknown>) {
   if (text) return `${String(text)}${currency ? ` ${String(currency)}` : ""}`;
   if (amount) return `${String(amount)}${currency ? ` ${String(currency)}` : ""}`;
   return "Not listed";
+}
+
+function formatConfidenceBuckets(value: unknown) {
+  if (!value || typeof value !== "object") return "Not scored";
+  const buckets = value as Record<string, unknown>;
+  return `>=90 ${String(buckets.gte090 ?? 0)} / >=80 ${String(buckets.gte080 ?? 0)} / >=70 ${String(buckets.gte070 ?? 0)} / >=60 ${String(buckets.gte060 ?? 0)} / <60 ${String(buckets.lt060 ?? 0)}`;
 }

@@ -247,7 +247,7 @@ export class DrugMarketService {
   }
 
   async coverage() {
-    const [sources, realCounts, demoCounts] = await Promise.all([
+    const [sources, realCounts, demoCounts, confidenceRows] = await Promise.all([
       this.prisma.drugMarketSource.findMany({ orderBy: [{ countryCode: "asc" }, { code: "asc" }] }),
       this.prisma.drugMarketVariant.groupBy({
         by: ["countryCode", "verificationStatus"],
@@ -259,6 +259,10 @@ export class DrugMarketService {
         by: ["countryCode"],
         where: { isDemo: true },
         _count: { _all: true }
+      }),
+      this.prisma.drugMarketVariant.findMany({
+        where: { isDemo: false },
+        select: { sourceId: true, parserConfidence: true }
       })
     ]);
     const openReviewItems = await this.prisma.drugMarketManualReviewQueue.findMany({
@@ -279,6 +283,7 @@ export class DrugMarketService {
       const rowsRetired = counts.filter((item) => item.verificationStatus === "retired").reduce((sum, item) => sum + item._count._all, 0);
       const reviewItemCount = reviewVariants.filter((variant) => variant.countryCode === source.countryCode).length;
       const confidenceValues = counts.map((item) => item._avg.parserConfidence).filter((value): value is number => typeof value === "number");
+      const sourceConfidenceRows = confidenceRows.filter((row) => row.sourceId === source.id);
       return {
         sourceId: source.id,
         sourceCode: source.code,
@@ -301,6 +306,13 @@ export class DrugMarketService {
         rowsFailed: 0,
         demoRowsExcluded: demoRows,
         parserConfidenceAverage: confidenceValues.length ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length : null,
+        parserConfidenceDistribution: {
+          gte090: sourceConfidenceRows.filter((row) => Number(row.parserConfidence ?? 0) >= 0.9).length,
+          gte080: sourceConfidenceRows.filter((row) => Number(row.parserConfidence ?? 0) >= 0.8).length,
+          gte070: sourceConfidenceRows.filter((row) => Number(row.parserConfidence ?? 0) >= 0.7).length,
+          gte060: sourceConfidenceRows.filter((row) => Number(row.parserConfidence ?? 0) >= 0.6).length,
+          lt060: sourceConfidenceRows.filter((row) => Number(row.parserConfidence ?? 0) < 0.6).length
+        },
         requiredNextAction: nextActionForSource(source.coverageStatus, source.sourceAccessMode)
       };
     });

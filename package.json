@@ -45,6 +45,7 @@
     "test:official-medications": "node scripts/official-medications-test.mjs",
     "test:official-medications:gcc": "node scripts/official-medications-gcc-test.mjs",
     "test:drug-market:review": "node scripts/drug-market-review-test.mjs",
+    "test:drug-market:oman": "node scripts/drug-market-oman-test.mjs",
     "medication:sources:discover": "node scripts/official-medication-source-discovery.mjs",
     "medication:import:official": "node scripts/import-official-medications.mjs",
     "medication:import:qatar": "node scripts/import-official-medications.mjs --country QAT --source QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",

@@ -13,6 +13,19 @@ export class DrugMarketSearchService {
     const contains = normalized || "__empty__";
     const showDemo = process.env.NODE_ENV === "test" || process.env.DEMO_MODE === "true";
     const countryCode = params.countryCode?.trim().toUpperCase();
+    const matchingSources = normalized
+      ? await this.prisma.drugMarketSource.findMany({
+          where: {
+            OR: [
+              { code: { contains: normalized, mode: "insensitive" } },
+              { name: { contains: normalized, mode: "insensitive" } },
+              { latestSourceLabel: { contains: normalized, mode: "insensitive" } }
+            ]
+          },
+          select: { id: true }
+        })
+      : [];
+    const matchingSourceIds = matchingSources.map((source) => source.id);
     const products = await this.prisma.drugMarketProduct.findMany({
       where: {
         isDemo: showDemo ? undefined : false,
@@ -35,7 +48,11 @@ export class DrugMarketSearchService {
               { variants: { some: { marketingCompany: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
               { variants: { some: { registrationNumber: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
               { variants: { some: { atcCode: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
-              { variants: { some: { currency: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } }
+              { variants: { some: { officialPriceText: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
+              { variants: { some: { priceText: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
+              { variants: { some: { currency: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
+              { variants: { some: { countryCode: { contains, mode: "insensitive" }, isDemo: showDemo ? undefined : false } } },
+              ...(matchingSourceIds.length ? [{ variants: { some: { sourceId: { in: matchingSourceIds }, isDemo: showDemo ? undefined : false } } }] : [])
             ]
           }
         ]

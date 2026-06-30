@@ -40,7 +40,7 @@ try {
     highConfidenceRows({ countryCode: "OMN", sourceCode: "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES", limit: 5 })
   ]);
   assert(bhrHigh.length > 0, "Bahrain has high-confidence verification candidates");
-  assert(omnHigh.length === 0, "Oman low-confidence parser rows are not auto-verification candidates");
+  assert(omnHigh.length > 0, "Oman parser exposes strict high-confidence verification candidates");
 
   let missingReasonFailed = false;
   try {
