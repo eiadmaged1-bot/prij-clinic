@@ -7,7 +7,7 @@ dist/
 build/
 .next/
 out/
-coverage/
+/coverage/
 
 # Environment and secrets
 .env

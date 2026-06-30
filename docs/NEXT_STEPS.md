@@ -2,11 +2,14 @@
 
 ## V0.7 Follow-Up
 
-1. Import and verify official Egypt/GCC medication-market sources before treating country coverage as usable reference data.
-2. Keep retail metadata connectors disabled by default until legal, privacy, and source-license review is complete.
-3. Expand Medication Intelligence Engine v2 tests around source import, manual review, duplicate merge candidates, and role denials.
-4. Review every medication interaction rule, herbal warning, and market mapping through qualified clinical governance before real use.
-5. Keep medication and prescription safety output draft-only; doctor approval remains mandatory.
+1. Run Official Medication Data Import Pack 1 - Egypt + Saudi Arabia using official-source-first files only.
+2. Import and verify official Egypt/GCC medication-market sources before treating country coverage as usable reference data.
+3. Keep imported rows in `needs_review`/`imported` style states until manual verification.
+4. Configure a non-committed staging environment with `AI_FEATURES_ENABLED=false`, `AI_PROVIDER=disabled`, and staging-only demo passwords, then rerun staging smoke.
+5. Keep retail metadata connectors disabled by default until legal, privacy, and source-license review is complete.
+6. Expand Medication Intelligence Engine v2 tests around source import, manual review, duplicate merge candidates, source priority, and role denials.
+7. Review every medication interaction rule, herbal warning, and market mapping through qualified clinical governance before real use.
+8. Keep medication and prescription safety output draft-only; doctor approval remains mandatory.
 
 ## V0.7 Workflow Follow-Up
 

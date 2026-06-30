@@ -20,6 +20,8 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - Drug-market strength, form, route, package, registration, source, country, and availability fields are market metadata only and must not become patient dosing instructions.
 - Medication and prescription safety checks remain draft-only doctor-support workflows. They cannot diagnose, prescribe, sign, approve, or modify final signed records.
 - Receptionist and accountant users must remain blocked from clinical decision-support tools and protected admin import workflows.
+- Staging smoke is gated until non-committed staging configuration sets `AI_FEATURES_ENABLED=false`, `AI_PROVIDER=disabled`, staging URLs if remote, and staging-only demo passwords.
+- Official price metadata is stored only as source-backed metadata where available; the app must not claim live shelf price, stock, checkout, or purchase availability.
 
 ## Safety Boundaries
 

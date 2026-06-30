@@ -6,6 +6,8 @@ V0.7 clinic workflow spine adds investigation result metadata, critical-result a
 
 V0.7 includes the Medication Intelligence Engine v2 framework. It is not a complete Egypt/GCC real market database yet; official source import and verification are still required. Retail metadata connectors remain disabled by default, imported market records stay review-gated until verified, and strength/form/pack fields are market metadata only, never patient dosing instructions.
 
+The v0.7 medication intelligence source-of-truth audit is documented in `docs/V0_7_MEDICATION_INTELLIGENCE_AUDIT.md`. The next medication-data sprint is Official Medication Data Import Pack 1 - Egypt + Saudi Arabia.
+
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.
 
 V0.6 is a unified local/private integration of the AI Management Mega Leap branch, Medical Calculator Suite branch, and Medication Intelligence Engine branch. It is not production-ready, not a medical device, and must not be used with real patient data.

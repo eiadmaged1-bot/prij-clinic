@@ -18,3 +18,14 @@ Safety boundaries:
 - Doctor approval is mandatory for clinical decisions and overrides.
 
 Market strength means marketed product variant only, such as `625 mg tablet` or `457 mg/5 mL oral suspension`. It is never converted into patient directions.
+
+V0.7 audit status:
+
+- Medication Intelligence Engine v2 is integrated as a framework.
+- It is not a complete Egypt/GCC medicine database yet.
+- Demo products are reference/demo rows only.
+- Country scope is `EG`, `KSA`, `UAE`, `QAT`, `KWT`, `BHR`, `OMN`, and optional `YEM`.
+- Official-source-first import remains pending.
+- Retail metadata connectors remain disabled by default.
+- Imported rows require review and verification.
+- Staging smoke is gated until disabled-AI staging configuration and staging-only demo credentials are provided.

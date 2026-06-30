@@ -6,6 +6,10 @@ Branch `integration/v0.7-medication-intelligence-unified` includes the V0.7 clin
 
 Medication Intelligence Engine v2 preserves medication families, ingredients, products, label sections, herbal references, patient medication/allergy lists, draft safety checks, and drug-market country/source/product/variant/import-review metadata. It is not a complete Egypt/GCC real market database yet; official source import and verification are still required. Retail metadata connectors remain disabled by default.
 
+Audit branch `audit/v0.7-medication-intelligence-source-of-truth` confirms the current medication/drug-market source of truth before real Egypt/GCC imports. See `docs/V0_7_MEDICATION_INTELLIGENCE_AUDIT.md`.
+
+Staging smoke is currently gated, not passed: no `.env.staging` is present and `AI_PROVIDER=disabled` was not set for the staging smoke command, so the runner stopped with `AI must remain disabled for staging smoke tests.`
+
 The branch remains local/demo only and is not production-ready. Do not use real patient data, PHI files, OCR, DICOM/PACS, external AI, WhatsApp, real e-signature, real payment gateway, insurance claim submission, or unverified medication market data for care.
 
 # V0.7 Clinic Workflow Spine

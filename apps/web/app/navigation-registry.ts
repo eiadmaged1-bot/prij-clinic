@@ -40,6 +40,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/admin", label: "Admin Control Center", icon: "admin", group: "Admin", adminOnly: true },
   { href: "/admin/medications", label: "Medication Catalog/Admin", icon: "prescription", group: "Admin", adminOnly: true },
   { href: "/admin/drug-market", label: "Drug Market Admin", icon: "prescription", group: "Admin", adminOnly: true },
+  { href: "/admin/drug-market/coverage", label: "Drug Market Coverage", icon: "prescription", group: "Admin", adminOnly: true },
   { href: "/admin/protocol-atlas", label: "Protocol Verification", icon: "ai", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/admin/accounts", label: "Accounts", icon: "reception", group: "Admin", adminOnly: true }

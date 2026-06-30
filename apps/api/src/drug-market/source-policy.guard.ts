@@ -1,6 +1,17 @@
 import { BadRequestException } from "@nestjs/common";
 
-const blockedUrlWords = ["login", "captcha", "checkout", "cart", "order", "stock", "branch", "payment"];
+const blockedUrlWords = [
+  "login",
+  "captcha",
+  "checkout",
+  "cart",
+  "order",
+  "stock",
+  "branch",
+  "payment",
+  "paywall",
+  "protected"
+];
 
 export function assertAllowedSourcePolicy(source: {
   policyStatus?: string | null;
