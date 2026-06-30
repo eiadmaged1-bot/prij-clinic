@@ -185,7 +185,8 @@ async function aiWalkthrough(tokens, fixture) {
 }
 
 async function guidelinesWalkthrough(tokens) {
-  const sources = await apiJson("GET", "/guidelines/sources", tokens.doctor);
+  const sourcesResponse = await apiJson("GET", "/guidelines/sources", tokens.doctor);
+  const sources = sourcesResponse.sources ?? sourcesResponse;
   if (!Array.isArray(sources) || sources.length === 0) throw new Error("guideline source registry is empty");
   const search = await apiJson("GET", "/guidelines/search?q=doctor%20review", tokens.doctor);
   if (!search.results?.length) throw new Error("guideline search returned no cited chunks");
