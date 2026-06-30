@@ -2,6 +2,14 @@
 
 ## V0.7 Follow-Up
 
+1. Import and verify official Egypt/GCC medication-market sources before treating country coverage as usable reference data.
+2. Keep retail metadata connectors disabled by default until legal, privacy, and source-license review is complete.
+3. Expand Medication Intelligence Engine v2 tests around source import, manual review, duplicate merge candidates, and role denials.
+4. Review every medication interaction rule, herbal warning, and market mapping through qualified clinical governance before real use.
+5. Keep medication and prescription safety output draft-only; doctor approval remains mandatory.
+
+## V0.7 Workflow Follow-Up
+
 1. Expand visual QA for patient Results, Documents, Consents, Referrals, Tasks, Internal Notes, Timeline, and Print Packet tabs.
 2. Add deeper lower-role positive-path tests for nurse/reception/accountant task and document metadata workflows.
 3. Design production file storage separately before accepting PHI uploads.
@@ -96,7 +104,7 @@ Do not start real production deployment until the following are designed, implem
 - Any future AI provider integration must have consent, RBAC, audit, privacy, provider contract, and doctor-review controls before use.
 # Medication Intelligence Next Steps
 
-- Add official Egypt, UAE, and Yemen file ingestion once clinic-owned files are available.
+- Add official Egypt, UAE, Yemen, and broader GCC file ingestion once clinic-owned files are available.
 - Expand verified interaction rules through licensed clinical data.
 - Add scheduled official-source update checks.
 - Improve prescription variant selection UX while keeping patient directions doctor-authored.

@@ -6,7 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
-import { MedicationSafetyPanel, PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
+import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -107,7 +107,9 @@ const tabs: TabConfig[] = [
   { key: "calculators", label: "Calculators", icon: "investigations", empty: "Calculator history appears here.", permissions: ["calculator.read", "calculator.calculate"] },
   { key: "medications", label: "Medications", icon: "prescription", endpoint: "", empty: "No active medication list entry yet.", permissions: ["patient_medications.read"] },
   { key: "allergies", label: "Allergies", icon: "consent", endpoint: "", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
+  { key: "herbals", label: "Herbal/Supplements", icon: "prescription", endpoint: "", empty: "No herbal or supplement entry yet.", permissions: ["medications.search"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
+  { key: "prescription-safety", label: "Prescription Safety", icon: "ai", empty: "Review prescription safety before doctor approval.", permissions: ["medications.safety_check", "prescription.read"] },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
   { key: "print-packet", label: "Print Packet", icon: "reports", empty: "Print-friendly visit packet." }
 ];
@@ -287,7 +289,9 @@ export default function PatientFilePage() {
           {active.key === "calculators" ? <CalculatorsPanel patient={patient} /> : null}
           {active.key === "medications" ? <PatientMedicationList /> : null}
           {active.key === "allergies" ? <PatientAllergyList /> : null}
+          {active.key === "herbals" ? <HerbalSearchPanel /> : null}
           {active.key === "medication-safety" ? <MedicationSafetyPanel patientId={patient.id} /> : null}
+          {active.key === "prescription-safety" ? <PrescriptionSafetyPanel patientId={patient.id} /> : null}
           {active.key === "pregnancy" ? (
             <>
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
@@ -300,7 +304,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "medication-safety" ? (
+          {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>

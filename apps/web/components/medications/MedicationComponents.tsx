@@ -102,6 +102,26 @@ export function MedicationSafetyPanel({ patientId }: { patientId?: string }) {
   );
 }
 
+export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
+  const [status, setStatus] = useState("No prescription check run");
+  async function runCheck() {
+    try {
+      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Demo prescription item", family: "prescription draft" }] }) as { alerts?: Array<{ severity: string }> };
+      setStatus(`Draft prescription safety review created with ${result.alerts?.length ?? 0} alert(s)`);
+    } catch {
+      setStatus("Prescription safety review requires clinical access");
+    }
+  }
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Prescription Safety</h2><SafetyAlertBadge severity="major" /></div>
+      <p className="muted">Prescription checks are draft safety support for the doctor. They do not prescribe, sign, or change final prescriptions.</p>
+      <button className="button" onClick={runCheck} type="button">Run Prescription Check</button>
+      <p className="muted">{status}</p>
+    </section>
+  );
+}
+
 export function SafetyAlertBadge({ severity }: { severity: string }) {
   return <span className={`badge ${severity === "critical" || severity === "major" ? "danger" : "warning"}`}>{severity} review</span>;
 }

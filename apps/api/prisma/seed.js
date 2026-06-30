@@ -1287,8 +1287,6 @@ async function main() {
     }
   }
 
-  await seedMedicationIntelligence(prisma);
-
   let demoOwner = null;
 
   if (seedDemoData && process.env.SEED_DEMO_OWNER !== "false") {
@@ -1489,6 +1487,7 @@ async function main() {
   await seedContraceptionProtocols(prisma);
   await seedAntenatalRoutineProtocols(prisma);
   await seedGuidelineCenter(prisma, demoOwner);
+  await seedMedicationIntelligence(prisma);
 
   if (!seedDemoData) {
     return;

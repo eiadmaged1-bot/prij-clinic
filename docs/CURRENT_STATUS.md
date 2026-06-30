@@ -1,10 +1,16 @@
 # Current Status
 
+# V0.7 Medication Intelligence Unified
+
+Branch `integration/v0.7-medication-intelligence-unified` includes the V0.7 clinic workflow spine and the Medication Intelligence Engine v2 framework in the latest unified app.
+
+Medication Intelligence Engine v2 preserves medication families, ingredients, products, label sections, herbal references, patient medication/allergy lists, draft safety checks, and drug-market country/source/product/variant/import-review metadata. It is not a complete Egypt/GCC real market database yet; official source import and verification are still required. Retail metadata connectors remain disabled by default.
+
+The branch remains local/demo only and is not production-ready. Do not use real patient data, PHI files, OCR, DICOM/PACS, external AI, WhatsApp, real e-signature, real payment gateway, insurance claim submission, or unverified medication market data for care.
+
 # V0.7 Clinic Workflow Spine
 
 Branch `leap/v0.7-clinic-workflow-spine` adds the clinic workflow spine around the patient file: investigation result metadata, critical acknowledgement workflow, metadata-only patient document archive, consent templates and demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packet views.
-
-The branch remains local/demo only. Do not use real patient data, PHI files, OCR, DICOM/PACS, external AI, WhatsApp, real e-signature, real payment gateway, or insurance claim submission.
 
 New focused verification:
 
@@ -174,6 +180,6 @@ npm run test:ai-management
 `npm run test:staging:smoke` requires explicit staging-script mode (`APP_ENV=staging`) even when pointed at the local fake/demo app.
 # Medication Intelligence Engine
 
-The `leap/e-medication-intelligence-engine` branch adds a unified medication catalog, herbal references, patient medication/allergy lists, draft safety checks, Egypt/Gulf market variant database, configurable country badges, source/import policy, admin controls, coverage dashboard pages, regression tests, and documentation.
+The `origin/leap/e-medication-intelligence-engine-v2` branch is integrated into v0.7 as a framework for a unified medication catalog, herbal references, patient medication/allergy lists, draft safety checks, Egypt/GCC market variant metadata, configurable country badges, source/import policy, admin controls, coverage dashboard pages, regression tests, and documentation.
 
 The feature is a professional reference and safety-support system only. It does not provide patient self-medication guidance, pharmacy availability, retail workflows, autonomous prescribing, automatic dose changes, or AI clinical decisions.

@@ -11,6 +11,16 @@
 
 This MVP foundation is not production-ready for real clinical operations. It is a local development and demo foundation for review, hardening, and fake-data workflow validation.
 
+## V0.7 Medication Intelligence Engine V2 Limitations
+
+- Medication Intelligence Engine v2 is a framework, not a complete Egypt/GCC real market database.
+- Official source import and verification are still required before market data can be trusted operationally.
+- Imported drug-market records default to imported/needs-review style states until verified.
+- Retail metadata connectors remain disabled by default.
+- Drug-market strength, form, route, package, registration, source, country, and availability fields are market metadata only and must not become patient dosing instructions.
+- Medication and prescription safety checks remain draft-only doctor-support workflows. They cannot diagnose, prescribe, sign, approve, or modify final signed records.
+- Receptionist and accountant users must remain blocked from clinical decision-support tools and protected admin import workflows.
+
 ## Safety Boundaries
 
 - Not production-ready.
