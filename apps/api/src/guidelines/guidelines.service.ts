@@ -437,7 +437,7 @@ export class GuidelinesService {
   }
 
   async archiveDocument(id: string, dto: Partial<ReviewGuidelineDto> | undefined, user: AuthUser) {
-    return this.reviewDocument(id, { reason: "Archived by authorized guideline manager.", ...(dto ?? {}), decision: "ARCHIVED" }, user);
+    return this.reviewDocument(id, { ...(dto ?? {}), decision: "ARCHIVED" }, user);
   }
 
   async search(query: SearchGuidelinesDto, user: AuthUser, mode: SearchMode = "SEARCH_ONLY") {
@@ -493,7 +493,9 @@ export class GuidelinesService {
         answer: "No source found in your local library.",
         warning: "Doctor review required. Evidence summary only.",
         citations: [],
-        mode: dto.mode ?? "concise"
+        mode: dto.mode ?? "concise",
+        externalAiAccess: false,
+        doctorReviewRequired: true
       };
     }
     const sentences = search.results
@@ -510,7 +512,9 @@ export class GuidelinesService {
         versionLabel: result.versionLabel,
         sectionHeading: result.sectionHeading
       })),
-      mode: dto.mode ?? "concise"
+      mode: dto.mode ?? "concise",
+      externalAiAccess: false,
+      doctorReviewRequired: true
     };
   }
 

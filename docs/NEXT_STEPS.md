@@ -1,5 +1,14 @@
 # Next Steps
 
+1. Run and archive the full v0.6 audit verification suite from `docs/V0_6_MASTER_UNIFIED_AUDIT.md`.
+2. Keep v0.6 stabilization limited to defects, tests, docs, and safety hardening; do not add major features until the unified branch is stable.
+3. Add focused visual/manual QA for the patient workspace medication, allergy, herbal/supplement, medication safety, AI snapshot, OB dating, guideline, and protocol tabs.
+4. Add more lower-role denial coverage for receptionist/accountant access to clinical AI, medication safety, drug-market admin, guideline medical library, and protocol verification.
+5. Review every verified calculator formula, medication interaction rule, herbal warning, and verified protocol pack with qualified clinical governance before real-world use.
+6. Keep marketed medication strength/form/package fields as market metadata only; patient directions must remain doctor-authored prescription fields.
+
+## V0.5 Carry-Forward Items
+
 1. Review every verified calculator formula with a qualified clinician before real-world use.
 2. Add richer patient-file placement for compact OB Dating Card in every future patient header component.
 3. Add formal formula approval workflow with reviewer identity and source attachment policy.

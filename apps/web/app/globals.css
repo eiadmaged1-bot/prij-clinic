@@ -27,6 +27,28 @@
   --radius-lg: 12px;
   --font-scale: 1;
   --density-space: 1rem;
+  --density-font-scale: 1;
+  --density-control-height: 2.75rem;
+  --density-card-padding: 1.25rem;
+  --density-sidebar-width: 18rem;
+}
+
+:root[data-density="large"],
+.app-shell[data-density="large"] {
+  --density-font-scale: 1.08;
+  --density-control-height: 3.25rem;
+  --density-card-padding: 1.45rem;
+  --density-sidebar-width: 19.5rem;
+  --density-space: 1.15rem;
+}
+
+:root[data-density="compact"],
+.app-shell[data-density="compact"] {
+  --density-font-scale: 0.96;
+  --density-control-height: 2.35rem;
+  --density-card-padding: 0.8rem;
+  --density-sidebar-width: 16rem;
+  --density-space: 0.7rem;
 }
 
 :root[data-theme="minimal-clean"] {
@@ -348,7 +370,8 @@ select:focus {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 18rem minmax(0, 1fr);
+  grid-template-columns: var(--density-sidebar-width) minmax(0, 1fr);
+  font-size: calc(1rem * var(--density-font-scale));
   min-height: 100vh;
 }
 
@@ -412,7 +435,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 2.75rem;
+  min-height: var(--density-control-height);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: #dcebf0;

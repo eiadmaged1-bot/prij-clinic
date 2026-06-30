@@ -28,6 +28,16 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - No fetal image interpretation.
 - Audit logs are application-level and not database-tamper-resistant.
 
+## V0.6 Unified Limitations
+
+- The unified v0.6 branch is a local/private integration and audit target, not a production release.
+- Medication safety checks use seeded/demo rules and limited local data; they are not a full commercial interaction database.
+- Drug-market strength, form, route, package, registration, source, country, and availability fields are market metadata only and must not be treated as patient dosing instructions.
+- Patient directions remain doctor-authored prescription content only.
+- Medication safety, AI management, guideline summaries, protocol snapshots, and calculator outputs require doctor review and cannot finalize clinical records.
+- Receptionist/accountant lockouts are enforced by permissions and tested routes, but future routes must continue adding server-side authorization checks before release.
+- Patient workspace integration is intentionally tabbed and role-filtered; future additions should avoid turning the default patient view into a crowded decision-support screen.
+
 # V0.5 Limitations
 
 - This is not an autonomous medical device, diagnostic engine, prescribing engine, or substitute for the doctor.

@@ -1,5 +1,23 @@
 # Current Status
 
+# V0.6 Master Unified Integration
+
+Branch `integration/v0.6-master-unified` is the current unified source-of-truth branch after merging:
+
+- Latest calculator + AI management mega integration.
+- Medication Intelligence Engine, herbal/supplement references, medication safety, patient medication/allergy lists, and drug-market metadata workflows.
+
+The unified branch keeps the calculator/AI/guideline/protocol model area and the medication/drug-market model area together. Patient workspace tabs remain role-aware and focused: medication, allergy, herbal/supplement, medication safety, and prescription safety tabs appear only for users with the relevant permissions.
+
+Clinical safety state remains unchanged:
+
+- AI cannot diagnose, prescribe, sign, approve, bypass RBAC, or update final signed clinical records.
+- Medication safety cannot auto-prescribe, sign, approve, or edit prescriptions.
+- Marketed medication strength/form/package data is country/source market metadata only, never patient dosing instructions.
+- Receptionist and accountant roles remain blocked from clinical AI, medication safety, drug-market admin, guideline medical library workflows, and protocol verification.
+
+See `docs/V0_6_MASTER_UNIFIED_AUDIT.md` for the source-of-truth audit.
+
 # V0.5.2 Calculators + AI Mega Integration
 
 Integration branch `integration/v0.5-calculators-ai-mega` merges:

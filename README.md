@@ -1,10 +1,10 @@
 # Prij Clinic
 
-Clinic Management System V0.5.2 integrated local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, and the local Guideline Center.
+Clinic Management System V0.6 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine, and drug-market metadata workflows.
 
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.
 
-V0.5.2 is a verified local/private integration of the AI Management Mega Leap branch and Medical Calculator Suite branch. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.6 is a unified local/private integration of the AI Management Mega Leap branch, Medical Calculator Suite branch, and Medication Intelligence Engine branch. It is not production-ready, not a medical device, and must not be used with real patient data.
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, billing, payments, service catalog, daily closing, patient statements, owner finance reports, secure Guideline Center, guideline source registry, private guideline vault controls, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
 V0.3 is a verified local/private integration of the locked MVP pilot workflow, finance/report deepening, general gynecology starter, and secure Clinical Guideline Center. It is not production-ready, not a medical device, and must not be used with real patient data.
@@ -34,6 +34,16 @@ The web app is now organized around the clinic workflow the pilot needs:
 - Patient files now include a General Gynecology workspace with recording-only visit templates for abnormal bleeding, pelvic pain, PCOS, fibroid or ovarian cyst, and contraception counseling.
 
 Every UI surface remains demo/local only: no real patient data, no real payment gateway, no production PHI upload, and no external AI calls.
+
+## V0.6 Unified Status
+
+- Medication Intelligence Engine is integrated with medication families, ingredients, products, label sections, herbal references, patient medication/allergy lists, draft medication safety checks, and drug-market country/source/product/variant metadata.
+- Calculator, OB dating, protocol atlas, AI management, and guideline center workflows remain integrated from the v0.5 calculator/AI mega work.
+- Patient workspace tabs remain role-aware and focused, including medication, allergy, herbal/supplement, medication safety, prescription safety, AI snapshot, OB/GYN, finance, guideline/protocol, and calculator-related views.
+- Marketed medication strength/form/package data is market metadata only and is never patient dosing instruction text.
+- AI and medication safety outputs remain doctor-review support only and cannot diagnose, prescribe, sign, approve, or update final signed records.
+
+See `docs/V0_6_MASTER_UNIFIED_AUDIT.md`.
 
 ## V0.5.2 Integration Status
 

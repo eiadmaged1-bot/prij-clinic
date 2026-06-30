@@ -3,6 +3,7 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { navigationRegistry, type NavItem } from "./navigation-registry";
 import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
@@ -28,97 +29,9 @@ type MvpPageProps = {
   primaryAction?: [string, string];
 };
 
-type NavGroup = {
-  title: string;
-  links: Array<[string, string, IconName]>;
-};
-
-type PortalSideItem = {
-  label: string;
-  icon: IconName;
-  href?: string;
-  badge?: string;
-};
-
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-const navGroups: NavGroup[] = [
-  {
-    title: "Operations",
-    links: [
-      ["/dashboard", "Dashboard", "dashboard"],
-      ["/doctor", "Doctor Mode", "doctor"],
-      ["/patients", "Patients", "patients"],
-      ["/patients/new", "New Patient", "patients"],
-      ["/appointments", "Appointments", "calendar"],
-      ["/calendar", "Calendar", "calendar"],
-      ["/queue", "Queue", "queue"]
-    ]
-  },
-  {
-    title: "Clinical",
-    links: [
-      ["/doctor/visit", "Guided Visit", "encounter"],
-      ["/calculators", "Calculators", "investigations"],
-      ["/protocol-atlas", "Protocol Atlas", "ai"],
-      ["/guidelines", "Guideline Center", "reports"],
-      ["/medications", "Medications", "prescription"],
-      ["/drug-market", "Drug Market", "prescription"],
-      ["/encounters", "Visits", "encounter"],
-      ["/prescriptions", "Prescriptions", "prescription"],
-      ["/investigations", "Orders", "investigations"],
-      ["/reports", "Reports", "reports"]
-    ]
-  },
-  {
-    title: "OB/Pregnancy",
-    links: [
-      ["/pregnancies", "Pregnancy", "pregnancy"],
-      ["/ultrasound", "Ultrasound", "ultrasound"]
-    ]
-  },
-  {
-    title: "Finance",
-    links: [["/billing", "Billing", "billing"]]
-  },
-  {
-    title: "Safety/Admin",
-    links: [
-      ["/consents", "Consents", "consent"],
-      ["/ai-drafts", "AI Draft Review", "ai"]
-    ]
-  }
-];
-
-const adminNavGroup: NavGroup = {
-  title: "Admin",
-  links: [
-    ["/admin", "Control Center", "admin"],
-    ["/admin/calculators", "Formula Registry", "investigations"],
-    ["/admin/medications", "Medication Catalog", "prescription"],
-    ["/admin/drug-market", "Drug Market Admin", "prescription"],
-    ["/admin/protocol-atlas", "Protocol Verification", "ai"],
-    ["/admin/appearance", "Appearance", "settings"],
-    ["/admin/accounts", "Accounts", "reception"]
-  ]
-};
-
-const portalSideItems: PortalSideItem[] = [
-  { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
-  { label: "Doctor Mode", icon: "doctor", href: "/doctor" },
-  { label: "Calendar", icon: "calendar", href: "/calendar", badge: "Today" },
-  { label: "Patients", icon: "patients", href: "/patients" },
-  { label: "Lab Orders", icon: "investigations", href: "/investigations" },
-  { label: "Guidelines", icon: "reports", href: "/guidelines" },
-  { label: "Finance", icon: "billing", href: "/billing" },
-  { label: "Inventory", icon: "files", badge: "Later" },
-  { label: "Accounts", icon: "reception", href: "/admin/accounts" },
-  { label: "Settings", icon: "settings", href: "/admin" },
-  { label: "Logs", icon: "timeline", href: "/admin" },
-  { label: "Messaging", icon: "ai", badge: "Later" },
-  { label: "Analytics", icon: "dashboard", badge: "Later" },
-  { label: "Support", icon: "consent", badge: "Later" }
-];
+const navGroupOrder: NavItem["group"][] = ["Operations", "Clinical", "OB/Pregnancy", "Finance", "Safety/Admin", "Admin"];
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -330,46 +243,19 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
-  const isDoctor = Boolean(user?.roles.includes("Doctor"));
+  const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
-  const canOpenClinical = hasAnyPermission(permissions, [
-    "encounter.read",
-    "encounter.create",
-    "prescription.read",
-    "investigation.read",
-    "report.read"
-    ,
-    "medications.read",
-    "drug_market.read"
-  ]);
-  const canOpenPregnancy = hasAnyPermission(permissions, ["pregnancy.read", "pregnancy.manage", "ob_ultrasound.read", "ob_ultrasound.manage"]);
-  const canOpenFinance = Boolean(
-    user?.roles.includes("Owner") ||
-      user?.roles.includes("Admin") ||
-      user?.roles.includes("Accountant") ||
-      hasAnyPermission(permissions, ["billing.read", "billing.manage", "billing.report"])
-  );
-  const canOpenGuidelines = Boolean(
-    permissions.includes("guidelines.read") || permissions.includes("guidelines.search")
-  );
-  const visibleNavGroups = navGroups
-    .filter((group) => group.title !== "Clinical" || canOpenClinical || canOpenGuidelines)
-    .filter((group) => group.title !== "OB/Pregnancy" || canOpenPregnancy)
-    .filter((group) => group.title !== "Finance" || canOpenFinance)
-    .map((group) =>
-      group.title === "Clinical" && canOpenGuidelines
-        ? { ...group, links: [...group.links, ["/guidelines", "Evidence Library", "reports"] as [string, string, IconName]] }
-        : group
-    )
-    .map((group) =>
-      group.title === "Clinical" && !canOpenClinical
-        ? { ...group, links: group.links.filter(([href]) => href === "/guidelines") }
-        : group
-    )
+  const visibleNavGroups = navGroupOrder
+    .map((group) => ({
+      title: group,
+      links: navigationRegistry
+        .filter((item) => item.group === group && canSeeNavItem(item, roles, permissions, canOpenAdmin))
+        .map((item) => [item.href, item.label, item.icon] as [string, string, IconName])
+    }))
     .filter((group) => group.links.length > 0);
 
   useEffect(() => {
-    setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
+    setComfort(localStorage.getItem("prijDensityMode") ?? localStorage.getItem("prijComfortMode") ?? "comfortable");
   }, []);
 
   useEffect(() => {
@@ -380,6 +266,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   function setComfortMode(next: string) {
     setComfort(next);
+    localStorage.setItem("prijDensityMode", next);
     localStorage.setItem("prijComfortMode", next);
   }
 
@@ -389,7 +276,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort}`}>
+    <main className={`app-shell theme-${theme} comfort-${comfort}`} data-density={comfort}>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
@@ -397,45 +284,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>V0.1 controlled demo</span>
         </Link>
 
-        {theme === "medicolize-portal" ? (
-          <nav className="nav-group portal-side-nav" aria-label="Owner portal navigation">
-            {portalSideItems
-              .filter((item) => item.href !== "/billing" || canOpenFinance)
-              .filter((item) => !["/doctor", "/investigations"].includes(item.href ?? "") || canOpenClinical)
-              .filter((item) => item.href !== "/admin" || canOpenAdmin)
-              .filter((item) => item.href !== "/admin/accounts" || canOpenAdmin)
-              .map((item) =>
-                item.href ? (
-                  <Link className={`nav-item ${isActive(pathname, item.href) ? "active" : ""}`} href={item.href} key={item.label}>
-                    <ThreeDMedicalIcon name={item.icon} size="sm" tone={item.href === "/admin" ? "violet" : "teal"} />
-                    <span>{item.label}</span>
-                    {item.badge ? <span className="side-badge">{item.badge}</span> : <span className="nav-dot" />}
-                  </Link>
-                ) : (
-                  <span className="nav-item disabled" key={item.label}>
-                    <ThreeDMedicalIcon name={item.icon} size="sm" tone="slate" />
-                    <span>{item.label}</span>
-                    <span className="side-badge">{item.badge}</span>
-                  </span>
-                )
-              )}
-          </nav>
-        ) : (
-          [...visibleNavGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
-            <nav className="nav-group" key={group.title} aria-label={group.title}>
-              <div className="nav-group-title">{group.title}</div>
-              {group.links
-                .filter(([href]) => !isDoctor || canOpenAdmin || !["/admin", "/admin/appearance", "/billing"].includes(href))
-                .map(([href, label, icon]) => (
+        {visibleNavGroups.map((group) => (
+          <nav className="nav-group" key={group.title} aria-label={group.title}>
+            <div className="nav-group-title">{group.title}</div>
+            {group.links.map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
                   <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
-              ))}
-            </nav>
-          ))
-        )}
+            ))}
+          </nav>
+        ))}
       </aside>
 
       <div className="app-main">
@@ -444,12 +304,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="eyebrow">Local pilot workspace</p>
             <p className="muted">Use demo records only. Clinical decisions stay doctor-led.</p>
           </div>
-          {theme === "medicolize-portal" ? (
-            <label className="portal-search" aria-label="Search patient files">
-              <span>Search</span>
-              <input placeholder="Find patient file or appointment" />
-            </label>
-          ) : null}
+          <label className="portal-search" aria-label="Search patient files">
+            <span>Search</span>
+            <input placeholder="Find patient file or appointment" />
+          </label>
           <div className="topbar-actions">
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
@@ -604,4 +462,11 @@ function isActive(pathname: string | null, href: string) {
 
 function hasAnyPermission(permissions: string[], keys: string[]) {
   return keys.some((key) => permissions.includes(key));
+}
+
+function canSeeNavItem(item: NavItem, roles: string[], permissions: string[], canOpenAdmin: boolean) {
+  if (item.adminOnly) return canOpenAdmin;
+  if (item.roles?.length && !item.roles.some((role) => roles.includes(role))) return false;
+  if (item.permissions?.length && !hasAnyPermission(permissions, item.permissions)) return false;
+  return true;
 }
