@@ -25,11 +25,29 @@ async function main() {
   }
   record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
-  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
-  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Control Center", "Appearance", "Accounts"]) {
-    if (!shellSource.includes(label)) throw new Error(`Admin navigation label missing from shell source: ${label}`);
+  const registrySource = await readFile("apps/web/app/navigation-registry.ts", "utf8");
+  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Admin Control Center", "Appearance", "Accounts", "Guideline Center", "Medications", "Drug Market"]) {
+    if (!registrySource.includes(label)) throw new Error(`Navigation registry label missing: ${label}`);
   }
-  record.pass("owner admin navigation includes control center appearance and accounts");
+  record.pass("canonical navigation registry includes clinical and admin modules");
+
+  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
+  if (shellSource.includes('theme === "medicolize-portal"')) throw new Error("Theme-specific shell navigation branch is still present.");
+  for (const label of ["navigationRegistry", "data-density", "prijDensityMode"]) {
+    if (!shellSource.includes(label)) throw new Error(`Shell density/navigation implementation missing ${label}`);
+  }
+  record.pass("themes share one shell and density persists per browser");
+
+  const cssSource = await readFile("apps/web/app/globals.css", "utf8");
+  for (const token of ["--density-font-scale", "--density-control-height", "--density-card-padding", "--density-sidebar-width", ':root[data-density="large"]', ':root[data-density="compact"]']) {
+    if (!cssSource.includes(token)) throw new Error(`Density token missing: ${token}`);
+  }
+  record.pass("comfort large compact density tokens are implemented");
+
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Medication Safety", "Prescription Safety", "Timeline"]) {
+    if (!registrySource.includes(label)) throw new Error(`Patient tab registry missing: ${label}`);
+  }
+  record.pass("patient tabs are registered independently of theme");
 
   const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
   const admin = adminLogin.token;

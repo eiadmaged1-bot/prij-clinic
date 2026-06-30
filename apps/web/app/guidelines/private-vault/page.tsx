@@ -1,15 +1,5 @@
-import { GuidelineCenterClient } from "../../../components/guidelines/GuidelineCenterClient";
-import { AppShell, SafetyAlert } from "../../mvp-page";
+import { GuidelineCenter } from "../GuidelineCenter";
 
-export default function GuidelinePrivateVaultPage() {
-  return (
-    <AppShell>
-      <section className="page-header">
-        <p className="eyebrow">Guideline Center</p>
-        <h1>Private vault</h1>
-      </section>
-      <SafetyAlert />
-      <GuidelineCenterClient mode="vault" />
-    </AppShell>
-  );
+export default function GuidelinesPrivateVaultPage() {
+  return <GuidelineCenter view="private" />;
 }

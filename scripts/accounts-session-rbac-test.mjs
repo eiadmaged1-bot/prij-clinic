@@ -1,8 +1,30 @@
 import { PrismaClient } from "@prisma/client";
 import { readFile } from "node:fs/promises";
 
+async function loadLocalEnv() {
+  if (process.env.DATABASE_URL) return;
+
+  try {
+    const envFile = await readFile(".env", "utf8");
+    for (const line of envFile.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const separatorIndex = trimmed.indexOf("=");
+      if (separatorIndex === -1) continue;
+      const key = trimmed.slice(0, separatorIndex).trim();
+      const value = trimmed.slice(separatorIndex + 1).trim();
+      if (key && process.env[key] === undefined) {
+        process.env[key] = value.replace(/^["']|["']$/g, "");
+      }
+    }
+  } catch {
+    // Keep the original Prisma error if DATABASE_URL is still unavailable.
+  }
+}
+
 const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
 const WEB_URL = (process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+await loadLocalEnv();
 const prisma = new PrismaClient();
 const runId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 const checks = [];

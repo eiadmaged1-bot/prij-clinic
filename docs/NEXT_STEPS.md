@@ -1,25 +1,17 @@
 # Next Steps
 
-1. Review every verified calculator formula with a qualified clinician before real-world use.
-2. Add richer patient-file placement for compact OB Dating Card in every future patient header component.
-3. Add formal formula approval workflow with reviewer identity and source attachment policy.
-4. Expand Playwright/manual QA for calculator hub and admin registry visual states.
-5. Add verified ultrasound formulas only after source review and governance approval.
-6. Keep AI disabled and draft-only; calculators must remain deterministic local code.
-7. Add richer audit UI filtering for protocol, guideline, calculator, and snapshot events.
-8. Add local guideline document storage and citation metadata only after privacy and copyright review.
-9. Consider future local RAG only after privacy, consent, and clinical governance review.
-10. Verify additional protocol packs after clinical governance review:
-   - Hypertension/preeclampsia full pathway.
-   - Early pregnancy non-emergency full pathway.
-   - Postpartum/lactation.
-   - Pelvic floor physiotherapy.
-   - Menopause.
-   - Breast health.
+## Exact Next Step
 
-# Recommended Next Sprint
+Master Source-of-Truth Audit.
 
-1. Investigations, radiology, and lab results deepening.
-2. Consent, legal forms, and patient document archive.
+## V0.6 Follow-Up
 
-Suggested sprint name: Investigations/Radiology/Lab Results Deepening + Consent/Legal Forms + Patient Document Archive.
+1. Continue source-of-truth audit now that the shell, density controls, theme tab preservation, and seeded demo catalog visibility are stabilized.
+2. Review every verified calculator formula with a qualified clinician before real-world use.
+3. Expand medication safety rules only from licensed or approved official sources.
+4. Add formal approval workflows for formulas, protocols, guideline documents, and medication rules.
+5. Keep AI disabled/extractive/local and draft-only until consent, privacy, vendor, audit, and doctor-review controls are formally approved.
+6. Improve browser-level visual coverage for calculator, AI management, guideline, medication, drug-market, theme switching, and density switching surfaces.
+7. Add backup/restore proof for database metadata plus any encrypted guideline or uploaded files.
+
+Do not use real patient data until production privacy, security, clinical governance, backup, incident response, and legal reviews are complete.

@@ -83,6 +83,11 @@ model User {
   reversedPayments                   Payment[]                   @relation("PaymentsReversedBy")
   requestedAiDrafts                  AiDraft[]                   @relation("AiDraftsRequestedBy")
   reviewedAiDrafts                   AiDraft[]                   @relation("AiDraftsReviewedBy")
+  importedGuidelineDocuments         GuidelineDocument[]         @relation("GuidelineDocumentsImportedBy")
+  reviewedGuidelineDocuments         GuidelineDocument[]         @relation("GuidelineDocumentsReviewedBy")
+  requestedGuidelineImportJobs       GuidelineImportJob[]        @relation("GuidelineImportJobsRequestedBy")
+  guidelineReviewDecisions           GuidelineReviewDecision[]   @relation("GuidelineReviewDecisionsDecidedBy")
+  guidelineQueryLogs                 GuidelineQueryLog[]         @relation("GuidelineQueryLogsUser")
   createdManagementSnapshots         AIManagementSnapshot[]      @relation("AIManagementSnapshotsCreatedBy")
   reviewedManagementSnapshots        AIManagementSnapshot[]      @relation("AIManagementSnapshotsReviewedBy")
   approvedClinicalMemories           PatientClinicalMemory[]     @relation("PatientClinicalMemoriesApprovedBy")
@@ -165,27 +170,30 @@ model Patient {
   updatedAt           DateTime      @updatedAt @db.Timestamptz(3)
   createdByUserId     String?       @db.Uuid
 
-  branch                Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
-  createdByUser         User?                       @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  appointments          Appointment[]
-  queueTickets          QueueTicket[]
-  encounters            Encounter[]
-  prescriptions         Prescription[]
-  investigationOrders   InvestigationOrder[]
-  reports               Report[]
-  pregnancies           Pregnancy[]
-  gynecologyVisits      GynecologyVisit[]
-  previousPregnancies   PreviousPregnancy[]
-  antenatalVisits       AntenatalVisit[]
-  obUltrasounds         ObUltrasound[]
-  invoices              Invoice[]
-  payments              Payment[]
-  aiDrafts              AiDraft[]
-  aiManagementSnapshots AIManagementSnapshot[]
-  clinicalMemories      PatientClinicalMemory[]
-  consentRecords        ConsentRecord[]
-  calculations          PatientCalculation[]
-  datingAssessments     PregnancyDatingAssessment[]
+  branch                 Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  createdByUser          User?                       @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  appointments           Appointment[]
+  queueTickets           QueueTicket[]
+  encounters             Encounter[]
+  prescriptions          Prescription[]
+  investigationOrders    InvestigationOrder[]
+  reports                Report[]
+  pregnancies            Pregnancy[]
+  gynecologyVisits       GynecologyVisit[]
+  previousPregnancies    PreviousPregnancy[]
+  antenatalVisits        AntenatalVisit[]
+  obUltrasounds          ObUltrasound[]
+  invoices               Invoice[]
+  payments               Payment[]
+  aiDrafts               AiDraft[]
+  aiManagementSnapshots  AIManagementSnapshot[]
+  clinicalMemories       PatientClinicalMemory[]
+  consentRecords         ConsentRecord[]
+  patientMedications     PatientMedication[]
+  patientAllergies       PatientAllergy[]
+  medicationSafetyChecks MedicationSafetyCheck[]
+  calculations           PatientCalculation[]
+  datingAssessments      PregnancyDatingAssessment[]
 
   @@index([branchId])
   @@index([status])
@@ -363,18 +371,543 @@ model Prescription {
 }
 
 model PrescriptionItem {
-  id             String  @id @default(uuid()) @db.Uuid
-  prescriptionId String  @db.Uuid
-  medicationName String
-  dose           String?
-  route          String?
-  frequency      String?
-  duration       String?
-  instructions   String?
+  id                  String  @id @default(uuid()) @db.Uuid
+  prescriptionId      String  @db.Uuid
+  medicationName      String
+  dose                String?
+  route               String?
+  frequency           String?
+  duration            String?
+  instructions        String?
+  medicationProductId String? @db.Uuid
+  drugMarketVariantId String? @db.Uuid
+  genericName         String?
+  brandName           String?
+  tradeName           String?
+  strengthText        String?
+  dosageForm          String?
 
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
   @@index([prescriptionId])
+  @@index([medicationProductId])
+  @@index([drugMarketVariantId])
+}
+
+model DrugFamily {
+  id                   String   @id @default(uuid()) @db.Uuid
+  code                 String   @unique
+  displayName          String
+  aliases              Json?
+  normalizedSearchText String
+  therapeuticClass     String?
+  pharmacologicClass   String?
+  restrictedFlag       Boolean  @default(false)
+  verificationStatus   String   @default("catalog_only")
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  memberships MedicationFamilyMembership[]
+
+  @@index([code])
+  @@index([displayName])
+  @@index([normalizedSearchText])
+  @@index([verificationStatus])
+}
+
+model MedicationIngredient {
+  id                   String   @id @default(uuid()) @db.Uuid
+  genericName          String
+  scientificName       String?
+  normalizedSearchText String
+  therapeuticClass     String?
+  pharmacologicClass   String?
+  atcCode              String?
+  rxCui                String?
+  pregnancyReviewFlag  Boolean  @default(false)
+  lactationReviewFlag  Boolean  @default(false)
+  renalReviewFlag      Boolean  @default(false)
+  hepaticReviewFlag    Boolean  @default(false)
+  verificationStatus   String   @default("needs_review")
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  familyMemberships MedicationFamilyMembership[]
+  products          MedicationProduct[]
+  labelSections     MedicationLabelSection[]
+
+  @@index([genericName])
+  @@index([normalizedSearchText])
+  @@index([atcCode])
+  @@index([rxCui])
+  @@index([verificationStatus])
+}
+
+model MedicationFamilyMembership {
+  id           String   @id @default(uuid()) @db.Uuid
+  ingredientId String   @db.Uuid
+  familyId     String   @db.Uuid
+  sourceStatus String   @default("catalog_only")
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  ingredient MedicationIngredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  family     DrugFamily           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, familyId])
+  @@index([familyId])
+  @@index([sourceStatus])
+}
+
+model MedicationProduct {
+  id                   String   @id @default(uuid()) @db.Uuid
+  ingredientId         String?  @db.Uuid
+  genericName          String
+  brandName            String?
+  normalizedSearchText String
+  route                String?
+  dosageForm           String?
+  strengthText         String?
+  verificationStatus   String   @default("needs_review")
+  sourceId             String?  @db.Uuid
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  ingredient    MedicationIngredient?    @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+  labelSections MedicationLabelSection[]
+
+  @@index([ingredientId])
+  @@index([genericName])
+  @@index([brandName])
+  @@index([normalizedSearchText])
+  @@index([dosageForm])
+  @@index([strengthText])
+  @@index([verificationStatus])
+}
+
+model MedicationLabelSection {
+  id                 String   @id @default(uuid()) @db.Uuid
+  ingredientId       String?  @db.Uuid
+  productId          String?  @db.Uuid
+  sectionType        String
+  title              String
+  summaryText        String
+  sourceId           String?  @db.Uuid
+  verificationStatus String   @default("needs_review")
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  ingredient MedicationIngredient? @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  product    MedicationProduct?    @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([productId])
+  @@index([sectionType])
+  @@index([verificationStatus])
+}
+
+model MedicationInteractionRule {
+  id                    String   @id @default(uuid()) @db.Uuid
+  ruleType              String
+  primaryIngredientId   String?  @db.Uuid
+  secondaryIngredientId String?  @db.Uuid
+  primaryFamilyId       String?  @db.Uuid
+  secondaryFamilyId     String?  @db.Uuid
+  herbalProductId       String?  @db.Uuid
+  severity              String   @default("moderate")
+  alertTitle            String
+  alertSummary          String
+  evidenceSource        String?
+  verificationStatus    String   @default("needs_review")
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([ruleType])
+  @@index([severity])
+  @@index([primaryIngredientId])
+  @@index([secondaryIngredientId])
+  @@index([primaryFamilyId])
+  @@index([secondaryFamilyId])
+  @@index([herbalProductId])
+  @@index([verificationStatus])
+}
+
+model HerbalProduct {
+  id                   String   @id @default(uuid()) @db.Uuid
+  commonName           String
+  botanicalName        String?
+  aliases              Json?
+  normalizedSearchText String
+  cautionSummary       String?
+  pregnancyReviewFlag  Boolean  @default(true)
+  lactationReviewFlag  Boolean  @default(true)
+  verificationStatus   String   @default("needs_review")
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([commonName])
+  @@index([botanicalName])
+  @@index([normalizedSearchText])
+  @@index([verificationStatus])
+}
+
+model PatientAllergy {
+  id                  String   @id @default(uuid()) @db.Uuid
+  patientId           String   @db.Uuid
+  allergyType         String
+  medicationProductId String?  @db.Uuid
+  ingredientId        String?  @db.Uuid
+  familyId            String?  @db.Uuid
+  herbalProductId     String?  @db.Uuid
+  displayName         String
+  reactionText        String?
+  severity            String   @default("unknown")
+  status              String   @default("active")
+  recordedByUserId    String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, status])
+  @@index([ingredientId])
+  @@index([familyId])
+  @@index([herbalProductId])
+}
+
+model PatientMedication {
+  id                  String    @id @default(uuid()) @db.Uuid
+  patientId           String    @db.Uuid
+  medicationType      String    @default("prescription")
+  medicationProductId String?   @db.Uuid
+  drugMarketVariantId String?   @db.Uuid
+  herbalProductId     String?   @db.Uuid
+  displayName         String
+  genericName         String?
+  tradeName           String?
+  strengthText        String?
+  dosageForm          String?
+  route               String?
+  sourceText          String?
+  status              String    @default("active")
+  recordedByUserId    String?   @db.Uuid
+  stoppedByUserId     String?   @db.Uuid
+  stoppedAt           DateTime? @db.Timestamptz(3)
+  stopReason          String?
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, status])
+  @@index([medicationProductId])
+  @@index([drugMarketVariantId])
+  @@index([herbalProductId])
+  @@index([genericName])
+}
+
+model MedicationSafetyCheck {
+  id              String   @id @default(uuid()) @db.Uuid
+  patientId       String?  @db.Uuid
+  prescriptionId  String?  @db.Uuid
+  status          String   @default("draft")
+  contextSummary  String?
+  checkedByUserId String?  @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  patient Patient?                @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  alerts  MedicationSafetyAlert[]
+
+  @@index([patientId, status])
+  @@index([prescriptionId])
+  @@index([createdAt])
+}
+
+model MedicationSafetyAlert {
+  id               String    @id @default(uuid()) @db.Uuid
+  safetyCheckId    String    @db.Uuid
+  severity         String
+  alertType        String
+  title            String
+  message          String
+  status           String    @default("open")
+  reviewedByUserId String?   @db.Uuid
+  reviewedAt       DateTime? @db.Timestamptz(3)
+  overrideReason   String?
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+
+  safetyCheck MedicationSafetyCheck @relation(fields: [safetyCheckId], references: [id], onDelete: Cascade)
+
+  @@index([safetyCheckId, severity])
+  @@index([status])
+}
+
+model MedicationDataSource {
+  id                 String   @id @default(uuid()) @db.Uuid
+  code               String   @unique
+  name               String
+  sourceType         String
+  websiteUrl         String?
+  verificationStatus String   @default("catalog_only")
+  notes              String?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([sourceType])
+  @@index([verificationStatus])
+  @@index([active])
+}
+
+model MedicationDataImportJob {
+  id                String   @id @default(uuid()) @db.Uuid
+  sourceId          String?  @db.Uuid
+  status            String   @default("needs_review")
+  fileName          String?
+  summaryText       String?
+  errorMessage      String?
+  requestedByUserId String?  @db.Uuid
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([sourceId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DrugMarketCountry {
+  id                        String   @id @default(uuid()) @db.Uuid
+  countryCode               String   @unique
+  displayName               String
+  compactBadgeLabel         String?
+  showCompactBadgeByDefault Boolean  @default(true)
+  active                    Boolean  @default(true)
+  createdAt                 DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                 DateTime @updatedAt @db.Timestamptz(3)
+
+  availabilities DrugMarketAvailability[]
+
+  @@index([countryCode])
+  @@index([active])
+}
+
+model DrugMarketSource {
+  id                 String   @id @default(uuid()) @db.Uuid
+  code               String   @unique
+  name               String
+  countryCode        String?
+  sourceType         String
+  priorityRank       Int      @default(100)
+  policyStatus       String   @default("approved")
+  verificationStatus String   @default("catalog_only")
+  websiteUrl         String?
+  notes              String?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([countryCode])
+  @@index([sourceType])
+  @@index([policyStatus])
+  @@index([verificationStatus])
+}
+
+model DrugMarketProduct {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tradeName            String
+  genericName          String?
+  scientificName       String?
+  normalizedSearchText String
+  familyText           String?
+  manufacturer         String?
+  marketingCompany     String?
+  verificationStatus   String   @default("needs_review")
+  createdAt            DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime @updatedAt @db.Timestamptz(3)
+
+  variants       DrugMarketVariant[]
+  availabilities DrugMarketAvailability[]
+
+  @@index([tradeName])
+  @@index([genericName])
+  @@index([normalizedSearchText])
+  @@index([verificationStatus])
+}
+
+model DrugMarketVariant {
+  id                  String   @id @default(uuid()) @db.Uuid
+  productId           String   @db.Uuid
+  countryCode         String
+  sourceId            String?  @db.Uuid
+  tradeName           String
+  genericName         String?
+  strengthText        String?
+  strengthValue       Decimal? @db.Decimal(12, 4)
+  strengthUnit        String?
+  dosageForm          String?
+  route               String?
+  packageText         String?
+  manufacturer        String?
+  marketingCompany    String?
+  registrationNumber  String?
+  legalStatus         String?
+  authorizationStatus String?
+  atcCode             String?
+  priceText           String?
+  currency            String?
+  sourceRowHash       String?
+  verificationStatus  String   @default("needs_review")
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  product DrugMarketProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([countryCode, sourceRowHash])
+  @@index([productId])
+  @@index([countryCode])
+  @@index([tradeName])
+  @@index([genericName])
+  @@index([strengthText])
+  @@index([dosageForm])
+  @@index([registrationNumber])
+  @@index([verificationStatus])
+}
+
+model DrugMarketAvailability {
+  id                String   @id @default(uuid()) @db.Uuid
+  productId         String   @db.Uuid
+  countryCode       String
+  variantCount      Int      @default(0)
+  compactBadgeLabel String?
+  showCompactBadge  Boolean  @default(true)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+
+  product DrugMarketProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  country DrugMarketCountry @relation(fields: [countryCode], references: [countryCode], onDelete: Restrict)
+
+  @@unique([productId, countryCode])
+  @@index([countryCode])
+}
+
+model DrugMarketImportJob {
+  id                String   @id @default(uuid()) @db.Uuid
+  sourceId          String?  @db.Uuid
+  status            String   @default("needs_review")
+  fileName          String?
+  rowCount          Int      @default(0)
+  importedCount     Int      @default(0)
+  errorCount        Int      @default(0)
+  requestedByUserId String?  @db.Uuid
+  summaryText       String?
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime @updatedAt @db.Timestamptz(3)
+
+  errors DrugMarketImportRowError[]
+
+  @@index([sourceId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DrugMarketImportRowError {
+  id        String   @id @default(uuid()) @db.Uuid
+  jobId     String   @db.Uuid
+  rowNumber Int
+  message   String
+  rowHash   String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  job DrugMarketImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([rowHash])
+}
+
+model DrugMarketManualReviewQueue {
+  id             String   @id @default(uuid()) @db.Uuid
+  queueType      String
+  productId      String?  @db.Uuid
+  variantId      String?  @db.Uuid
+  status         String   @default("open")
+  reason         String
+  resolutionNote String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([queueType])
+  @@index([status])
+  @@index([productId])
+  @@index([variantId])
+}
+
+model DrugMarketSearchLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String?  @db.Uuid
+  query           String
+  normalizedQuery String
+  countryCode     String?
+  resultCount     Int
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, createdAt])
+  @@index([countryCode])
+}
+
+model DrugMarketImportRun {
+  id              String    @id @default(uuid()) @db.Uuid
+  connectorId     String?   @db.Uuid
+  sourceId        String?   @db.Uuid
+  status          String    @default("needs_review")
+  dryRun          Boolean   @default(false)
+  message         String?
+  rowCount        Int       @default(0)
+  createdByUserId String?   @db.Uuid
+  startedAt       DateTime  @default(now()) @db.Timestamptz(3)
+  finishedAt      DateTime? @db.Timestamptz(3)
+
+  @@index([connectorId])
+  @@index([sourceId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model DrugMarketSourceConnector {
+  id               String   @id @default(uuid()) @db.Uuid
+  code             String   @unique
+  displayName      String
+  sourceId         String?  @db.Uuid
+  connectorType    String
+  countryCode      String?
+  enabled          Boolean  @default(false)
+  policyStatus     String   @default("approved")
+  isRetailMetadata Boolean  @default(false)
+  baseUrl          String?
+  notes            String?
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([sourceId])
+  @@index([connectorType])
+  @@index([countryCode])
+  @@index([enabled])
+  @@index([policyStatus])
+  @@index([isRetailMetadata])
+}
+
+model DrugMarketMergeCandidate {
+  id                 String   @id @default(uuid()) @db.Uuid
+  primaryProductId   String?  @db.Uuid
+  candidateProductId String?  @db.Uuid
+  reason             String
+  status             String   @default("open")
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([primaryProductId])
+  @@index([candidateProductId])
+  @@index([status])
 }
 
 model InvestigationOrder {
@@ -497,6 +1030,74 @@ enum AiDraftType {
   report_summary
   follow_up_message
   administrative_message
+}
+
+enum GuidelineSourceType {
+  OPEN_PUBLIC
+  PUBLIC_RESTRICTED
+  LICENSED_UPLOAD
+  LOGIN_REQUIRED
+  LINK_ONLY
+  DO_NOT_IMPORT
+}
+
+enum GuidelineAccessLevel {
+  OWNER_ONLY
+  OWNER_DOCTOR
+  CLINICAL_TEAM
+}
+
+enum GuidelineStatus {
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+  DRAFT_IMPORT
+  NEEDS_REVIEW
+}
+
+enum GuidelineLicenseStatus {
+  OPEN
+  CHECK_REQUIRED
+  LICENSED_PRIVATE
+  LOGIN_REQUIRED
+  LINK_ONLY
+  DO_NOT_IMPORT
+}
+
+enum GuidelineImportJobType {
+  OPEN_SOURCE_IMPORT
+  PRIVATE_UPLOAD
+  TEXT_EXTRACTION
+  REINDEX
+  UPDATE_CHECK
+}
+
+enum GuidelineImportJobStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum GuidelineUpdateCheckStatus {
+  NO_CHANGE
+  POSSIBLE_UPDATE
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum GuidelineReviewDecisionValue {
+  APPROVED
+  REJECTED
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum GuidelineAnswerMode {
+  SEARCH_ONLY
+  MOCK_RAG
+  CITATION_SUMMARY
 }
 
 model Report {
@@ -902,6 +1503,238 @@ model AiDraft {
   @@index([status])
 }
 
+model GuidelineSource {
+  id                 String               @id @default(uuid()) @db.Uuid
+  name               String
+  organization       String
+  sourceType         GuidelineSourceType
+  websiteUrl         String?
+  countryOrRegion    String?
+  specialties        Json?
+  defaultAccessLevel GuidelineAccessLevel @default(OWNER_DOCTOR)
+  notes              String?
+  active             Boolean              @default(true)
+  createdAt          DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime             @updatedAt @db.Timestamptz(3)
+
+  documents    GuidelineDocument[]
+  importJobs   GuidelineImportJob[]
+  updateChecks GuidelineUpdateCheck[]
+
+  @@index([organization])
+  @@index([sourceType])
+  @@index([active])
+}
+
+model GuidelineDocument {
+  id                  String                 @id @default(uuid()) @db.Uuid
+  sourceId            String                 @db.Uuid
+  title               String
+  specialty           String
+  topic               String
+  subtopic            String?
+  organization        String
+  publicationDate     DateTime?              @db.Date
+  lastReviewedDate    DateTime?              @db.Date
+  versionLabel        String?
+  guidelineStatus     GuidelineStatus        @default(NEEDS_REVIEW)
+  licenseStatus       GuidelineLicenseStatus @default(CHECK_REQUIRED)
+  originalUrl         String?
+  localFilePath       String?
+  fileName            String?
+  fileMimeType        String?
+  fileSha256          String?
+  fileEncrypted       Boolean                @default(false)
+  fileEncryptionKeyId String?
+  fileEncryptionIv    String?
+  fileEncryptionTag   String?
+  downloadsAllowed    Boolean                @default(false)
+  importedByUserId    String?                @db.Uuid
+  reviewedByUserId    String?                @db.Uuid
+  reviewedAt          DateTime?              @db.Timestamptz(3)
+  accessLevel         GuidelineAccessLevel   @default(OWNER_DOCTOR)
+  createdAt           DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime               @updatedAt @db.Timestamptz(3)
+
+  source          GuidelineSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  importedByUser  User?                     @relation("GuidelineDocumentsImportedBy", fields: [importedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser  User?                     @relation("GuidelineDocumentsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  versions        GuidelineVersion[]
+  sections        GuidelineSection[]
+  chunks          GuidelineChunk[]
+  importJobs      GuidelineImportJob[]
+  updateChecks    GuidelineUpdateCheck[]
+  reviewDecisions GuidelineReviewDecision[]
+
+  @@index([sourceId])
+  @@index([specialty])
+  @@index([topic])
+  @@index([guidelineStatus])
+  @@index([licenseStatus])
+  @@index([fileSha256])
+  @@index([accessLevel])
+  @@index([downloadsAllowed])
+}
+
+model GuidelineVersion {
+  id                String          @id @default(uuid()) @db.Uuid
+  documentId        String          @db.Uuid
+  versionLabel      String
+  publicationDate   DateTime?       @db.Date
+  lastReviewedDate  DateTime?       @db.Date
+  status            GuidelineStatus @default(NEEDS_REVIEW)
+  fileSha256        String?
+  extractedTextHash String?
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamptz(3)
+
+  document        GuidelineDocument         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  sections        GuidelineSection[]
+  chunks          GuidelineChunk[]
+  reviewDecisions GuidelineReviewDecision[]
+
+  @@index([documentId])
+  @@index([status])
+  @@index([fileSha256])
+}
+
+model GuidelineSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @db.Uuid
+  versionId   String?  @db.Uuid
+  heading     String
+  sectionPath String?
+  pageStart   Int?
+  pageEnd     Int?
+  orderIndex  Int
+  text        String
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  chunks   GuidelineChunk[]
+
+  @@index([documentId, orderIndex])
+  @@index([versionId])
+}
+
+model GuidelineChunk {
+  id               String   @id @default(uuid()) @db.Uuid
+  documentId       String   @db.Uuid
+  sectionId        String?  @db.Uuid
+  versionId        String?  @db.Uuid
+  chunkIndex       Int
+  text             String
+  normalizedText   String
+  tokenEstimate    Int?
+  pageStart        Int?
+  pageEnd          Int?
+  citationLabel    String
+  embeddingJson    Json?
+  searchVectorText String?
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  section  GuidelineSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@index([sectionId])
+  @@index([versionId])
+}
+
+model GuidelineImportJob {
+  id                String                   @id @default(uuid()) @db.Uuid
+  jobType           GuidelineImportJobType
+  status            GuidelineImportJobStatus @default(PENDING)
+  sourceId          String?                  @db.Uuid
+  documentId        String?                  @db.Uuid
+  requestedByUserId String?                  @db.Uuid
+  inputUrl          String?
+  inputFileName     String?
+  message           String?
+  errorMessage      String?
+  resultJson        Json?
+  startedAt         DateTime?                @db.Timestamptz(3)
+  finishedAt        DateTime?                @db.Timestamptz(3)
+  createdAt         DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                 @updatedAt @db.Timestamptz(3)
+
+  source          GuidelineSource?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  document        GuidelineDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  requestedByUser User?              @relation("GuidelineImportJobsRequestedBy", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([jobType])
+  @@index([status])
+  @@index([sourceId])
+  @@index([documentId])
+}
+
+model GuidelineUpdateCheck {
+  id              String                     @id @default(uuid()) @db.Uuid
+  sourceId        String?                    @db.Uuid
+  documentId      String?                    @db.Uuid
+  status          GuidelineUpdateCheckStatus
+  checkedUrl      String?
+  detectedTitle   String?
+  detectedVersion String?
+  detectedDate    DateTime?                  @db.Date
+  message         String?
+  resultJson      Json?
+  checkedAt       DateTime                   @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime                   @default(now()) @db.Timestamptz(3)
+
+  source   GuidelineSource?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  document GuidelineDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([sourceId])
+  @@index([documentId])
+  @@index([status])
+  @@index([checkedAt])
+}
+
+model GuidelineReviewDecision {
+  id              String                       @id @default(uuid()) @db.Uuid
+  documentId      String                       @db.Uuid
+  versionId       String?                      @db.Uuid
+  decision        GuidelineReviewDecisionValue
+  reason          String?
+  decidedByUserId String                       @db.Uuid
+  decidedAt       DateTime                     @default(now()) @db.Timestamptz(3)
+  createdAt       DateTime                     @default(now()) @db.Timestamptz(3)
+
+  document      GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version       GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  decidedByUser User              @relation("GuidelineReviewDecisionsDecidedBy", fields: [decidedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([documentId])
+  @@index([versionId])
+  @@index([decision])
+  @@index([decidedByUserId])
+}
+
+model GuidelineQueryLog {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @db.Uuid
+  query         String
+  specialty     String?
+  topic         String?
+  answerMode    GuidelineAnswerMode
+  resultCount   Int
+  citedChunkIds Json
+  createdAt     DateTime            @default(now()) @db.Timestamptz(3)
+
+  user User @relation("GuidelineQueryLogsUser", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([specialty])
+  @@index([topic])
+  @@index([answerMode])
+}
+
 model ClinicalProtocol {
   id                   String   @id @default(cuid())
   code                 String   @unique
@@ -929,238 +1762,6 @@ model ClinicalProtocol {
   @@index([condition])
   @@index([implementationStatus])
   @@index([riskLevel])
-}
-
-enum GuidelineSourceType {
-  OPEN_PUBLIC
-  PUBLIC_RESTRICTED
-  LICENSED_UPLOAD
-  LOGIN_REQUIRED
-  LINK_ONLY
-  DO_NOT_IMPORT
-}
-
-enum GuidelineAccessLevel {
-  OWNER_ONLY
-  OWNER_DOCTOR
-  CLINICAL_TEAM
-}
-
-enum GuidelineStatus {
-  ACTIVE
-  SUPERSEDED
-  ARCHIVED
-  DRAFT_IMPORT
-  NEEDS_REVIEW
-}
-
-enum GuidelineLicenseStatus {
-  OPEN
-  CHECK_REQUIRED
-  LICENSED_PRIVATE
-  LOGIN_REQUIRED
-  LINK_ONLY
-  DO_NOT_IMPORT
-}
-
-enum GuidelineImportJobStatus {
-  PENDING
-  RUNNING
-  SUCCEEDED
-  FAILED
-  NEEDS_REVIEW
-}
-
-enum GuidelineImportJobType {
-  OPEN_SOURCE_IMPORT
-  PRIVATE_UPLOAD
-  TEXT_EXTRACTION
-  REINDEX
-  UPDATE_CHECK
-}
-
-enum GuidelineReviewDecisionValue {
-  APPROVED
-  REJECTED
-  SUPERSEDED
-  ARCHIVED
-}
-
-enum GuidelineAnswerMode {
-  SEARCH_ONLY
-  MOCK_RAG
-  CITATION_SUMMARY
-}
-
-model GuidelineSource {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String   @unique
-  organization String   @default("Local source registry")
-  sourceType   GuidelineSourceType @default(LINK_ONLY)
-  abbreviation String?
-  websiteUrl   String?
-  countryOrRegion String?
-  specialties  Json?
-  defaultAccessLevel GuidelineAccessLevel @default(OWNER_DOCTOR)
-  active       Boolean  @default(true)
-  status       String   @default("active")
-  notes        String?
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
-
-  documents    GuidelineDocument[]
-
-  @@index([status])
-}
-
-model GuidelineDocument {
-  id             String   @id @default(uuid()) @db.Uuid
-  sourceId       String   @db.Uuid
-  title          String
-  specialty      String   @default("Women's health")
-  topic          String   @default("Guideline center")
-  subtopic       String?
-  organization   String   @default("Local Clinic Protocol")
-  guidelineStatus GuidelineStatus @default(NEEDS_REVIEW)
-  documentType   String   @default("demo_text")
-  licenseStatus  GuidelineLicenseStatus @default(CHECK_REQUIRED)
-  originalUrl    String?
-  accessLevel    GuidelineAccessLevel @default(OWNER_DOCTOR)
-  reviewStatus   String   @default("pending_governance_review")
-  citationLabel  String
-  storageRef     String?
-  importedByUserId String? @db.Uuid
-  reviewedByUserId String? @db.Uuid
-  reviewedAt     DateTime? @db.Timestamptz(3)
-  fileEncrypted  Boolean  @default(false)
-  downloadsAllowed Boolean @default(false)
-  archivedAt     DateTime? @db.Timestamptz(3)
-  createdAt      DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
-
-  source         GuidelineSource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  versions       GuidelineVersion[]
-  sections       GuidelineSection[]
-  importJobs     GuidelineImportJob[]
-  reviewDecisions GuidelineReviewDecision[]
-
-  @@index([sourceId])
-  @@index([reviewStatus])
-  @@index([archivedAt])
-}
-
-model GuidelineVersion {
-  id          String   @id @default(uuid()) @db.Uuid
-  documentId  String   @db.Uuid
-  versionLabel String
-  publishedYear Int?
-  sourceUrl   String?
-  status      GuidelineStatus @default(ACTIVE)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-
-  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  sections    GuidelineSection[]
-
-  @@index([documentId])
-  @@index([status])
-}
-
-model GuidelineSection {
-  id          String   @id @default(uuid()) @db.Uuid
-  documentId  String   @db.Uuid
-  versionId   String?  @db.Uuid
-  heading     String
-  sectionPath String?
-  orderIndex  Int      @default(0)
-  sortOrder   Int      @default(0)
-  text        String   @default("")
-  reviewStatus String  @default("pending_governance_review")
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-
-  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  version     GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
-  chunks      GuidelineChunk[]
-
-  @@index([documentId])
-  @@index([versionId])
-}
-
-model GuidelineChunk {
-  id            String   @id @default(uuid()) @db.Uuid
-  documentId    String   @db.Uuid
-  sectionId     String   @db.Uuid
-  versionId     String?  @db.Uuid
-  chunkIndex    Int
-  text          String
-  normalizedText String  @default("")
-  tokenEstimate Int?
-  citationLabel String
-  reviewStatus  String   @default("pending_governance_review")
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
-
-  section       GuidelineSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-
-  @@unique([sectionId, chunkIndex])
-  @@index([citationLabel])
-  @@index([reviewStatus])
-}
-
-model GuidelineImportJob {
-  id          String   @id @default(uuid()) @db.Uuid
-  jobType     GuidelineImportJobType
-  documentId  String?  @db.Uuid
-  sourceId    String?  @db.Uuid
-  status      GuidelineImportJobStatus @default(SUCCEEDED)
-  importType  String   @default("demo_text")
-  summary     String?
-  requestedByUserId String? @db.Uuid
-  message     String?
-  resultJson  Json?
-  startedAt   DateTime? @db.Timestamptz(3)
-  finishedAt  DateTime? @db.Timestamptz(3)
-  createdByUserId String? @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-
-  document    GuidelineDocument? @relation(fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([documentId])
-  @@index([status])
-}
-
-model GuidelineReviewDecision {
-  id          String   @id @default(uuid()) @db.Uuid
-  documentId  String   @db.Uuid
-  decision    GuidelineReviewDecisionValue
-  reason      String?
-  decidedByUserId String? @db.Uuid
-  decidedAt   DateTime? @db.Timestamptz(3)
-  reviewerUserId String? @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-
-  document    GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@index([documentId])
-  @@index([decision])
-}
-
-model GuidelineQueryLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String?  @db.Uuid
-  queryText   String
-  query       String?
-  resultCount Int      @default(0)
-  mode        String   @default("search")
-  answerMode  GuidelineAnswerMode?
-  citedChunkIds Json?
-  actorUserId String?  @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-
-  @@index([actorUserId, createdAt])
-  @@index([mode])
 }
 
 model AIManagementSnapshot {

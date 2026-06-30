@@ -1,59 +1,32 @@
 # Current Status
 
-# V0.5.2 Calculators + AI Mega Integration
+## V0.6 Master-Unified Merge
 
-Integration branch `integration/v0.5-calculators-ai-mega` merges:
+Branch `integration/v0.6-master-unified` is merging the calculator/AI management mega integration with the Medication Intelligence Engine.
 
-- AI Management Mega base at `a803bee`.
-- Medical Calculator Suite source at `c752a62`.
+Unified scope now includes:
 
-The integration preserves calculator, OB dating, verified protocol pack, AI snapshot, guideline center, pilot walkthrough, RBAC denial, and audit-log functionality from both branches.
+- Hardened accounts/session/RBAC, protected local owner account behavior, branch scope, audit logs, and demo-only seed safeguards.
+- Patient workspace modules for OB/GYN, general gynecology, finance, Guideline Center, Protocol Atlas, AI Management Snapshot, medical calculators, OB dating, medication lists, allergies, herbal/supplement lists, and medication safety review.
+- Medical Calculator Suite with `CalculatorFormula`, `PatientCalculation`, `PregnancyDatingAssessment`, formula registry, OB dating review, Best EDD, lock/change/void workflows, and calculator tests.
+- AI Management Mega with verified local protocol packs, deterministic draft-only management snapshots, doctor review, and no external AI calls.
+- Secure Guideline Center with source registry, upload/import/search/ask/review/archive flows, private vault controls, optional local encryption, RBAC, and audit.
+- Medication Intelligence Engine with medication families, ingredients, products, herbals, patient medication/allergy lists, safety checks/alerts, source registry, Egypt/Gulf drug-market models, import jobs, country badges, admin pages, and regression tests.
 
-Medical Calculator Suite and Always-On OB Dating Engine sprint added:
+## Safety State
 
-- `CalculatorFormula`
-- `PatientCalculation`
-- `PregnancyDatingAssessment`
-- `Patient.patientType`
-- calculator API and admin registry API
-- verified safe handler formula engine
-- OB dating candidate, Best EDD, lock, locked-change, and void workflows
-- patient-linked calculation history
-- `/calculators` hub
-- `/admin/calculators` metadata registry
-- always-on OB Dating Card for OB patients and active pregnancies
-- GYN/Women Health hide behavior when no active pregnancy exists
-- focused calculator and OB dating tests
+This remains local/demo software only. It is not production-ready, not a medical device, and must not be used with real patient data, real payment data, PHI uploads, external AI providers, or live clinical workflows.
 
-# V0.5 AI Management Mega Leap Status
+AI cannot diagnose, prescribe, sign, approve, update final records, or bypass doctor review. Medication intelligence cannot auto-prescribe. Market strength/form data is catalog metadata only and must never become patient dosing instructions.
 
-Implemented:
-- Four verified protocol packs for emergency OB/early pregnancy, AUB/menstrual disorders, contraception, and routine antenatal care.
-- Pack-specific AI Management Snapshot headings and output limits.
-- Local Guideline Center foundation with source registry, demo text import, local chunk search, extractive/mock ask, query logs, RBAC, and audit.
-- Guideline route coverage in the shared route authorization manifest.
-- Script-assisted pilot walkthrough automation for owner, doctor, receptionist, accountant, clinical, finance, AI management, guideline, role-denial, and full demo flows.
+Receptionist/accountant roles must remain blocked from clinical decision-support tools. Clinical record changes must remain auditable.
 
-Protocol editor hardening is active:
+## V0.6 UI Shell + Theme + Demo Data Hotfix
 
-- raw JSON editing is blocked in the UI
-- every source/content/status change requires an audit reason
-- catalog-only, draft, retired, and unknown protocols generate no management advice
-- snapshot output remains deterministic and local with no external AI calls
-
-Not fully implemented:
-- Full Playwright/real-browser click automation with screenshots.
-- Real PDF extraction.
-- Production clinical governance approval of guideline source versions.
-
-Remaining production work includes formal clinical formula review, richer UI polish, validated ultrasound coefficient governance, and production compliance review.
-
-Latest local verification passed:
-
-- Prisma repair/generate, migration deploy, seed.
-- Typecheck and production build.
-- Security, UI, workflow, clinical persistence, OB/GYN, account RBAC, finance, gynecology, AI regression, protocol atlas, AI management, calculator, OB dating, protocol pack, and guideline tests.
-- Pilot walkthroughs for owner, doctor, receptionist, accountant, clinical, finance, AI, guidelines, denials, and demo.
-- Local route spot checks for calculator/guideline/AI role denials and blocked draft/unknown clinical outputs.
-
-`test:staging:smoke` was not run because local `APP_ENV=local`; staging smoke remains environment-gated.
+- Global app shell now uses one canonical navigation registry for every theme. Themes change presentation only; they do not replace modules or tabs.
+- Patient workspace tabs now come from a canonical patient tab registry and are filtered only by permissions.
+- Comfort, Large, and Compact density modes now persist per browser and visibly change text scale, control height, sidebar width/items, cards, rows, badges, and spacing.
+- Medication demo seed data now includes family, ingredient, product, and herbal/supplement reference records for visible Medication Center search and browse states.
+- Guideline Center demo seed data now includes source registry entries plus local/demo antenatal, PCOS, and endometriosis indexed documents and citations.
+- Drug Market demo seed data now includes EG, KSA, UAE, YEM, Gulf, and multi-strength product/variant examples with compact badge behavior.
+- All added data is demo/reference metadata only and is not a production clinical database.

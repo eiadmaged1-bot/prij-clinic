@@ -8,7 +8,7 @@ import { GuidelinesController } from "./guidelines.controller";
 import { GuidelinesService } from "./guidelines.service";
 
 @Module({
-  imports: [PrismaModule, AuditModule, AuthModule, RbacModule, UsersModule],
+  imports: [AuditModule, AuthModule, PrismaModule, RbacModule, UsersModule],
   controllers: [GuidelinesController],
   providers: [GuidelinesService]
 })
