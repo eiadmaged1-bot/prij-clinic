@@ -251,7 +251,7 @@ export function DrugMarketImportPanel() {
   return (
     <section className="panel">
       <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
-      <p className="muted">Only official or licensed files. Do not upload pharmacy stock, checkout, or patient data.</p>
+      <p className="muted">Only official or licensed files. Do not upload retail workflow data or patient data.</p>
       <div className="data-list">
         <article className="data-row">
           <strong>Workflow</strong>
