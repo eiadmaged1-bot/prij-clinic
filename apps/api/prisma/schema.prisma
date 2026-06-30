@@ -24,6 +24,12 @@ model Branch {
   appointments     Appointment[]
   queueTickets     QueueTicket[]
   reports          Report[]
+  investigationResults InvestigationResult[]
+  patientDocuments PatientDocument[]
+  clinicDepartments ClinicDepartment[]
+  referrals        Referral[]
+  patientTasks     PatientTask[]
+  patientInternalNotes PatientInternalNote[]
   pregnancies      Pregnancy[]
   gynecologyVisits GynecologyVisit[]
   antenatalVisits  AntenatalVisit[]
@@ -178,6 +184,11 @@ model Patient {
   prescriptions          Prescription[]
   investigationOrders    InvestigationOrder[]
   reports                Report[]
+  investigationResults   InvestigationResult[]
+  patientDocuments       PatientDocument[]
+  referrals              Referral[]
+  patientTasks           PatientTask[]
+  patientInternalNotes   PatientInternalNote[]
   pregnancies            Pregnancy[]
   gynecologyVisits       GynecologyVisit[]
   previousPregnancies    PreviousPregnancy[]
@@ -206,6 +217,17 @@ model ConsentRecord {
   patientId        String        @db.Uuid
   consentType      ConsentType
   status           ConsentStatus @default(unknown)
+  templateId       String?       @db.Uuid
+  signedByName     String?
+  relationshipToPatient String?
+  guardianName     String?
+  witnessName      String?
+  signatureStatus  ConsentSignatureStatus @default(not_required)
+  signedAt         DateTime?     @db.Timestamptz(3)
+  legalNotes       String?
+  documentId       String?       @db.Uuid
+  reviewedByUserId String?       @db.Uuid
+  reviewedAt       DateTime?     @db.Timestamptz(3)
   capturedByUserId String?       @db.Uuid
   capturedAt       DateTime      @default(now()) @db.Timestamptz(3)
   notes            String?
@@ -213,11 +235,22 @@ model ConsentRecord {
   updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
 
   patient        Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  template       ConsentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   capturedByUser User?   @relation("ConsentRecordsCapturedBy", fields: [capturedByUserId], references: [id], onDelete: SetNull)
 
   @@index([patientId, consentType])
+  @@index([templateId])
   @@index([status])
+  @@index([signatureStatus])
   @@index([capturedAt])
+}
+
+enum ConsentSignatureStatus {
+  not_required
+  pending
+  captured_demo
+  declined
+  withdrawn
 }
 
 model Appointment {
@@ -290,9 +323,13 @@ enum PrescriptionStatus {
 enum InvestigationOrderStatus {
   requested
   scheduled
+  pending_payment
+  sent
   sample_collected
+  in_progress
   sent_out
   result_pending
+  result_ready
   result_received
   reviewed
   cancelled
@@ -302,6 +339,7 @@ enum InvestigationOrderStatus {
 enum InvestigationPriority {
   routine
   urgent
+  stat
 }
 
 enum InvestigationCategory {
@@ -312,6 +350,29 @@ enum InvestigationCategory {
   cytology
   procedure
   other
+}
+
+enum InvestigationOrderSource {
+  doctor
+  reception
+  patient_file
+  external_referral
+}
+
+enum InvestigationBillingStatus {
+  not_billable
+  pending_invoice
+  invoiced
+  paid
+  waived_demo
+}
+
+enum InvestigationResultReviewStatus {
+  pending_review
+  reviewed
+  needs_follow_up
+  amended
+  voided
 }
 
 model Encounter {
@@ -912,11 +973,22 @@ model DrugMarketMergeCandidate {
 
 model InvestigationOrder {
   id          String                   @id @default(uuid()) @db.Uuid
+  orderNumber String?                  @unique
   patientId   String                   @db.Uuid
   encounterId String?                  @db.Uuid
   doctorId    String                   @db.Uuid
+  orderSource InvestigationOrderSource @default(doctor)
+  orderType   InvestigationCategory    @default(laboratory)
+  clinicalQuestion String?
+  diagnosisText String?
   status      InvestigationOrderStatus @default(requested)
   priority    InvestigationPriority    @default(routine)
+  requestedAt DateTime                 @default(now()) @db.Timestamptz(3)
+  targetDepartment String?
+  externalProviderId String?           @db.Uuid
+  billingStatus InvestigationBillingStatus @default(not_billable)
+  cancellationReason String?
+  voidReason String?
   notes       String?
   createdAt   DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime                 @updatedAt @db.Timestamptz(3)
@@ -926,26 +998,38 @@ model InvestigationOrder {
   doctor    User                     @relation("InvestigationOrdersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
   items     InvestigationOrderItem[]
   reports   Report[]
+  results   InvestigationResult[]
 
   @@index([patientId, createdAt])
+  @@index([orderNumber])
   @@index([encounterId])
   @@index([doctorId, createdAt])
+  @@index([orderType])
   @@index([status])
+  @@index([billingStatus])
 }
 
 model InvestigationOrderItem {
   id           String                   @id @default(uuid()) @db.Uuid
   orderId      String                   @db.Uuid
   category     InvestigationCategory
+  itemCode     String?
+  itemName     String?
   testName     String
+  specimenType String?
+  bodySite     String?
+  laterality   String?
   instructions String?
   status       InvestigationOrderStatus @default(requested)
+  resultId     String?                  @db.Uuid
 
   order InvestigationOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  result InvestigationResult? @relation(fields: [resultId], references: [id], onDelete: SetNull)
 
   @@index([orderId])
   @@index([category])
   @@index([status])
+  @@index([resultId])
 }
 
 enum ReportStatus {
@@ -963,6 +1047,237 @@ enum ReportCategory {
   cytology
   external
   other
+}
+
+enum ExternalProviderType {
+  laboratory
+  radiology_center
+  hospital
+  referral_doctor
+  pharmacy
+  insurance_company_placeholder
+  other
+}
+
+enum ClinicDepartmentType {
+  reception
+  doctor_room
+  laboratory
+  radiology
+  ultrasound
+  nursing
+  finance
+  admin
+  other
+}
+
+enum PatientDocumentType {
+  lab_result
+  radiology_result
+  ultrasound_report
+  consent_form
+  referral_letter
+  external_report
+  clinical_photo_demo_only
+  insurance_document_placeholder
+  identity_document_demo_only
+  procedure_document
+  discharge_summary_placeholder
+  other
+}
+
+enum PatientDocumentStatus {
+  draft_metadata
+  active
+  reviewed
+  archived
+  voided
+}
+
+enum PatientDocumentStorageMode {
+  metadata_only
+  local_demo_file
+  external_reference_placeholder
+}
+
+enum PatientDocumentConfidentialityLevel {
+  normal
+  sensitive
+  restricted
+}
+
+enum ConsentTemplateCategory {
+  general_treatment
+  procedure
+  ultrasound
+  report_storage
+  ai_processing
+  communication
+  privacy
+  referral
+  photography_demo_only
+  other
+}
+
+enum ConsentTemplateLanguage {
+  en
+  ar
+  mixed
+}
+
+enum ReferralDirection {
+  outbound
+  inbound
+  internal
+}
+
+enum ReferralType {
+  lab
+  radiology
+  fetal_medicine
+  hospital
+  specialist
+  emergency
+  insurance_placeholder
+  other
+}
+
+enum ReferralUrgency {
+  routine
+  urgent
+  emergency
+}
+
+enum ReferralStatus {
+  draft
+  sent
+  accepted
+  completed
+  cancelled
+  closed
+}
+
+enum PatientTaskType {
+  call_patient
+  collect_sample
+  review_result
+  prepare_document
+  collect_payment
+  schedule_follow_up
+  referral_follow_up
+  admin_task
+  other
+}
+
+enum PatientTaskPriority {
+  low
+  normal
+  high
+  urgent
+}
+
+enum PatientTaskStatus {
+  open
+  in_progress
+  done
+  cancelled
+}
+
+enum PatientInternalNoteType {
+  reception_note
+  clinical_note
+  billing_note
+  document_note
+  safety_note
+  other
+}
+
+enum PatientInternalNoteVisibility {
+  internal_all
+  clinical_only
+  admin_only
+  finance_only
+}
+
+model ExternalProvider {
+  id           String               @id @default(uuid()) @db.Uuid
+  name         String
+  providerType ExternalProviderType
+  contactName  String?
+  phone        String?
+  email        String?
+  address      String?
+  notes        String?
+  active       Boolean              @default(true)
+  createdAt    DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime             @updatedAt @db.Timestamptz(3)
+
+  @@index([providerType])
+  @@index([active])
+}
+
+model ClinicDepartment {
+  id             String               @id @default(uuid()) @db.Uuid
+  branchId       String?              @db.Uuid
+  code           String               @unique
+  name           String
+  departmentType ClinicDepartmentType
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @db.Timestamptz(3)
+
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([branchId])
+  @@index([departmentType])
+  @@index([active])
+}
+
+model InvestigationResult {
+  id                         String                          @id @default(uuid()) @db.Uuid
+  patientId                  String                          @db.Uuid
+  branchId                   String?                         @db.Uuid
+  orderId                    String?                         @db.Uuid
+  orderItemId                String?                         @db.Uuid
+  reportId                   String?                         @db.Uuid
+  resultNumber               String?                         @unique
+  category                   InvestigationCategory
+  title                      String
+  resultDate                 DateTime?                       @db.Timestamptz(3)
+  sampleDate                 DateTime?                       @db.Timestamptz(3)
+  performedByText            String?
+  externalProviderId         String?                         @db.Uuid
+  summaryText                String?
+  structuredValuesJson       Json?
+  abnormalFlag               Boolean                         @default(false)
+  criticalFlag               Boolean                         @default(false)
+  criticalAcknowledgedAt     DateTime?                       @db.Timestamptz(3)
+  criticalAcknowledgedByUserId String?                       @db.Uuid
+  reviewStatus               InvestigationResultReviewStatus @default(pending_review)
+  doctorComment              String?
+  followUpNeeded             Boolean                         @default(false)
+  followUpDate               DateTime?                       @db.Date
+  reviewedByUserId           String?                         @db.Uuid
+  reviewedAt                 DateTime?                       @db.Timestamptz(3)
+  createdByUserId            String?                         @db.Uuid
+  voidReason                 String?
+  createdAt                  DateTime                        @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime                        @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  order InvestigationOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  report Report? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  orderItems InvestigationOrderItem[]
+
+  @@index([patientId, createdAt])
+  @@index([branchId])
+  @@index([orderId])
+  @@index([orderItemId])
+  @@index([reportId])
+  @@index([category])
+  @@index([reviewStatus])
+  @@index([criticalFlag, reviewStatus])
 }
 
 enum PregnancyStatus {
@@ -1124,6 +1439,7 @@ model Report {
   investigationOrder InvestigationOrder? @relation(fields: [investigationOrderId], references: [id], onDelete: SetNull)
   uploadedByUser     User?               @relation("ReportsUploadedBy", fields: [uploadedByUserId], references: [id], onDelete: SetNull)
   reviewedByUser     User?               @relation("ReportsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  investigationResults InvestigationResult[]
 
   @@index([branchId])
   @@index([patientId, createdAt])
@@ -1131,6 +1447,173 @@ model Report {
   @@index([investigationOrderId])
   @@index([category])
   @@index([status])
+}
+
+model PatientDocument {
+  id                    String                              @id @default(uuid()) @db.Uuid
+  patientId             String                              @db.Uuid
+  branchId              String?                             @db.Uuid
+  linkedReportId        String?                             @db.Uuid
+  linkedResultId        String?                             @db.Uuid
+  linkedConsentRecordId String?                             @db.Uuid
+  linkedEncounterId     String?                             @db.Uuid
+  linkedPrescriptionId  String?                             @db.Uuid
+  title                 String
+  documentType          PatientDocumentType
+  category              String
+  status                PatientDocumentStatus               @default(draft_metadata)
+  storageMode           PatientDocumentStorageMode          @default(metadata_only)
+  fileName              String?
+  fileMimeType          String?
+  fileSizeBytes         Int?
+  fileReference         String?
+  fileSha256            String?
+  sourceText            String?
+  summaryText           String?
+  tagsJson              Json?
+  confidentialityLevel  PatientDocumentConfidentialityLevel @default(normal)
+  uploadedByUserId      String?                             @db.Uuid
+  reviewedByUserId      String?                             @db.Uuid
+  reviewedAt            DateTime?                           @db.Timestamptz(3)
+  archivedByUserId      String?                             @db.Uuid
+  archivedAt            DateTime?                           @db.Timestamptz(3)
+  archiveReason         String?
+  voidReason            String?
+  createdAt             DateTime                            @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                            @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([branchId])
+  @@index([linkedReportId])
+  @@index([linkedResultId])
+  @@index([linkedConsentRecordId])
+  @@index([linkedEncounterId])
+  @@index([linkedPrescriptionId])
+  @@index([documentType])
+  @@index([status])
+  @@index([storageMode])
+  @@index([confidentialityLevel])
+}
+
+model ConsentTemplate {
+  id               String                  @id @default(uuid()) @db.Uuid
+  code             String                  @unique
+  title            String
+  category         ConsentTemplateCategory
+  language         ConsentTemplateLanguage @default(en)
+  versionLabel     String
+  bodyText         String
+  fieldsJson       Json?
+  requiresWitness  Boolean                 @default(false)
+  requiresGuardian Boolean                 @default(false)
+  active           Boolean                 @default(true)
+  createdAt        DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                @updatedAt @db.Timestamptz(3)
+
+  records ConsentRecord[]
+
+  @@index([category])
+  @@index([language])
+  @@index([active])
+}
+
+model Referral {
+  id                  String            @id @default(uuid()) @db.Uuid
+  patientId           String            @db.Uuid
+  branchId            String?           @db.Uuid
+  encounterId         String?           @db.Uuid
+  pregnancyId         String?           @db.Uuid
+  referredByUserId    String?           @db.Uuid
+  referralDirection   ReferralDirection @default(outbound)
+  referralType        ReferralType
+  referredToProviderId String?          @db.Uuid
+  referredToText      String?
+  reason              String
+  clinicalSummary     String?
+  urgency             ReferralUrgency   @default(routine)
+  status              ReferralStatus    @default(draft)
+  sentAt              DateTime?         @db.Timestamptz(3)
+  completedAt         DateTime?         @db.Timestamptz(3)
+  closedAt            DateTime?         @db.Timestamptz(3)
+  closureNote         String?
+  createdAt           DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([branchId])
+  @@index([encounterId])
+  @@index([pregnancyId])
+  @@index([referredByUserId])
+  @@index([referralType])
+  @@index([status])
+  @@index([urgency])
+}
+
+model PatientTask {
+  id                String              @id @default(uuid()) @db.Uuid
+  patientId         String?             @db.Uuid
+  branchId          String?             @db.Uuid
+  assignedToUserId  String?             @db.Uuid
+  createdByUserId   String?             @db.Uuid
+  relatedOrderId    String?             @db.Uuid
+  relatedResultId   String?             @db.Uuid
+  relatedDocumentId String?             @db.Uuid
+  relatedConsentId  String?             @db.Uuid
+  taskType          PatientTaskType
+  title             String
+  description       String?
+  priority          PatientTaskPriority @default(normal)
+  status            PatientTaskStatus   @default(open)
+  dueAt             DateTime?           @db.Timestamptz(3)
+  completedAt       DateTime?           @db.Timestamptz(3)
+  cancellationReason String?
+  createdAt         DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime            @updatedAt @db.Timestamptz(3)
+
+  patient Patient? @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([branchId])
+  @@index([assignedToUserId])
+  @@index([createdByUserId])
+  @@index([taskType])
+  @@index([priority])
+  @@index([status])
+  @@index([dueAt])
+}
+
+model PatientInternalNote {
+  id              String                        @id @default(uuid()) @db.Uuid
+  patientId       String                        @db.Uuid
+  branchId        String?                       @db.Uuid
+  createdByUserId String?                       @db.Uuid
+  noteType        PatientInternalNoteType
+  visibility      PatientInternalNoteVisibility @default(internal_all)
+  title           String?
+  bodyText        String
+  pinned          Boolean                       @default(false)
+  archived        Boolean                       @default(false)
+  archiveReason   String?
+  createdAt       DateTime                      @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                      @updatedAt @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([branchId])
+  @@index([createdByUserId])
+  @@index([noteType])
+  @@index([visibility])
+  @@index([archived])
+  @@index([pinned])
 }
 
 model Pregnancy {

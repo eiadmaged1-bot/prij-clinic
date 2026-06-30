@@ -177,6 +177,42 @@ const medicationPermissions = [
 
 permissions.push(...medicationPermissions);
 
+const workflowSpinePermissions = [
+  "investigation.result_read",
+  "investigation.result_create",
+  "investigation.result_update",
+  "investigation.result_review",
+  "investigation.result_void",
+  "investigation.routing_manage",
+  "patient_document.read",
+  "patient_document.create",
+  "patient_document.review",
+  "patient_document.archive",
+  "patient_document.void",
+  "patient_document.restricted_read",
+  "consent_template.read",
+  "consent_template.manage",
+  "consent_record.sign_demo",
+  "consent_record.review",
+  "referral.read",
+  "referral.create",
+  "referral.update",
+  "referral.close",
+  "referral.print",
+  "patient_task.read",
+  "patient_task.create",
+  "patient_task.update",
+  "patient_task.assign",
+  "patient_internal_note.read",
+  "patient_internal_note.create",
+  "patient_internal_note.archive",
+  "patient_internal_note.admin_read",
+  "patient_internal_note.clinical_read",
+  "patient_internal_note.finance_read"
+];
+
+permissions.push(...workflowSpinePermissions);
+
 const reservedSystemOwnerPermissions = ["system_owner.manage", "developer_owner.manage"];
 const guidelineSourceRegistry = ["WHO", "NICE", "RCOG", "ACOG", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "FSRH", "Local Clinic Protocol"];
 
@@ -203,6 +239,32 @@ const rolePermissionKeys = {
     "guideline.manage",
     "guideline.review",
     "ai_management.read",
+    "investigation.routing_manage",
+    "patient_document.read",
+    "patient_document.create",
+    "patient_document.review",
+    "patient_document.archive",
+    "patient_document.void",
+    "patient_document.restricted_read",
+    "consent_template.read",
+    "consent_template.manage",
+    "consent_record.sign_demo",
+    "consent_record.review",
+    "referral.read",
+    "referral.create",
+    "referral.update",
+    "referral.close",
+    "referral.print",
+    "patient_task.read",
+    "patient_task.create",
+    "patient_task.update",
+    "patient_task.assign",
+    "patient_internal_note.read",
+    "patient_internal_note.create",
+    "patient_internal_note.archive",
+    "patient_internal_note.admin_read",
+    "patient_internal_note.clinical_read",
+    "patient_internal_note.finance_read",
     "medications.read",
     "medications.search",
     "medications.manage_catalog",
@@ -255,6 +317,31 @@ const rolePermissionKeys = {
     "investigation.review",
     "investigations.read",
     "investigations.manage",
+    "investigation.result_read",
+    "investigation.result_create",
+    "investigation.result_update",
+    "investigation.result_review",
+    "investigation.result_void",
+    "patient_document.read",
+    "patient_document.create",
+    "patient_document.review",
+    "patient_document.archive",
+    "consent_template.read",
+    "consent_record.sign_demo",
+    "consent_record.review",
+    "referral.read",
+    "referral.create",
+    "referral.update",
+    "referral.close",
+    "referral.print",
+    "patient_task.read",
+    "patient_task.create",
+    "patient_task.update",
+    "patient_task.assign",
+    "patient_internal_note.read",
+    "patient_internal_note.create",
+    "patient_internal_note.archive",
+    "patient_internal_note.clinical_read",
     "report.read",
     "report.upload",
     "report.review",
@@ -308,6 +395,16 @@ const rolePermissionKeys = {
     "encounters.read",
     "report.read",
     "reports.read",
+    "investigation.result_read",
+    "investigation.result_create",
+    "patient_document.read",
+    "patient_document.create",
+    "patient_task.read",
+    "patient_task.create",
+    "patient_task.update",
+    "patient_internal_note.read",
+    "patient_internal_note.create",
+    "patient_internal_note.clinical_read",
     "pregnancy.read",
     "ob_ultrasound.read",
     "patient_medications.read",
@@ -336,7 +433,18 @@ const rolePermissionKeys = {
     "queue.read",
     "queue.manage",
     "queue.status_update",
-    "payment.manage"
+    "payment.manage",
+    "investigation.routing_manage",
+    "patient_document.read",
+    "patient_document.create",
+    "consent_template.read",
+    "consent_record.sign_demo",
+    "patient_task.read",
+    "patient_task.create",
+    "patient_task.update",
+    "patient_task.assign",
+    "patient_internal_note.read",
+    "patient_internal_note.create"
   ],
   Accountant: [
     "billing.read",
@@ -346,7 +454,14 @@ const rolePermissionKeys = {
     "billing.void",
     "billing.report",
     "dashboard.read",
-    "patient.read"
+    "patient.read",
+    "patient_document.read",
+    "patient_task.read",
+    "patient_task.create",
+    "patient_task.update",
+    "patient_internal_note.read",
+    "patient_internal_note.create",
+    "patient_internal_note.finance_read"
   ]
 };
 
@@ -496,6 +611,208 @@ async function seedGuidelineCenter(prisma, demoOwner) {
       }
     });
   }
+}
+
+async function seedWorkflowSpine(prisma, demoPatient, branch, demoOwner) {
+  const providers = [
+    ["Demo Central Lab", "laboratory"],
+    ["Demo Radiology Center", "radiology_center"],
+    ["Demo Referral Hospital", "hospital"],
+    ["Demo Fetal Medicine Consultant", "referral_doctor"]
+  ];
+  const providerByName = new Map();
+  for (const [name, providerType] of providers) {
+    const existing = await prisma.externalProvider.findFirst({ where: { name } });
+    const data = { name, providerType, active: true, notes: "Local demo provider directory record only." };
+    const provider = existing ? await prisma.externalProvider.update({ where: { id: existing.id }, data }) : await prisma.externalProvider.create({ data });
+    providerByName.set(name, provider);
+  }
+
+  const departments = [
+    ["RECEPTION", "Reception", "reception"],
+    ["DOCTOR_ROOM", "Doctor Room", "doctor_room"],
+    ["ULTRASOUND_ROOM", "Ultrasound Room", "ultrasound"],
+    ["LAB_DESK", "Lab Desk", "laboratory"],
+    ["RADIOLOGY_DESK", "Radiology Desk", "radiology"],
+    ["FINANCE_DESK", "Finance Desk", "finance"]
+  ];
+  for (const [code, name, departmentType] of departments) {
+    await prisma.clinicDepartment.upsert({
+      where: { code },
+      update: { name, departmentType, branchId: branch.id, active: true },
+      create: { code, name, departmentType, branchId: branch.id, active: true }
+    });
+  }
+
+  const templates = [
+    ["GENERAL_TREATMENT_DEMO_V1", "General treatment consent", "general_treatment", true],
+    ["ULTRASOUND_EXAM_DEMO_V1", "Ultrasound examination consent", "ultrasound", true],
+    ["PROCEDURE_PLACEHOLDER_DEMO_V1", "Procedure consent placeholder", "procedure", true],
+    ["REPORT_STORAGE_DEMO_V1", "Report storage consent", "report_storage", true],
+    ["COMMUNICATION_DEMO_V1", "Communication consent", "communication", true],
+    ["AI_PROCESSING_PLACEHOLDER_DEMO_V1", "AI processing consent placeholder", "ai_processing", false],
+    ["REFERRAL_PLACEHOLDER_DEMO_V1", "Referral consent placeholder", "referral", true]
+  ];
+  for (const [code, title, category, active] of templates) {
+    await prisma.consentTemplate.upsert({
+      where: { code },
+      update: {
+        title,
+        category,
+        language: "en",
+        versionLabel: "demo-v1",
+        bodyText: `${title}. Local demo placeholder only. Legal review is required before real use.`,
+        active
+      },
+      create: {
+        code,
+        title,
+        category,
+        language: "en",
+        versionLabel: "demo-v1",
+        bodyText: `${title}. Local demo placeholder only. Legal review is required before real use.`,
+        active
+      }
+    });
+  }
+
+  const order = await prisma.investigationOrder.upsert({
+    where: { orderNumber: "DEMO-ORD-0001" },
+    update: {
+      patientId: demoPatient.id,
+      doctorId: demoOwner.id,
+      orderSource: "patient_file",
+      orderType: "laboratory",
+      priority: "routine",
+      status: "result_ready",
+      targetDepartment: "Lab Desk",
+      externalProviderId: providerByName.get("Demo Central Lab")?.id,
+      billingStatus: "waived_demo",
+      clinicalQuestion: "Demo follow-up question only. Doctor-authored text."
+    },
+    create: {
+      orderNumber: "DEMO-ORD-0001",
+      patientId: demoPatient.id,
+      doctorId: demoOwner.id,
+      orderSource: "patient_file",
+      orderType: "laboratory",
+      priority: "routine",
+      status: "result_ready",
+      targetDepartment: "Lab Desk",
+      externalProviderId: providerByName.get("Demo Central Lab")?.id,
+      billingStatus: "waived_demo",
+      clinicalQuestion: "Demo follow-up question only. Doctor-authored text.",
+      notes: "Local demo investigation order only.",
+      items: {
+        create: [
+          { category: "laboratory", testName: "CBC demo metadata", itemName: "CBC demo metadata", specimenType: "Demo blood sample", status: "result_ready" }
+        ]
+      }
+    }
+  });
+
+  const resultSeeds = [
+    ["DEMO-RES-CBC-001", "CBC result metadata", "laboratory", false, false],
+    ["DEMO-RES-US-001", "Pelvic ultrasound external report metadata", "ultrasound", true, false],
+    ["DEMO-RES-BHCG-001", "Beta-hCG follow-up metadata", "laboratory", true, true],
+    ["DEMO-RES-UA-001", "Urine analysis metadata", "laboratory", false, false],
+    ["DEMO-RES-RAD-001", "Radiology report metadata", "radiology", false, false]
+  ];
+  for (const [resultNumber, title, category, abnormalFlag, criticalFlag] of resultSeeds) {
+    await prisma.investigationResult.upsert({
+      where: { resultNumber },
+      update: {
+        patientId: demoPatient.id,
+        branchId: branch.id,
+        orderId: order.id,
+        category,
+        title,
+        summaryText: "Demo result metadata only. Doctor review required. No automatic interpretation.",
+        abnormalFlag,
+        criticalFlag,
+        reviewStatus: "pending_review",
+        createdByUserId: demoOwner.id
+      },
+      create: {
+        resultNumber,
+        patientId: demoPatient.id,
+        branchId: branch.id,
+        orderId: order.id,
+        category,
+        title,
+        summaryText: "Demo result metadata only. Doctor review required. No automatic interpretation.",
+        abnormalFlag,
+        criticalFlag,
+        reviewStatus: "pending_review",
+        createdByUserId: demoOwner.id
+      }
+    });
+  }
+
+  const document = await findOrCreate(prisma.patientDocument, { patientId: demoPatient.id, title: "Demo CBC document metadata" }, {
+    patientId: demoPatient.id,
+    branchId: branch.id,
+    title: "Demo CBC document metadata",
+    documentType: "lab_result",
+    category: "Laboratory",
+    status: "active",
+    storageMode: "metadata_only",
+    summaryText: "Metadata-only demo archive item. No real PHI file stored.",
+    confidentialityLevel: "normal",
+    uploadedByUserId: demoOwner.id
+  });
+
+  await findOrCreate(prisma.referral, { patientId: demoPatient.id, reason: "Demo fetal medicine referral follow-up" }, {
+    patientId: demoPatient.id,
+    branchId: branch.id,
+    referredByUserId: demoOwner.id,
+    referralDirection: "outbound",
+    referralType: "fetal_medicine",
+    referredToProviderId: providerByName.get("Demo Fetal Medicine Consultant")?.id,
+    reason: "Demo fetal medicine referral follow-up",
+    clinicalSummary: "Doctor-authored demo clinical summary placeholder only.",
+    urgency: "routine",
+    status: "draft"
+  });
+
+  const tasks = [
+    ["Review pending lab result", "review_result", "high"],
+    ["Schedule follow-up", "schedule_follow_up", "normal"],
+    ["Collect missing consent", "prepare_document", "normal"],
+    ["Confirm report pickup", "admin_task", "low"]
+  ];
+  for (const [title, taskType, priority] of tasks) {
+    await findOrCreate(prisma.patientTask, { patientId: demoPatient.id, title }, {
+      patientId: demoPatient.id,
+      branchId: branch.id,
+      createdByUserId: demoOwner.id,
+      relatedDocumentId: title === "Confirm report pickup" ? document.id : null,
+      taskType,
+      title,
+      priority,
+      status: "open",
+      description: "Local demo workflow task only."
+    });
+  }
+
+  await findOrCreate(prisma.patientInternalNote, { patientId: demoPatient.id, title: "Demo internal workflow note" }, {
+    patientId: demoPatient.id,
+    branchId: branch.id,
+    createdByUserId: demoOwner.id,
+    noteType: "safety_note",
+    visibility: "clinical_only",
+    title: "Demo internal workflow note",
+    bodyText: "Internal demo note only. Not for patient portal or external messaging.",
+    pinned: true
+  });
+}
+
+async function findOrCreate(model, where, data) {
+  const existing = await model.findFirst({ where });
+  if (existing) {
+    return model.update({ where: { id: existing.id }, data });
+  }
+  return model.create({ data });
 }
 
 function normalizeSearchText(value) {
@@ -1409,6 +1726,10 @@ async function main() {
         requestedByUserId: demoOwner?.id
       }
     });
+  }
+
+  if (demoOwner) {
+    await seedWorkflowSpine(prisma, demoPatientA, mainBranch, demoOwner);
   }
 }
 

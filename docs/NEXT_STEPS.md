@@ -1,5 +1,13 @@
 # Next Steps
 
+## V0.7 Follow-Up
+
+1. Expand visual QA for patient Results, Documents, Consents, Referrals, Tasks, Internal Notes, Timeline, and Print Packet tabs.
+2. Add deeper lower-role positive-path tests for nurse/reception/accountant task and document metadata workflows.
+3. Design production file storage separately before accepting PHI uploads.
+4. Add secure export policy before PDF generation.
+5. Keep result interpretation doctor-authored only and AI disabled.
+
 1. Run and archive the full v0.6 audit verification suite from `docs/V0_6_MASTER_UNIFIED_AUDIT.md`.
 2. Keep v0.6 stabilization limited to defects, tests, docs, and safety hardening; do not add major features until the unified branch is stable.
 3. Add focused visual/manual QA for the patient workspace medication, allergy, herbal/supplement, medication safety, AI snapshot, OB dating, guideline, and protocol tabs.

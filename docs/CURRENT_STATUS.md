@@ -1,5 +1,17 @@
 # Current Status
 
+# V0.7 Clinic Workflow Spine
+
+Branch `leap/v0.7-clinic-workflow-spine` adds the clinic workflow spine around the patient file: investigation result metadata, critical acknowledgement workflow, metadata-only patient document archive, consent templates and demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packet views.
+
+The branch remains local/demo only. Do not use real patient data, PHI files, OCR, DICOM/PACS, external AI, WhatsApp, real e-signature, real payment gateway, or insurance claim submission.
+
+New focused verification:
+
+```powershell
+npm run test:workflow:spine
+```
+
 # V0.6 Master Unified Integration
 
 Branch `integration/v0.6-master-unified` is the current unified source-of-truth branch after merging:
