@@ -105,6 +105,14 @@ const permissions = [
   "billing.void",
   "billing.report",
   "dashboard.read",
+  "guidelines.read",
+  "guidelines.search",
+  "guidelines.upload",
+  "guidelines.import",
+  "guidelines.review",
+  "guidelines.manage_sources",
+  "guidelines.manage_private",
+  "guidelines.delete_or_archive",
   "ai_draft.request",
   "ai_draft.read",
   "ai_draft.review",
@@ -142,6 +150,33 @@ const permissions = [
   "developer_owner.manage"
 ];
 
+const medicationPermissions = [
+  "medications.read",
+  "medications.search",
+  "medications.manage_catalog",
+  "medications.manage_sources",
+  "medications.import",
+  "medications.verify",
+  "medications.safety_check",
+  "medications.review_alerts",
+  "medications.override_alerts",
+  "patient_medications.read",
+  "patient_medications.write",
+  "patient_allergies.read",
+  "patient_allergies.write",
+  "drug_market.read",
+  "drug_market.search",
+  "drug_market.import",
+  "drug_market.verify",
+  "drug_market.manage_sources",
+  "drug_market.manage_countries",
+  "drug_market.manage_products",
+  "drug_market.review_queue",
+  "drug_market.automation"
+];
+
+permissions.push(...medicationPermissions);
+
 const reservedSystemOwnerPermissions = ["system_owner.manage", "developer_owner.manage"];
 const guidelineSourceRegistry = ["WHO", "NICE", "RCOG", "ACOG", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "FSRH", "Local Clinic Protocol"];
 
@@ -158,12 +193,38 @@ const rolePermissionKeys = {
     "audit.read",
     "calculator.read",
     "calculator.manage",
+    "guidelines.read",
+    "guidelines.search",
+    "guidelines.manage_sources",
+    "guidelines.manage_private",
     "protocol_atlas.read",
     "protocol_atlas.manage",
     "guideline.read",
     "guideline.manage",
     "guideline.review",
-    "ai_management.read"
+    "ai_management.read",
+    "medications.read",
+    "medications.search",
+    "medications.manage_catalog",
+    "medications.manage_sources",
+    "medications.import",
+    "medications.verify",
+    "medications.safety_check",
+    "medications.review_alerts",
+    "medications.override_alerts",
+    "patient_medications.read",
+    "patient_medications.write",
+    "patient_allergies.read",
+    "patient_allergies.write",
+    "drug_market.read",
+    "drug_market.search",
+    "drug_market.import",
+    "drug_market.verify",
+    "drug_market.manage_sources",
+    "drug_market.manage_countries",
+    "drug_market.manage_products",
+    "drug_market.review_queue",
+    "drug_market.automation"
   ],
   Doctor: [
     "patient.read",
@@ -206,6 +267,9 @@ const rolePermissionKeys = {
     "calculator.read",
     "calculator.calculate",
     "calculator.review",
+    "guidelines.read",
+    "guidelines.search",
+    "guidelines.upload",
     "ai_draft.request",
     "ai_draft.read",
     "ai_draft.review",
@@ -217,7 +281,18 @@ const rolePermissionKeys = {
     "ai_management.request",
     "ai_management.read",
     "ai_management.review",
-    "ai_management.memory_save"
+    "ai_management.memory_save",
+    "medications.read",
+    "medications.search",
+    "medications.safety_check",
+    "medications.review_alerts",
+    "medications.override_alerts",
+    "patient_medications.read",
+    "patient_medications.write",
+    "patient_allergies.read",
+    "patient_allergies.write",
+    "drug_market.read",
+    "drug_market.search"
   ],
   Nurse: [
     "patient.read",
@@ -234,7 +309,15 @@ const rolePermissionKeys = {
     "report.read",
     "reports.read",
     "pregnancy.read",
-    "ob_ultrasound.read"
+    "ob_ultrasound.read",
+    "patient_medications.read",
+    "patient_medications.write",
+    "patient_allergies.read",
+    "patient_allergies.write",
+    "medications.read",
+    "medications.search",
+    "drug_market.read",
+    "drug_market.search"
   ],
   Receptionist: [
     "patient.read",
@@ -267,6 +350,21 @@ const rolePermissionKeys = {
   ]
 };
 
+const guidelineSources = [
+  ["WHO Guideline Registry", "WHO", "https://www.who.int/publications/guidelines", "OPEN_PUBLIC", "Global", ["obstetrics", "gynecology", "general medicine"], "Registry only. Import only direct public documents when license and access allow."],
+  ["NICE Guidance", "NICE", "https://www.nice.org.uk/guidance", "PUBLIC_RESTRICTED", "United Kingdom", ["obstetrics", "gynecology", "general medicine"], "Public guidance registry. Check reuse terms before importing content."],
+  ["RCOG Guidance", "RCOG", "https://www.rcog.org.uk/guidance/", "PUBLIC_RESTRICTED", "United Kingdom", ["obstetrics", "gynecology"], "Registry only. Some content or reuse may require review."],
+  ["ACOG Clinical Guidance", "ACOG", "https://www.acog.org/clinical", "PUBLIC_RESTRICTED", "United States", ["obstetrics", "gynecology"], "Registry only. Do not bypass member, login, or subscription access."],
+  ["FIGO Guidance", "FIGO", "https://www.figo.org/resources", "OPEN_PUBLIC", "Global", ["obstetrics", "gynecology"], "Registry only. Import direct public resources only after access review."],
+  ["ESHRE Guidelines", "ESHRE", "https://www.eshre.eu/Guidelines-and-Legal/Guidelines", "PUBLIC_RESTRICTED", "Europe", ["fertility", "gynecology"], "Registry only. Check guideline license and reuse terms before import."],
+  ["ASRM Practice Guidance", "ASRM", "https://www.asrm.org/practice-guidance/", "PUBLIC_RESTRICTED", "United States", ["fertility", "gynecology"], "Registry only. Some materials may be restricted."],
+  ["SMFM Publications and Guidelines", "SMFM", "https://www.smfm.org/publications", "PUBLIC_RESTRICTED", "United States", ["obstetrics"], "Registry only. Check public access and reuse before import."],
+  ["CDC Guidelines", "CDC", "https://www.cdc.gov/guidelines/", "OPEN_PUBLIC", "United States", ["obstetrics", "gynecology", "general medicine"], "Registry only. Import direct public documents only."],
+  ["SOGC Guidelines", "SOGC", "https://www.sogc.org/en/content/featured-news/Clinical-Practice-Guidelines.aspx", "PUBLIC_RESTRICTED", "Canada", ["obstetrics", "gynecology"], "Registry only. Check access and reuse terms before import."],
+  ["WSES Guidelines", "WSES", "https://www.wses.org.uk/scientific-resources/guidelines", "OPEN_PUBLIC", "Global", ["surgery", "general medicine"], "Registry only. Surgical guideline source for cross-specialty context."],
+  ["SAGES Guidelines", "SAGES", "https://www.sages.org/publications/guidelines/", "PUBLIC_RESTRICTED", "United States", ["surgery", "gynecology"], "Registry only. Check public access and reuse before import."]
+];
+
 function describePermission(key) {
   const [area, action] = key.split(".");
 
@@ -278,7 +376,7 @@ function riskLevelFor(key) {
     return "critical";
   }
 
-  if (key === "audit.read" || key.endsWith(".manage")) {
+  if (key === "audit.read" || key.endsWith(".manage") || key.includes(".import") || key.includes(".override")) {
     return "high";
   }
 
@@ -287,40 +385,44 @@ function riskLevelFor(key) {
 
 async function seedGuidelineCenter(prisma, demoOwner) {
   for (const name of guidelineSourceRegistry) {
-    await prisma.guidelineSource.upsert({
-      where: { name },
-      update: { status: "active", active: true },
-      create: {
-        name,
-        organization: name,
-        sourceType: "LINK_ONLY",
-        abbreviation: name,
-        specialties: ["women_health", "obgyn"],
-        defaultAccessLevel: "OWNER_DOCTOR",
-        active: true,
-        status: "active",
-        notes: "Source registry metadata only. Imported documents require clinical governance review."
-      }
-    });
+    const existing = await prisma.guidelineSource.findFirst({ where: { name } });
+    const data = {
+      name,
+      organization: name,
+      sourceType: "LINK_ONLY",
+      websiteUrl: null,
+      countryOrRegion: null,
+      specialties: ["women_health", "obgyn"],
+      defaultAccessLevel: "OWNER_DOCTOR",
+      active: true,
+      notes: "Source registry metadata only. Imported documents require clinical governance review."
+    };
+
+    if (existing) {
+      await prisma.guidelineSource.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.guidelineSource.create({ data });
+    }
   }
 
   if (!seedDemoData) return;
 
-  const localSource = await prisma.guidelineSource.upsert({
-    where: { name: "Local Clinic Protocol" },
-    update: {},
-    create: {
-      name: "Local Clinic Protocol",
-      organization: "Local Clinic Protocol",
-      sourceType: "LINK_ONLY",
-      abbreviation: "LOCAL",
-      specialties: ["women_health", "obgyn"],
-      defaultAccessLevel: "OWNER_DOCTOR",
-      active: true,
-      status: "active",
-      notes: "Local demo source metadata only."
-    }
-  });
+  let localSource = await prisma.guidelineSource.findFirst({ where: { name: "Local Clinic Protocol" } });
+  const localSourceData = {
+    name: "Local Clinic Protocol",
+    organization: "Local Clinic Protocol",
+    sourceType: "LINK_ONLY",
+    websiteUrl: null,
+    countryOrRegion: null,
+    specialties: ["women_health", "obgyn"],
+    defaultAccessLevel: "OWNER_DOCTOR",
+    active: true,
+    notes: "Local demo source metadata only."
+  };
+  localSource = localSource
+    ? await prisma.guidelineSource.update({ where: { id: localSource.id }, data: localSourceData })
+    : await prisma.guidelineSource.create({ data: localSourceData });
+
   const existing = await prisma.guidelineDocument.findFirst({
     where: {
       sourceId: localSource.id,
@@ -337,14 +439,21 @@ async function seedGuidelineCenter(prisma, demoOwner) {
       topic: "Guideline center safety",
       organization: "Local Clinic Protocol",
       guidelineStatus: "NEEDS_REVIEW",
-      documentType: "demo_text",
       licenseStatus: "CHECK_REQUIRED",
       accessLevel: "OWNER_DOCTOR",
-      reviewStatus: "pending_governance_review",
-      citationLabel: "Local Clinic Protocol: Demo guideline center safety text",
+      originalUrl: null,
       importedByUserId: demoOwner?.id,
-      versions: { create: { versionLabel: "demo_text_v1", status: "ACTIVE" } },
-      importJobs: { create: { jobType: "TEXT_EXTRACTION", status: "SUCCEEDED", importType: "TEXT_EXTRACTION", summary: "Seeded original demo text. No external AI call.", message: "Seeded local demo import.", requestedByUserId: demoOwner?.id, createdByUserId: demoOwner?.id, startedAt: new Date(), finishedAt: new Date() } }
+      versions: { create: { versionLabel: "demo_text_v1", status: "NEEDS_REVIEW" } },
+      importJobs: {
+        create: {
+          jobType: "TEXT_EXTRACTION",
+          status: "SUCCEEDED",
+          message: "Seeded local demo import. No external AI call.",
+          requestedByUserId: demoOwner?.id,
+          startedAt: new Date(),
+          finishedAt: new Date()
+        }
+      }
     }
   });
 
@@ -354,7 +463,6 @@ async function seedGuidelineCenter(prisma, demoOwner) {
       heading: "Demo evidence library safety",
       sectionPath: "Demo evidence library safety",
       orderIndex: 1,
-      sortOrder: 1,
       text: "Demo evidence library safety text."
     }
   });
@@ -377,16 +485,27 @@ async function seedGuidelineCenter(prisma, demoOwner) {
     });
   }
 
-  await prisma.guidelineReviewDecision.create({
-    data: {
-      documentId: document.id,
-      decision: "REJECTED",
-      reason: "Seeded demo text requires clinical governance review before production.",
-      decidedByUserId: demoOwner?.id,
-      decidedAt: new Date(),
-      reviewerUserId: demoOwner?.id
-    }
-  });
+  if (demoOwner?.id) {
+    await prisma.guidelineReviewDecision.create({
+      data: {
+        documentId: document.id,
+        decision: "REJECTED",
+        reason: "Seeded demo text requires clinical governance review before production.",
+        decidedByUserId: demoOwner.id,
+        decidedAt: new Date()
+      }
+    });
+  }
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\p{L}\p{N}%/.\s-]+/gu, " ")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 async function hashPassword(password) {
@@ -394,6 +513,327 @@ async function hashPassword(password) {
   const key = await scrypt(password, salt, 64);
 
   return `scrypt:16384:8:1:${salt}:${key.toString("base64url")}`;
+}
+
+async function seedMedicationIntelligence(prisma) {
+  const families = [
+    ["BETA_BLOCKER", "beta blocker", ["beta-blocker", "beta blockers"]],
+    ["ACEI", "ACE inhibitor", ["ACEI", "ACE inhibitors"]],
+    ["ARB", "angiotensin receptor blocker", ["ARB", "sartans"]],
+    ["CCB", "calcium channel blocker", ["CCB"]],
+    ["THIAZIDE", "thiazide", []],
+    ["LOOP_DIURETIC", "loop diuretic", []],
+    ["POTASSIUM_SPARING_DIURETIC", "potassium sparing diuretic", []],
+    ["STATIN", "statin", []],
+    ["ANTIPLATELET", "antiplatelet", []],
+    ["ANTICOAGULANT", "anticoagulant", []],
+    ["NSAID", "NSAID", ["non-steroidal anti-inflammatory drug"]],
+    ["PENICILLIN", "penicillin", []],
+    ["CEPHALOSPORIN", "cephalosporin", []],
+    ["MACROLIDE", "macrolide", []],
+    ["FLUOROQUINOLONE", "fluoroquinolone", []],
+    ["TETRACYCLINE", "tetracycline", []],
+    ["AMINOGLYCOSIDE", "aminoglycoside", []],
+    ["ANTIFUNGAL", "antifungal", []],
+    ["ANTIVIRAL", "antiviral", []],
+    ["SSRI", "SSRI", ["selective serotonin reuptake inhibitor"]],
+    ["SNRI", "SNRI", []],
+    ["TCA", "TCA", []],
+    ["ANTIPSYCHOTIC", "antipsychotic", []],
+    ["BENZODIAZEPINE", "benzodiazepine placeholder", ["benzodiazepines"]],
+    ["MOOD_STABILIZER", "mood stabilizer", []],
+    ["ANTIEPILEPTIC", "antiepileptic", []],
+    ["PPI", "PPI", ["proton pump inhibitor"]],
+    ["H2_BLOCKER", "H2 blocker", []],
+    ["ANTIEMETIC", "antiemetic", []],
+    ["ANTIHISTAMINE", "antihistamine", []],
+    ["CORTICOSTEROID", "corticosteroid", []],
+    ["INHALED_CORTICOSTEROID", "inhaled corticosteroid", []],
+    ["SABA", "SABA", []],
+    ["LABA", "LABA", []],
+    ["LAMA", "LAMA", []],
+    ["INSULIN", "insulin", []],
+    ["METFORMIN_CLASS", "metformin class placeholder", []],
+    ["GLP1", "GLP1", []],
+    ["SGLT2", "SGLT2", []],
+    ["DPP4", "DPP4", []],
+    ["THYROID_HORMONE", "thyroid hormone", []],
+    ["ANTITHYROID", "antithyroid", []],
+    ["COC", "combined oral contraceptive", []],
+    ["PROGESTIN_ONLY_CONTRACEPTIVE", "progestin-only contraceptive", []],
+    ["EMERGENCY_CONTRACEPTION", "emergency contraception class placeholder", []],
+    ["FERTILITY_MEDICATION", "fertility medication class placeholder", []],
+    ["UTEROTONIC", "uterotonic class placeholder", []],
+    ["TOCOLYTIC", "tocolytic class placeholder", []],
+    ["MAGNESIUM_SULFATE", "magnesium sulfate class placeholder", []],
+    ["IRON_SUPPLEMENT", "iron supplement", []],
+    ["FOLIC_ACID_SUPPLEMENT", "folic acid supplement class placeholder", []],
+    ["VITAMIN_SUPPLEMENT", "vitamin supplement", []],
+    ["HERBAL_SUPPLEMENT", "herbal/supplement", []]
+  ];
+
+  const familyByCode = new Map();
+  for (const [code, displayName, aliases] of families) {
+    const family = await prisma.drugFamily.upsert({
+      where: { code },
+      update: {
+        displayName,
+        aliases,
+        normalizedSearchText: normalizeSearchText([code, displayName, ...aliases].join(" ")),
+        restrictedFlag: code === "BENZODIAZEPINE",
+        verificationStatus: "catalog_only"
+      },
+      create: {
+        code,
+        displayName,
+        aliases,
+        normalizedSearchText: normalizeSearchText([code, displayName, ...aliases].join(" ")),
+        restrictedFlag: code === "BENZODIAZEPINE",
+        verificationStatus: "catalog_only"
+      }
+    });
+    familyByCode.set(code, family);
+  }
+
+  const countries = [
+    ["EG", "Egypt", null, false],
+    ["KSA", "Saudi Arabia", "KSA", true],
+    ["UAE", "United Arab Emirates", "UAE", true],
+    ["YEM", "Yemen", "YEM", true]
+  ];
+
+  for (const [countryCode, displayName, compactBadgeLabel, showCompactBadgeByDefault] of countries) {
+    await prisma.drugMarketCountry.upsert({
+      where: { countryCode },
+      update: { displayName, compactBadgeLabel, showCompactBadgeByDefault, active: true },
+      create: { countryCode, displayName, compactBadgeLabel, showCompactBadgeByDefault, active: true }
+    });
+  }
+
+  const marketSources = [
+    ["EDA_EDDB", "Egyptian Drug Database", "EG", "official_registry", 10],
+    ["SFDA_DRUG_LIST", "SFDA Drug List", "KSA", "official_registry", 10],
+    ["UAE_EDE_DIRECTORY", "UAE EDE Directory", "UAE", "official_registry", 10],
+    ["UAE_MOHAP_SHARIK", "UAE MOHAP Sharik", "UAE", "official_registry", 20],
+    ["YEMEN_OFFICIAL_UPLOAD", "Yemen official owner-provided upload", "YEM", "official_upload", 10],
+    ["YEMEN_WHO_NEML_REFERENCE", "Yemen WHO/NEML reference", "YEM", "reference_only", 80],
+    ["LOCAL_MANUAL", "Local manual catalog entry", null, "manual", 90],
+    ["LICENSED_PROVIDER", "Licensed provider placeholder", null, "licensed_provider", 30]
+  ];
+  const marketSourceByCode = new Map();
+  for (const [code, name, countryCode, sourceType, priorityRank] of marketSources) {
+    const source = await prisma.drugMarketSource.upsert({
+      where: { code },
+      update: { name, countryCode, sourceType, priorityRank, policyStatus: "approved", verificationStatus: "catalog_only", active: true },
+      create: { code, name, countryCode, sourceType, priorityRank, policyStatus: "approved", verificationStatus: "catalog_only", active: true }
+    });
+    marketSourceByCode.set(code, source);
+  }
+
+  const medicationSources = [
+    ["RXNORM", "RxNorm", "official_reference"],
+    ["DAILYMED", "DailyMed", "official_labels"],
+    ["OPENFDA_DRUG_LABELS", "openFDA drug labels", "official_labels"],
+    ["WHO_ATC_DDD", "WHO ATC/DDD", "official_reference"],
+    ["NCCIH_HERBS", "NCCIH Herbs at a Glance", "official_reference"],
+    ["LICENSED_COMMERCIAL_DRUG_DB", "Licensed commercial drug database placeholder", "licensed_provider"],
+    ["LOCAL_EGYPT_GULF_BRAND_MAPPING", "Local Egyptian/Gulf brand mapping placeholder", "manual_mapping"]
+  ];
+  for (const [code, name, sourceType] of medicationSources) {
+    await prisma.medicationDataSource.upsert({
+      where: { code },
+      update: { name, sourceType, verificationStatus: "catalog_only", active: true },
+      create: { code, name, sourceType, verificationStatus: "catalog_only", active: true }
+    });
+  }
+
+  const connectors = [
+    ["SFDA_OFFICIAL_DRUG_LIST_CONNECTOR", "SFDA official drug list connector", "SFDA_DRUG_LIST", "official_registry", "KSA", false, true],
+    ["EDA_EDDB_CONNECTOR", "EDA EDDB connector", "EDA_EDDB", "official_registry", "EG", false, true],
+    ["UAE_EDE_DIRECTORY_CONNECTOR", "UAE EDE directory connector", "UAE_EDE_DIRECTORY", "official_registry", "UAE", false, true],
+    ["UAE_MOHAP_DIRECTORY_CONNECTOR", "UAE MOHAP directory connector", "UAE_MOHAP_SHARIK", "official_registry", "UAE", false, true],
+    ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_UPLOAD", "official_upload", "YEM", false, true],
+    ["RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "Retail public metadata connector template", "LOCAL_MANUAL", "retail_metadata", null, true, false]
+  ];
+  for (const [code, displayName, sourceCode, connectorType, countryCode, isRetailMetadata, enabled] of connectors) {
+    await prisma.drugMarketSourceConnector.upsert({
+      where: { code },
+      update: {
+        displayName,
+        sourceId: marketSourceByCode.get(sourceCode)?.id,
+        connectorType,
+        countryCode,
+        isRetailMetadata,
+        enabled: isRetailMetadata ? false : enabled,
+        policyStatus: "approved",
+        notes: isRetailMetadata ? "Disabled by default. Product metadata only if explicitly approved later." : "Official-source-first connector placeholder."
+      },
+      create: {
+        code,
+        displayName,
+        sourceId: marketSourceByCode.get(sourceCode)?.id,
+        connectorType,
+        countryCode,
+        isRetailMetadata,
+        enabled: isRetailMetadata ? false : enabled,
+        policyStatus: "approved",
+        notes: isRetailMetadata ? "Disabled by default. Product metadata only if explicitly approved later." : "Official-source-first connector placeholder."
+      }
+    });
+  }
+
+  const ingredient = await prisma.medicationIngredient.upsert({
+    where: { id: "00000000-0000-0000-0000-00000000ace1" },
+    update: {
+      genericName: "Demo ACE ingredient",
+      normalizedSearchText: normalizeSearchText("Demo ACE ingredient ACEI ACE inhibitor"),
+      verificationStatus: "catalog_only"
+    },
+    create: {
+      id: "00000000-0000-0000-0000-00000000ace1",
+      genericName: "Demo ACE ingredient",
+      normalizedSearchText: normalizeSearchText("Demo ACE ingredient ACEI ACE inhibitor"),
+      verificationStatus: "catalog_only"
+    }
+  });
+  await prisma.medicationFamilyMembership.upsert({
+    where: { ingredientId_familyId: { ingredientId: ingredient.id, familyId: familyByCode.get("ACEI").id } },
+    update: {},
+    create: { ingredientId: ingredient.id, familyId: familyByCode.get("ACEI").id, sourceStatus: "catalog_only" }
+  });
+  await prisma.medicationProduct.upsert({
+    where: { id: "00000000-0000-0000-0000-00000000b001" },
+    update: {
+      ingredientId: ingredient.id,
+      genericName: "Demo ACE ingredient",
+      brandName: "Demoace",
+      normalizedSearchText: normalizeSearchText("Demoace Demo ACE ingredient ACEI tablet"),
+      dosageForm: "tablet",
+      strengthText: "10 mg tablet",
+      verificationStatus: "catalog_only"
+    },
+    create: {
+      id: "00000000-0000-0000-0000-00000000b001",
+      ingredientId: ingredient.id,
+      genericName: "Demo ACE ingredient",
+      brandName: "Demoace",
+      normalizedSearchText: normalizeSearchText("Demoace Demo ACE ingredient ACEI tablet"),
+      dosageForm: "tablet",
+      strengthText: "10 mg tablet",
+      verificationStatus: "catalog_only"
+    }
+  });
+
+  await prisma.herbalProduct.upsert({
+    where: { id: "00000000-0000-0000-0000-00000000f001" },
+    update: {
+      commonName: "Demo herbal supplement",
+      botanicalName: "Demo botanica",
+      normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
+      cautionSummary: "Demo catalog caution only. Doctor review is required.",
+      verificationStatus: "catalog_only"
+    },
+    create: {
+      id: "00000000-0000-0000-0000-00000000f001",
+      commonName: "Demo herbal supplement",
+      botanicalName: "Demo botanica",
+      normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
+      cautionSummary: "Demo catalog caution only. Doctor review is required.",
+      verificationStatus: "catalog_only"
+    }
+  });
+
+  const demoProducts = [
+    ["DemoEG", "Demo generic EG", [["EG", "1 g tablet", "tablet"], ["EG", "457 mg/5 mL oral suspension", "oral suspension"]]],
+    ["DemoKSA", "Demo generic KSA", [["KSA", "625 mg tablet", "tablet"]]],
+    ["DemoUAE", "Demo generic UAE", [["UAE", "vial", "vial"]]],
+    ["DemoYEM", "Demo generic YEM", [["YEM", "drops", "drops"]]],
+    ["DemoGulf", "Demo generic Gulf", [["KSA", "suppository", "suppository"], ["UAE", "cream", "cream"]]]
+  ];
+
+  for (const [tradeName, genericName, variants] of demoProducts) {
+    let product = await prisma.drugMarketProduct.findFirst({ where: { tradeName, genericName } });
+    const productData = {
+      tradeName,
+      genericName,
+      normalizedSearchText: normalizeSearchText(`${tradeName} ${genericName} demo market product ACEI beta blocker NSAID`),
+      familyText: tradeName === "DemoEG" ? "ACE inhibitor" : null,
+      manufacturer: "Demo manufacturer",
+      marketingCompany: "Demo marketing company",
+      verificationStatus: "catalog_only"
+    };
+    product = product
+      ? await prisma.drugMarketProduct.update({ where: { id: product.id }, data: productData })
+      : await prisma.drugMarketProduct.create({ data: productData });
+
+    for (const [countryCode, strengthText, dosageForm] of variants) {
+      const source = marketSourceByCode.get(countryCode === "EG" ? "EDA_EDDB" : countryCode === "KSA" ? "SFDA_DRUG_LIST" : countryCode === "UAE" ? "UAE_EDE_DIRECTORY" : "YEMEN_OFFICIAL_UPLOAD");
+      const sourceRowHash = crypto.createHash("sha256").update(`${tradeName}|${countryCode}|${strengthText}`).digest("hex");
+      await prisma.drugMarketVariant.upsert({
+        where: { countryCode_sourceRowHash: { countryCode, sourceRowHash } },
+        update: {
+          productId: product.id,
+          sourceId: source?.id,
+          tradeName,
+          genericName,
+          strengthText,
+          dosageForm,
+          route: dosageForm === "tablet" ? "oral" : null,
+          packageText: "Demo pack variant only; not patient directions.",
+          manufacturer: "Demo manufacturer",
+          marketingCompany: "Demo marketing company",
+          registrationNumber: `DEMO-${countryCode}-${tradeName}`,
+          sourceRowHash,
+          verificationStatus: "catalog_only"
+        },
+        create: {
+          productId: product.id,
+          countryCode,
+          sourceId: source?.id,
+          tradeName,
+          genericName,
+          strengthText,
+          dosageForm,
+          route: dosageForm === "tablet" ? "oral" : null,
+          packageText: "Demo pack variant only; not patient directions.",
+          manufacturer: "Demo manufacturer",
+          marketingCompany: "Demo marketing company",
+          registrationNumber: `DEMO-${countryCode}-${tradeName}`,
+          sourceRowHash,
+          verificationStatus: "catalog_only"
+        }
+      });
+    }
+    await recomputeDemoAvailability(prisma, product.id);
+  }
+}
+
+async function recomputeDemoAvailability(prisma, productId) {
+  const variants = await prisma.drugMarketVariant.groupBy({
+    by: ["countryCode"],
+    where: { productId, verificationStatus: { not: "retired" } },
+    _count: { _all: true }
+  });
+  const hasEgypt = variants.some((item) => item.countryCode === "EG");
+  for (const item of variants) {
+    const country = await prisma.drugMarketCountry.findUnique({ where: { countryCode: item.countryCode } });
+    const showCompactBadge = !hasEgypt && country?.showCompactBadgeByDefault === true;
+    await prisma.drugMarketAvailability.upsert({
+      where: { productId_countryCode: { productId, countryCode: item.countryCode } },
+      update: {
+        variantCount: item._count._all,
+        compactBadgeLabel: showCompactBadge ? country?.compactBadgeLabel : null,
+        showCompactBadge
+      },
+      create: {
+        productId,
+        countryCode: item.countryCode,
+        variantCount: item._count._all,
+        compactBadgeLabel: showCompactBadge ? country?.compactBadgeLabel : null,
+        showCompactBadge
+      }
+    });
+  }
 }
 
 async function main() {
@@ -482,6 +922,29 @@ async function main() {
       });
     }
   }
+
+  for (const [name, organization, websiteUrl, sourceType, countryOrRegion, specialties, notes] of guidelineSources) {
+    const existing = await prisma.guidelineSource.findFirst({ where: { name } });
+    const data = {
+      name,
+      organization,
+      websiteUrl,
+      sourceType,
+      countryOrRegion,
+      specialties,
+      defaultAccessLevel: "OWNER_DOCTOR",
+      notes,
+      active: true
+    };
+
+    if (existing) {
+      await prisma.guidelineSource.update({ where: { id: existing.id }, data });
+    } else {
+      await prisma.guidelineSource.create({ data });
+    }
+  }
+
+  await seedMedicationIntelligence(prisma);
 
   let demoOwner = null;
 

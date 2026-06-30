@@ -850,6 +850,38 @@ code {
   gap: 0.75rem;
 }
 
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.inline-form input {
+  min-width: 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.floating-action-note {
+  margin: 1rem auto 2rem;
+  width: min(1120px, calc(100% - 2rem));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
 .data-row {
   display: grid;
   gap: 0.75rem;
@@ -2412,6 +2444,99 @@ button.obgyn-template-card {
     min-height: 10.5rem;
     padding: 1rem;
   }
+}
+
+.guideline-hero {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(232, 246, 242, 0.95), rgba(247, 250, 252, 0.96));
+  border: 1px solid rgba(20, 124, 112, 0.18);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+}
+
+.guideline-hero h1 {
+  margin: 0.2rem 0;
+}
+
+.guideline-actions {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  margin-bottom: 1rem;
+}
+
+.guideline-card {
+  align-items: flex-start;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  color: inherit;
+  display: grid;
+  gap: 0.45rem;
+  min-height: 9rem;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.guideline-card span {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.guideline-search {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 1rem;
+}
+
+.guideline-search textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.guideline-meta-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  margin: 0.85rem 0;
+}
+
+.guideline-meta-grid span {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.25rem;
+  min-height: 4rem;
+  padding: 0.75rem;
+}
+
+.guideline-file-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 0.85rem 0;
+}
+
+.toggle-line {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+  min-height: 2.5rem;
+}
+
+.evidence-answer {
+  background: #f8fafc;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  margin-bottom: 0.85rem;
+  padding: 1rem;
 }
 
 @media print {

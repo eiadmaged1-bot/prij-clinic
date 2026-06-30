@@ -38,6 +38,15 @@
     "test:obgyn:core": "node scripts/obgyn-core-depth-test.mjs",
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",
+    "test:medications": "node scripts/medication-intelligence-test.mjs",
+    "test:drug-market": "node scripts/medication-intelligence-test.mjs",
+    "test:drug-market:auto-import": "node scripts/medication-intelligence-test.mjs",
+    "test:medication-intelligence": "node scripts/medication-intelligence-test.mjs",
+    "test:integrated:probes": "node scripts/integrated-route-page-probes.mjs",
+    "guidelines:import-open": "node scripts/guidelines-import-open.mjs",
+    "guidelines:reindex": "node scripts/guidelines-reindex.mjs",
+    "guidelines:check-updates": "node scripts/guidelines-check-updates.mjs",
+    "test:guidelines:library": "node scripts/guidelines-library-test.mjs",
     "test:accounts:rbac": "node scripts/accounts-session-rbac-test.mjs",
     "test:finance:reports": "node scripts/finance-reports-test.mjs",
     "test:calculators": "node scripts/calculator-suite-test.mjs",
@@ -72,5 +81,11 @@
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/multer": "^2.1.0"
   }
 }

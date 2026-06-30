@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
+import { MedicationSafetyPanel, PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -95,6 +96,11 @@ const tabs: TabConfig[] = [
   { key: "ai-snapshot", label: "AI Snapshot", icon: "ai", empty: "No management snapshot yet. Doctor review is required." },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready." },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit." },
+  { key: "medications", label: "Medications", icon: "prescription", endpoint: "", empty: "No active medication list entry yet." },
+  { key: "allergies", label: "Allergies", icon: "consent", endpoint: "", empty: "No allergy entry yet." },
+  { key: "herbals", label: "Herbal/Supplements", icon: "files", endpoint: "", empty: "No herbal or supplement entry yet." },
+  { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed." },
+  { key: "prescription-safety", label: "Prescription Safety", icon: "prescription", empty: "Prescription safety review appears here." },
   { key: "orders", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed." },
   { key: "billing", label: "Billing/Finance", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details." },
   { key: "files", label: "Files", icon: "files", endpoint: "/reports", collectionKey: "reports", empty: "No report or attachment record yet. Real clinical file upload is disabled." },
@@ -118,6 +124,9 @@ export default function PatientFilePage() {
     () => tabs.filter((tab) => {
       if (tab.key === "gynecology") return permissions.includes("encounter.read") || permissions.includes("encounter.create");
       if (tab.key === "ai-snapshot") return permissions.includes("ai_management.request") || permissions.includes("ai_management.read");
+      if (["medications", "herbals"].includes(tab.key)) return permissions.includes("patient_medications.read");
+      if (tab.key === "allergies") return permissions.includes("patient_allergies.read");
+      if (["medication-safety", "prescription-safety"].includes(tab.key)) return permissions.includes("medications.safety_check");
       return true;
     }),
     [permissions]
@@ -260,6 +269,9 @@ export default function PatientFilePage() {
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "more" ? <MorePanel /> : null}
           {active.key === "ai-snapshot" ? <ManagementSnapshotPanel patientId={patient.id} /> : null}
+          {active.key === "medications" || active.key === "herbals" ? <PatientMedicationList /> : null}
+          {active.key === "allergies" ? <PatientAllergyList /> : null}
+          {active.key === "medication-safety" || active.key === "prescription-safety" ? <MedicationSafetyPanel patientId={patient.id} /> : null}
           {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "pregnancy" ? (
             <>
@@ -272,7 +284,7 @@ export default function PatientFilePage() {
               />
             </>
           ) : null}
-          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "ai-snapshot" && active.key !== "gynecology" && active.key !== "pregnancy" ? (
+          {active.key !== "overview" && active.key !== "timeline" && active.key !== "more" && active.key !== "ai-snapshot" && active.key !== "gynecology" && active.key !== "pregnancy" && active.key !== "medications" && active.key !== "herbals" && active.key !== "allergies" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
