@@ -25,6 +25,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/reports", label: "Reports", icon: "reports", group: "Clinical", permissions: ["report.read"] },
   { href: "/pregnancies", label: "Pregnancy", icon: "pregnancy", group: "Women's Health", permissions: ["pregnancy.read", "pregnancy.manage"] },
   { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Women's Health", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
+  { href: "/gynecology", label: "Gynecology", icon: "doctor", group: "Women's Health", permissions: ["encounter.read", "encounter.create"] },
   { href: "/medications", label: "Medication Center", icon: "prescription", group: "Medication", permissions: ["medications.read", "medications.search"] },
   { href: "/drug-market", label: "Drug Market", icon: "prescription", group: "Medication", permissions: ["drug_market.read", "drug_market.search"] },
   { href: "/billing", label: "Billing", icon: "billing", group: "Finance", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
