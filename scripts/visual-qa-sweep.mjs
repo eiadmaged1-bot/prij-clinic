@@ -148,15 +148,29 @@ async function main() {
   for (const label of ["Patient file", "Start Visit"]) {
     if (!visibleText(patientHtml).includes(label)) throw new Error(`Patient file missing ${label}.`);
   }
-  const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
+  const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
   for (const label of [
     "Summary",
-    "Pregnancy/OB",
-    "General Gynecology",
+    "Medical",
+    "Clinical",
+    "Appointments",
     "Encounters",
     "Prescriptions",
     "Investigations",
-    "Billing/Finance",
+    "Reports",
+    "Pregnancy",
+    "Ultrasound",
+    "Billing",
+    "Consents",
+    "AI Drafts",
+    "Protocol Atlas",
+    "Calculators",
+    "Medications",
+    "Allergies",
+    "Herbal/Supplements",
+    "Medication Safety",
+    "Prescription Safety",
+    "Timeline",
     "Pregnancy Overview",
     "Antenatal Visits",
     "Visit details",

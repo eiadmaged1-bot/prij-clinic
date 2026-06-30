@@ -25,8 +25,8 @@ async function main() {
   }
   record.pass("guided visit workflow steps are implemented");
 
-  const patientSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
-  for (const label of ["Summary", "Pregnancy/OB", "General Gynecology", "Encounters", "Prescriptions", "Investigations", "Billing/Finance", "Files", "Timeline", "Start Visit"]) {
+  const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Prescriptions", "Investigations", "Reports", "Pregnancy", "Ultrasound", "Billing", "Consents", "AI Drafts", "Protocol Atlas", "Calculators", "Medications", "Allergies", "Herbal/Supplements", "Medication Safety", "Prescription Safety", "Timeline", "Start Visit"]) {
     if (!patientSource.includes(label)) throw new Error(`Simplified patient file label missing: ${label}`);
   }
   record.pass("patient file simplified tabs and actions are implemented");
@@ -59,7 +59,7 @@ async function main() {
   }
   record.pass("OB/GYN patient workspace avoids fetal growth automation wording");
 
-  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
+  const shellSource = `${await readFile("apps/web/app/mvp-page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
   for (const label of ["Comfort", "Large", "Compact", "Doctor Mode"]) {
     if (!shellSource.includes(label)) throw new Error(`Comfort or role navigation label missing: ${label}`);
   }

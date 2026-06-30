@@ -50,6 +50,8 @@
     "test:accounts:rbac": "node scripts/accounts-session-rbac-test.mjs",
     "test:finance:reports": "node scripts/finance-reports-test.mjs",
     "test:calculators": "node scripts/calculator-suite-test.mjs",
+    "test:medical-calculators": "node scripts/calculator-suite-test.mjs",
+    "test:calculator-suite": "node scripts/calculator-suite-test.mjs",
     "test:ob-dating": "node scripts/ob-dating-test.mjs",
     "test:security:expanded": "node scripts/security-test-all.mjs",
     "test:protocol-atlas": "node scripts/protocol-atlas-test.mjs",

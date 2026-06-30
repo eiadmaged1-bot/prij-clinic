@@ -138,6 +138,16 @@ export default function AppearancePage() {
 
       <SafetyAlert />
 
+      <section className="panel appearance-density-note">
+        <div className="section-heading">
+          <div>
+            <h2>Density controls</h2>
+            <p className="muted">Comfort is the balanced default. Large increases text, controls, sidebar items, cards, and rows for tablet or RDP use. Compact tightens spacing, chips, buttons, cards, and rows while keeping text readable.</p>
+          </div>
+          <span className="badge accent">Saved per browser</span>
+        </div>
+      </section>
+
       {error ? <p className="form-error">{error}</p> : null}
       {message ? <p className="success-message">{message}</p> : null}
 
