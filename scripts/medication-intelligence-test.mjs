@@ -62,8 +62,25 @@ async function main() {
 
   const market = await apiJson("POST", "/drug-market/search", doctor, { query: "DemoGulf" });
   const gulf = market.products?.find((product) => product.tradeName === "DemoGulf");
-  if (!gulf?.badges?.includes("KSA") || !gulf.badges.includes("UAE")) throw new Error("KSA+UAE compact badges missing");
-  record.pass("KSA and UAE badges appear when Egypt is absent");
+  for (const badge of ["KSA", "UAE", "QAT", "KWT", "BHR", "OMN"]) {
+    if (!gulf?.badges?.includes(badge)) throw new Error(`${badge} compact badge missing on multi-Gulf product`);
+  }
+  record.pass("multi-Gulf badges appear when Egypt is absent");
+
+  for (const [tradeName, badge] of [
+    ["DemoKSA", "KSA"],
+    ["DemoUAE", "UAE"],
+    ["DemoQAT", "QAT"],
+    ["DemoKWT", "KWT"],
+    ["DemoBHR", "BHR"],
+    ["DemoOMN", "OMN"],
+    ["DemoYEM", "YEM"]
+  ]) {
+    const response = await apiJson("POST", "/drug-market/search", doctor, { query: tradeName });
+    const product = response.products?.find((item) => item.tradeName === tradeName);
+    if (!product?.badges?.includes(badge)) throw new Error(`${tradeName} should show ${badge} compact badge`);
+  }
+  record.pass("single-country compact badges appear for target markets");
 
   const egypt = await apiJson("POST", "/drug-market/search", doctor, { query: "DemoEG" });
   const eg = egypt.products?.find((product) => product.tradeName === "DemoEG");

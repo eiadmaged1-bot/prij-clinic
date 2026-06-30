@@ -916,6 +916,10 @@ async function seedMedicationIntelligence(prisma) {
     ["EG", "Egypt", null, false],
     ["KSA", "Saudi Arabia", "KSA", true],
     ["UAE", "United Arab Emirates", "UAE", true],
+    ["QAT", "Qatar", "QAT", true],
+    ["KWT", "Kuwait", "KWT", true],
+    ["BHR", "Bahrain", "BHR", true],
+    ["OMN", "Oman", "OMN", true],
     ["YEM", "Yemen", "YEM", true]
   ];
 
@@ -932,6 +936,10 @@ async function seedMedicationIntelligence(prisma) {
     ["SFDA_DRUG_LIST", "SFDA Drug List", "KSA", "official_registry", 10],
     ["UAE_EDE_DIRECTORY", "UAE EDE Directory", "UAE", "official_registry", 10],
     ["UAE_MOHAP_SHARIK", "UAE MOHAP Sharik", "UAE", "official_registry", 20],
+    ["QATAR_MOPH_DRUG_LIST", "Qatar MOPH drug list", "QAT", "official_registry", 10],
+    ["KUWAIT_MOH_DRUG_PRICE_LIST", "Kuwait MOH drug price list", "KWT", "official_registry", 10],
+    ["BAHRAIN_NHRA_MEDICINES_LIST", "Bahrain NHRA medicines list", "BHR", "official_registry", 10],
+    ["OMAN_MOH_OFFICIAL_UPLOAD", "Oman MOH official owner-provided upload", "OMN", "official_upload", 10],
     ["YEMEN_OFFICIAL_UPLOAD", "Yemen official owner-provided upload", "YEM", "official_upload", 10],
     ["YEMEN_WHO_NEML_REFERENCE", "Yemen WHO/NEML reference", "YEM", "reference_only", 80],
     ["LOCAL_MANUAL", "Local manual catalog entry", null, "manual", 90],
@@ -965,11 +973,15 @@ async function seedMedicationIntelligence(prisma) {
   }
 
   const connectors = [
-    ["SFDA_OFFICIAL_DRUG_LIST_CONNECTOR", "SFDA official drug list connector", "SFDA_DRUG_LIST", "official_registry", "KSA", false, true],
-    ["EDA_EDDB_CONNECTOR", "EDA EDDB connector", "EDA_EDDB", "official_registry", "EG", false, true],
-    ["UAE_EDE_DIRECTORY_CONNECTOR", "UAE EDE directory connector", "UAE_EDE_DIRECTORY", "official_registry", "UAE", false, true],
-    ["UAE_MOHAP_DIRECTORY_CONNECTOR", "UAE MOHAP directory connector", "UAE_MOHAP_SHARIK", "official_registry", "UAE", false, true],
-    ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_UPLOAD", "official_upload", "YEM", false, true],
+    ["SFDA_OFFICIAL_DRUG_LIST_CONNECTOR", "SFDA official drug list connector", "SFDA_DRUG_LIST", "official_registry", "KSA", false, false],
+    ["EDA_EDDB_CONNECTOR", "EDA EDDB connector", "EDA_EDDB", "official_registry", "EG", false, false],
+    ["UAE_EDE_DIRECTORY_CONNECTOR", "UAE EDE directory connector", "UAE_EDE_DIRECTORY", "official_registry", "UAE", false, false],
+    ["UAE_MOHAP_DIRECTORY_CONNECTOR", "UAE MOHAP directory connector", "UAE_MOHAP_SHARIK", "official_registry", "UAE", false, false],
+    ["QATAR_MOPH_CONNECTOR", "Qatar MOPH connector", "QATAR_MOPH_DRUG_LIST", "official_registry", "QAT", false, false],
+    ["KUWAIT_MOH_CONNECTOR", "Kuwait MOH connector", "KUWAIT_MOH_DRUG_PRICE_LIST", "official_registry", "KWT", false, false],
+    ["BAHRAIN_NHRA_CONNECTOR", "Bahrain NHRA connector", "BAHRAIN_NHRA_MEDICINES_LIST", "official_registry", "BHR", false, false],
+    ["OMAN_OFFICIAL_UPLOAD_CONNECTOR", "Oman official upload connector", "OMAN_MOH_OFFICIAL_UPLOAD", "official_upload", "OMN", false, false],
+    ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_UPLOAD", "official_upload", "YEM", false, false],
     ["RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "Retail public metadata connector template", "LOCAL_MANUAL", "retail_metadata", null, true, false]
   ];
   for (const [code, displayName, sourceCode, connectorType, countryCode, isRetailMetadata, enabled] of connectors) {
@@ -1064,8 +1076,12 @@ async function seedMedicationIntelligence(prisma) {
     ["DemoEG", "Demo generic EG", [["EG", "1 g tablet", "tablet"], ["EG", "457 mg/5 mL oral suspension", "oral suspension"]]],
     ["DemoKSA", "Demo generic KSA", [["KSA", "625 mg tablet", "tablet"]]],
     ["DemoUAE", "Demo generic UAE", [["UAE", "vial", "vial"]]],
+    ["DemoQAT", "Demo generic QAT", [["QAT", "ampoule", "ampoule"]]],
+    ["DemoKWT", "Demo generic KWT", [["KWT", "sachet", "sachet"]]],
+    ["DemoBHR", "Demo generic BHR", [["BHR", "inhaler", "inhaler"]]],
+    ["DemoOMN", "Demo generic OMN", [["OMN", "patch", "patch"]]],
     ["DemoYEM", "Demo generic YEM", [["YEM", "drops", "drops"]]],
-    ["DemoGulf", "Demo generic Gulf", [["KSA", "suppository", "suppository"], ["UAE", "cream", "cream"]]]
+    ["DemoGulf", "Demo generic Gulf", [["KSA", "suppository", "suppository"], ["UAE", "cream", "cream"], ["QAT", "cream", "cream"], ["KWT", "cream", "cream"], ["BHR", "cream", "cream"], ["OMN", "cream", "cream"]]]
   ];
 
   for (const [tradeName, genericName, variants] of demoProducts) {
@@ -1084,7 +1100,17 @@ async function seedMedicationIntelligence(prisma) {
       : await prisma.drugMarketProduct.create({ data: productData });
 
     for (const [countryCode, strengthText, dosageForm] of variants) {
-      const source = marketSourceByCode.get(countryCode === "EG" ? "EDA_EDDB" : countryCode === "KSA" ? "SFDA_DRUG_LIST" : countryCode === "UAE" ? "UAE_EDE_DIRECTORY" : "YEMEN_OFFICIAL_UPLOAD");
+      const sourceCodeByCountry = {
+        EG: "EDA_EDDB",
+        KSA: "SFDA_DRUG_LIST",
+        UAE: "UAE_EDE_DIRECTORY",
+        QAT: "QATAR_MOPH_DRUG_LIST",
+        KWT: "KUWAIT_MOH_DRUG_PRICE_LIST",
+        BHR: "BAHRAIN_NHRA_MEDICINES_LIST",
+        OMN: "OMAN_MOH_OFFICIAL_UPLOAD",
+        YEM: "YEMEN_OFFICIAL_UPLOAD"
+      };
+      const source = marketSourceByCode.get(sourceCodeByCountry[countryCode] ?? "LOCAL_MANUAL");
       const sourceRowHash = crypto.createHash("sha256").update(`${tradeName}|${countryCode}|${strengthText}`).digest("hex");
       await prisma.drugMarketVariant.upsert({
         where: { countryCode_sourceRowHash: { countryCode, sourceRowHash } },
