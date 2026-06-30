@@ -234,14 +234,14 @@ async function fetchOfficialFile(source, url, htmlDepth = 0, sourceLabel = null)
   enforceOfficialUrlPolicy(source, finalUrl);
   const contentType = response.headers.get("content-type") ?? "";
   const contentDisposition = response.headers.get("content-disposition") ?? "";
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}; finalUrl=${finalUrl}; contentType=${contentType || "unknown"}`);
   const buffer = Buffer.from(await response.arrayBuffer());
   if (looksLikeHtmlBlock(buffer, contentType)) {
-    if (htmlDepth >= 1) throw new Error(`official server returned HTML instead of a source file (${contentType || "unknown content type"})`);
+    if (htmlDepth >= 1) throw new Error(`official server returned HTML instead of a source file (${contentType || "unknown content type"}); finalUrl=${finalUrl}`);
     const html = buffer.toString("utf8");
     const discovered = discoverVisibleFileLinksFromHtml(source, finalUrl, html);
     const next = discovered.find((link) => isPreferredSourceLink(source.code, link.label, link.url)) ?? discovered[0];
-    if (!next) throw new Error(`official HTML page did not expose a supported source file link (${contentType || "unknown content type"})`);
+    if (!next) throw new Error(`official HTML page did not expose a supported source file link (${contentType || "unknown content type"}); finalUrl=${finalUrl}; visibleCandidateLinks=${discovered.length}`);
     return fetchOfficialFile(source, next.url, htmlDepth + 1, next.label);
   }
   mkdirSync(storageRoot, { recursive: true });
