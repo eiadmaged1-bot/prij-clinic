@@ -241,12 +241,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<DensityMode>("comfortable");
   const { theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
-  const permissions = user?.permissions ?? [];
   const isDoctor = Boolean(user?.roles.includes("Doctor"));
   const canOpenAdmin = isAdmin;
   const visibleNavGroups = useMemo(
-    () => groupNavItems(navigationRegistry.filter((item) => canSeeNavItem(item, permissions, user?.roles ?? [], canOpenAdmin))),
-    [canOpenAdmin, permissions, user?.roles]
+    () => groupNavItems(navigationRegistry.filter((item) => canSeeNavItem(item, user?.permissions ?? [], user?.roles ?? [], canOpenAdmin))),
+    [canOpenAdmin, user?.permissions, user?.roles]
   );
 
   useEffect(() => {

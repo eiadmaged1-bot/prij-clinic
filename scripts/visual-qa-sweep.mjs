@@ -162,7 +162,7 @@ async function main() {
     "Ultrasound",
     "Billing",
     "Consents",
-    "AI Drafts",
+    "AI Snapshot",
     "Protocol Atlas",
     "Calculators",
     "Medications",

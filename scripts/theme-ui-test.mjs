@@ -7,11 +7,11 @@ const webUrl = process.env.WEB_URL ?? "http://localhost:3000";
 async function main() {
   await waitForApi();
 
-  const themeSource = await readFile("apps/web/app/theme.tsx", "utf8");
-  for (const theme of ["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]) {
+  const themeSource = `${await readFile("apps/web/app/theme.tsx", "utf8")}\n${await readFile("apps/web/lib/theme-registry.ts", "utf8")}`;
+  for (const theme of ["luxury-clinic", "medicolize-portal", "incision-clean", "compact-operations", "senior-doctor-large", "dark-navy"]) {
     if (!themeSource.includes(`"${theme}"`)) throw new Error(`Theme ${theme} is missing from registry.`);
   }
-  record.pass("theme registry includes required appearances");
+  record.pass("premium theme registry includes required appearances");
 
   const loginSource = await readFile("apps/web/app/login/page.tsx", "utf8");
   if (!loginSource.includes('demoEmail = "eyad"') || !loginSource.includes('demoPassword = "eyad"')) {
@@ -20,13 +20,13 @@ async function main() {
   record.pass("login page renders local demo admin credentials");
 
   const dashboardSource = await readFile("apps/web/app/dashboard/page.tsx", "utf8");
-  for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "AI Draft Review", "Owner portal", "Clinic Command"]) {
+  for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "Draft Review", "Owner portal", "Clinic Command"]) {
     if (!dashboardSource.includes(label)) throw new Error(`Portal dashboard label missing: ${label}`);
   }
   record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
   const registrySource = await readFile("apps/web/app/navigation-registry.ts", "utf8");
-  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Admin Control Center", "Appearance", "Accounts", "Guideline Center", "Medications", "Drug Market"]) {
+  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Admin Control Center", "Appearance", "Accounts", "Guideline Center", "Medication Center", "Drug Market"]) {
     if (!registrySource.includes(label)) throw new Error(`Navigation registry label missing: ${label}`);
   }
   record.pass("canonical navigation registry includes clinical and admin modules");
@@ -39,12 +39,12 @@ async function main() {
   record.pass("themes share one shell and density persists per browser");
 
   const cssSource = await readFile("apps/web/app/globals.css", "utf8");
-  for (const token of ["--density-font-scale", "--density-control-height", "--density-card-padding", "--density-sidebar-width", ':root[data-density="large"]', ':root[data-density="compact"]']) {
+  for (const token of ["--density-font-scale", "--density-control-height", "--density-card-padding", "--density-sidebar-width", ':root[data-density="large"]', ':root[data-density="compact"]', ':root[data-density="magnified"]']) {
     if (!cssSource.includes(token)) throw new Error(`Density token missing: ${token}`);
   }
-  record.pass("comfort large compact density tokens are implemented");
+  record.pass("compact comfortable large magnified density tokens are implemented");
 
-  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Medication Safety", "Prescription Safety", "Timeline"]) {
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Queue", "Encounters", "Gynecology", "Files", "Medication Safety", "Prescription Safety", "Timeline"]) {
     if (!registrySource.includes(label)) throw new Error(`Patient tab registry missing: ${label}`);
   }
   record.pass("patient tabs are registered independently of theme");

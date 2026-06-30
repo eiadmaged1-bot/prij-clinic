@@ -7,9 +7,9 @@ const webUrl = process.env.WEB_URL ?? "http://localhost:3000";
 async function main() {
   await waitForApi();
 
-  const iconSource = await readFile("apps/web/components/ThreeDMedicalIcon.tsx", "utf8");
-  for (const icon of ["dashboard", "patients", "queue", "encounter", "prescription", "investigations", "reports", "pregnancy", "ultrasound", "billing", "consent", "doctor"]) {
-    if (!iconSource.includes(`${icon}:`)) throw new Error(`3D medical icon missing: ${icon}`);
+  const iconSource = `${await readFile("apps/web/components/ThreeDMedicalIcon.tsx", "utf8")}\n${await readFile("apps/web/lib/app-icons.ts", "utf8")}`;
+  for (const icon of ["dashboard", "patients", "queue", "encounters", "prescriptions", "investigations", "reports", "pregnancy", "ultrasound", "billing", "consents", "doctor-mode", "backup-restore", "security"]) {
+    if (!iconSource.includes(icon)) throw new Error(`3D medical icon missing: ${icon}`);
   }
   record.pass("3D medical icon system includes required modules");
 
@@ -26,7 +26,7 @@ async function main() {
   record.pass("guided visit workflow steps are implemented");
 
   const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
-  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Prescriptions", "Investigations", "Reports", "Pregnancy", "Ultrasound", "Billing", "Consents", "AI Drafts", "Protocol Atlas", "Calculators", "Medications", "Allergies", "Herbal/Supplements", "Medication Safety", "Prescription Safety", "Timeline", "Start Visit"]) {
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Queue", "Encounters", "Prescriptions", "Investigations", "Reports", "Pregnancy", "Ultrasound", "Gynecology", "Billing", "Consents", "Files", "AI Snapshot", "Protocol Atlas", "Calculators", "Medications", "Allergies", "Herbal/Supplements", "Medication Safety", "Prescription Safety", "Timeline", "Start Visit"]) {
     if (!patientSource.includes(label)) throw new Error(`Simplified patient file label missing: ${label}`);
   }
   record.pass("patient file simplified tabs and actions are implemented");
@@ -60,7 +60,7 @@ async function main() {
   record.pass("OB/GYN patient workspace avoids fetal growth automation wording");
 
   const shellSource = `${await readFile("apps/web/app/mvp-page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
-  for (const label of ["Comfort", "Large", "Compact", "Doctor Mode"]) {
+  for (const label of ["Comfort", "Large", "Compact", "Magnify", "Doctor Mode"]) {
     if (!shellSource.includes(label)) throw new Error(`Comfort or role navigation label missing: ${label}`);
   }
   record.pass("elder-friendly visual preferences are present");
