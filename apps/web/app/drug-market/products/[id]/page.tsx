@@ -24,6 +24,14 @@ export default function DrugMarketProductPage({ params }: { params: Promise<{ id
         <AvailabilitySummary availabilities={(product?.availabilities as Array<Record<string, unknown>>) ?? []} />
       </section>
       <section className="panel">
+        <h2>Source & freshness</h2>
+        <dl>
+          <div><dt>Review status</dt><dd>{String(product?.verificationStatus ?? "needs_review")}</dd></div>
+          <div><dt>Demo row</dt><dd>{product?.isDemo ? "Yes" : "No"}</dd></div>
+          <div><dt>Latest source fetch</dt><dd>{String(product?.latestSourceFetchedAt ?? "Not imported yet")}</dd></div>
+        </dl>
+      </section>
+      <section className="panel">
         <h2>Variants by country</h2>
         <MarketVariantTable variants={(product?.variants as Array<Record<string, unknown>>) ?? []} />
       </section>

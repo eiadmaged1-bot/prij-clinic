@@ -87,7 +87,7 @@ export class DrugMarketController {
 
   @Post("import/sfda")
   @Permissions("drug_market.import")
-  sfda(@Body() dto: { rows?: Array<Record<string, string>> }, @CurrentUser() user: AuthUser) { return this.importService.importRows({ ...dto, sourceCode: "SFDA_DRUG_LIST", fileName: "SFDA official rows" }, user); }
+  sfda(@Body() dto: { rows?: Array<Record<string, string>> }, @CurrentUser() user: AuthUser) { return this.importService.importRows({ ...dto, sourceCode: "SFDA_DRUGS_LIST", fileName: "SFDA official rows" }, user); }
 
   @Post("import/recompute-availability")
   @Permissions("drug_market.verify")

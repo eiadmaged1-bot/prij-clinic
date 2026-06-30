@@ -8,7 +8,7 @@ export class DrugMarketBadgeService {
   async recomputeProduct(productId: string) {
     const variants = await this.prisma.drugMarketVariant.groupBy({
       by: ["countryCode"],
-      where: { productId, verificationStatus: { not: "retired" } },
+      where: { productId, verificationStatus: { not: "retired" }, isDemo: false },
       _count: { _all: true }
     });
     const hasEgypt = variants.some((item) => item.countryCode === "EG");

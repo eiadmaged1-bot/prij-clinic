@@ -932,28 +932,376 @@ async function seedMedicationIntelligence(prisma) {
   }
 
   const marketSources = [
-    ["EDA_EDDB", "Egyptian Drug Database", "EG", "official_registry", 10],
-    ["SFDA_DRUG_LIST", "SFDA Drug List", "KSA", "official_registry", 10],
-    ["UAE_EDE_DIRECTORY", "UAE EDE Directory", "UAE", "official_registry", 10],
-    ["UAE_MOHAP_SHARIK", "UAE MOHAP Sharik", "UAE", "official_registry", 20],
-    ["QATAR_MOPH_DRUG_LIST", "Qatar MOPH drug list", "QAT", "official_registry", 10],
-    ["KUWAIT_MOH_DRUG_PRICE_LIST", "Kuwait MOH drug price list", "KWT", "official_registry", 10],
-    ["BAHRAIN_NHRA_MEDICINES_LIST", "Bahrain NHRA medicines list", "BHR", "official_registry", 10],
-    ["OMAN_MOH_OFFICIAL_UPLOAD", "Oman MOH official owner-provided upload", "OMN", "official_upload", 10],
-    ["YEMEN_OFFICIAL_UPLOAD", "Yemen official owner-provided upload", "YEM", "official_upload", 10],
-    ["YEMEN_WHO_NEML_REFERENCE", "Yemen WHO/NEML reference", "YEM", "reference_only", 80],
-    ["LOCAL_MANUAL", "Local manual catalog entry", null, "manual", 90],
-    ["LICENSED_PROVIDER", "Licensed provider placeholder", null, "licensed_provider", 30]
+    {
+      code: "EDA_EDDB_SEARCH",
+      name: "Egyptian Drug Authority EDDB official search",
+      countryCode: "EG",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://eddb.edaegypt.gov.eg/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "egypt-eda-targeted-lookup",
+      coverageStatus: "partial",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Targeted admin verification only where technically allowed. Bulk brute-force enumeration is forbidden."
+    },
+    {
+      code: "EDA_EGYPTIAN_DRUG_REGISTER",
+      name: "Egyptian Drug Authority public drug register",
+      countryCode: "EG",
+      sourceType: "official_registry",
+      priorityRank: 11,
+      officialUrl: "https://www.edaegypt.gov.eg/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "eda-drug-register",
+      coverageStatus: "partial",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Import public official files only when safely available. Egypt is partial unless a complete official bulk file is imported."
+    },
+    {
+      code: "EDA_OFFICIAL_FILE_UPLOAD",
+      name: "EDA official file upload",
+      countryCode: "EG",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.edaegypt.gov.eg/",
+      sourceAccessMode: "official_upload",
+      importerKey: "eda-official-file",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official EDDB/EDA file import."
+    },
+    {
+      code: "SFDA_DRUGS_LIST",
+      name: "Saudi FDA Drugs List",
+      countryCode: "KSA",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.sfda.gov.sa/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "sfda-drugs-list",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Primary official Saudi medication/product data source."
+    },
+    {
+      code: "SFDA_OFFICIAL_FILE_UPLOAD",
+      name: "SFDA official file upload",
+      countryCode: "KSA",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.sfda.gov.sa/",
+      sourceAccessMode: "official_upload",
+      importerKey: "sfda-drugs-list",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official SFDA export import."
+    },
+    {
+      code: "UAE_MOHAP_REGISTERED_MEDICAL_PRODUCT_DIRECTORY",
+      name: "UAE MOHAP registered medical product directory",
+      countryCode: "UAE",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://mohap.gov.ae/",
+      sourceAccessMode: "approved_api_required",
+      importerKey: "uae-mohap-directory",
+      requiresApproval: true,
+      coverageStatus: "blocked_requires_api_approval",
+      sourceFreshnessStatus: "gated",
+      notes: "Do not bypass MOHAP access controls. Use approved API credentials or official file upload."
+    },
+    {
+      code: "UAE_MOHAP_OPEN_DATA_API_MARKETPLACE",
+      name: "UAE MOHAP open-data/API marketplace",
+      countryCode: "UAE",
+      sourceType: "official_api",
+      priorityRank: 11,
+      officialUrl: "https://mohap.gov.ae/",
+      sourceAccessMode: "approved_api_required",
+      importerKey: "uae-mohap-api",
+      requiresApproval: true,
+      coverageStatus: "blocked_requires_api_approval",
+      sourceFreshnessStatus: "gated",
+      notes: "Requires approved API access when not public."
+    },
+    {
+      code: "UAE_OFFICIAL_FILE_UPLOAD",
+      name: "UAE official file upload",
+      countryCode: "UAE",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://mohap.gov.ae/",
+      sourceAccessMode: "official_upload",
+      importerKey: "uae-mohap-directory",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official MOHAP file import."
+    },
+    {
+      code: "QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
+      name: "Qatar MOPH registered pharmaceutical products with prices",
+      countryCode: "QAT",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.moph.gov.qa/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "qatar-moph-xlsx",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Discover and import the official MOPH XLSX when safely available."
+    },
+    {
+      code: "QATAR_OFFICIAL_FILE_UPLOAD",
+      name: "Qatar official file upload",
+      countryCode: "QAT",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.moph.gov.qa/",
+      sourceAccessMode: "official_upload",
+      importerKey: "qatar-moph-xlsx",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official Qatar file import."
+    },
+    {
+      code: "KUWAIT_MOH_DRUG_PRICE_LIST",
+      name: "Kuwait MOH drug price list",
+      countryCode: "KWT",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.moh.gov.kw/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "kuwait-moh-price-pdf",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "PDF parsing is best effort. Low-confidence rows route to review."
+    },
+    {
+      code: "KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST",
+      name: "Kuwait MOH food supplement price list",
+      countryCode: "KWT",
+      sourceType: "official_registry",
+      priorityRank: 11,
+      officialUrl: "https://www.moh.gov.kw/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "kuwait-moh-price-pdf",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Official supplement price-list PDF, separate from medicine rows."
+    },
+    {
+      code: "KUWAIT_OFFICIAL_FILE_UPLOAD",
+      name: "Kuwait official file upload",
+      countryCode: "KWT",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.moh.gov.kw/",
+      sourceAccessMode: "official_upload",
+      importerKey: "kuwait-moh-price-pdf",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official Kuwait file import."
+    },
+    {
+      code: "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST",
+      name: "Bahrain NHRA registered medicine price list",
+      countryCode: "BHR",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.nhra.bh/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "bahrain-nhra-xlsx",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Discover latest NHRA open-data registered medicine price list."
+    },
+    {
+      code: "BAHRAIN_NHRA_LICENSED_MEDICINES_OPEN_DATA",
+      name: "Bahrain NHRA licensed medicines open data",
+      countryCode: "BHR",
+      sourceType: "official_registry",
+      priorityRank: 11,
+      officialUrl: "https://www.nhra.bh/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "bahrain-nhra-xlsx",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Official NHRA open data where safely available."
+    },
+    {
+      code: "BAHRAIN_OFFICIAL_FILE_UPLOAD",
+      name: "Bahrain official file upload",
+      countryCode: "BHR",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.nhra.bh/",
+      sourceAccessMode: "official_upload",
+      importerKey: "bahrain-nhra-xlsx",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official Bahrain file import."
+    },
+    {
+      code: "OMAN_MOH_DRUG_SAFETY_CENTER",
+      name: "Oman MOH Drug Safety Center",
+      countryCode: "OMN",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.moh.gov.om/",
+      sourceAccessMode: "gated_manual_required",
+      importerKey: "oman-official-upload",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "No complete public bulk feed assumed. Use official/licensed upload until a public official feed is confirmed."
+    },
+    {
+      code: "OMAN_OFFICIAL_FILE_UPLOAD",
+      name: "Oman official file upload",
+      countryCode: "OMN",
+      sourceType: "official_upload",
+      priorityRank: 12,
+      officialUrl: "https://www.moh.gov.om/",
+      sourceAccessMode: "official_upload",
+      importerKey: "oman-official-upload",
+      coverageStatus: "blocked_requires_official_file",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Owner-provided official Oman file import."
+    },
+    {
+      code: "YEMEN_OFFICIAL_FILE_UPLOAD",
+      name: "Yemen official file upload",
+      countryCode: "YEM",
+      sourceType: "official_upload",
+      priorityRank: 90,
+      officialUrl: null,
+      sourceAccessMode: "official_upload",
+      importerKey: "generic-official-file",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "manual_required",
+      active: false,
+      notes: "Optional Yemen source remains disabled until an official source is provided."
+    },
+    {
+      code: "RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE",
+      name: "Retail public metadata connector template",
+      countryCode: null,
+      sourceType: "retail_metadata",
+      priorityRank: 100,
+      officialUrl: null,
+      sourceAccessMode: "unavailable",
+      importerKey: "retail-template-disabled",
+      policyStatus: "blocked",
+      sourcePolicyStatus: "blocked",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      active: false,
+      notes: "Disabled by default. Retail metadata cannot override official registry data and must never use stock/order/cart/checkout paths."
+    },
+    {
+      code: "LOCAL_MANUAL",
+      name: "Local manual catalog entry",
+      countryCode: null,
+      sourceType: "manual",
+      priorityRank: 95,
+      officialUrl: null,
+      sourceAccessMode: "official_upload",
+      importerKey: "generic-official-file",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Manual/admin metadata must stay review-gated."
+    },
+    {
+      code: "LICENSED_PROVIDER",
+      name: "Licensed provider placeholder",
+      countryCode: null,
+      sourceType: "licensed_provider",
+      priorityRank: 30,
+      officialUrl: null,
+      sourceAccessMode: "official_upload",
+      importerKey: "generic-official-file",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "manual_required",
+      notes: "Licensed provider files uploaded by the owner/admin only."
+    }
   ];
   const marketSourceByCode = new Map();
-  for (const [code, name, countryCode, sourceType, priorityRank] of marketSources) {
+  for (const sourceConfig of marketSources) {
+    const {
+      code,
+      name,
+      countryCode,
+      sourceType,
+      priorityRank,
+      officialUrl,
+      sourceAccessMode,
+      importerKey,
+      requiresApproval = false,
+      policyStatus = "approved",
+      sourcePolicyStatus = policyStatus,
+      coverageStatus = "not_imported",
+      sourceFreshnessStatus = "unknown",
+      notes,
+      active = true
+    } = sourceConfig;
     const source = await prisma.drugMarketSource.upsert({
       where: { code },
-      update: { name, countryCode, sourceType, priorityRank, policyStatus: "approved", verificationStatus: "catalog_only", active: true },
-      create: { code, name, countryCode, sourceType, priorityRank, policyStatus: "approved", verificationStatus: "catalog_only", active: true }
+      update: {
+        name,
+        countryCode,
+        sourceType,
+        priorityRank,
+        policyStatus,
+        sourcePolicyStatus,
+        verificationStatus: "catalog_only",
+        websiteUrl: officialUrl,
+        officialUrl,
+        sourceAccessMode,
+        importerKey,
+        requiresApproval,
+        notes,
+        active
+      },
+      create: {
+        code,
+        name,
+        countryCode,
+        sourceType,
+        priorityRank,
+        policyStatus,
+        sourcePolicyStatus,
+        verificationStatus: "catalog_only",
+        websiteUrl: officialUrl,
+        officialUrl,
+        sourceAccessMode,
+        importerKey,
+        requiresApproval,
+        coverageStatus,
+        sourceFreshnessStatus,
+        notes,
+        active
+      }
     });
     marketSourceByCode.set(code, source);
   }
+  await prisma.drugMarketSource.updateMany({
+    where: {
+      code: {
+        in: [
+          "EDA_EDDB",
+          "SFDA_DRUG_LIST",
+          "UAE_EDE_DIRECTORY",
+          "UAE_MOHAP_SHARIK",
+          "QATAR_MOPH_DRUG_LIST",
+          "BAHRAIN_NHRA_MEDICINES_LIST",
+          "OMAN_MOH_OFFICIAL_UPLOAD",
+          "YEMEN_OFFICIAL_UPLOAD",
+          "YEMEN_WHO_NEML_REFERENCE"
+        ]
+      }
+    },
+    data: { active: false, coverageStatus: "not_imported", sourceFreshnessStatus: "unknown", notes: "Legacy v0.7 source alias retained for history; v0.8 registry uses official source-specific records." }
+  });
 
   const medicationSources = [
     ["RXNORM", "RxNorm", "official_reference"],
@@ -973,16 +1321,18 @@ async function seedMedicationIntelligence(prisma) {
   }
 
   const connectors = [
-    ["SFDA_OFFICIAL_DRUG_LIST_CONNECTOR", "SFDA official drug list connector", "SFDA_DRUG_LIST", "official_registry", "KSA", false, false],
-    ["EDA_EDDB_CONNECTOR", "EDA EDDB connector", "EDA_EDDB", "official_registry", "EG", false, false],
-    ["UAE_EDE_DIRECTORY_CONNECTOR", "UAE EDE directory connector", "UAE_EDE_DIRECTORY", "official_registry", "UAE", false, false],
-    ["UAE_MOHAP_DIRECTORY_CONNECTOR", "UAE MOHAP directory connector", "UAE_MOHAP_SHARIK", "official_registry", "UAE", false, false],
-    ["QATAR_MOPH_CONNECTOR", "Qatar MOPH connector", "QATAR_MOPH_DRUG_LIST", "official_registry", "QAT", false, false],
-    ["KUWAIT_MOH_CONNECTOR", "Kuwait MOH connector", "KUWAIT_MOH_DRUG_PRICE_LIST", "official_registry", "KWT", false, false],
-    ["BAHRAIN_NHRA_CONNECTOR", "Bahrain NHRA connector", "BAHRAIN_NHRA_MEDICINES_LIST", "official_registry", "BHR", false, false],
-    ["OMAN_OFFICIAL_UPLOAD_CONNECTOR", "Oman official upload connector", "OMAN_MOH_OFFICIAL_UPLOAD", "official_upload", "OMN", false, false],
-    ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_UPLOAD", "official_upload", "YEM", false, false],
-    ["RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "Retail public metadata connector template", "LOCAL_MANUAL", "retail_metadata", null, true, false]
+    ["SFDA_OFFICIAL_DRUG_LIST_CONNECTOR", "SFDA official drug list connector", "SFDA_DRUGS_LIST", "official_registry", "KSA", false, true],
+    ["EDA_EDDB_CONNECTOR", "EDA EDDB targeted lookup connector", "EDA_EDDB_SEARCH", "official_registry", "EG", false, false],
+    ["EDA_OFFICIAL_FILE_UPLOAD_CONNECTOR", "EDA official file upload connector", "EDA_OFFICIAL_FILE_UPLOAD", "official_upload", "EG", false, true],
+    ["UAE_MOHAP_DIRECTORY_CONNECTOR", "UAE MOHAP directory connector", "UAE_MOHAP_REGISTERED_MEDICAL_PRODUCT_DIRECTORY", "official_registry", "UAE", false, false],
+    ["UAE_OFFICIAL_FILE_UPLOAD_CONNECTOR", "UAE official file upload connector", "UAE_OFFICIAL_FILE_UPLOAD", "official_upload", "UAE", false, true],
+    ["QATAR_MOPH_CONNECTOR", "Qatar MOPH connector", "QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES", "official_registry", "QAT", false, true],
+    ["KUWAIT_MOH_DRUG_PRICE_CONNECTOR", "Kuwait MOH drug price connector", "KUWAIT_MOH_DRUG_PRICE_LIST", "official_registry", "KWT", false, true],
+    ["KUWAIT_MOH_SUPPLEMENT_PRICE_CONNECTOR", "Kuwait MOH supplement price connector", "KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST", "official_registry", "KWT", false, true],
+    ["BAHRAIN_NHRA_CONNECTOR", "Bahrain NHRA connector", "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST", "official_registry", "BHR", false, true],
+    ["OMAN_OFFICIAL_UPLOAD_CONNECTOR", "Oman official upload connector", "OMAN_OFFICIAL_FILE_UPLOAD", "official_upload", "OMN", false, true],
+    ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_FILE_UPLOAD", "official_upload", "YEM", false, false],
+    ["RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "Retail public metadata connector template", "RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "retail_metadata", null, true, false]
   ];
   for (const [code, displayName, sourceCode, connectorType, countryCode, isRetailMetadata, enabled] of connectors) {
     await prisma.drugMarketSourceConnector.upsert({
@@ -994,7 +1344,7 @@ async function seedMedicationIntelligence(prisma) {
         countryCode,
         isRetailMetadata,
         enabled: isRetailMetadata ? false : enabled,
-        policyStatus: "approved",
+        policyStatus: isRetailMetadata ? "blocked" : "approved",
         notes: isRetailMetadata ? "Disabled by default. Product metadata only if explicitly approved later." : "Official-source-first connector placeholder."
       },
       create: {
@@ -1005,7 +1355,7 @@ async function seedMedicationIntelligence(prisma) {
         countryCode,
         isRetailMetadata,
         enabled: isRetailMetadata ? false : enabled,
-        policyStatus: "approved",
+        policyStatus: isRetailMetadata ? "blocked" : "approved",
         notes: isRetailMetadata ? "Disabled by default. Product metadata only if explicitly approved later." : "Official-source-first connector placeholder."
       }
     });
@@ -1093,7 +1443,8 @@ async function seedMedicationIntelligence(prisma) {
       familyText: tradeName === "DemoEG" ? "ACE inhibitor" : null,
       manufacturer: "Demo manufacturer",
       marketingCompany: "Demo marketing company",
-      verificationStatus: "catalog_only"
+      verificationStatus: "catalog_only",
+      isDemo: true
     };
     product = product
       ? await prisma.drugMarketProduct.update({ where: { id: product.id }, data: productData })
@@ -1101,13 +1452,13 @@ async function seedMedicationIntelligence(prisma) {
 
     for (const [countryCode, strengthText, dosageForm] of variants) {
       const sourceCodeByCountry = {
-        EG: "EDA_EDDB",
-        KSA: "SFDA_DRUG_LIST",
-        UAE: "UAE_EDE_DIRECTORY",
-        QAT: "QATAR_MOPH_DRUG_LIST",
+        EG: "EDA_OFFICIAL_FILE_UPLOAD",
+        KSA: "SFDA_DRUGS_LIST",
+        UAE: "UAE_OFFICIAL_FILE_UPLOAD",
+        QAT: "QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
         KWT: "KUWAIT_MOH_DRUG_PRICE_LIST",
-        BHR: "BAHRAIN_NHRA_MEDICINES_LIST",
-        OMN: "OMAN_MOH_OFFICIAL_UPLOAD",
+        BHR: "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST",
+        OMN: "OMAN_OFFICIAL_FILE_UPLOAD",
         YEM: "YEMEN_OFFICIAL_UPLOAD"
       };
       const source = marketSourceByCode.get(sourceCodeByCountry[countryCode] ?? "LOCAL_MANUAL");
@@ -1127,7 +1478,8 @@ async function seedMedicationIntelligence(prisma) {
           marketingCompany: "Demo marketing company",
           registrationNumber: `DEMO-${countryCode}-${tradeName}`,
           sourceRowHash,
-          verificationStatus: "catalog_only"
+          verificationStatus: "catalog_only",
+          isDemo: true
         },
         create: {
           productId: product.id,
@@ -1143,12 +1495,21 @@ async function seedMedicationIntelligence(prisma) {
           marketingCompany: "Demo marketing company",
           registrationNumber: `DEMO-${countryCode}-${tradeName}`,
           sourceRowHash,
-          verificationStatus: "catalog_only"
+          verificationStatus: "catalog_only",
+          isDemo: true
         }
       });
     }
     await recomputeDemoAvailability(prisma, product.id);
   }
+  await prisma.drugMarketVariant.updateMany({
+    where: { registrationNumber: { startsWith: "DEMO-" } },
+    data: { isDemo: true, verificationStatus: "catalog_only" }
+  });
+  await prisma.drugMarketProduct.updateMany({
+    where: { tradeName: { startsWith: "Demo" } },
+    data: { isDemo: true, verificationStatus: "catalog_only" }
+  });
 }
 
 async function recomputeDemoAvailability(prisma, productId) {

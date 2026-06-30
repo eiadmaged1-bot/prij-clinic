@@ -42,8 +42,13 @@ export class DrugMarketService {
           countryCode: dto.countryCode?.trim().toUpperCase() || null,
           sourceType: dto.sourceType ?? "official_registry",
           policyStatus: dto.policyStatus ?? "approved",
+          sourcePolicyStatus: dto.sourcePolicyStatus ?? dto.policyStatus ?? "approved",
           verificationStatus: "needs_review",
-          websiteUrl: dto.websiteUrl ?? null
+          websiteUrl: dto.websiteUrl ?? null,
+          officialUrl: dto.officialUrl ?? dto.websiteUrl ?? null,
+          sourceAccessMode: dto.sourceAccessMode ?? "official_upload",
+          importerKey: dto.importerKey ?? null,
+          notes: dto.notes ?? null
         }
       })
       .then(async (source) => {
@@ -54,7 +59,18 @@ export class DrugMarketService {
 
   updateSource(id: string, dto: Record<string, string>, user: AuthUser) {
     return this.prisma.drugMarketSource
-      .update({ where: { id }, data: { ...(dto.policyStatus ? { policyStatus: dto.policyStatus } : {}), ...(dto.active !== undefined ? { active: dto.active === "true" } : {}) } })
+      .update({
+        where: { id },
+        data: {
+          ...(dto.policyStatus ? { policyStatus: dto.policyStatus } : {}),
+          ...(dto.sourcePolicyStatus ? { sourcePolicyStatus: dto.sourcePolicyStatus } : {}),
+          ...(dto.sourceAccessMode ? { sourceAccessMode: dto.sourceAccessMode } : {}),
+          ...(dto.coverageStatus ? { coverageStatus: dto.coverageStatus } : {}),
+          ...(dto.sourceFreshnessStatus ? { sourceFreshnessStatus: dto.sourceFreshnessStatus } : {}),
+          ...(dto.notes !== undefined ? { notes: dto.notes || null } : {}),
+          ...(dto.active !== undefined ? { active: dto.active === "true" } : {})
+        }
+      })
       .then(async (source) => {
         await this.audit.record({ actorUserId: user.id, action: "drug_market.source_updated", resourceType: "drug_market_source", resourceId: source.id, severity: "high" });
         return source;
@@ -62,17 +78,31 @@ export class DrugMarketService {
   }
 
   products() {
-    return this.prisma.drugMarketProduct.findMany({ include: { variants: true, availabilities: true }, orderBy: { tradeName: "asc" }, take: 100 });
+    const showDemo = process.env.NODE_ENV === "test" || process.env.DEMO_MODE === "true";
+    return this.prisma.drugMarketProduct.findMany({
+      where: { isDemo: showDemo ? undefined : false },
+      include: { variants: { where: { isDemo: showDemo ? undefined : false } }, availabilities: true },
+      orderBy: { tradeName: "asc" },
+      take: 100
+    });
   }
 
   async product(id: string) {
-    const product = await this.prisma.drugMarketProduct.findUnique({ where: { id }, include: { variants: true, availabilities: true } });
+    const showDemo = process.env.NODE_ENV === "test" || process.env.DEMO_MODE === "true";
+    const product = await this.prisma.drugMarketProduct.findUnique({
+      where: { id },
+      include: {
+        variants: { where: { isDemo: showDemo ? undefined : false }, orderBy: [{ countryCode: "asc" }, { tradeName: "asc" }] },
+        availabilities: true
+      }
+    });
     if (!product) throw new BadRequestException("Product not found.");
     return { ...product, badges: compactCountryBadges(product.availabilities) };
   }
 
   variants(productId?: string) {
-    return this.prisma.drugMarketVariant.findMany({ where: productId ? { productId } : {}, orderBy: [{ tradeName: "asc" }, { countryCode: "asc" }], take: 200 });
+    const showDemo = process.env.NODE_ENV === "test" || process.env.DEMO_MODE === "true";
+    return this.prisma.drugMarketVariant.findMany({ where: { ...(productId ? { productId } : {}), isDemo: showDemo ? undefined : false }, orderBy: [{ tradeName: "asc" }, { countryCode: "asc" }], take: 200 });
   }
 
   variant(id: string) {
@@ -105,7 +135,7 @@ export class DrugMarketService {
   }
 
   recomputeAvailability() {
-    return this.prisma.drugMarketProduct.findMany({ select: { id: true } }).then(async (products) => {
+    return this.prisma.drugMarketProduct.findMany({ where: { isDemo: false }, select: { id: true } }).then(async (products) => {
       for (const product of products) await this.badges.recomputeProduct(product.id);
       return { recomputedProducts: products.length };
     });
@@ -131,8 +161,50 @@ export class DrugMarketService {
     return this.prisma.drugMarketImportRun.findMany({ orderBy: { startedAt: "desc" }, take: 50 });
   }
 
-  coverage() {
-    return this.prisma.drugMarketVariant.groupBy({ by: ["countryCode", "verificationStatus"], _count: { _all: true } });
+  async coverage() {
+    const [sources, realCounts, demoCounts] = await Promise.all([
+      this.prisma.drugMarketSource.findMany({ orderBy: [{ countryCode: "asc" }, { code: "asc" }] }),
+      this.prisma.drugMarketVariant.groupBy({
+        by: ["countryCode", "verificationStatus"],
+        where: { isDemo: false },
+        _count: { _all: true },
+        _avg: { parserConfidence: true }
+      }),
+      this.prisma.drugMarketVariant.groupBy({
+        by: ["countryCode"],
+        where: { isDemo: true },
+        _count: { _all: true }
+      })
+    ]);
+    return sources.map((source) => {
+      const counts = realCounts.filter((item) => item.countryCode === source.countryCode);
+      const demoRows = demoCounts.find((item) => item.countryCode === source.countryCode)?._count._all ?? 0;
+      const rowsImported = counts.reduce((sum, item) => sum + item._count._all, 0);
+      const rowsNeedsReview = counts.filter((item) => item.verificationStatus === "needs_review" || item.verificationStatus === "imported").reduce((sum, item) => sum + item._count._all, 0);
+      const rowsVerified = counts.filter((item) => item.verificationStatus === "verified").reduce((sum, item) => sum + item._count._all, 0);
+      const confidenceValues = counts.map((item) => item._avg.parserConfidence).filter((value): value is number => typeof value === "number");
+      return {
+        sourceId: source.id,
+        sourceCode: source.code,
+        sourceName: source.name,
+        countryCode: source.countryCode,
+        officialUrl: source.officialUrl ?? source.websiteUrl,
+        sourceAccessMode: source.sourceAccessMode,
+        lastCheckedAt: source.lastCheckedAt,
+        lastSuccessfulImportAt: source.lastSuccessfulImportAt,
+        latestSourcePublishedAt: source.latestSourcePublishedAt,
+        latestSourceLabel: source.latestSourceLabel,
+        sourceFreshnessStatus: source.sourceFreshnessStatus,
+        coverageStatus: source.coverageStatus,
+        rowsImported,
+        rowsNeedsReview,
+        rowsVerified,
+        rowsFailed: 0,
+        demoRowsExcluded: demoRows,
+        parserConfidenceAverage: confidenceValues.length ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length : null,
+        requiredNextAction: nextActionForSource(source.coverageStatus, source.sourceAccessMode)
+      };
+    });
   }
 
   reviewQueue() {
@@ -167,4 +239,12 @@ export class DrugMarketService {
       return item;
     });
   }
+}
+
+function nextActionForSource(coverageStatus: string, sourceAccessMode: string) {
+  if (coverageStatus === "blocked_requires_api_approval" || sourceAccessMode === "approved_api_required") return "Configure approved official API access or upload an official file.";
+  if (coverageStatus === "blocked_requires_official_file" || sourceAccessMode === "official_upload" || sourceAccessMode === "gated_manual_required") return "Upload an owner-provided official or licensed source file.";
+  if (coverageStatus === "not_imported") return "Run safe official discovery/import.";
+  if (coverageStatus === "needs_review" || coverageStatus === "partial") return "Review imported rows and verify selected records with a reason.";
+  return "Monitor freshness and re-import when the official source changes.";
 }

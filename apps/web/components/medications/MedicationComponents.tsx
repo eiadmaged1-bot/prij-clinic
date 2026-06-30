@@ -139,7 +139,7 @@ export function PatientAllergyList() {
 }
 
 export function DrugMarketSearchBox() {
-  const [query, setQuery] = useState("DemoGulf");
+  const [query, setQuery] = useState("");
   const [products, setProducts] = useState<DrugMarketProduct[]>([]);
   const [status, setStatus] = useState("Ready");
 
@@ -162,7 +162,7 @@ export function DrugMarketSearchBox() {
     <section className="panel">
       <div className="section-heading"><h2>Drug Market Search</h2><span className="badge">Strength/form variants only</span></div>
       <form className="inline-form" onSubmit={submit}>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search trade, generic, family, strength, form, or country" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search trade, generic, family, ATC, strength, form, source, or country" />
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
@@ -176,13 +176,14 @@ export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }
     <article className="data-row">
       <div className="data-row-header">
         <strong>{product.tradeName}</strong>
-        <span>{product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
+        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source metadata</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
         <div><dt>Drug family</dt><dd>{product.family || "Not listed"}</dd></div>
         <div><dt>Variants</dt><dd><StrengthVariantList variants={product.variantSummary ?? []} /></dd></div>
         <div><dt>Review status</dt><dd>{product.verificationStatus ?? "needs review"}</dd></div>
+        <div><dt>Source freshness</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not imported yet"}</dd></div>
       </dl>
       <Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link>
     </article>
@@ -198,8 +199,20 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
     <div className="data-list">
       {variants.map((variant) => (
         <article className="data-row" key={String(variant.id)}>
+          <div className="data-row-header">
+            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source row</span>}</span>
+            <span className="badge">{String(variant.verificationStatus ?? "needs_review")}</span>
+          </div>
           <strong>{String(variant.countryCode)} · {String(variant.strengthText ?? "variant")}</strong>
           <p className="muted">{[variant.dosageForm, variant.route, variant.packageText, variant.registrationNumber].filter(Boolean).join(" · ")}</p>
+          <dl>
+            <div><dt>Manufacturer</dt><dd>{String(variant.manufacturer ?? "Not listed")}</dd></div>
+            <div><dt>Marketing company</dt><dd>{String(variant.marketingCompany ?? "Not listed")}</dd></div>
+            <div><dt>ATC/class</dt><dd>{String(variant.atcCode ?? "Not listed")}</dd></div>
+            <div><dt>Official listed price</dt><dd>{formatPrice(variant)}</dd></div>
+            <div><dt>Source date</dt><dd>{formatDate(String(variant.sourcePublishedAt ?? variant.sourceFetchedAt ?? ""))}</dd></div>
+            <div><dt>Parser confidence</dt><dd>{formatConfidence(variant.parserConfidence)}</dd></div>
+          </dl>
         </article>
       ))}
     </div>
@@ -210,18 +223,55 @@ export function AvailabilitySummary({ availabilities }: { availabilities: Array<
   return <p className="muted">{availabilities.map((item) => `${item.countryCode}: ${item.variantCount}`).join(" · ") || "No availability summary yet"}</p>;
 }
 
-export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null }> }) {
-  return <span>{variants.map((variant) => `${variant.countryCode} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""}`.trim()).join(", ") || "No variants listed"}</span>;
+export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null; officialPriceText?: string | null; currency?: string | null }> }) {
+  return <span>{variants.map((variant) => `${variant.countryCode} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""}${variant.officialPriceText ? ` - source price ${variant.officialPriceText} ${variant.currency ?? ""}` : ""}`.trim()).join(", ") || "No variants listed"}</span>;
 }
 
 export function DrugMarketImportPanel() {
-  return <section className="panel"><h2>Official File Import</h2><p className="muted">Approved public registries and owner-provided official files default to review before verification.</p></section>;
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
+      <p className="muted">Only official or licensed files. Do not upload pharmacy stock, checkout, or patient data.</p>
+      <div className="data-list">
+        <article className="data-row">
+          <strong>Workflow</strong>
+          <p className="muted">Select country and source, preview mapped columns, dry run, then commit rows as imported or needs review. Raw official fields stay in protected admin review details.</p>
+        </article>
+        <article className="data-row">
+          <strong>Accepted formats</strong>
+          <p className="muted">CSV and JSON are supported now. XLSX and PDF sources are tracked and require an approved parser path or official conversion before import.</p>
+        </article>
+      </div>
+    </section>
+  );
 }
 
 export function DrugMarketCoverageDashboard() {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
   const [status, setStatus] = useState("Loading coverage");
-  useEffect(() => { void getDrugMarketCoverage().then((data) => setStatus(`${Array.isArray(data) ? data.length : 0} coverage group(s)`)).catch(() => setStatus("Coverage requires admin access")); }, []);
-  return <section className="panel"><h2>Coverage Dashboard</h2><p className="muted">{status}</p></section>;
+  useEffect(() => { void getDrugMarketCoverage().then((data) => { setRows(Array.isArray(data) ? data as Array<Record<string, unknown>> : []); setStatus(`${Array.isArray(data) ? data.length : 0} source coverage row(s)`); }).catch(() => setStatus("Coverage requires admin access")); }, []);
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Coverage Dashboard</h2><span className="badge">Demo excluded</span></div>
+      <p className="muted">{status}</p>
+      <div className="data-list">
+        {rows.slice(0, 24).map((row) => (
+          <article className="data-row" key={String(row.sourceCode)}>
+            <div className="data-row-header"><strong>{String(row.countryCode ?? "ALL")} - {String(row.sourceCode)}</strong><span className="badge">{String(row.coverageStatus ?? "unknown")}</span></div>
+            <dl>
+              <div><dt>Access</dt><dd>{String(row.sourceAccessMode ?? "unknown")}</dd></div>
+              <div><dt>Rows imported</dt><dd>{String(row.rowsImported ?? 0)}</dd></div>
+              <div><dt>Needs review</dt><dd>{String(row.rowsNeedsReview ?? 0)}</dd></div>
+              <div><dt>Verified</dt><dd>{String(row.rowsVerified ?? 0)}</dd></div>
+              <div><dt>Demo rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
+              <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
+              <div><dt>Next action</dt><dd>{String(row.requiredNextAction ?? "Review source status")}</dd></div>
+            </dl>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function SourceConnectorPanel() {
@@ -231,7 +281,7 @@ export function SourceConnectorPanel() {
 }
 
 export function ReviewQueuePanel() {
-  return <section className="panel"><h2>Review Queue</h2><p className="muted">Conflicts and unverified imports stay visible until resolved or dismissed by an authorized reviewer.</p></section>;
+  return <section className="panel"><h2>Review Queue</h2><p className="muted">Conflicts, duplicate candidates, low-confidence parses, and unverified imports stay visible until an authorized reviewer resolves them with a reason.</p></section>;
 }
 
 export function MergeCandidatePanel() {
@@ -246,4 +296,23 @@ export function SourceAndCountrySummary() {
       .catch(() => setStatus("Source summary requires access"));
   }, []);
   return <section className="panel"><h2>Countries and Sources</h2><p className="muted">{status}</p></section>;
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "Not listed";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not listed" : date.toLocaleDateString();
+}
+
+function formatConfidence(value: unknown) {
+  return typeof value === "number" ? `${Math.round(value * 100)}%` : "Not scored";
+}
+
+function formatPrice(variant: Record<string, unknown>) {
+  const text = variant.officialPriceText ?? variant.priceText;
+  const amount = variant.officialPriceAmount;
+  const currency = variant.currency;
+  if (text) return `${String(text)}${currency ? ` ${String(currency)}` : ""}`;
+  if (amount) return `${String(amount)}${currency ? ` ${String(currency)}` : ""}`;
+  return "Not listed";
 }

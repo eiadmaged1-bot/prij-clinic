@@ -18,8 +18,28 @@ export type DrugMarketProduct = {
   scientificName?: string | null;
   family?: string | null;
   verificationStatus?: string;
+  isDemo?: boolean;
+  sourceFreshness?: string | null;
   badges?: string[];
-  variantSummary?: Array<{ id: string; countryCode: string; strengthText?: string | null; dosageForm?: string | null; route?: string | null; verificationStatus?: string }>;
+  variantSummary?: Array<{
+    id: string;
+    countryCode: string;
+    strengthText?: string | null;
+    dosageForm?: string | null;
+    route?: string | null;
+    manufacturer?: string | null;
+    marketingCompany?: string | null;
+    registrationNumber?: string | null;
+    atcCode?: string | null;
+    officialPriceText?: string | null;
+    officialPriceAmount?: string | number | null;
+    currency?: string | null;
+    sourceFetchedAt?: string | null;
+    sourcePublishedAt?: string | null;
+    parserConfidence?: number | null;
+    verificationStatus?: string;
+    isDemo?: boolean;
+  }>;
 };
 
 export function searchDrugMarket(query: string, countryCode?: string) {
