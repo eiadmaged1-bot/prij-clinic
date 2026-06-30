@@ -60,7 +60,7 @@ async function main() {
   record.pass("OB/GYN patient workspace avoids fetal growth automation wording");
 
   const shellSource = `${await readFile("apps/web/app/mvp-page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
-  for (const label of ["Comfort", "Large", "Compact", "Magnify", "Doctor Mode"]) {
+  for (const label of ["comfortable", "large", "compact", "magnified", "Doctor Mode"]) {
     if (!shellSource.includes(label)) throw new Error(`Comfort or role navigation label missing: ${label}`);
   }
   record.pass("elder-friendly visual preferences are present");
