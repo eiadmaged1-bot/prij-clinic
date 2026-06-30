@@ -8,6 +8,7 @@ import { ManagementSnapshotPanel } from "../../../components/ai-management/Manag
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
 import { MedicationSafetyPanel, PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
+import { PatientHeader, PatientQuickActions, PatientTabs, PatientWorkspaceShell } from "../../../components/patients/PatientWorkspaceShell";
 import { patientTabRegistry } from "../../navigation-registry";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -194,23 +195,16 @@ export default function PatientFilePage() {
 
   return (
     <AppShell>
-      <section className="patient-simple-hero">
-        <div className="patient-avatar">
-          <ThreeDMedicalIcon name="patients" size="lg" />
-        </div>
-        <div>
-          <p className="eyebrow">Patient file</p>
-          <h1>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</h1>
-          <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
-        </div>
-        <div className="patient-primary-actions">
-          <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
-            <ThreeDMedicalIcon name="encounter" size="sm" />
-            Start Visit
-          </Link>
-          <span className="badge">{patient?.status ?? "Loading"}</span>
-        </div>
-      </section>
+      <PatientHeader
+        status={patient?.status ?? "Loading"}
+        subtitle={patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}
+        title={patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}
+      >
+        <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
+          <ThreeDMedicalIcon name="encounter" size="sm" />
+          Start Visit
+        </Link>
+      </PatientHeader>
 
       <SafetyAlert />
 
@@ -225,18 +219,11 @@ export default function PatientFilePage() {
       ) : null}
 
       {patient ? (
-        <>
+        <PatientWorkspaceShell>
           <PatientActionPanel patientId={patient.id} onSubmit={submitPatientAction} status={actionStatus} related={related} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
 
-          <section className="patient-tabs simple" aria-label="Patient file sections">
-            {visibleTabs.map((tab) => (
-              <button className={`tab-button ${activeTab === tab.key ? "active" : ""}`} key={tab.key} onClick={() => setActiveTab(tab.key)} type="button">
-                <ThreeDMedicalIcon name={tab.icon} size="sm" />
-                {tab.label}
-              </button>
-            ))}
-          </section>
+          <PatientTabs activeKey={activeTab} onChange={setActiveTab} tabs={visibleTabs} />
 
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
           {active.key === "medical" || active.key === "clinical" || active.key === "protocol-atlas" || active.key === "calculators" || active.key === "ultrasound" || active.key === "consents" ? <RelatedPanel config={active} rows={related[active.key] ?? []} /> : null}
@@ -260,7 +247,7 @@ export default function PatientFilePage() {
           {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "ultrasound" && active.key !== "consents" && active.key !== "timeline" && active.key !== "ai-snapshot" && active.key !== "gynecology" && active.key !== "pregnancy" && active.key !== "medications" && active.key !== "herbals" && active.key !== "allergies" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
-        </>
+        </PatientWorkspaceShell>
       ) : !error ? (
         <div className="skeleton" />
       ) : null}
@@ -1027,14 +1014,14 @@ function PatientActionPanel({
         </div>
         {status ? <span className="badge">{status}</span> : null}
       </div>
-      <div className="patient-action-strip" aria-label="Patient actions">
+      <PatientQuickActions>
         {actions.map(([key, label, icon]) => (
           <button className={`patient-action ${open === key ? "active" : ""}`} key={key} onClick={() => setOpen(key)} type="button">
             <ThreeDMedicalIcon name={icon as IconName} size="sm" />
             <span>{label}</span>
           </button>
         ))}
-      </div>
+      </PatientQuickActions>
 
       {open === "appointment" ? (
         <ActionForm
