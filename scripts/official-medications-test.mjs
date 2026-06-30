@@ -15,6 +15,8 @@ const requiredSources = [
   "KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST",
   "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST",
   "BAHRAIN_NHRA_LICENSED_MEDICINES_OPEN_DATA",
+  "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
+  "OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
   "OMAN_MOH_DRUG_SAFETY_CENTER",
   "OMAN_OFFICIAL_FILE_UPLOAD",
   "YEMEN_OFFICIAL_FILE_UPLOAD"
@@ -43,8 +45,8 @@ const uae = sources.find((source) => source.code === "UAE_MOHAP_REGISTERED_MEDIC
 assert(uae?.coverageStatus === "blocked_requires_api_approval", "UAE MOHAP gated source records API approval requirement");
 const egypt = sources.find((source) => source.code === "EDA_EGYPTIAN_DRUG_REGISTER");
 assert(!["imported", "verified", "complete"].includes(egypt?.coverageStatus ?? ""), "Egypt source is not marked complete from seed");
-const oman = sources.find((source) => source.code === "OMAN_MOH_DRUG_SAFETY_CENTER");
-assert(oman?.coverageStatus === "blocked_requires_official_file", "Oman remains official-file-required until import");
+const oman = sources.find((source) => source.code === "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES");
+assert(oman?.sourceAccessMode === "public_discovery", "Oman MOH public price-list discovery source is active");
 
 for (const script of [
   "scripts/official-medication-source-discovery.mjs",

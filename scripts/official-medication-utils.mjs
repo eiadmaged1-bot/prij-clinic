@@ -16,7 +16,7 @@ export const countrySourceDefaults = {
   QAT: "QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
   KWT: "KUWAIT_MOH_DRUG_PRICE_LIST",
   BHR: "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST",
-  OMN: "OMAN_OFFICIAL_FILE_UPLOAD",
+  OMN: "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
   YEM: "YEMEN_OFFICIAL_FILE_UPLOAD"
 };
 
@@ -36,6 +36,8 @@ const blockedUrlPattern = /(login|signin|captcha|paywall|checkout|cart|order|sto
 
 const officialSourceCandidates = {
   QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES: [
+    "https://www.moph.gov.qa/english/departments/policyaffairs/pdc/regnpricing/Pages/default.aspx",
+    "https://www.moph.gov.qa/english/departments/policyaffairs/pdc/Pages/default.aspx",
     "https://www.moph.gov.qa/Admin/Lists/PublicationsAttachments/Attachments/66/Priced%20Products%20%2815-08-2025%29.xlsx"
   ],
   BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST: [
@@ -47,6 +49,12 @@ const officialSourceCandidates = {
   ],
   KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST: [
     "https://www.moh.gov.kw/Portal/Modules/DrugPriceList/FoodSupplementPriceList.pdf"
+  ],
+  OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES: [
+    "https://www.moh.gov.om/en/hospitals-directorates/directorates-and-centers-at-hq/drug-safety-center/"
+  ],
+  OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES: [
+    "https://www.moh.gov.om/en/hospitals-directorates/directorates-and-centers-at-hq/drug-safety-center/"
   ]
 };
 
@@ -56,6 +64,10 @@ const officialDomainsBySource = {
   BAHRAIN_NHRA_LICENSED_MEDICINES_OPEN_DATA: ["nhra.bh", "www.nhra.bh"],
   KUWAIT_MOH_DRUG_PRICE_LIST: ["moh.gov.kw", "www.moh.gov.kw"],
   KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST: ["moh.gov.kw", "www.moh.gov.kw"],
+  OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES: ["moh.gov.om", "www.moh.gov.om"],
+  OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES: ["moh.gov.om", "www.moh.gov.om"],
+  OMAN_MOH_DRUG_SAFETY_CENTER: ["moh.gov.om", "www.moh.gov.om"],
+  OMAN_OFFICIAL_FILE_UPLOAD: ["moh.gov.om", "www.moh.gov.om"],
   SFDA_DRUGS_LIST: ["sfda.gov.sa", "www.sfda.gov.sa"],
   EDA_EDDB_SEARCH: ["eddb.edaegypt.gov.eg"],
   EDA_EGYPTIAN_DRUG_REGISTER: ["edaegypt.gov.eg", "www.edaegypt.gov.eg"],
@@ -142,7 +154,7 @@ export async function executeOfficialImport({ countryCode, sourceCode, mode = "l
     snapshot = { sourceUrl: source.officialUrl ?? source.websiteUrl, finalUrl: source.officialUrl ?? source.websiteUrl, fetchedAt: new Date(), filePath: resolve(file) };
   } else {
     const downloaded = await discoverAndFetchOfficialSource(source, { maxPages });
-    parsed = parseDownloadedSource(downloaded, source);
+    parsed = await parseDownloadedSource(downloaded, source);
     snapshot = downloaded;
   }
 
@@ -179,32 +191,61 @@ async function discoverVisibleFileLinks(source, pageUrl) {
   const response = await fetch(pageUrl, { headers: requestHeaders(pageUrl), signal: AbortSignal.timeout(20000) });
   if (!response.ok) throw new Error(`Discovery HTTP ${response.status}`);
   const html = await response.text();
+  return discoverVisibleFileLinksFromHtml(source, pageUrl, html).map((item) => item.url);
+}
+
+function discoverVisibleFileLinksFromHtml(source, pageUrl, html) {
   const $ = loadHtml(html);
   const links = [];
   $("a[href]").each((_, element) => {
     const href = String($(element).attr("href") ?? "");
     const text = String($(element).text() ?? "");
-    if (!/\.(xlsx?|csv|json|pdf)(?:$|[?#])|price|drug|medicine|pharmaceutical/i.test(`${href} ${text}`)) return;
+    const combined = `${href} ${text}`;
+    if (!isRelevantOfficialFileLink(source.code, combined)) return;
     try {
-      links.push(new URL(href, pageUrl).toString());
+      links.push({ url: new URL(href, pageUrl).toString(), label: text.trim() || href });
     } catch {
       // Ignore malformed visible links.
     }
   });
-  return [...new Set(links)];
+  $("[data-fileUrl], [data-fileurl], [data-file-url]").each((_, element) => {
+    const href = String($(element).attr("data-fileUrl") ?? $(element).attr("data-fileurl") ?? $(element).attr("data-file-url") ?? "");
+    const label = String($(element).attr("data-fileName") ?? $(element).attr("data-filename") ?? $(element).text() ?? "");
+    const combined = `${href} ${label}`;
+    if (!href || !isRelevantOfficialFileLink(source.code, combined)) return;
+    try {
+      links.push({ url: new URL(href, pageUrl).toString(), label: label.trim() || href });
+    } catch {
+      // Ignore malformed visible file selectors.
+    }
+  });
+  const seen = new Set();
+  return links.filter((link) => {
+    if (seen.has(link.url)) return false;
+    seen.add(link.url);
+    return true;
+  });
 }
 
-async function fetchOfficialFile(source, url) {
+async function fetchOfficialFile(source, url, htmlDepth = 0, sourceLabel = null) {
   enforceOfficialUrlPolicy(source, url);
   const response = await fetch(url, { redirect: "follow", headers: requestHeaders(url), signal: AbortSignal.timeout(45000) });
   const finalUrl = response.url || url;
   enforceOfficialUrlPolicy(source, finalUrl);
   const contentType = response.headers.get("content-type") ?? "";
+  const contentDisposition = response.headers.get("content-disposition") ?? "";
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
-  if (looksLikeHtmlBlock(buffer, contentType)) throw new Error(`official server returned HTML instead of a source file (${contentType || "unknown content type"})`);
+  if (looksLikeHtmlBlock(buffer, contentType)) {
+    if (htmlDepth >= 1) throw new Error(`official server returned HTML instead of a source file (${contentType || "unknown content type"})`);
+    const html = buffer.toString("utf8");
+    const discovered = discoverVisibleFileLinksFromHtml(source, finalUrl, html);
+    const next = discovered.find((link) => isPreferredSourceLink(source.code, link.label, link.url)) ?? discovered[0];
+    if (!next) throw new Error(`official HTML page did not expose a supported source file link (${contentType || "unknown content type"})`);
+    return fetchOfficialFile(source, next.url, htmlDepth + 1, next.label);
+  }
   mkdirSync(storageRoot, { recursive: true });
-  const extension = extensionFromUrlOrType(finalUrl, contentType);
+  const extension = extensionFromUrlOrType(finalUrl, contentType, contentDisposition, buffer);
   const fileSha256 = sha256Buffer(buffer);
   const safeCode = source.code.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const fileName = `${safeCode}-${new Date().toISOString().slice(0, 10)}-${fileSha256.slice(0, 12)}${extension}`;
@@ -215,8 +256,10 @@ async function fetchOfficialFile(source, url) {
     sourceUrl: url,
     finalUrl,
     contentType,
+    contentDisposition,
     lastModified: response.headers.get("last-modified"),
     fetchedAt: new Date(),
+    sourceLabel,
     buffer,
     fileName,
     filePath,
@@ -224,7 +267,7 @@ async function fetchOfficialFile(source, url) {
   };
 }
 
-function parseDownloadedSource(downloaded, source) {
+async function parseDownloadedSource(downloaded, source) {
   if (downloaded.kind === "rows") {
     return { fileName: downloaded.fileName, fileSha256: downloaded.fileSha256, rows: downloaded.rows, parserName: source.importerKey ?? "official-public-list" };
   }
@@ -240,7 +283,8 @@ function parseDownloadedSource(downloaded, source) {
     return { fileName: downloaded.fileName, fileSha256: downloaded.fileSha256, rows: Array.isArray(parsed) ? parsed : parsed.rows ?? [], parserName: "generic-official-json" };
   }
   if (extension === ".pdf" || /pdf/i.test(downloaded.contentType ?? "")) {
-    return { fileName: downloaded.fileName, fileSha256: downloaded.fileSha256, rows: parsePdfLikeText(downloaded.buffer.toString("latin1")), parserName: source.importerKey ?? "generic-official-pdf-text" };
+    const text = await extractPdfText(downloaded.buffer);
+    return { fileName: downloaded.fileName, fileSha256: downloaded.fileSha256, rows: parsePdfLikeText(text, source.code), parserName: source.importerKey ?? "generic-official-pdf-text" };
   }
   throw new Error(`Unsupported official file type from ${downloaded.finalUrl}`);
 }
@@ -261,8 +305,63 @@ function parseXlsxRows(buffer) {
   return rows;
 }
 
-function parsePdfLikeText(text) {
-  return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => ({ lineText: line, Price: line.match(/\b\d+(?:\.\d{1,3})?\b/)?.[0] ?? "" }));
+function parsePdfLikeText(text, sourceCode = "") {
+  if (sourceCode.startsWith("OMAN_MOH_")) return parseOmanPricePdfText(text);
+  return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const price = line.match(/\b\d+(?:\.\d{1,3})?\b/g)?.at(-1) ?? "";
+    const words = line.replace(/\s+/g, " ").trim();
+    return {
+      lineText: words,
+      "Product Name": words.replace(/\b\d+(?:\.\d{1,3})?\b/g, "").trim(),
+      Price: price
+    };
+  });
+}
+
+function parseOmanPricePdfText(text) {
+  const lines = text.split(/\r?\n/).map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const rows = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^(regn\.|رقم التسجيل|for search press|--\s*\d+\s+of\s+\d+\s*--)/i.test(line)) continue;
+    const startsRow = /^(?:[A-Z]\d{4,}[A-Z]?|\d{4,}[A-Z]?|1R|V)\s+/.test(line);
+    if (startsRow) {
+      if (current) rows.push(current);
+      const [registrationNumber, ...rest] = line.split(" ");
+      current = { registrationNumber, block: [line], firstText: rest.join(" ") };
+    } else if (current) {
+      current.block.push(line);
+    }
+  }
+  if (current) rows.push(current);
+  return rows.map((row) => {
+    const blockText = row.block.join(" ");
+    const prices = [...blockText.matchAll(/\b\d+(?:\.\d{1,3})\b/g)].map((match) => match[0]);
+    const price = prices.at(-1) ?? "";
+    const withoutPrice = price ? blockText.replace(new RegExp(`\\s${price.replace(".", "\\.")}$`), "") : blockText;
+    const productText = row.firstText || withoutPrice.replace(row.registrationNumber, "").trim();
+    return {
+      registrationNumber: row.registrationNumber,
+      "Product Name": productText,
+      "Trade Name": productText,
+      Price: price,
+      currency: "OMR",
+      lineText: blockText,
+      rawBlockText: blockText
+    };
+  }).filter((row) => row["Product Name"] && row.Price);
+}
+
+async function extractPdfText(buffer) {
+  try {
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    await parser.destroy();
+    return result.text || buffer.toString("latin1");
+  } catch {
+    return buffer.toString("latin1");
+  }
 }
 
 function parseCsv(text) {
@@ -390,7 +489,7 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
       parserVersion: "v0.8.1",
       rowCount: parsed.rows.length,
       totalRowsSeen: parsed.rows.length,
-      sourceSnapshotJson: { sourceCode: source.code, sourceUrl: snapshot.sourceUrl, finalUrl: snapshot.finalUrl, contentType: snapshot.contentType, fileName: parsed.fileName },
+      sourceSnapshotJson: { sourceCode: source.code, sourceUrl: snapshot.sourceUrl, finalUrl: snapshot.finalUrl, contentType: snapshot.contentType, contentDisposition: snapshot.contentDisposition, fileName: parsed.fileName, sourceLabel: snapshot.sourceLabel },
       coverageJson: { countryCode, sourceCode: source.code }
     }
   });
@@ -414,7 +513,10 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
         const product = await upsertProduct(row, now);
         const variant = await upsertVariant(product.id, row, run.id, source.id, now);
         touchedProductIds.add(product.id);
-        if (variant.verificationStatus !== "verified") rowsNeedsReview += 1;
+        if (variant.verificationStatus !== "verified") {
+          rowsNeedsReview += 1;
+          await createOfficialReviewItem(product.id, variant.id, row, source.code);
+        }
         if (row.parserConfidence < 0.65) {
           await prisma.drugMarketManualReviewQueue.create({
             data: { queueType: "low_confidence_official_row", productId: product.id, variantId: variant.id, reason: "Official medication row imported with low parser confidence. Manual review required." }
@@ -469,11 +571,31 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
       lastSuccessfulImportAt: rowsImported ? now : source.lastSuccessfulImportAt,
       sourceFreshnessStatus: rowsImported || parsed.rows.length ? "current_checked_today" : "failed",
       coverageStatus: rowsImported ? (rowsNeedsReview ? "needs_review" : "imported") : (parsed.rows.length ? "needs_review" : "failed"),
-      latestSourceLabel: parsed.fileName
+      latestSourceLabel: snapshot.sourceLabel ?? parsed.fileName
     }
   });
 
   return { source: source.code, status, rowsImported, rowsSeen: parsed.rows.length, rowsNeedsReview, rowsSkipped, rowsFailed, fileSha256: parsed.fileSha256, sourceUrl: snapshot.finalUrl ?? snapshot.sourceUrl };
+}
+
+async function createOfficialReviewItem(productId, variantId, row, sourceCode) {
+  await prisma.drugMarketManualReviewQueue.deleteMany({
+    where: { queueType: "official_import_review", variantId, status: "open" }
+  });
+  const reasons = ["Imported official medication row requires admin/owner review before verification"];
+  if (!row.genericName) reasons.push("missing generic/scientific name");
+  if (!row.strengthText) reasons.push("missing strength");
+  if (!row.dosageForm) reasons.push("missing dosage form");
+  if ((row.officialPriceAmount || row.officialPriceText) && !row.currency) reasons.push("missing price currency");
+  if (row.parserConfidence < 0.65) reasons.push("low parser confidence");
+  await prisma.drugMarketManualReviewQueue.create({
+    data: {
+      queueType: "official_import_review",
+      productId,
+      variantId,
+      reason: `${row.countryCode} ${sourceCode}: ${reasons.join("; ")}.`
+    }
+  });
 }
 
 async function recomputeProductAvailability(productId) {
@@ -607,9 +729,13 @@ function requestHeaders(url) {
   };
 }
 
-function extensionFromUrlOrType(url, contentType) {
+function extensionFromUrlOrType(url, contentType, contentDisposition = "", buffer = Buffer.alloc(0)) {
   const pathExt = extname(new URL(url).pathname).toLowerCase();
   if (pathExt) return pathExt;
+  const dispositionExt = contentDisposition.match(/filename\*?=(?:UTF-8''|")?([^";]+)/i)?.[1];
+  if (dispositionExt && extname(dispositionExt)) return extname(dispositionExt).toLowerCase();
+  if (buffer.subarray(0, 4).toString("binary") === "PK\u0003\u0004") return ".xlsx";
+  if (buffer.subarray(0, 4).toString("utf8") === "%PDF") return ".pdf";
   if (/spreadsheet|excel/i.test(contentType)) return ".xlsx";
   if (/pdf/i.test(contentType)) return ".pdf";
   if (/csv/i.test(contentType)) return ".csv";
@@ -623,8 +749,94 @@ function looksLikeHtmlBlock(buffer, contentType) {
 }
 
 async function fetchSfdaPublicRows(source, options) {
-  const run = await recordBlockedRun(source, "failed", `SFDA public list downloader is conservative in v0.8.1 and did not find a stable direct public data endpoint. maxPages=${options.maxPages ?? "default"}. No bypass attempted.`);
-  throw new Error(run.message ?? "SFDA source unavailable.");
+  const maxPages = options.maxPages === "all" ? 10 : Math.max(1, Math.min(Number(options.maxPages ?? 1) || 1, 10));
+  const rows = [];
+  let lastUrl = source.officialUrl || "https://www.sfda.gov.sa/en/drugs-list";
+  try {
+    for (let page = 1; page <= maxPages; page += 1) {
+      const pageUrl = page === 1 ? "https://www.sfda.gov.sa/en/drugs-list" : `https://www.sfda.gov.sa/en/drugs-list?pg=${page}`;
+      enforceOfficialUrlPolicy(source, pageUrl);
+      const response = await fetch(pageUrl, { headers: requestHeaders(pageUrl), signal: AbortSignal.timeout(30000) });
+      lastUrl = response.url || pageUrl;
+      if (!response.ok) throw new Error(`SFDA public HTML HTTP ${response.status}`);
+      const html = await response.text();
+      const pageRows = parseSfdaHtmlRows(html);
+      if (!pageRows.length && page === 1) break;
+      rows.push(...pageRows);
+      if (!pageRows.length) break;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "SFDA public HTML fetch failed.";
+    const run = await recordBlockedRun(source, "failed", `SFDA public list fetch failed or timed out: ${message}. No bypass attempted.`);
+    throw new Error(run.message ?? message);
+  }
+  if (!rows.length) {
+    const run = await recordBlockedRun(source, "failed", `SFDA public list did not expose a parseable server-rendered table. maxPages=${options.maxPages ?? "default"}. No bypass attempted.`);
+    throw new Error(run.message ?? "SFDA source unavailable.");
+  }
+  return {
+    kind: "rows",
+    sourceUrl: "https://www.sfda.gov.sa/en/drugs-list",
+    finalUrl: lastUrl,
+    contentType: "text/html",
+    fetchedAt: new Date(),
+    fileName: `sfda-public-html-${new Date().toISOString().slice(0, 10)}.json`,
+    fileSha256: sha256Buffer(Buffer.from(JSON.stringify(rows))),
+    rows
+  };
+}
+
+function isRelevantOfficialFileLink(sourceCode, combined) {
+  const text = combined.toLowerCase();
+  if (blockedUrlPattern.test(text)) return false;
+  if (sourceCode === "QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES") {
+    return /registered pharmaceutical products|priced products|products with prices|\.xlsx/i.test(combined);
+  }
+  if (sourceCode === "KUWAIT_MOH_DRUG_PRICE_LIST") return /drug price list|drugpricelist|\.pdf/i.test(combined);
+  if (sourceCode === "KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST") return /food supplement price list|foodsupplement|\.pdf/i.test(combined);
+  if (sourceCode === "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES") {
+    return /pharmaceutical products list with prices/i.test(combined) && !/supp list/i.test(combined);
+  }
+  if (sourceCode === "OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES") {
+    return /supp list registered pharmaceutical products list with prices/i.test(combined);
+  }
+  return /\.(xlsx?|csv|json|pdf)(?:$|[?#])|price|drug|medicine|pharmaceutical/i.test(combined);
+}
+
+function isPreferredSourceLink(sourceCode, label, url) {
+  return isRelevantOfficialFileLink(sourceCode, `${label} ${url}`) && /\.(xlsx?|csv|json|pdf)(?:$|[?#])/i.test(url);
+}
+
+function parseSfdaHtmlRows(html) {
+  const $ = loadHtml(html);
+  const rows = [];
+  $("table tr").each((_, tr) => {
+    const cells = $(tr).find("th,td").map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim()).get();
+    if (cells.length < 5) return;
+    if (/scientific name/i.test(cells.join(" "))) return;
+    rows.push({
+      "Scientific Name": cells[0] ?? "",
+      "Trade Name": cells[1] ?? "",
+      Strength: cells[2] ?? "",
+      "Dosage Form": cells[3] ?? "",
+      Price: cells[4] ?? ""
+    });
+  });
+  if (!rows.length) {
+    const body = $("body").text().replace(/\s+/g, " ").trim();
+    const pattern = /([A-Z][A-Z0-9 ,+\-/]+)\s+([A-Z][A-Z0-9 +\-/]+)\s+([0-9][A-Z0-9 ./%\\-]*)\s+(TABLET|CAPSULE|SUSP|SUSPENSION|CREAM|OINTMENT|SOLUTION|INJECTION|SYRUP)\s+([0-9]+(?:\.[0-9]+)?)/gi;
+    for (const match of body.matchAll(pattern)) {
+      rows.push({
+        "Scientific Name": match[1],
+        "Trade Name": match[2],
+        Strength: match[3],
+        "Dosage Form": match[4],
+        Price: match[5]
+      });
+      if (rows.length >= 200) break;
+    }
+  }
+  return rows;
 }
 
 function pick(row, keys) {

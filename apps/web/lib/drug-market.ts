@@ -55,8 +55,9 @@ export function uploadDrugMarketFile(input: { sourceCode?: string; rows: Array<R
 export function listDrugMarketImportJobs() { return request("/drug-market/import/jobs"); }
 export function getDrugMarketImportJob(id: string) { return request(`/drug-market/import/jobs/${id}`); }
 export function listDrugMarketReviewQueue() { return request("/drug-market/review-queue"); }
-export function verifyDrugMarketVariant(id: string) { return request(`/drug-market/variants/${id}/verify`, { method: "POST" }); }
-export function retireDrugMarketVariant(id: string) { return request(`/drug-market/variants/${id}/retire`, { method: "POST" }); }
+export function verifyDrugMarketVariant(id: string, reason: string) { return request(`/drug-market/variants/${id}/verify`, { method: "POST", body: JSON.stringify({ reason }) }); }
+export function rejectDrugMarketVariant(id: string, reason: string) { return request(`/drug-market/variants/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }); }
+export function retireDrugMarketVariant(id: string, reason: string) { return request(`/drug-market/variants/${id}/retire`, { method: "POST", body: JSON.stringify({ reason }) }); }
 export function recomputeDrugMarketAvailability() { return request("/drug-market/import/recompute-availability", { method: "POST" }); }
 export function runDrugMarketConnector(id: string) { return request(`/drug-market/automation/connectors/${id}/run`, { method: "POST" }); }
 export function dryRunDrugMarketConnector(id: string) { return request(`/drug-market/automation/connectors/${id}/dry-run`, { method: "POST" }); }

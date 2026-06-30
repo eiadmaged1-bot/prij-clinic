@@ -1,9 +1,10 @@
 # Next Steps
 
-Next medication sprint: Real Data Review + Verification Batch 1.
+Next medication sprint: Real Data Verification Batch 1 + Gulf Pack 3, or Egypt official file ingestion if the owner provides an EDA file.
 
 Recommended tasks:
-- Review Bahrain NHRA imported rows and verify a small owner-approved batch.
+- Review and verify a small owner-approved Bahrain NHRA batch with reasons.
+- Review and verify a small owner-approved Oman MOH batch with reasons.
 - Re-check Qatar MOPH public XLSX link from the official site.
 - Locate a stable official Kuwait MOH PDF endpoint.
 - Confirm an official SFDA public export or approved endpoint.

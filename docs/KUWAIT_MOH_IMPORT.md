@@ -1,6 +1,6 @@
 # Kuwait MOH Import
 
-Command:
+Commands:
 
 ```powershell
 npm run medication:import:kuwait -- --source KUWAIT_MOH_DRUG_PRICE_LIST --mode dry-run
@@ -8,8 +8,10 @@ npm run medication:import:kuwait -- --source KUWAIT_MOH_DRUG_PRICE_LIST --mode l
 npm run medication:import:kuwait -- --source KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST --mode live
 ```
 
-Status on 2026-06-30: blocked/source unavailable.
+v0.8.2 behavior:
+- Uses official MOH domain candidates only.
+- Accepts PDF content type or PDF magic header.
+- Extracts text with `pdf-parse` when an official PDF is accessible.
+- Routes all imported rows to review.
 
-The configured official Kuwait MOH PDF candidate failed to fetch. The importer did not use unofficial mirrors and did not create fallback rows.
-
-PDF parsing remains conservative: high-confidence rows can be imported, low-confidence lines are routed to review, and no row is verified automatically.
+Status on 2026-06-30: failed. The official drug price PDF candidate fetch failed. No unofficial mirrors or fallback rows were used.

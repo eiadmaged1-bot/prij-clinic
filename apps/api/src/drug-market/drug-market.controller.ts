@@ -75,11 +75,15 @@ export class DrugMarketController {
 
   @Post("variants/:id/verify")
   @Permissions("drug_market.verify")
-  verifyVariant(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.market.verifyVariant(id, user); }
+  verifyVariant(@Param("id") id: string, @Body() dto: Record<string, string>, @CurrentUser() user: AuthUser) { return this.market.verifyVariant(id, dto, user); }
+
+  @Post("variants/:id/reject")
+  @Permissions("drug_market.verify")
+  rejectVariant(@Param("id") id: string, @Body() dto: Record<string, string>, @CurrentUser() user: AuthUser) { return this.market.rejectVariant(id, dto, user); }
 
   @Post("variants/:id/retire")
   @Permissions("drug_market.verify")
-  retireVariant(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.market.retireVariant(id, user); }
+  retireVariant(@Param("id") id: string, @Body() dto: Record<string, string>, @CurrentUser() user: AuthUser) { return this.market.retireVariant(id, dto, user); }
 
   @Post("import/upload")
   @Permissions("drug_market.import")

@@ -116,18 +116,28 @@ export class DrugMarketService {
     return variant;
   }
 
-  verifyVariant(id: string, user: AuthUser) {
-    return this.updateVariant(id, { verificationStatus: "verified" }, user).then(async (variant) => {
-      await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_verified", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high" });
-      return variant;
-    });
+  async verifyVariant(id: string, dto: Record<string, string>, user: AuthUser) {
+    const reason = requiredDecisionReason(dto);
+    const variant = await this.updateVariant(id, { verificationStatus: "verified" }, user);
+    await this.resolveOpenVariantReviewItems(variant.id, "verified", reason);
+    await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_verified", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high", reason });
+    return variant;
   }
 
-  retireVariant(id: string, user: AuthUser) {
-    return this.updateVariant(id, { verificationStatus: "retired" }, user).then(async (variant) => {
-      await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_retired", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high" });
-      return variant;
-    });
+  async rejectVariant(id: string, dto: Record<string, string>, user: AuthUser) {
+    const reason = requiredDecisionReason(dto);
+    const variant = await this.updateVariant(id, { verificationStatus: "rejected" }, user);
+    await this.resolveOpenVariantReviewItems(variant.id, "rejected", reason);
+    await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_rejected", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high", reason });
+    return variant;
+  }
+
+  async retireVariant(id: string, dto: Record<string, string>, user: AuthUser) {
+    const reason = requiredDecisionReason(dto);
+    const variant = await this.updateVariant(id, { verificationStatus: "retired" }, user);
+    await this.resolveOpenVariantReviewItems(variant.id, "retired", reason);
+    await this.audit.record({ actorUserId: user.id, action: "drug_market.variant_retired", resourceType: "drug_market_variant", resourceId: variant.id, severity: "high", reason });
+    return variant;
   }
 
   availability(productId: string) {
@@ -176,12 +186,23 @@ export class DrugMarketService {
         _count: { _all: true }
       })
     ]);
+    const openReviewItems = await this.prisma.drugMarketManualReviewQueue.findMany({
+      where: { queueType: "official_import_review", status: "open" },
+      select: { variantId: true }
+    });
+    const openReviewVariantIds = openReviewItems.map((item) => item.variantId).filter((id): id is string => Boolean(id));
+    const reviewVariants = openReviewVariantIds.length
+      ? await this.prisma.drugMarketVariant.findMany({ where: { id: { in: openReviewVariantIds }, isDemo: false }, select: { countryCode: true } })
+      : [];
     return sources.map((source) => {
       const counts = realCounts.filter((item) => item.countryCode === source.countryCode);
       const demoRows = demoCounts.find((item) => item.countryCode === source.countryCode)?._count._all ?? 0;
       const rowsImported = counts.reduce((sum, item) => sum + item._count._all, 0);
       const rowsNeedsReview = counts.filter((item) => item.verificationStatus === "needs_review" || item.verificationStatus === "imported").reduce((sum, item) => sum + item._count._all, 0);
       const rowsVerified = counts.filter((item) => item.verificationStatus === "verified").reduce((sum, item) => sum + item._count._all, 0);
+      const rowsRejected = counts.filter((item) => item.verificationStatus === "rejected").reduce((sum, item) => sum + item._count._all, 0);
+      const rowsRetired = counts.filter((item) => item.verificationStatus === "retired").reduce((sum, item) => sum + item._count._all, 0);
+      const reviewItemCount = reviewVariants.filter((variant) => variant.countryCode === source.countryCode).length;
       const confidenceValues = counts.map((item) => item._avg.parserConfidence).filter((value): value is number => typeof value === "number");
       return {
         sourceId: source.id,
@@ -198,7 +219,10 @@ export class DrugMarketService {
         coverageStatus: source.coverageStatus,
         rowsImported,
         rowsNeedsReview,
+        reviewItemCount,
         rowsVerified,
+        rowsRejected,
+        rowsRetired,
         rowsFailed: 0,
         demoRowsExcluded: demoRows,
         parserConfidenceAverage: confidenceValues.length ? confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length : null,
@@ -207,8 +231,43 @@ export class DrugMarketService {
     });
   }
 
-  reviewQueue() {
-    return this.prisma.drugMarketManualReviewQueue.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
+  async reviewQueue() {
+    const items = await this.prisma.drugMarketManualReviewQueue.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
+    const variantIds = items.map((item) => item.variantId).filter((id): id is string => Boolean(id));
+    const variants = variantIds.length
+      ? await this.prisma.drugMarketVariant.findMany({
+          where: { id: { in: variantIds } },
+          include: { product: true }
+        })
+      : [];
+    const variantById = new Map(variants.map((variant) => [variant.id, variant]));
+    return items.map((item) => {
+      const variant = item.variantId ? variantById.get(item.variantId) : null;
+      return {
+        ...item,
+        variant: variant
+          ? {
+              id: variant.id,
+              productId: variant.productId,
+              countryCode: variant.countryCode,
+              tradeName: variant.tradeName,
+              genericName: variant.genericName,
+              strengthText: variant.strengthText,
+              dosageForm: variant.dosageForm,
+              route: variant.route,
+              packageText: variant.packageText,
+              registrationNumber: variant.registrationNumber,
+              officialPriceText: variant.officialPriceText,
+              officialPriceAmount: variant.officialPriceAmount,
+              currency: variant.currency,
+              verificationStatus: variant.verificationStatus,
+              parserConfidence: variant.parserConfidence,
+              sourceFetchedAt: variant.sourceFetchedAt,
+              productTradeName: variant.product.tradeName
+            }
+          : null
+      };
+    });
   }
 
   resolveReviewQueue(id: string, dto: Record<string, string>, user: AuthUser) {
@@ -239,6 +298,13 @@ export class DrugMarketService {
       return item;
     });
   }
+
+  private resolveOpenVariantReviewItems(variantId: string, status: string, reason: string) {
+    return this.prisma.drugMarketManualReviewQueue.updateMany({
+      where: { variantId, status: "open" },
+      data: { status, resolutionNote: reason }
+    });
+  }
 }
 
 function nextActionForSource(coverageStatus: string, sourceAccessMode: string) {
@@ -247,4 +313,10 @@ function nextActionForSource(coverageStatus: string, sourceAccessMode: string) {
   if (coverageStatus === "not_imported") return "Run safe official discovery/import.";
   if (coverageStatus === "needs_review" || coverageStatus === "partial") return "Review imported rows and verify selected records with a reason.";
   return "Monitor freshness and re-import when the official source changes.";
+}
+
+function requiredDecisionReason(dto: Record<string, string>) {
+  const reason = String(dto.reason ?? dto.note ?? "").trim();
+  if (reason.length < 3) throw new BadRequestException("A review decision reason is required.");
+  return reason;
 }

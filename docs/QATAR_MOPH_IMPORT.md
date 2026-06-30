@@ -1,14 +1,16 @@
 # Qatar MOPH Import
 
-Command:
+Commands:
 
 ```powershell
 npm run medication:import:qatar -- --mode dry-run
 npm run medication:import:qatar -- --mode live
 ```
 
-Status on 2026-06-30: blocked/source changed.
+v0.8.2 behavior:
+- Treats official MOPH pages as HTML discovery pages.
+- Parses visible links and official file selectors.
+- Accepts XLSX content type, octet-stream with XLSX filename, or XLSX magic header.
+- If HTML is returned again, parses one additional official HTML hop and then stops.
 
-The importer used the official MOPH domain candidate for the priced products XLSX, but the official server returned HTML instead of an XLSX file. No fallback rows were created and no unofficial mirror was used.
-
-Next action: re-check the official MOPH public page or use an owner-provided official Qatar file through the official upload path.
+Status on 2026-06-30: failed. The official pages returned HTML but did not expose a supported public XLSX link to the importer. No fallback rows were created.

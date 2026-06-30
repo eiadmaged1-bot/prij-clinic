@@ -1,14 +1,16 @@
 # Saudi SFDA Import
 
-Command:
+Commands:
 
 ```powershell
 npm run medication:import:sfda -- --mode dry-run --max-pages 2
 npm run medication:import:sfda -- --mode live --max-pages all
 ```
 
-Status on 2026-06-30: public endpoint not stable.
+v0.8.2 behavior:
+- Uses only the official SFDA public list page.
+- Attempts server-rendered HTML table parsing.
+- Respects `--max-pages`.
+- Records a failed/blocked source status if the page is dynamic, times out, or lacks a parseable public table.
 
-The v0.8.1 connector does not brute-force or bypass SFDA public pages. It records a failed import run when no stable direct public endpoint is safely discoverable.
-
-Next action: identify an official SFDA structured export or approved public API endpoint, then enable paginated import with rate limiting.
+Status on 2026-06-30: failed. The official public HTML path timed out or was not safely parseable. No bypass, login, CAPTCHA workaround, or third-party mirror was used.

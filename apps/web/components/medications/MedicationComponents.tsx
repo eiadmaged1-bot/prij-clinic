@@ -3,7 +3,18 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { searchMedications, listDrugFamilies, runMedicationSafetyCheck, type MedicationResult } from "../../lib/medications";
-import { searchDrugMarket, listDrugMarketCountries, listDrugMarketSources, listDrugMarketConnectors, getDrugMarketCoverage, type DrugMarketProduct } from "../../lib/drug-market";
+import {
+  searchDrugMarket,
+  listDrugMarketCountries,
+  listDrugMarketSources,
+  listDrugMarketConnectors,
+  listDrugMarketReviewQueue,
+  getDrugMarketCoverage,
+  rejectDrugMarketVariant,
+  retireDrugMarketVariant,
+  verifyDrugMarketVariant,
+  type DrugMarketProduct
+} from "../../lib/drug-market";
 
 export function MedicationSearchBox() {
   const [query, setQuery] = useState("ACEI");
@@ -262,7 +273,9 @@ export function DrugMarketCoverageDashboard() {
               <div><dt>Access</dt><dd>{String(row.sourceAccessMode ?? "unknown")}</dd></div>
               <div><dt>Rows imported</dt><dd>{String(row.rowsImported ?? 0)}</dd></div>
               <div><dt>Needs review</dt><dd>{String(row.rowsNeedsReview ?? 0)}</dd></div>
+              <div><dt>Review queue</dt><dd>{String(row.reviewItemCount ?? row.reviewItems ?? 0)}</dd></div>
               <div><dt>Verified</dt><dd>{String(row.rowsVerified ?? 0)}</dd></div>
+              <div><dt>Rejected/retired</dt><dd>{String(row.rowsRejected ?? 0)} / {String(row.rowsRetired ?? 0)}</dd></div>
               <div><dt>Demo rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
               <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
               <div><dt>Next action</dt><dd>{String(row.requiredNextAction ?? "Review source status")}</dd></div>
@@ -281,7 +294,76 @@ export function SourceConnectorPanel() {
 }
 
 export function ReviewQueuePanel() {
-  return <section className="panel"><h2>Review Queue</h2><p className="muted">Conflicts, duplicate candidates, low-confidence parses, and unverified imports stay visible until an authorized reviewer resolves them with a reason.</p></section>;
+  const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
+  const [reason, setReason] = useState("Reviewed against official source metadata");
+  const [status, setStatus] = useState("Loading review queue");
+
+  async function load() {
+    try {
+      const data = await listDrugMarketReviewQueue();
+      const rows = Array.isArray(data) ? data as Array<Record<string, unknown>> : [];
+      setItems(rows);
+      setStatus(`${rows.filter((item) => item.status === "open").length} open review item(s)`);
+    } catch {
+      setStatus("Review queue requires admin access");
+    }
+  }
+
+  async function decide(variantId: unknown, action: "verify" | "reject" | "retire") {
+    if (!variantId || reason.trim().length < 3) {
+      setStatus("Enter a review reason before deciding");
+      return;
+    }
+    setStatus("Saving review decision");
+    try {
+      if (action === "verify") await verifyDrugMarketVariant(String(variantId), reason);
+      if (action === "reject") await rejectDrugMarketVariant(String(variantId), reason);
+      if (action === "retire") await retireDrugMarketVariant(String(variantId), reason);
+      await load();
+    } catch {
+      setStatus("Review decision was denied or failed");
+    }
+  }
+
+  useEffect(() => { void load(); }, []);
+
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Review Queue</h2><span className="badge warning">Reason required</span></div>
+      <p className="muted">{status}</p>
+      <form className="inline-form" onSubmit={(event) => event.preventDefault()}>
+        <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Review decision reason" />
+      </form>
+      <div className="data-list">
+        {items.slice(0, 100).map((item) => {
+          const variant = item.variant as Record<string, unknown> | null;
+          return (
+            <article className="data-row" key={String(item.id)}>
+              <div className="data-row-header">
+                <strong>{String(variant?.tradeName ?? variant?.productTradeName ?? item.queueType ?? "Review item")}</strong>
+                <span className="badge">{String(item.status ?? "open")}</span>
+              </div>
+              <p className="muted">{String(item.reason ?? "Official row requires review")}</p>
+              <dl>
+                <div><dt>Country</dt><dd>{String(variant?.countryCode ?? "Not listed")}</dd></div>
+                <div><dt>Generic</dt><dd>{String(variant?.genericName ?? "Not listed")}</dd></div>
+                <div><dt>Strength/form</dt><dd>{[variant?.strengthText, variant?.dosageForm, variant?.route].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
+                <div><dt>Registration</dt><dd>{String(variant?.registrationNumber ?? "Not listed")}</dd></div>
+                <div><dt>Official/source price</dt><dd>{formatPrice(variant ?? {})}</dd></div>
+                <div><dt>Parser confidence</dt><dd>{formatConfidence(variant?.parserConfidence)}</dd></div>
+              </dl>
+              <div className="toolbar">
+                {variant?.productId ? <Link className="button secondary compact" href={`/drug-market/products/${String(variant.productId)}`}>Open profile</Link> : null}
+                <button className="button compact" type="button" onClick={() => void decide(variant?.id, "verify")}>Verify</button>
+                <button className="button secondary compact" type="button" onClick={() => void decide(variant?.id, "reject")}>Reject</button>
+                <button className="button secondary compact" type="button" onClick={() => void decide(variant?.id, "retire")}>Retire</button>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export function MergeCandidatePanel() {

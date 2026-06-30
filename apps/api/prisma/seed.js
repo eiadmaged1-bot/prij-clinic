@@ -1143,17 +1143,43 @@ async function seedMedicationIntelligence(prisma) {
       notes: "Owner-provided official Bahrain file import."
     },
     {
+      code: "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
+      name: "Oman MOH registered pharmaceutical products with prices",
+      countryCode: "OMN",
+      sourceType: "official_registry",
+      priorityRank: 10,
+      officialUrl: "https://www.moh.gov.om/en/hospitals-directorates/directorates-and-centers-at-hq/drug-safety-center/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "oman-official-upload",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Official MOH Drug Safety Center public product price list. Rows remain review-gated."
+    },
+    {
+      code: "OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
+      name: "Oman MOH supplement registered pharmaceutical products with prices",
+      countryCode: "OMN",
+      sourceType: "official_registry",
+      priorityRank: 11,
+      officialUrl: "https://www.moh.gov.om/en/hospitals-directorates/directorates-and-centers-at-hq/drug-safety-center/",
+      sourceAccessMode: "public_discovery",
+      importerKey: "oman-official-upload",
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Official MOH Drug Safety Center supplement/product price list when published separately. Rows remain review-gated."
+    },
+    {
       code: "OMAN_MOH_DRUG_SAFETY_CENTER",
       name: "Oman MOH Drug Safety Center",
       countryCode: "OMN",
       sourceType: "official_registry",
-      priorityRank: 10,
-      officialUrl: "https://www.moh.gov.om/",
-      sourceAccessMode: "gated_manual_required",
+      priorityRank: 12,
+      officialUrl: "https://www.moh.gov.om/en/hospitals-directorates/directorates-and-centers-at-hq/drug-safety-center/",
+      sourceAccessMode: "public_discovery",
       importerKey: "oman-official-upload",
-      coverageStatus: "blocked_requires_official_file",
-      sourceFreshnessStatus: "manual_required",
-      notes: "No complete public bulk feed assumed. Use official/licensed upload until a public official feed is confirmed."
+      coverageStatus: "not_imported",
+      sourceFreshnessStatus: "unknown",
+      notes: "Official MOH Drug Safety Center page used for public file discovery. Rows remain review-gated."
     },
     {
       code: "OMAN_OFFICIAL_FILE_UPLOAD",
@@ -1302,6 +1328,10 @@ async function seedMedicationIntelligence(prisma) {
     },
     data: { active: false, coverageStatus: "not_imported", sourceFreshnessStatus: "unknown", notes: "Legacy v0.7 source alias retained for history; v0.8 registry uses official source-specific records." }
   });
+  await prisma.drugMarketSource.updateMany({
+    where: { code: "OMAN_MOH_DRUG_SAFETY_CENTER", coverageStatus: "blocked_requires_official_file" },
+    data: { coverageStatus: "not_imported", sourceFreshnessStatus: "unknown" }
+  });
 
   const medicationSources = [
     ["RXNORM", "RxNorm", "official_reference"],
@@ -1330,6 +1360,8 @@ async function seedMedicationIntelligence(prisma) {
     ["KUWAIT_MOH_DRUG_PRICE_CONNECTOR", "Kuwait MOH drug price connector", "KUWAIT_MOH_DRUG_PRICE_LIST", "official_registry", "KWT", false, true],
     ["KUWAIT_MOH_SUPPLEMENT_PRICE_CONNECTOR", "Kuwait MOH supplement price connector", "KUWAIT_MOH_FOOD_SUPPLEMENT_PRICE_LIST", "official_registry", "KWT", false, true],
     ["BAHRAIN_NHRA_CONNECTOR", "Bahrain NHRA connector", "BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST", "official_registry", "BHR", false, true],
+    ["OMAN_MOH_PRICE_LIST_CONNECTOR", "Oman MOH price list connector", "OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES", "official_registry", "OMN", false, true],
+    ["OMAN_MOH_SUPP_PRICE_LIST_CONNECTOR", "Oman MOH supplement price list connector", "OMAN_MOH_SUPP_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES", "official_registry", "OMN", false, true],
     ["OMAN_OFFICIAL_UPLOAD_CONNECTOR", "Oman official upload connector", "OMAN_OFFICIAL_FILE_UPLOAD", "official_upload", "OMN", false, true],
     ["YEMEN_OFFICIAL_UPLOAD_CONNECTOR", "Yemen official upload connector", "YEMEN_OFFICIAL_FILE_UPLOAD", "official_upload", "YEM", false, false],
     ["RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "Retail public metadata connector template", "RETAIL_PUBLIC_METADATA_CONNECTOR_TEMPLATE", "retail_metadata", null, true, false]

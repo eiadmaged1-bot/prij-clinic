@@ -7,7 +7,7 @@ for (const row of realRows) {
   if (!row.countryCode) failures.push(`Variant ${row.id} missing countryCode.`);
   if (!row.tradeName && !row.genericName) failures.push(`Variant ${row.id} missing trade/generic name.`);
   if (!row.sourceId && !row.importRunId) failures.push(`Variant ${row.id} missing source/import metadata.`);
-  if (!["imported", "needs_review", "verified", "retired"].includes(row.verificationStatus)) failures.push(`Variant ${row.id} has invalid verificationStatus ${row.verificationStatus}.`);
+  if (!["imported", "needs_review", "verified", "rejected", "retired"].includes(row.verificationStatus)) failures.push(`Variant ${row.id} has invalid verificationStatus ${row.verificationStatus}.`);
   if ((row.officialPriceAmount || row.officialPriceText || row.priceText) && !row.currency) failures.push(`Variant ${row.id} has price metadata without currency.`);
   const unsafeText = [row.packageText, row.officialRowJson ? JSON.stringify(row.officialRowJson) : ""].join(" ").toLowerCase();
   for (const [term, pattern] of [
