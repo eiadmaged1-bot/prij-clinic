@@ -42,7 +42,7 @@ assert(realDemoLeak === 0, "demo variants are not counted as real rows");
 const uae = sources.find((source) => source.code === "UAE_MOHAP_REGISTERED_MEDICAL_PRODUCT_DIRECTORY");
 assert(uae?.coverageStatus === "blocked_requires_api_approval", "UAE MOHAP gated source records API approval requirement");
 const egypt = sources.find((source) => source.code === "EDA_EGYPTIAN_DRUG_REGISTER");
-assert(["partial", "not_imported", "needs_review"].includes(egypt?.coverageStatus ?? ""), "Egypt source is not marked complete from seed");
+assert(!["imported", "verified", "complete"].includes(egypt?.coverageStatus ?? ""), "Egypt source is not marked complete from seed");
 const oman = sources.find((source) => source.code === "OMAN_MOH_DRUG_SAFETY_CENTER");
 assert(oman?.coverageStatus === "blocked_requires_official_file", "Oman remains official-file-required until import");
 

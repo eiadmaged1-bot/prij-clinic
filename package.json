@@ -45,6 +45,12 @@
     "test:official-medications": "node scripts/official-medications-test.mjs",
     "medication:sources:discover": "node scripts/official-medication-source-discovery.mjs",
     "medication:import:official": "node scripts/import-official-medications.mjs",
+    "medication:import:qatar": "node scripts/import-official-medications.mjs --country QAT --source QATAR_MOPH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES",
+    "medication:import:bahrain": "node scripts/import-official-medications.mjs --country BHR --source BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST",
+    "medication:import:kuwait": "node scripts/import-official-medications.mjs --country KWT",
+    "medication:import:sfda": "node scripts/import-official-medications.mjs --country KSA --source SFDA_DRUGS_LIST",
+    "medication:import:eda-file": "node scripts/import-official-medications.mjs --country EG --source EDA_OFFICIAL_FILE_UPLOAD --mode live",
+    "medication:eda:lookup": "node scripts/eda-targeted-lookup.mjs",
     "medication:import:official:all": "node scripts/import-official-medications.mjs --country KSA --mode live",
     "medication:validate:official": "node scripts/validate-official-medication-data.mjs",
     "medication:coverage:report": "node scripts/report-medication-source-coverage.mjs",
@@ -97,7 +103,9 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
-    "pdf-parse": "^2.4.5"
+    "cheerio": "^1.2.0",
+    "pdf-parse": "^2.4.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/multer": "^2.1.0"

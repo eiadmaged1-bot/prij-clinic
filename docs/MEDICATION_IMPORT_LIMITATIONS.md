@@ -1,10 +1,12 @@
 # Medication Import Limitations
 
 Current limitations:
-- No fake fallback rows are created when a live source fails or is gated.
-- CSV and JSON official uploads are supported.
-- XLSX and PDF parsing are represented by parser modules and source coverage states, but native table extraction needs an approved parser implementation.
-- UAE MOHAP may require approved API credentials.
-- Egypt bulk coverage requires an official bulk file; EDDB brute-force enumeration is forbidden.
-- Oman requires official/licensed upload until a public bulk source is confirmed.
+- Qatar MOPH official XLSX candidate returned HTML rather than a file from the official server.
+- Kuwait MOH PDF candidate failed to fetch.
+- Saudi SFDA needs a stable official public export or endpoint before live import.
+- Egypt requires owner-provided official files or one explicit targeted lookup at a time.
+- PDF parsing is best effort and review-gated.
 
+The system does not use retail metadata, unofficial mirrors, pharmacy stock/order/cart/checkout pages, protected-source bypasses, or external AI calls.
+
+Official listed prices are source metadata only. They are not live shelf prices, dispensing instructions, or patient advice.

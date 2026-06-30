@@ -1,8 +1,14 @@
 # Saudi SFDA Import
 
-Primary source: SFDA Drugs List.
+Command:
 
-Mapped metadata includes trade/scientific names, strength, dosage form, route, package, manufacturer, marketing company, registration number, ATC code, authorization/legal status, and official price when present.
+```powershell
+npm run medication:import:sfda -- --mode dry-run --max-pages 2
+npm run medication:import:sfda -- --mode live --max-pages all
+```
 
-Rows import as review-gated official metadata. No patient dosing or prescribing logic is generated.
+Status on 2026-06-30: public endpoint not stable.
 
+The v0.8.1 connector does not brute-force or bypass SFDA public pages. It records a failed import run when no stable direct public endpoint is safely discoverable.
+
+Next action: identify an official SFDA structured export or approved public API endpoint, then enable paginated import with rate limiting.

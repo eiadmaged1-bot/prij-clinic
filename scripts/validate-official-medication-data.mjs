@@ -10,8 +10,17 @@ for (const row of realRows) {
   if (!["imported", "needs_review", "verified", "retired"].includes(row.verificationStatus)) failures.push(`Variant ${row.id} has invalid verificationStatus ${row.verificationStatus}.`);
   if ((row.officialPriceAmount || row.officialPriceText || row.priceText) && !row.currency) failures.push(`Variant ${row.id} has price metadata without currency.`);
   const unsafeText = [row.packageText, row.officialRowJson ? JSON.stringify(row.officialRowJson) : ""].join(" ").toLowerCase();
-  for (const term of ["take one", "take 1", "how to take", "checkout", "cart", "order now", "branch stock", "in stock"]) {
-    if (unsafeText.includes(term)) failures.push(`Variant ${row.id} contains unsafe dosing or purchase wording: ${term}.`);
+  for (const [term, pattern] of [
+    ["take one", /\btake\s+one\b/],
+    ["take 1", /\btake\s+1\b/],
+    ["how to take", /\bhow\s+to\s+take\b/],
+    ["checkout", /\bcheckout\b/],
+    ["cart", /\bcart\b/],
+    ["order now", /\border\s+now\b/],
+    ["branch stock", /\bbranch\s+stock\b/],
+    ["in stock", /\bin\s+stock\b/]
+  ]) {
+    if (pattern.test(unsafeText)) failures.push(`Variant ${row.id} contains unsafe dosing or purchase wording: ${term}.`);
   }
 }
 
