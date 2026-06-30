@@ -1,29 +1,15 @@
 # Known Limitations
 
-- Not production-ready.
-- Not a medical device.
-- Uses fake/demo data only.
-- No external AI.
-- No autonomous diagnosis.
-- No autonomous prescribing.
-- Most protocols are catalog-only.
-- Protocol content is short deterministic summary text, not full guideline text.
-- The structured protocol editor validates safety shape but does not certify clinical correctness.
-- Verified protocols include the original verified examples plus the emergency OB/early pregnancy, AUB/menstrual, contraception, and routine antenatal packs.
-- Draft protocol options can be stored for review but are not output in AI Management Snapshot.
-- Patient memory stores structured facts only after doctor approval.
-- Formula verification is code-level and metadata-level; it is not clinical certification.
-- Ultrasound biometry, growth percentile, Doppler, AFI, and SDP formulas are draft/catalog-only.
-- No automatic fetal growth restriction diagnosis.
-- No fetal image interpretation.
-- Audit logs are application-level and not database-tamper-resistant.
+V0.6 master-unified is a local/private integration branch for calculator/AI mega plus medication intelligence. It is not production-ready and must not be used with real patient data.
 
-# V0.5 Limitations
-
-- This is not an autonomous medical device, diagnostic engine, prescribing engine, or substitute for the doctor.
-- Guideline Center import is demo text/local metadata only. Real licensed PDFs and production source packs are not committed.
-- `/guidelines/ask` is extractive/mock local search only, not generative RAG.
-- Pilot walkthrough automation is script-assisted page/API verification, not full Playwright screenshot/click automation.
-- Local route authorization tests intentionally mutate demo records; rerun seed before checking clean protocol counts.
-- Local Postgres may already contain migrations from earlier worktrees; current migration deploy reported no pending migrations on the shared dev database.
-- Staging smoke was not run in this local integration pass because staging environment variables were not intentionally configured.
+- No production clinical governance certification has been completed.
+- Calculator formulas, OB dating behavior, protocol packs, guideline content, and medication safety rules require qualified clinical review before real use.
+- AI remains local/deterministic or placeholder-only. No external AI calls are approved.
+- AI cannot diagnose, prescribe, sign, approve, or change final signed records.
+- Medication intelligence is reference and safety-support only. It cannot auto-prescribe or convert market strength/form metadata into dosing instructions.
+- Guideline vault encryption requires a non-committed local key and operational backup/restore proof before any sensitive file testing.
+- Payment, insurance, e-invoicing, pharmacy availability, inventory, and retail workflows are not production systems.
+- Receptionist/accountant access must remain non-clinical and must not include clinical decision-support tools.
+- V0.6 shell/theme/demo-data hotfix seed records are intentionally small demo references. They prove UI visibility and route behavior only; they are not clinically complete or production validated.
+- Drug Market strength/form fields remain market metadata only. The UI must not present them as patient dosing or self-medication instructions.
+- Guideline demo chunks are short local placeholders for citation/search testing. They are not licensed guideline reproductions and are not clinical advice.

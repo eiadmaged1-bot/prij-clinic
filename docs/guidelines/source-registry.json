@@ -1,0 +1,14 @@
+[
+  { "organization": "WHO", "sourceType": "OPEN_PUBLIC", "specialties": ["obstetrics", "gynecology", "general medicine"] },
+  { "organization": "NICE", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["obstetrics", "gynecology", "general medicine"] },
+  { "organization": "RCOG", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["obstetrics", "gynecology"] },
+  { "organization": "ACOG", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["obstetrics", "gynecology"] },
+  { "organization": "FIGO", "sourceType": "OPEN_PUBLIC", "specialties": ["obstetrics", "gynecology"] },
+  { "organization": "ESHRE", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["fertility", "gynecology"] },
+  { "organization": "ASRM", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["fertility", "gynecology"] },
+  { "organization": "SMFM", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["obstetrics"] },
+  { "organization": "CDC", "sourceType": "OPEN_PUBLIC", "specialties": ["obstetrics", "gynecology", "general medicine"] },
+  { "organization": "SOGC", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["obstetrics", "gynecology"] },
+  { "organization": "WSES", "sourceType": "OPEN_PUBLIC", "specialties": ["surgery", "general medicine"] },
+  { "organization": "SAGES", "sourceType": "PUBLIC_RESTRICTED", "specialties": ["surgery", "gynecology"] }
+]

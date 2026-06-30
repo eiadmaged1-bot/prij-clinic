@@ -38,10 +38,17 @@ backups/
 
 # Uploaded or sensitive local files
 uploads/
-storage/
+storage/*
+!storage/
+!storage/README.md
+apps/api/uploads/
+apps/api/storage/
 private/
 patient-data/
 /reports/
+*.pdf
+*.tmp
+*.extracted.txt
 
 # OS and editor files
 .DS_Store

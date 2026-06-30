@@ -38,16 +38,27 @@ async function main() {
   pass("demo users login");
 
   const sources = await request("/guidelines/sources");
-  if (!sources.response.ok || !sources.body.some((source) => source.name === "WHO") || !sources.body.some((source) => source.name === "Local Clinic Protocol")) throw new Error("source registry missing expected sources");
+  const sourceList = sources.body.sources ?? sources.body;
+  for (const sourceName of ["WHO Guideline Registry", "NICE Guidance", "RCOG Guidance", "ACOG Clinical Guidance", "ESHRE Guidelines", "ASRM Practice Guidance", "SMFM Publications and Guidelines"]) {
+    if (!sources.response.ok || !sourceList.some((source) => source.name === sourceName)) throw new Error(`source registry missing ${sourceName}`);
+  }
   pass("owner can read seeded source registry");
 
-  const manage = await request("/guidelines/sources", { method: "POST", body: JSON.stringify({ name: "Demo Governance Source", abbreviation: "DGS", notes: "Demo metadata only." }) });
-  if (!manage.response.ok || manage.body.name !== "Demo Governance Source") throw new Error("owner source manage failed");
+  const governanceSourceName = `Demo Governance Source ${Date.now()}`;
+  const manage = await request("/guidelines/sources", { method: "POST", body: JSON.stringify({ name: governanceSourceName, organization: governanceSourceName, sourceType: "OPEN_PUBLIC", notes: "Demo metadata only." }) });
+  if (!manage.response.ok || manage.body.name !== governanceSourceName) throw new Error("owner source manage failed");
   pass("owner can manage sources");
 
   const doctorSources = await request("/guidelines/sources", {}, doctorToken);
   if (!doctorSources.response.ok) throw new Error("doctor could not read sources");
   pass("doctor can read guideline center");
+
+  const documents = await request("/guidelines/documents", {}, doctorToken);
+  const documentList = documents.body.documents ?? documents.body;
+  for (const title of ["Demo Antenatal Care Reference", "Demo PCOS Guideline Index", "Demo Endometriosis Guideline Index"]) {
+    if (!documents.response.ok || !documentList.some((document) => document.title === title)) throw new Error(`seeded guideline document missing ${title}`);
+  }
+  pass("seeded demo guideline documents are visible");
 
   for (const [role, token] of [["receptionist", receptionToken], ["accountant", accountantToken]]) {
     const denied = await request("/guidelines/search?q=doctor", {}, token);
@@ -59,7 +70,13 @@ async function main() {
   if (!search.response.ok || !search.body.results.length || !search.body.results[0].citationLabel) throw new Error("search did not return citations");
   pass("search returns citations");
 
-  const ask = await request("/guidelines/ask", { method: "POST", body: JSON.stringify({ question: "What happens when no source is found?" }) }, doctorToken);
+  for (const term of ["antenatal", "PCOS", "endometriosis"]) {
+    const result = await request(`/guidelines/search?q=${encodeURIComponent(term)}`, {}, doctorToken);
+    if (!result.response.ok || !result.body.results.length) throw new Error(`guideline search did not return seeded demo result for ${term}`);
+  }
+  pass("guideline search returns seeded antenatal PCOS and endometriosis chunks");
+
+  const ask = await request("/guidelines/ask", { method: "POST", body: JSON.stringify({ question: "What does the PCOS demo index contain?" }) }, doctorToken);
   if (!ask.response.ok || ask.body.externalAiAccess !== false || !ask.body.doctorReviewRequired || !ask.body.citations.length) throw new Error("ask did not return safe cited answer");
   pass("ask returns local cited answer with no external AI");
 
@@ -74,7 +91,8 @@ async function main() {
   pass("guideline output avoids diagnosis and prescribing wording");
 
   const logs = await request("/guidelines/query-logs");
-  if (!logs.response.ok || !Array.isArray(logs.body) || logs.body.length < 2) throw new Error("query logs unavailable");
+  const queryLogs = logs.body.queryLogs ?? logs.body;
+  if (!logs.response.ok || !Array.isArray(queryLogs) || queryLogs.length < 2) throw new Error("query logs unavailable");
   pass("query logs recorded");
 
   const audit = await request("/audit?limit=100");

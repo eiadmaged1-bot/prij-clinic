@@ -123,12 +123,10 @@ const routeDefinitions = [
   { method: "GET", path: "/guidelines/documents", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local document metadata only." },
   { method: "GET", path: "/guidelines/documents/:guidelineDocumentId", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local document metadata and chunks only." },
   { method: "POST", path: "/guidelines/documents/:guidelineDocumentId/review", category: "guidelines-review", requiredPermission: "guideline.review", allowedAs: "doctor", denyAs: "reception", fixtureBody: "guidelineReview", notes: "Clinical governance review action is audited." },
-  { method: "POST", path: "/guidelines/upload-demo-text", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "guidelineDemoText", notes: "Demo text only; no licensed PDFs or external AI." },
-  { method: "POST", path: "/guidelines/reindex", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Local reindex placeholder only." },
   { method: "GET", path: "/guidelines/search?q=doctor%20review", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", notes: "Local citation search only." },
   { method: "POST", path: "/guidelines/ask", category: "guidelines", requiredPermission: "guideline.read", allowedAs: "doctor", denyAs: "reception", fixtureBody: "guidelineAsk", notes: "Extractive/mock local answer only; no external AI." },
   { method: "GET", path: "/guidelines/query-logs", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Query logs are owner/admin-managed." },
-  { method: "POST", path: "/guidelines/documents/:guidelineDocumentId/archive", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", notes: "Archive action is audited." }
+  { method: "POST", path: "/guidelines/documents/:guidelineDocumentId/archive", category: "guidelines-admin", requiredPermission: "guideline.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "guidelineReview", notes: "Archive action is audited." }
 ];
 
 export const routeManifest = routeDefinitions.map((route) => ({
@@ -357,8 +355,8 @@ export function bodyFor(kind, ids) {
     managementSnapshot: { patientId: ids.patientId, diagnosisText: "endometriosis", protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1", clinicalGoal: "pain control" },
     managementReview: { decision: "approved" },
     managementMemory: { memoryType: "protocol_used", title: "Demo protocol memory", valueJson: { protocolCode: "ENDOMETRIOSIS_MANAGEMENT_V1" } },
-    guidelineSource: { name: `Demo Route Guideline Source ${runId}`, abbreviation: "DRGS", notes: "Demo source metadata only. Governance review required." },
-    guidelineSourcePatch: { abbreviation: "DRG", notes: "Demo source metadata update only. Governance review required." },
+    guidelineSource: { name: `Demo Route Guideline Source ${runId}`, organization: `Demo Route Guideline Source ${runId}`, sourceType: "OPEN_PUBLIC", notes: "Demo source metadata only. Governance review required." },
+    guidelineSourcePatch: { name: `Demo Route Guideline Source ${runId} Updated`, organization: `Demo Route Guideline Source ${runId} Updated`, sourceType: "OPEN_PUBLIC", notes: "Demo source metadata update only. Governance review required." },
     guidelineDemoText: {
       sourceName: "Local Clinic Protocol",
       title: `Demo route guideline text ${runId}`,
@@ -427,7 +425,9 @@ export async function createRouteFixtures(ownerToken) {
   await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
   const guidelineSource = await apiJson("POST", "/guidelines/sources", ownerToken, bodyFor("guidelineSource", ids));
   ids.guidelineSourceId = guidelineSource.id;
-  const guidelineDocument = await apiJson("POST", "/guidelines/upload-demo-text", ownerToken, bodyFor("guidelineDemoText", ids));
+  const guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
+  const guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
+  if (!guidelineDocument?.id) throw new Error("Expected seeded guideline document fixture.");
   ids.guidelineDocumentId = guidelineDocument.id;
   return ids;
 }

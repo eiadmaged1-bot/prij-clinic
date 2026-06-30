@@ -2,9 +2,13 @@
 
 Clinic Management System V0.5.2 integrated local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, and the local Guideline Center.
 
-Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.
+Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, secure Guideline Center, guideline source registry, private guideline vault controls, protocol-backed AI Management Snapshots, Medication Intelligence Engine, Egypt/Gulf drug-market references, dashboard summary, disabled AI draft placeholders, local backup helpers, and CI/security tests.
 
-V0.5.2 is a verified local/private integration of the AI Management Mega Leap branch and Medical Calculator Suite branch. It is not production-ready, not a medical device, and must not be used with real patient data.
+V0.6 master-unified merges the latest calculator/AI management mega integration with the Medication Intelligence Engine. It is not production-ready, not a medical device, and must not be used with real patient data.
+
+The local Clinical Guideline Center supports owner/admin/doctor evidence-library workflows, source registry metadata, private licensed upload storage, local text extraction/chunking, citation search, and mock/local RAG answers from indexed chunks only. It does not call external AI providers and does not modify clinical records.
+
+V0.6 UI shell/theme/demo-data hotfix stabilizes one shared app shell across all themes, makes Comfort/Large/Compact density visibly different, preserves authorized navigation and patient tabs during theme changes, and restores demo-only Medication Center, Guideline Center, and Drug Market seed visibility. Demo medication, guideline, and market records are reference placeholders only, not a production clinical database.
 
 The locked pilot flow is:
 
@@ -54,6 +58,9 @@ Release-candidate verification and production-readiness planning are documented 
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
 - `docs/V0_3_FINANCE_GYN_INTEGRATION.md`
 - `docs/V0_5_CALCULATORS_AI_MEGA_INTEGRATION.md`
+- `docs/V0_3_FINANCE_GYN_GUIDELINE_INTEGRATION.md`
+- `docs/MEDICATION_INTELLIGENCE_ENGINE.md`
+- `docs/EGYPT_GULF_DRUG_MARKET_DATABASE.md`
 
 ## Safety Rules
 
@@ -94,6 +101,8 @@ APP_URL=http://localhost:3000
 DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
 JWT_SECRET=your-local-dev-secret
 JWT_EXPIRES_IN=1h
+GUIDELINE_VAULT_ENCRYPTION_KEY=
+GUIDELINE_VAULT_ENCRYPTION_KEY_ID=local-dev-key
 DEMO_OWNER_EMAIL=owner@prij.local
 DEMO_OWNER_PASSWORD=LocalDev123!
 SEED_DEMO_OWNER=true
@@ -159,12 +168,22 @@ http://localhost:3000/billing
 http://localhost:3000/consents
 http://localhost:3000/calculators
 http://localhost:3000/ai-drafts
+http://localhost:3000/guidelines
+http://localhost:3000/guidelines/search
+http://localhost:3000/guidelines/ask
+http://localhost:3000/guidelines/upload
 http://localhost:3000/protocol-atlas
 http://localhost:3000/admin/calculators
 http://localhost:3000/admin/protocol-atlas
 http://localhost:3000/guidelines
 http://localhost:3000/guidelines/search
 http://localhost:3000/guidelines/ask
+http://localhost:3000/medications
+http://localhost:3000/medications/search
+http://localhost:3000/drug-market
+http://localhost:3000/drug-market/search
+http://localhost:3000/admin/medications
+http://localhost:3000/admin/drug-market
 ```
 
 Recommended demo flow:
@@ -270,6 +289,9 @@ GET  /calculators/ob/patient/:patientId/current
 POST /calculators/ob/dating/:id/set-best
 POST /calculators/ob/dating/:id/lock
 GET  /admin/calculators
+GET  /guidelines/documents/:id/view
+GET  /guidelines/documents/:id/download
+PATCH /guidelines/documents/:id/file-access-settings
 GET  /protocol-atlas
 GET  /protocol-atlas/groups
 GET  /protocol-atlas/:id
@@ -327,6 +349,11 @@ npm run test:accounts:rbac
 npm run test:finance:reports
 npm run test:calculators
 npm run test:ob-dating
+npm run test:guidelines
+npm run test:integrated:probes
+npm run test:medications
+npm run test:drug-market
+npm run test:medication-intelligence
 ```
 
 Security integration CI is handled by a separate workflow, `Security Integration Tests`, on `workflow_dispatch`, `pull_request`, and pushes to `security/**`, `tests/**`, `ci/**`, and `auto/**`.
@@ -440,6 +467,15 @@ npm run test:gyn:starter
 ```
 
 These use fake/demo data only. Finance remains manual with no real payment gateway, and gynecology remains recording-only with no automatic diagnosis, treatment recommendation, contraception recommendation, or prescribing.
+
+Guideline Center checks:
+
+```powershell
+npm run test:guidelines
+npm run test:integrated:probes
+```
+
+These use fake/demo text only. Do not upload real licensed guideline files. `GUIDELINE_VAULT_ENCRYPTION_KEY` must remain a local non-committed secret before any real private vault use.
 
 ## Local Backup
 
