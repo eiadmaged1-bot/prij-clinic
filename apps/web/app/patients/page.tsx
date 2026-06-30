@@ -117,7 +117,9 @@ export default function PatientsPage() {
         {status === "Loading" ? <div className="skeleton" /> : null}
 
         {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
-          <div className="empty-state">No patient files match this view. Create a new demo patient file to begin.</div>
+          <div className="empty-state">
+            No patient files yet. Create your first test patient. Use fake/demo-only data. Do not use real patient data in local demo.
+          </div>
         ) : null}
 
         {filtered.length > 0 ? (

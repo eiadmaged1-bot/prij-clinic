@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
+import { adminNavigationGroup, navigationGroups, type NavGroup } from "../lib/navigation-manifest";
 
 type Field = {
   name: string;
@@ -28,93 +29,7 @@ type MvpPageProps = {
   primaryAction?: [string, string];
 };
 
-type NavGroup = {
-  title: string;
-  links: Array<[string, string, IconName]>;
-};
-
-type PortalSideItem = {
-  label: string;
-  icon: IconName;
-  href?: string;
-  badge?: string;
-};
-
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-
-const navGroups: NavGroup[] = [
-  {
-    title: "Operations",
-    links: [
-      ["/dashboard", "Dashboard", "dashboard"],
-      ["/doctor", "Doctor Mode", "doctor"],
-      ["/patients", "Patients", "patients"],
-      ["/patients/new", "New Patient", "patients"],
-      ["/appointments", "Appointments", "calendar"],
-      ["/calendar", "Calendar", "calendar"],
-      ["/queue", "Queue", "queue"]
-    ]
-  },
-  {
-    title: "Clinical",
-    links: [
-      ["/doctor/visit", "Guided Visit", "encounter"],
-      ["/protocol-atlas", "Protocol Atlas", "ai"],
-      ["/medications", "Medications", "prescription"],
-      ["/drug-market", "Drug Market", "prescription"],
-      ["/encounters", "Visits", "encounter"],
-      ["/prescriptions", "Prescriptions", "prescription"],
-      ["/investigations", "Orders", "investigations"],
-      ["/reports", "Reports", "reports"]
-    ]
-  },
-  {
-    title: "OB/Pregnancy",
-    links: [
-      ["/pregnancies", "Pregnancy", "pregnancy"],
-      ["/ultrasound", "Ultrasound", "ultrasound"]
-    ]
-  },
-  {
-    title: "Finance",
-    links: [["/billing", "Billing", "billing"]]
-  },
-  {
-    title: "Safety/Admin",
-    links: [
-      ["/consents", "Consents", "consent"],
-      ["/ai-drafts", "AI Draft Review", "ai"]
-    ]
-  }
-];
-
-const adminNavGroup: NavGroup = {
-  title: "Admin",
-  links: [
-    ["/admin", "Control Center", "admin"],
-    ["/admin/medications", "Medication Catalog", "prescription"],
-    ["/admin/drug-market", "Drug Market Admin", "prescription"],
-    ["/admin/protocol-atlas", "Protocol Verification", "ai"],
-    ["/admin/appearance", "Appearance", "settings"],
-    ["/admin/accounts", "Accounts", "reception"]
-  ]
-};
-
-const portalSideItems: PortalSideItem[] = [
-  { label: "Dashboard", icon: "dashboard", href: "/dashboard" },
-  { label: "Doctor Mode", icon: "doctor", href: "/doctor" },
-  { label: "Calendar", icon: "calendar", href: "/calendar", badge: "Today" },
-  { label: "Patients", icon: "patients", href: "/patients" },
-  { label: "Lab Orders", icon: "investigations", href: "/investigations" },
-  { label: "Finance", icon: "billing", href: "/billing" },
-  { label: "Inventory", icon: "files", badge: "Later" },
-  { label: "Accounts", icon: "reception", href: "/admin/accounts" },
-  { label: "Settings", icon: "settings", href: "/admin" },
-  { label: "Logs", icon: "timeline", href: "/admin" },
-  { label: "Messaging", icon: "ai", badge: "Later" },
-  { label: "Analytics", icon: "dashboard", badge: "Later" },
-  { label: "Support", icon: "consent", badge: "Later" }
-];
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -322,8 +237,7 @@ export function MvpPage({
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [comfort, setComfort] = useState("comfortable");
-  const { theme } = useTheme();
+  const { theme, density, scale, motion, setDensity, setScale, setMotion } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
   const isDoctor = Boolean(user?.roles.includes("Doctor"));
@@ -348,25 +262,21 @@ export function AppShell({ children }: { children: ReactNode }) {
   const canOpenGuidelines = Boolean(
     permissions.includes("guidelines.read") || permissions.includes("guidelines.search")
   );
-  const visibleNavGroups = navGroups
+  const visibleNavGroups: NavGroup[] = navigationGroups
     .filter((group) => group.title !== "Clinical" || canOpenClinical || canOpenGuidelines)
     .filter((group) => group.title !== "OB/Pregnancy" || canOpenPregnancy)
     .filter((group) => group.title !== "Finance" || canOpenFinance)
     .map((group) =>
-      group.title === "Clinical" && canOpenGuidelines
-        ? { ...group, links: [...group.links, ["/guidelines", "Evidence Library", "reports"] as [string, string, IconName]] }
+      group.title === "Clinical" && !canOpenClinical
+        ? { ...group, links: group.links.filter((link) => link.href === "/guidelines") }
         : group
     )
     .map((group) =>
-      group.title === "Clinical" && !canOpenClinical
-        ? { ...group, links: group.links.filter(([href]) => href === "/guidelines") }
+      group.title === "Clinical" && !canOpenGuidelines
+        ? { ...group, links: group.links.filter((link) => link.href !== "/guidelines") }
         : group
     )
     .filter((group) => group.links.length > 0);
-
-  useEffect(() => {
-    setComfort(localStorage.getItem("prijComfortMode") ?? "comfortable");
-  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -374,18 +284,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [router, status]);
 
-  function setComfortMode(next: string) {
-    setComfort(next);
-    localStorage.setItem("prijComfortMode", next);
-  }
-
   async function signOut() {
     await logout();
     router.push("/login");
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort}`}>
+    <main className={`app-shell theme-${theme} density-${density} scale-${scale} motion-${motion}`}>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
@@ -393,45 +298,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span>V0.1 controlled demo</span>
         </Link>
 
-        {theme === "medicolize-portal" ? (
-          <nav className="nav-group portal-side-nav" aria-label="Owner portal navigation">
-            {portalSideItems
-              .filter((item) => item.href !== "/billing" || canOpenFinance)
-              .filter((item) => !["/doctor", "/investigations"].includes(item.href ?? "") || canOpenClinical)
-              .filter((item) => item.href !== "/admin" || canOpenAdmin)
-              .filter((item) => item.href !== "/admin/accounts" || canOpenAdmin)
-              .map((item) =>
-                item.href ? (
-                  <Link className={`nav-item ${isActive(pathname, item.href) ? "active" : ""}`} href={item.href} key={item.label}>
-                    <ThreeDMedicalIcon name={item.icon} size="sm" tone={item.href === "/admin" ? "violet" : "teal"} />
-                    <span>{item.label}</span>
-                    {item.badge ? <span className="side-badge">{item.badge}</span> : <span className="nav-dot" />}
-                  </Link>
-                ) : (
-                  <span className="nav-item disabled" key={item.label}>
-                    <ThreeDMedicalIcon name={item.icon} size="sm" tone="slate" />
-                    <span>{item.label}</span>
-                    <span className="side-badge">{item.badge}</span>
-                  </span>
-                )
-              )}
-          </nav>
-        ) : (
-          [...visibleNavGroups, ...(canOpenAdmin ? [adminNavGroup] : [])].map((group) => (
+        {[...visibleNavGroups, ...(canOpenAdmin ? [adminNavigationGroup] : [])].map((group) => (
             <nav className="nav-group" key={group.title} aria-label={group.title}>
               <div className="nav-group-title">{group.title}</div>
               {group.links
-                .filter(([href]) => !isDoctor || canOpenAdmin || !["/admin", "/admin/appearance", "/billing"].includes(href))
-                .map(([href, label, icon]) => (
-                <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
-                  <span>{label}</span>
+                .filter((link) => !isDoctor || canOpenAdmin || !["/admin", "/admin/appearance", "/billing"].includes(link.href))
+                .map((link) => (
+                <Link className={`nav-item ${isActive(pathname, link.href) ? "active" : ""}`} href={link.href} key={link.href}>
+                  <ThreeDMedicalIcon name={link.icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
+                  <span>{link.label}</span>
                   <span className="nav-dot" />
                 </Link>
               ))}
             </nav>
-          ))
-        )}
+          ))}
       </aside>
 
       <div className="app-main">
@@ -448,12 +328,22 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
           <div className="topbar-actions">
             <div className="comfort-switch" aria-label="Display comfort">
-              {["comfortable", "large", "compact"].map((mode) => (
-                <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
-                  <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
-                  {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
-                </button>
-              ))}
+              <button className={density === "comfortable" && scale === "normal" ? "active" : ""} onClick={() => { setDensity("comfortable"); setScale("normal"); }} type="button">
+                <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+                Comfort
+              </button>
+              <button className={scale === "magnified" ? "active" : ""} onClick={() => setScale(scale === "magnified" ? "normal" : "magnified")} type="button">
+                <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+                Large
+              </button>
+              <button className={density === "compact" ? "active" : ""} onClick={() => setDensity(density === "compact" ? "comfortable" : "compact")} type="button">
+                <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+                Compact
+              </button>
+              <button className={motion === "reduced" ? "active" : ""} onClick={() => setMotion(motion === "reduced" ? "normal" : "reduced")} type="button">
+                <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
+                Motion
+              </button>
             </div>
             <div className="user-menu" aria-label="Current user">
               <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />

@@ -82,3 +82,9 @@ This MVP foundation is not production-ready for real clinical operations. It is 
 - No real pharmacy integration exists.
 - Retail metadata connector is disabled by default.
 - Egypt, UAE, and Yemen complete market coverage may require official file uploads.
+# Current Limitations: Clean Reference Theme Workflow
+
+- Reference import helper scripts are safe placeholders and do not fetch external data.
+- Clean seed verifies bootstrap shape but DB execution still depends on local PostgreSQL availability.
+- Calculators/Formulas dashboard card is a registry placeholder, not a clinical calculator engine.
+- Medication market metadata is not patient dosing or prescribing guidance.

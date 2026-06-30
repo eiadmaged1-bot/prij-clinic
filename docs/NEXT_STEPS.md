@@ -61,3 +61,9 @@ Do not start real production deployment until the following are designed, implem
 - Add scheduled official-source update checks.
 - Improve prescription variant selection UX while keeping patient directions doctor-authored.
 - Add broader visual Playwright coverage for medication admin pages.
+# Next Steps: Clean Reference Theme Workflow
+
+- Run DB-backed clean seed and reset dry-run when PostgreSQL is available.
+- Expand reference importer scripts only after source licensing and access review.
+- Add migration-backed audit events for future reference import execution.
+- Keep AI draft features disabled until doctor-review workflow and audit requirements are complete.

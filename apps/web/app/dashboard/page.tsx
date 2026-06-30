@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { adminNavigationGroup, portalModules as navigationPortalModules } from "../../lib/navigation-manifest";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -47,22 +48,6 @@ const quickActions: Array<[string, string, string, IconName]> = [
   ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
   ["/billing", "New Invoice", "Review demo invoices without payment gateway data.", "billing"],
   ["/ai-drafts", "AI Draft Review", "Doctor review required before any use.", "ai"]
-];
-
-const portalModules: Array<[string, string, string, string, string]> = [
-  ["/patients", "Operations", "Patients", "PT", "teal"],
-  ["/appointments", "Operations", "Appointments", "AP", "teal"],
-  ["/queue", "Operations", "Queue", "QU", "teal"],
-  ["/calendar", "Operations", "Calendar", "CA", "teal"],
-  ["/encounters", "Clinical", "Encounters", "EN", "navy"],
-  ["/prescriptions", "Clinical", "Prescriptions", "RX", "navy"],
-  ["/investigations", "Clinical", "Investigations", "IV", "navy"],
-  ["/reports", "Clinical", "Reports", "RP", "navy"],
-  ["/pregnancies", "OB/Pregnancy", "Pregnancy", "PG", "teal"],
-  ["/ultrasound", "OB/Pregnancy", "Ultrasound", "US", "teal"],
-  ["/billing", "Finance", "Billing", "BI", "navy"],
-  ["/consents", "Safety", "Consents", "CO", "gray"],
-  ["/ai-drafts", "Safety", "AI Draft Review", "AI", "gray"]
 ];
 
 export default function DashboardPage() {
@@ -189,12 +174,21 @@ export default function DashboardPage() {
 
         <section className="portal-grid" aria-label="Clinic app launcher">
           {[
-            ...portalModules,
+            ...navigationPortalModules.map((module) => [
+              module.href,
+              module.category,
+              module.label,
+              module.label.slice(0, 2).toUpperCase(),
+              module.category === "Clinical" || module.category === "Finance" ? "navy" : module.category === "Safety/Admin" ? "gray" : "teal"
+            ] as [string, string, string, string, string]),
             ...(canOpenAdmin
-              ? ([
-                  ["/admin", "Admin", "Control Center", "AD", "gray"],
-                  ["/admin/appearance", "Admin", "Appearance", "TH", "gray"]
-                ] as Array<[string, string, string, string, string]>)
+              ? adminNavigationGroup.links.map((link) => [
+                  link.href,
+                  "Admin",
+                  link.label,
+                  link.label.slice(0, 2).toUpperCase(),
+                  "gray"
+                ] as [string, string, string, string, string])
               : [])
           ].map(
             ([href, category, label, icon, tone]) => (

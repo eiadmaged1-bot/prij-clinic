@@ -11,10 +11,15 @@ const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
 const appEnv = process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "local");
 const isProduction = appEnv === "production";
-const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA !== "false";
+const requestedSeedMode = ((process.env.PRIJ_SEED_MODE || (process.env.SEED_DEMO_DATA === "true" ? "demo" : "clean")) + "").toLowerCase();
+if (!["clean", "test", "demo"].includes(requestedSeedMode)) {
+  throw new Error("PRIJ_SEED_MODE must be one of clean, test, or demo.");
+}
+const normalizedSeedMode = requestedSeedMode;
+const seedIsCleanMode = normalizedSeedMode === "clean";
 
-if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true")) {
-  throw new Error("Production seed refuses demo data. Set SEED_DEMO_DATA=false and SEED_DEMO_OWNER=false.");
+if (isProduction && (normalizedSeedMode !== "clean" || process.env.SEED_DEMO_OWNER === "true")) {
+  throw new Error("Production seed refuses demo data. Use PRIJ_SEED_MODE=clean.");
 }
 
 for (const [name, value] of Object.entries({
@@ -375,7 +380,7 @@ async function hashPassword(password) {
   return `scrypt:16384:8:1:${salt}:${key.toString("base64url")}`;
 }
 
-async function seedMedicationIntelligence(prisma) {
+async function seedMedicationIntelligence(prisma, includeFixtureCatalogs = false) {
   const families = [
     ["BETA_BLOCKER", "beta blocker", ["beta-blocker", "beta blockers"]],
     ["ACEI", "ACE inhibitor", ["ACEI", "ACE inhibitors"]],
@@ -584,87 +589,89 @@ async function seedMedicationIntelligence(prisma) {
     }
   });
 
-  await prisma.herbalProduct.upsert({
-    where: { id: "00000000-0000-0000-0000-00000000f001" },
-    update: {
-      commonName: "Demo herbal supplement",
-      botanicalName: "Demo botanica",
-      normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
-      cautionSummary: "Demo catalog caution only. Doctor review is required.",
-      verificationStatus: "catalog_only"
-    },
-    create: {
-      id: "00000000-0000-0000-0000-00000000f001",
-      commonName: "Demo herbal supplement",
-      botanicalName: "Demo botanica",
-      normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
-      cautionSummary: "Demo catalog caution only. Doctor review is required.",
-      verificationStatus: "catalog_only"
+  if (includeFixtureCatalogs) {
+    await prisma.herbalProduct.upsert({
+      where: { id: "00000000-0000-0000-0000-00000000f001" },
+      update: {
+        commonName: "Demo herbal supplement",
+        botanicalName: "Demo botanica",
+        normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
+        cautionSummary: "Demo catalog caution only. Doctor review is required.",
+        verificationStatus: "catalog_only"
+      },
+      create: {
+        id: "00000000-0000-0000-0000-00000000f001",
+        commonName: "Demo herbal supplement",
+        botanicalName: "Demo botanica",
+        normalizedSearchText: normalizeSearchText("Demo herbal supplement Demo botanica"),
+        cautionSummary: "Demo catalog caution only. Doctor review is required.",
+        verificationStatus: "catalog_only"
+      }
+    });
+
+    const demoProducts = [
+      ["DemoEG", "Demo generic EG", [["EG", "1 g tablet", "tablet"], ["EG", "457 mg/5 mL oral suspension", "oral suspension"]]],
+      ["DemoKSA", "Demo generic KSA", [["KSA", "625 mg tablet", "tablet"]]],
+      ["DemoUAE", "Demo generic UAE", [["UAE", "vial", "vial"]]],
+      ["DemoYEM", "Demo generic YEM", [["YEM", "drops", "drops"]]],
+      ["DemoGulf", "Demo generic Gulf", [["KSA", "suppository", "suppository"], ["UAE", "cream", "cream"]]]
+    ];
+
+    for (const [tradeName, genericName, variants] of demoProducts) {
+      let product = await prisma.drugMarketProduct.findFirst({ where: { tradeName, genericName } });
+      const productData = {
+        tradeName,
+        genericName,
+        normalizedSearchText: normalizeSearchText(`${tradeName} ${genericName} demo market product ACEI beta blocker NSAID`),
+        familyText: tradeName === "DemoEG" ? "ACE inhibitor" : null,
+        manufacturer: "Demo manufacturer",
+        marketingCompany: "Demo marketing company",
+        verificationStatus: "catalog_only"
+      };
+      product = product
+        ? await prisma.drugMarketProduct.update({ where: { id: product.id }, data: productData })
+        : await prisma.drugMarketProduct.create({ data: productData });
+
+      for (const [countryCode, strengthText, dosageForm] of variants) {
+        const source = marketSourceByCode.get(countryCode === "EG" ? "EDA_EDDB" : countryCode === "KSA" ? "SFDA_DRUG_LIST" : countryCode === "UAE" ? "UAE_EDE_DIRECTORY" : "YEMEN_OFFICIAL_UPLOAD");
+        const sourceRowHash = crypto.createHash("sha256").update(`${tradeName}|${countryCode}|${strengthText}`).digest("hex");
+        await prisma.drugMarketVariant.upsert({
+          where: { countryCode_sourceRowHash: { countryCode, sourceRowHash } },
+          update: {
+            productId: product.id,
+            sourceId: source?.id,
+            tradeName,
+            genericName,
+            strengthText,
+            dosageForm,
+            route: dosageForm === "tablet" ? "oral" : null,
+            packageText: "Demo pack variant only; not patient directions.",
+            manufacturer: "Demo manufacturer",
+            marketingCompany: "Demo marketing company",
+            registrationNumber: `DEMO-${countryCode}-${tradeName}`,
+            sourceRowHash,
+            verificationStatus: "catalog_only"
+          },
+          create: {
+            productId: product.id,
+            countryCode,
+            sourceId: source?.id,
+            tradeName,
+            genericName,
+            strengthText,
+            dosageForm,
+            route: dosageForm === "tablet" ? "oral" : null,
+            packageText: "Demo pack variant only; not patient directions.",
+            manufacturer: "Demo manufacturer",
+            marketingCompany: "Demo marketing company",
+            registrationNumber: `DEMO-${countryCode}-${tradeName}`,
+            sourceRowHash,
+            verificationStatus: "catalog_only"
+          }
+        });
+      }
+      await recomputeDemoAvailability(prisma, product.id);
     }
-  });
-
-  const demoProducts = [
-    ["DemoEG", "Demo generic EG", [["EG", "1 g tablet", "tablet"], ["EG", "457 mg/5 mL oral suspension", "oral suspension"]]],
-    ["DemoKSA", "Demo generic KSA", [["KSA", "625 mg tablet", "tablet"]]],
-    ["DemoUAE", "Demo generic UAE", [["UAE", "vial", "vial"]]],
-    ["DemoYEM", "Demo generic YEM", [["YEM", "drops", "drops"]]],
-    ["DemoGulf", "Demo generic Gulf", [["KSA", "suppository", "suppository"], ["UAE", "cream", "cream"]]]
-  ];
-
-  for (const [tradeName, genericName, variants] of demoProducts) {
-    let product = await prisma.drugMarketProduct.findFirst({ where: { tradeName, genericName } });
-    const productData = {
-      tradeName,
-      genericName,
-      normalizedSearchText: normalizeSearchText(`${tradeName} ${genericName} demo market product ACEI beta blocker NSAID`),
-      familyText: tradeName === "DemoEG" ? "ACE inhibitor" : null,
-      manufacturer: "Demo manufacturer",
-      marketingCompany: "Demo marketing company",
-      verificationStatus: "catalog_only"
-    };
-    product = product
-      ? await prisma.drugMarketProduct.update({ where: { id: product.id }, data: productData })
-      : await prisma.drugMarketProduct.create({ data: productData });
-
-    for (const [countryCode, strengthText, dosageForm] of variants) {
-      const source = marketSourceByCode.get(countryCode === "EG" ? "EDA_EDDB" : countryCode === "KSA" ? "SFDA_DRUG_LIST" : countryCode === "UAE" ? "UAE_EDE_DIRECTORY" : "YEMEN_OFFICIAL_UPLOAD");
-      const sourceRowHash = crypto.createHash("sha256").update(`${tradeName}|${countryCode}|${strengthText}`).digest("hex");
-      await prisma.drugMarketVariant.upsert({
-        where: { countryCode_sourceRowHash: { countryCode, sourceRowHash } },
-        update: {
-          productId: product.id,
-          sourceId: source?.id,
-          tradeName,
-          genericName,
-          strengthText,
-          dosageForm,
-          route: dosageForm === "tablet" ? "oral" : null,
-          packageText: "Demo pack variant only; not patient directions.",
-          manufacturer: "Demo manufacturer",
-          marketingCompany: "Demo marketing company",
-          registrationNumber: `DEMO-${countryCode}-${tradeName}`,
-          sourceRowHash,
-          verificationStatus: "catalog_only"
-        },
-        create: {
-          productId: product.id,
-          countryCode,
-          sourceId: source?.id,
-          tradeName,
-          genericName,
-          strengthText,
-          dosageForm,
-          route: dosageForm === "tablet" ? "oral" : null,
-          packageText: "Demo pack variant only; not patient directions.",
-          manufacturer: "Demo manufacturer",
-          marketingCompany: "Demo marketing company",
-          registrationNumber: `DEMO-${countryCode}-${tradeName}`,
-          sourceRowHash,
-          verificationStatus: "catalog_only"
-        }
-      });
-    }
-    await recomputeDemoAvailability(prisma, product.id);
   }
 }
 
@@ -804,11 +811,77 @@ async function main() {
     }
   }
 
-  await seedMedicationIntelligence(prisma);
+  await seedMedicationIntelligence(prisma, !seedIsCleanMode);
 
-  let demoOwner = null;
+  const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
+  const localAdmin = await prisma.user.upsert({
+    where: { email: "eyad.admin@prij.local" },
+    update: {
+      loginId: "eyad",
+      displayName: "System Owner",
+      status: "active",
+      branchId: mainBranch.id,
+      permissionPreset: "advanced",
+      protectedAccount: true,
+      passwordHash: await hashPassword(localAdminPassword),
+      failedLoginCount: 0,
+      lockedUntil: null
+    },
+    create: {
+      email: "eyad.admin@prij.local",
+      loginId: "eyad",
+      displayName: "System Owner",
+      status: "active",
+      branchId: mainBranch.id,
+      permissionPreset: "advanced",
+      protectedAccount: true,
+      passwordHash: await hashPassword(localAdminPassword)
+    }
+  });
 
-  if (seedDemoData && process.env.SEED_DEMO_OWNER !== "false") {
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId_branchId: {
+        userId: localAdmin.id,
+        roleId: roleByName.get("Owner").id,
+        branchId: mainBranch.id
+      }
+    },
+    update: {},
+    create: {
+      userId: localAdmin.id,
+      roleId: roleByName.get("Owner").id,
+      branchId: mainBranch.id,
+      createdByUserId: localAdmin.id
+    }
+  });
+
+  for (const key of reservedSystemOwnerPermissions) {
+    const permission = permissionByKey.get(key);
+
+    await prisma.userPermissionOverride.upsert({
+      where: {
+        userId_permissionId: {
+          userId: localAdmin.id,
+          permissionId: permission.id
+        }
+      },
+      update: {
+        effect: "allow",
+        grantedByUserId: localAdmin.id
+      },
+      create: {
+        userId: localAdmin.id,
+        permissionId: permission.id,
+        effect: "allow",
+        grantedByUserId: localAdmin.id
+      }
+    });
+  }
+
+  let demoOwner = localAdmin;
+
+  if (!seedIsCleanMode && process.env.SEED_DEMO_OWNER !== "false") {
     const email = process.env.DEMO_OWNER_EMAIL || "owner@prij.local";
     const password = process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
 
@@ -856,78 +929,7 @@ async function main() {
     demoOwner = owner;
   }
 
-  if (seedDemoData) {
-    const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
-    const localAdmin = await prisma.user.upsert({
-      where: { email: "eyad.admin@prij.local" },
-      update: {
-        loginId: "eyad",
-        displayName: "Eyad Admin",
-        status: "active",
-        branchId: mainBranch.id,
-        permissionPreset: "advanced",
-        protectedAccount: true,
-        passwordHash: await hashPassword(localAdminPassword),
-        failedLoginCount: 0,
-        lockedUntil: null
-      },
-      create: {
-        email: "eyad.admin@prij.local",
-        loginId: "eyad",
-        displayName: "Eyad Admin",
-        status: "active",
-        branchId: mainBranch.id,
-        permissionPreset: "advanced",
-        protectedAccount: true,
-        createdByUserId: demoOwner?.id,
-        passwordHash: await hashPassword(localAdminPassword)
-      }
-    });
-
-    await prisma.userRole.upsert({
-      where: {
-        userId_roleId_branchId: {
-          userId: localAdmin.id,
-          roleId: roleByName.get("Owner").id,
-          branchId: mainBranch.id
-        }
-      },
-      update: {},
-      create: {
-        userId: localAdmin.id,
-        roleId: roleByName.get("Owner").id,
-        branchId: mainBranch.id,
-        createdByUserId: demoOwner?.id
-      }
-    });
-
-    if (!demoOwner) {
-      demoOwner = localAdmin;
-    }
-
-    for (const key of reservedSystemOwnerPermissions) {
-      const permission = permissionByKey.get(key);
-
-      await prisma.userPermissionOverride.upsert({
-        where: {
-          userId_permissionId: {
-            userId: localAdmin.id,
-            permissionId: permission.id
-          }
-        },
-        update: {
-          effect: "allow",
-          grantedByUserId: localAdmin.id
-        },
-        create: {
-          userId: localAdmin.id,
-          permissionId: permission.id,
-          effect: "allow",
-          grantedByUserId: localAdmin.id
-        }
-      });
-    }
-
+  if (!seedIsCleanMode) {
     const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
     const demoUsers = [
       ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
@@ -1001,7 +1003,7 @@ async function main() {
 
   await seedWomensHealthProtocols(prisma);
 
-  if (!seedDemoData) {
+if (seedIsCleanMode) {
     return;
   }
 

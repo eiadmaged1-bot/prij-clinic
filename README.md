@@ -525,3 +525,34 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/DEPLOYMENT_READINESS.md`
 - `docs/ENVIRONMENT_STRATEGY.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+# Clean Data and Reference Bootstrap
+
+Default seeding is clean:
+
+```powershell
+npm run seed:clean
+npm run seed:reference
+```
+
+Demo/test fixtures require an explicit mode:
+
+```powershell
+npm run seed:test-fixtures
+```
+
+Local patient workflow data can be inspected or removed without dropping schema, migrations, users, RBAC, branches, system settings, audit logs, or reference data:
+
+```powershell
+npm run db:reset:clinic-data -- --dry-run
+npm run db:reset:clinic-data
+```
+
+Safety checks:
+
+```powershell
+npm run test:data:hygiene
+npm run test:reference:data
+npm run test:theme:matrix
+```
+
+Do not use real patient data in local demo. Reference medication strength/form/package fields are market metadata only and never patient directions.

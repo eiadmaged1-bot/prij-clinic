@@ -29,6 +29,18 @@
   --density-space: 1rem;
 }
 
+:root[data-density="compact"] {
+  --density-space: 0.72rem;
+}
+
+:root[data-scale="magnified"] {
+  --font-scale: 1.08;
+}
+
+:root[data-motion="reduced"] {
+  scroll-behavior: auto;
+}
+
 :root[data-theme="minimal-clean"] {
   --background: #f8fafc;
   --background-soft: #ffffff;
@@ -96,7 +108,6 @@
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --density-space: 0.85rem;
 }
 
 :root[data-theme="compact-operations"] {
@@ -113,7 +124,6 @@
   --radius-sm: 5px;
   --radius-md: 7px;
   --radius-lg: 10px;
-  --density-space: 0.7rem;
 }
 
 :root[data-theme="dark-navy"] {
@@ -161,10 +171,19 @@ body {
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-  font-size: 16px;
+  font-size: calc(16px * var(--font-scale));
   line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 1ms !important;
 }
 
 a {
@@ -1529,6 +1548,39 @@ td span {
   margin-bottom: 1rem;
 }
 
+.preference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.segmented-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  padding: 0.2rem;
+}
+
+.segmented-control button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 2.35rem;
+  padding: 0.5rem 0.8rem;
+}
+
+.segmented-control button.active {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
+}
+
 .theme-preview {
   display: grid;
   gap: 1rem;
@@ -1719,23 +1771,23 @@ td span {
   box-shadow: var(--shadow-sm);
 }
 
-.comfort-large {
+.scale-magnified {
   font-size: 1.08rem;
 }
 
-.comfort-large .button,
-.comfort-large input,
-.comfort-large select,
-.comfort-large textarea {
+.scale-magnified .button,
+.scale-magnified input,
+.scale-magnified select,
+.scale-magnified textarea {
   min-height: 3.25rem;
   font-size: 1rem;
 }
 
-.comfort-compact .panel,
-.comfort-compact .card,
-.comfort-compact .data-row,
-.comfort-compact .metric-card,
-.comfort-compact .quick-card {
+.density-compact .panel,
+.density-compact .card,
+.density-compact .data-row,
+.density-compact .metric-card,
+.density-compact .quick-card {
   padding: 0.8rem;
 }
 
@@ -2251,17 +2303,17 @@ button.obgyn-template-card {
   color: var(--foreground);
 }
 
-:root[data-theme="compact-operations"] .panel,
-:root[data-theme="compact-operations"] .card,
-:root[data-theme="compact-operations"] .data-row,
-:root[data-theme="compact-operations"] .metric-card {
+:root[data-density="compact"] .panel,
+:root[data-density="compact"] .card,
+:root[data-density="compact"] .data-row,
+:root[data-density="compact"] .metric-card {
   padding: 0.8rem;
 }
 
-:root[data-theme="compact-operations"] .summary-grid,
-:root[data-theme="compact-operations"] .dashboard-grid,
-:root[data-theme="compact-operations"] .content-grid,
-:root[data-theme="compact-operations"] .data-list {
+:root[data-density="compact"] .summary-grid,
+:root[data-density="compact"] .dashboard-grid,
+:root[data-density="compact"] .content-grid,
+:root[data-density="compact"] .data-list {
   gap: 0.65rem;
 }
 

@@ -93,3 +93,11 @@ npm run test:ai-management
 The `leap/e-medication-intelligence-engine` branch adds a unified medication catalog, herbal references, patient medication/allergy lists, draft safety checks, Egypt/Gulf market variant database, configurable country badges, source/import policy, admin controls, coverage dashboard pages, regression tests, and documentation.
 
 The feature is a professional reference and safety-support system only. It does not provide patient self-medication guidance, pharmacy availability, retail workflows, autonomous prescribing, automatic dose changes, or AI clinical decisions.
+# Clean Reference Theme Sprint Status
+
+- Clean seed mode defaults on unless `SEED_DEMO_DATA=true`.
+- Clean seed mode preserves system owner/RBAC/setup/reference bootstrap and skips fake patient workflow records.
+- Local clinic-data reset script added with dry-run and production refusal.
+- Shared navigation and patient-tab manifests added.
+- Theme, density, scale, and motion are independent axes.
+- Admin reference-data dashboard added.

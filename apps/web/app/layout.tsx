@@ -15,7 +15,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="clinic-premium" data-density="comfortable" data-scale="normal" data-motion="normal" suppressHydrationWarning>
       <body>
         <ThemeProvider>
           <SessionProvider>{children}</SessionProvider>

@@ -17,7 +17,7 @@ const fallbackSettings: AppearanceSettings = {
 };
 
 export default function AppearancePage() {
-  const { theme, setTheme, resetTheme } = useTheme();
+  const { theme, density, scale, motion, setTheme, setDensity, setScale, setMotion, resetTheme, resetDisplayPreferences } = useTheme();
   const [settings, setSettings] = useState<AppearanceSettings>(fallbackSettings);
   const [selectedTheme, setSelectedTheme] = useState<AppThemeId>(theme);
   const [message, setMessage] = useState("");
@@ -118,6 +118,7 @@ export default function AppearancePage() {
 
   function resetBrowserTheme() {
     resetTheme();
+    resetDisplayPreferences();
     setSelectedTheme(settings.defaultTheme);
     setMessage("This browser will use the default theme again.");
     setError("");
@@ -164,6 +165,48 @@ export default function AppearancePage() {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>Display axes</h2>
+            <p className="muted">Density, scale, and motion are independent of theme and do not change navigation availability.</p>
+          </div>
+          <span className="badge accent">Browser local</span>
+        </div>
+        <div className="preference-grid">
+          <div>
+            <p className="eyebrow">Density</p>
+            <div className="segmented-control" aria-label="Density">
+              {(["comfortable", "compact"] as const).map((option) => (
+                <button className={density === option ? "active" : ""} key={option} onClick={() => setDensity(option)} type="button">
+                  {option === "comfortable" ? "Comfortable" : "Compact"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="eyebrow">Scale</p>
+            <div className="segmented-control" aria-label="Scale">
+              {(["normal", "magnified"] as const).map((option) => (
+                <button className={scale === option ? "active" : ""} key={option} onClick={() => setScale(option)} type="button">
+                  {option === "normal" ? "Normal" : "Magnified"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="eyebrow">Motion</p>
+            <div className="segmented-control" aria-label="Motion">
+              {(["normal", "reduced"] as const).map((option) => (
+                <button className={motion === option ? "active" : ""} key={option} onClick={() => setMotion(option)} type="button">
+                  {option === "normal" ? "Normal" : "Reduced"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="panel">
