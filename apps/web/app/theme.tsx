@@ -1,8 +1,14 @@
 "use client";
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import {
+  type AppThemeId,
+  isThemeId,
+  normalizeThemeId,
+  themeRegistry
+} from "../lib/theme-registry";
 
-export type AppThemeId = "clinic-premium" | "medicolize-portal" | "incision-portal" | "minimal-clean" | "compact-operations";
+export type { AppThemeId };
 
 export type AppTheme = {
   id: AppThemeId;
@@ -11,40 +17,14 @@ export type AppTheme = {
   tone: string;
 };
 
-export const themes: AppTheme[] = [
-  {
-    id: "clinic-premium",
-    name: "Original Premium",
-    description: "Modern clinical workspace with sidebar navigation and calm teal accents.",
-    tone: "Premium clinic"
-  },
-  {
-    id: "medicolize-portal",
-    name: "Clinic Portal",
-    description: "Owner-focused operating portal with a dark sidebar, search top bar, compact badges, and patient-centered navigation.",
-    tone: "Owner portal"
-  },
-  {
-    id: "incision-portal",
-    name: "Incision Portal",
-    description: "Clean app launcher cards with a simple top header and rounded tiles.",
-    tone: "Portal cards"
-  },
-  {
-    id: "minimal-clean",
-    name: "Minimal Clean",
-    description: "Mostly white and slate, with less visual weight for daily use.",
-    tone: "Quiet daily use"
-  },
-  {
-    id: "compact-operations",
-    name: "Compact Operations",
-    description: "Denser spacing for reception, queue, billing, and admin work.",
-    tone: "Dense operations"
-  }
-];
+export const themes: AppTheme[] = themeRegistry.map((theme) => ({
+  id: theme.id,
+  name: theme.displayName,
+  description: theme.description,
+  tone: theme.layoutVariant.replace("-", " ")
+}));
 
-const fallbackTheme: AppThemeId = "clinic-premium";
+const fallbackTheme: AppThemeId = "luxury-clinic";
 
 type ThemeContextValue = {
   theme: AppThemeId;
@@ -60,7 +40,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("prijClinicTheme");
     if (isThemeId(storedTheme)) {
-      setThemeState(storedTheme);
+      setThemeState(normalizeThemeId(storedTheme));
     }
   }, []);
 
@@ -72,8 +52,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       theme,
       setTheme(nextTheme) {
-        setThemeState(nextTheme);
-        window.localStorage.setItem("prijClinicTheme", nextTheme);
+        const normalized = normalizeThemeId(nextTheme);
+        setThemeState(normalized);
+        window.localStorage.setItem("prijClinicTheme", normalized);
       },
       resetTheme() {
         setThemeState(fallbackTheme);
@@ -93,8 +74,5 @@ export function useTheme() {
   }
   return context;
 }
-
-export function isThemeId(value: unknown): value is AppThemeId {
-  return typeof value === "string" && themes.some((theme) => theme.id === value);
-}
+export { isThemeId };
 

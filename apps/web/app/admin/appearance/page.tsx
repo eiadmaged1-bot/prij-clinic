@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { AppThemeId, isThemeId, themes, useTheme } from "../../theme";
+import { AppIcon } from "../../../components/ui/AppIcon";
+import { type DensityMode, normalizeDensityMode } from "../../../lib/theme-registry";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -12,7 +14,7 @@ type AppearanceSettings = {
 };
 
 const fallbackSettings: AppearanceSettings = {
-  defaultTheme: "clinic-premium",
+  defaultTheme: "luxury-clinic",
   allowUserThemeOverride: true
 };
 
@@ -20,6 +22,7 @@ export default function AppearancePage() {
   const { theme, setTheme, resetTheme } = useTheme();
   const [settings, setSettings] = useState<AppearanceSettings>(fallbackSettings);
   const [selectedTheme, setSelectedTheme] = useState<AppThemeId>(theme);
+  const [density, setDensity] = useState<DensityMode>("comfortable");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -35,6 +38,7 @@ export default function AppearancePage() {
 
   useEffect(() => {
     void loadSettings();
+    setDensity(normalizeDensityMode(localStorage.getItem("prijDensityMode")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -123,6 +127,14 @@ export default function AppearancePage() {
     setError("");
   }
 
+  function applyDensity(next: DensityMode) {
+    setDensity(next);
+    localStorage.setItem("prijDensityMode", next);
+    document.documentElement.dataset.density = next;
+    setMessage("Density saved for this browser.");
+    setError("");
+  }
+
   return (
     <AppShell>
       <section className="page-header">
@@ -142,9 +154,16 @@ export default function AppearancePage() {
         <div className="section-heading">
           <div>
             <h2>Density controls</h2>
-            <p className="muted">Comfort is the balanced default. Large increases text, controls, sidebar items, cards, and rows for tablet or RDP use. Compact tightens spacing, chips, buttons, cards, and rows while keeping text readable.</p>
+            <p className="muted">Choose compact, comfort, large, or magnified spacing without changing available tabs, routes, or permissions.</p>
           </div>
           <span className="badge accent">Saved per browser</span>
+        </div>
+        <div className="comfort-switch" aria-label="Density preview">
+          {(["compact", "comfortable", "large", "magnified"] as DensityMode[]).map((mode) => (
+            <button className={density === mode ? "active" : ""} key={mode} onClick={() => applyDensity(mode)} type="button">
+              {mode === "comfortable" ? "Comfort" : mode[0]!.toUpperCase() + mode.slice(1)}
+            </button>
+          ))}
         </div>
       </section>
 
@@ -159,6 +178,7 @@ export default function AppearancePage() {
               <span />
               <span />
             </div>
+            <AppIcon name={appTheme.id === "compact-operations" ? "queue" : appTheme.id === "medicolize-portal" ? "owner-control" : appTheme.id === "dark-navy" ? "security" : "dashboard"} size="md" />
             <div>
               <p className="eyebrow">{appTheme.tone}</p>
               <h2>{appTheme.name}</h2>
@@ -199,6 +219,24 @@ export default function AppearancePage() {
           <button className="button secondary" onClick={resetBrowserTheme} type="button">
             Reset this browser
           </button>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>3D icon preview</h2>
+            <p className="muted">Local SVG/CSS badges cover the main clinic modules without remote icon loading.</p>
+          </div>
+          <span className="badge accent">Local assets</span>
+        </div>
+        <div className="quick-grid">
+          {(["patients", "appointments", "encounters", "prescriptions", "investigations", "billing"] as const).map((icon) => (
+            <div className="quick-card" key={icon}>
+              <AppIcon name={icon} size="md" />
+              <strong>{icon.replace("-", " ").replace(/^./, (letter) => letter.toUpperCase())}</strong>
+            </div>
+          ))}
         </div>
       </section>
     </AppShell>

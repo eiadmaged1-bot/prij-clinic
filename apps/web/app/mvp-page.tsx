@@ -7,6 +7,7 @@ import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 import { navigationRegistry, type NavItem } from "./navigation-registry";
+import { type DensityMode, normalizeDensityMode } from "../lib/theme-registry";
 
 type Field = {
   name: string;
@@ -158,12 +159,12 @@ export function MvpPage({
                 {primaryAction[1]}
               </Link>
             ) : null}
-            <span className="badge warning">Demo/local only</span>
-            <span className="badge accent">AI disabled</span>
+            <span className="badge warning">Local Demo Mode</span>
+            <span className="badge accent">Doctor review required</span>
           </div>
         </div>
         <p className="muted">
-          Use fake demo records only. This V0.1 interface is for local workflow review and is not ready for real patient use.
+          Use fake demo records only. This workspace is for local workflow review and is not ready for real patient use.
         </p>
       </section>
 
@@ -173,7 +174,7 @@ export function MvpPage({
         <div className="panel">
           <div className="section-heading">
               <h2>{title} focus</h2>
-            <span className="badge">V0.1</span>
+            <span className="badge">Workflow</span>
           </div>
           <ul className="feature-list">
             {items.map((item) => (
@@ -237,19 +238,20 @@ export function MvpPage({
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [density, setDensity] = useState("comfort");
+  const [density, setDensity] = useState<DensityMode>("comfortable");
   const { theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
   const isDoctor = Boolean(user?.roles.includes("Doctor"));
   const canOpenAdmin = isAdmin;
-  const visibleNavGroups = groupNavItems(
-    navigationRegistry.filter((item) => canSeeNavItem(item, permissions, user?.roles ?? [], canOpenAdmin))
+  const visibleNavGroups = useMemo(
+    () => groupNavItems(navigationRegistry.filter((item) => canSeeNavItem(item, permissions, user?.roles ?? [], canOpenAdmin))),
+    [canOpenAdmin, permissions, user?.roles]
   );
 
   useEffect(() => {
     const stored = localStorage.getItem("prijDensityMode");
-    setDensity(stored === "large" || stored === "compact" ? stored : "comfort");
+    setDensity(normalizeDensityMode(stored));
   }, []);
 
   useEffect(() => {
@@ -262,7 +264,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [router, status]);
 
-  function setDensityMode(next: string) {
+  function setDensityMode(next: DensityMode) {
     setDensity(next);
     localStorage.setItem("prijDensityMode", next);
   }
@@ -278,7 +280,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
           <strong>Prij Clinic</strong>
-          <span>V0.1 controlled demo</span>
+          <span>Local Demo Mode</span>
         </Link>
 
         {visibleNavGroups.map((group) => (
@@ -300,7 +302,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="app-main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Local pilot workspace</p>
+            <p className="eyebrow">Clinic workspace</p>
             <p className="muted">Use demo records only. Clinical decisions stay doctor-led.</p>
           </div>
           <label className="portal-search" aria-label="Search patient files">
@@ -309,10 +311,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           </label>
           <div className="topbar-actions">
             <div className="comfort-switch" aria-label="Display density">
-              {["comfort", "large", "compact"].map((mode) => (
+              {(["compact", "comfortable", "large", "magnified"] as DensityMode[]).map((mode) => (
                 <button className={density === mode ? "active" : ""} key={mode} onClick={() => setDensityMode(mode)} type="button" aria-pressed={density === mode}>
-                  <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
-                  {mode === "comfort" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
+                  <ThreeDMedicalIcon name={mode === "large" || mode === "magnified" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
+                  {mode === "comfortable" ? "Comfort" : mode === "magnified" ? "Magnify" : mode[0]!.toUpperCase() + mode.slice(1)}
                 </button>
               ))}
             </div>
@@ -364,10 +366,10 @@ export function SafetyAlert() {
       <div>
         <strong>Demo/local only - no real patient data.</strong>
         <p className="muted">
-          AI remains disabled and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass review.
+          AI draft tools remain off or doctor-reviewed. They cannot diagnose, prescribe, sign, update final records, or bypass review.
         </p>
       </div>
-      <span className="badge danger">Not production-ready</span>
+      <span className="badge danger">Local Demo Mode</span>
     </section>
   );
 }
@@ -466,7 +468,7 @@ function canSeeNavItem(item: NavItem, permissions: string[], roles: string[], is
 }
 
 function groupNavItems(items: NavItem[]) {
-  const titles: NavItem["group"][] = ["Operations", "Clinical", "OB/Pregnancy", "Finance", "Safety/Admin", "Admin"];
+  const titles: NavItem["group"][] = ["Daily Work", "Clinical", "Women's Health", "Medication", "Finance", "Evidence", "Admin", "Future"];
   return titles
     .map((title) => ({ title, links: items.filter((item) => item.group === title) }))
     .filter((group) => group.links.length > 0);

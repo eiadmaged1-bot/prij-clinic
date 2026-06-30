@@ -1243,14 +1243,14 @@ async function main() {
     where: { key: "appearance" },
     update: {
       valueJson: {
-        defaultTheme: "clinic-premium",
+        defaultTheme: "luxury-clinic",
         allowUserThemeOverride: true
       }
     },
     create: {
       key: "appearance",
       valueJson: {
-        defaultTheme: "clinic-premium",
+        defaultTheme: "luxury-clinic",
         allowUserThemeOverride: true
       },
       updatedByUserId: demoOwner?.id

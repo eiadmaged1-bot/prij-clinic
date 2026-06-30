@@ -17,11 +17,26 @@ import {
 } from "./admin.dto";
 
 const defaultAppearanceSettings = {
-  defaultTheme: "clinic-premium",
+  defaultTheme: "luxury-clinic",
   allowUserThemeOverride: true
 };
 
-const allowedAppearanceThemes = new Set(["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
+const allowedAppearanceThemes = new Set([
+  "luxury-clinic",
+  "medicolize-portal",
+  "incision-clean",
+  "compact-operations",
+  "senior-doctor-large",
+  "dark-navy",
+  "clinic-premium",
+  "incision-portal",
+  "minimal-clean"
+]);
+const appearanceThemeAliases: Record<string, string> = {
+  "clinic-premium": "luxury-clinic",
+  "minimal-clean": "luxury-clinic",
+  "incision-portal": "incision-clean"
+};
 const accountInclude = {
   branch: true,
   userRoles: {
@@ -382,7 +397,7 @@ export class RbacService {
 
   async updateAppearanceSettings(dto: AppearanceSettingsDto, user?: AuthUser) {
     const next = {
-      defaultTheme: dto.defaultTheme,
+      defaultTheme: appearanceThemeAliases[dto.defaultTheme] ?? dto.defaultTheme,
       allowUserThemeOverride: dto.allowUserThemeOverride
     };
 

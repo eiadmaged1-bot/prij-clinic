@@ -38,7 +38,7 @@ type DashboardSummary = {
   };
 };
 
-const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "AI review"];
+const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "Doctor review"];
 
 const quickActions: Array<[string, string, string, IconName]> = [
   ["/patients/new", "New Patient", "Start demo registration with fake identifiers only.", "patients"],
@@ -46,7 +46,7 @@ const quickActions: Array<[string, string, string, IconName]> = [
   ["/queue", "Queue Check-in", "Move a demo patient into today's queue.", "queue"],
   ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
   ["/billing", "New Invoice", "Review demo invoices without payment gateway data.", "billing"],
-  ["/ai-drafts", "AI Draft Review", "Doctor review required before any use.", "ai"]
+  ["/ai-drafts", "Draft Review", "Doctor review required before any use.", "ai"]
 ];
 
 const portalModules: Array<[string, string, string, string, string]> = [
@@ -62,7 +62,7 @@ const portalModules: Array<[string, string, string, string, string]> = [
   ["/ultrasound", "OB/Pregnancy", "Ultrasound", "US", "teal"],
   ["/billing", "Finance", "Billing", "BI", "navy"],
   ["/consents", "Safety", "Consents", "CO", "gray"],
-  ["/ai-drafts", "Safety", "AI Draft Review", "AI", "gray"]
+  ["/ai-drafts", "Safety", "Draft Review", "AI", "gray"]
 ];
 
 export default function DashboardPage() {
@@ -172,7 +172,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (theme === "incision-portal") {
+  if (theme === "incision-clean") {
     return (
       <AppShell>
         <section className="portal-header">
@@ -272,14 +272,14 @@ export default function DashboardPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">V0.1 clinic command center</p>
+        <p className="eyebrow">Clinic command center</p>
             <h1>Dashboard</h1>
           </div>
           <div className="topbar-actions">
             <button className="button secondary compact" onClick={logout} type="button">
               Logout
             </button>
-            <span className="badge accent">AI disabled</span>
+            <span className="badge accent">Doctor review required</span>
             <span className="badge warning">Demo only</span>
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function DashboardPage() {
         <Metric label="Active pregnancies" value={summary?.operational.activePregnancies ?? "-"} />
         <Metric label="Draft ultrasounds" value={summary?.operational.draftUltrasounds ?? "-"} detail="Physician interpretation required" />
         <Metric label="Pending AI drafts" value={summary?.safety.pendingAiDrafts ?? "-"} detail="Draft-only, review required" />
-        <Metric label="AI features" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="External AI is off" />
+        <Metric label="Draft tools" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="External AI access is off" />
       </section>
     </AppShell>
   );
