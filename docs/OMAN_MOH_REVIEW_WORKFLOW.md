@@ -4,12 +4,12 @@ Source:
 - `OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES`
 - Official Oman MOH Drug Safety Center price list.
 
-Current counts after Batch 1:
+Current counts after v0.8.4 Batch 2:
 - Real rows: 5,100.
-- Product groups: 4,020.
-- Verified rows: 0.
-- Needs-review rows: 5,100.
-- Open official review items: 5,100.
+- Product groups: 4,611.
+- Verified rows: 100.
+- Needs-review rows: 5,000.
+- Open official review items: 5,000.
 - Demo rows excluded from real coverage/search by default.
 
 Commands:
@@ -21,7 +21,8 @@ npm run medication:oman:review:summary
 npm run medication:oman:verify:batch -- --limit 100 --reason "Official Oman MOH high-confidence sample verification"
 ```
 
-Batch 1 did not verify Oman rows because the current PDF parser confidence is 0.59, below the high-confidence verification threshold. This is intentional. The next Oman step is parser improvement or manual row-level review, not auto-verification.
+Batch 2 improved the Oman parser and verified 100 strict high-confidence rows with reason `Official Oman MOH high-confidence batch review`.
+Rows remain review-gated unless verified explicitly.
 
 QA checks:
 - trade name or generic name present
@@ -34,3 +35,12 @@ QA checks:
 - registration number preserved when present
 - no patient dosing instructions
 - no stock/order/cart/checkout/purchase workflow fields
+
+Batch 2 parser audit:
+- `>= 0.90`: 3,507 rows
+- `>= 0.80`: 3,833 rows
+- `>= 0.70`: 4,883 rows
+- `>= 0.60`: 5,041 rows
+- `< 0.60`: 59 rows
+
+Remaining low-confidence and duplicate-risk rows are blocked from batch verification.

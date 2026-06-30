@@ -1,7 +1,7 @@
 # Next Steps
 
 Medication data next steps:
-- Improve Oman PDF parsing so strength/form/generic fields can be extracted with defensible confidence, then run a small Oman verification batch.
+- Continue Oman manual review and consider medication verification batch 3 from remaining strict high-confidence rows.
 - Continue Bahrain manual review beyond the first 100 verified rows.
 - Recover Qatar/Kuwait/SFDA only through official public files or owner-provided official uploads.
 - Keep Egypt limited to official file upload and targeted lookup.

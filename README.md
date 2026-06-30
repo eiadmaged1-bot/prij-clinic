@@ -8,6 +8,8 @@ V0.7 includes the Medication Intelligence Engine v2 framework. It is not a compl
 
 V0.8.3 Batch 1 verifies the first 100 high-confidence Bahrain NHRA official medication rows while preserving all 8,269 Bahrain/Oman real official rows and 23 excluded demo rows. Oman remains review-gated because current PDF parser confidence is below the high-confidence verification threshold. See `docs/OFFICIAL_MEDICATION_VERIFICATION_BATCH_1.md`.
 
+V0.8.4 Batch 2 improves the Oman MOH parser, extracts defensible structured strength/form/pack metadata for many rows, and verifies 100 strict high-confidence Oman official medication rows. Totals remain 8,269 real official rows, with 100 Bahrain verified rows preserved, 100 Oman verified rows, and 23 demo rows excluded. See `docs/OFFICIAL_MEDICATION_VERIFICATION_BATCH_2_OMAN.md`.
+
 The v0.7 medication intelligence source-of-truth audit is documented in `docs/V0_7_MEDICATION_INTELLIGENCE_AUDIT.md`. The next medication-data sprint is Official Medication Data Import Pack 1 - Egypt + Saudi Arabia.
 
 Current foundation includes hardened accounts/session/RBAC, audit logs, patients, consent records, appointments, queue, encounters, prescriptions, investigations, reports, general gynecology starter records, pregnancy records, OB ultrasound records, OB dating assessments, deterministic calculator history, billing, payments, service catalog, daily closing, patient statements, owner finance reports, dashboard summary, disabled AI draft placeholders, local protocol-backed AI Management Snapshots, guideline/evidence library metadata, local backup helpers, and CI/security tests.

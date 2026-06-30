@@ -15,6 +15,7 @@ Date: 2026-06-28
 - Patients, appointments, queue, doctor calendar, encounters, prescriptions, investigations, reports, pregnancies, and OB ultrasound records.
 - Billing invoices, invoice items, payment records, payment reversal placeholder, and dashboard summary.
 - AI draft placeholder records with disabled/mock metadata only.
+- Medication market/reference metadata now includes v0.8.4 Batch 2: 8,269 real Bahrain/Oman official rows, 23 demo rows excluded, 100 Bahrain verified rows preserved, and 100 Oman high-confidence official rows verified.
 
 ## Safety State
 
