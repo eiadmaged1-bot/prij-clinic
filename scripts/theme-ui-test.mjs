@@ -44,7 +44,7 @@ async function main() {
   }
   record.pass("comfort large compact density tokens are implemented");
 
-  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Medication Safety", "Prescription Safety", "Timeline"]) {
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Medications", "Allergies", "Medication Safety", "Timeline"]) {
     if (!registrySource.includes(label)) throw new Error(`Patient tab registry missing: ${label}`);
   }
   record.pass("patient tabs are registered independently of theme");

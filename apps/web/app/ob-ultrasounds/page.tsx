@@ -7,7 +7,7 @@ export default function ObUltrasoundsPage() {
       title="OB Ultrasounds"
       items={[
         "OB patient files show current GA and EDD context when a reviewed dating estimate exists",
-        "Use ultrasound GA as a dating candidate from the patient Pregnancy/OB review panel",
+        "Use ultrasound GA as a dating candidate from the patient Pregnancy review panel",
         "Structured OB ultrasound draft measurements and findings",
         "No diagnostic fetal-image AI or automatic clinical conclusions",
         "Raw biometry measurements remain recording-only until formulas are verified",

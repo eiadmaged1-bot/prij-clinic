@@ -26,7 +26,7 @@ async function main() {
   record.pass("guided visit workflow steps are implemented");
 
   const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
-  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Prescriptions", "Investigations", "Reports", "Pregnancy", "Ultrasound", "Billing", "Consents", "AI Drafts", "Protocol Atlas", "Calculators", "Medications", "Allergies", "Herbal/Supplements", "Medication Safety", "Prescription Safety", "Timeline", "Start Visit"]) {
+  for (const label of ["Summary", "Medical", "Clinical", "Appointments", "Encounters", "Prescriptions", "Investigations", "Reports", "Pregnancy", "Ultrasound", "Billing", "Consents", "AI Drafts", "Protocol Atlas", "Calculators", "Medications", "Allergies", "Medication Safety", "Timeline", "Start Visit"]) {
     if (!patientSource.includes(label)) throw new Error(`Simplified patient file label missing: ${label}`);
   }
   record.pass("patient file simplified tabs and actions are implemented");
@@ -69,7 +69,7 @@ async function main() {
   for (const label of ["Structured Protocol Editor", "Source metadata", "Aliases", "Structured content", "Doctor preview after verification", "Verify protocol"]) {
     if (!protocolAdminSource.includes(label)) throw new Error(`Protocol editor missing label: ${label}`);
   }
-  for (const forbidden of ["contentJson", "Prisma", "raw JSON editor"]) {
+  for (const forbidden of ["contentJson", "Prisma", "raw JSON", "endpoint", "schema"]) {
     if (protocolAdminSource.includes(forbidden)) throw new Error(`Protocol editor exposes technical wording: ${forbidden}`);
   }
   if (!protocolAdminSource.includes("disabled={!canVerify}")) throw new Error("Verify button is not gated by requirements.");

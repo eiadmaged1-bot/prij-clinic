@@ -409,7 +409,7 @@ function permissionGroups(permissions: Permission[], boundary: string[]) {
     ["Prescriptions", ["prescription.", "prescriptions."]],
     ["Investigations", ["investigation.", "investigations."]],
     ["Reports", ["report.", "reports."]],
-    ["Pregnancy/OB", ["pregnancy.", "ob_ultrasound."]],
+    ["Pregnancy", ["pregnancy.", "ob_ultrasound."]],
     ["Billing", ["billing.", "payment."]],
     ["Consents", ["patient.consent"]],
     ["Admin/Owner", ["user.", "role.", "permission.", "clinic_settings.", "branch.", "audit.", "security.", "session.", "system_owner.", "developer_owner."]],

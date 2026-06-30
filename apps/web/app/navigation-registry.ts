@@ -70,8 +70,6 @@ export const patientTabRegistry: PatientTab[] = [
   { key: "calculators", label: "Calculators", icon: "investigations", empty: "Calculator history appears here." },
   { key: "medications", label: "Medications", icon: "prescription", empty: "No active medication list entry yet.", permissions: ["patient_medications.read"] },
   { key: "allergies", label: "Allergies", icon: "consent", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
-  { key: "herbals", label: "Herbal/Supplements", icon: "files", empty: "No herbal or supplement entry yet.", permissions: ["patient_medications.read"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
-  { key: "prescription-safety", label: "Prescription Safety", icon: "prescription", empty: "Prescription safety review appears here.", permissions: ["medications.safety_check"] },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." }
 ];

@@ -130,7 +130,7 @@ export default function AdminProtocolAtlasPage() {
             </select>
             <button className="button" type="submit">Search</button>
           </form>
-          <p className="notice">{status || "Search and select a protocol. Raw JSON editing is blocked."}</p>
+          <p className="notice">{status || "Search and select a protocol. Use structured fields only."}</p>
           <div className="data-list">
             {protocols.map((protocol) => (
               <button className="data-row text-left" key={protocol.id} onClick={() => void openEditor(protocol)} type="button">

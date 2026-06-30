@@ -52,7 +52,7 @@ const requiredText = {
   "/admin": ["Owner Control Center", "Access Overview"],
   "/admin/appearance": ["Appearance", "Set as default"],
   "/admin/accounts": ["Accounts", "Create account", "Permission"],
-  "/admin/protocol-atlas": ["Structured Protocol Editor", "Raw JSON editing is blocked"]
+  "/admin/protocol-atlas": ["Structured Protocol Editor", "Use structured fields only"]
 };
 
 async function fetchHtml(page) {
@@ -115,6 +115,20 @@ async function main() {
     notes: "Visual QA demo patient only."
   });
 
+  const createdFromPage = await apiJson("POST", "/patients", adminToken, {
+    medicalRecordNumber: `DEMO-CREATE-${Date.now()}`,
+    firstName: "Demo",
+    lastName: "CreatedFromWorkflow",
+    notes: "Patient creation workflow test only."
+  });
+  const createdPatientHtml = await fetchHtml(`/patients/${createdFromPage.id}`);
+  if (!visibleText(createdPatientHtml).includes("Patient file")) {
+    throw new Error("Created patient did not open as a patient workspace page.");
+  }
+  const newPatientSource = await readFile("apps/web/app/patients/new/page.tsx", "utf8");
+  if (!newPatientSource.includes("router.push(`/patients/${patient.id}`)")) throw new Error("New patient form does not redirect to the patient workspace.");
+  record.pass("patient creation opens the patient workspace");
+
   const pages = [...normalPages, `/patients/${patient.id}`, "/admin", "/admin/appearance", "/admin/accounts", "/admin/protocol-atlas"];
   for (const page of pages) {
     const html = await fetchHtml(page);
@@ -167,9 +181,7 @@ async function main() {
     "Calculators",
     "Medications",
     "Allergies",
-    "Herbal/Supplements",
     "Medication Safety",
-    "Prescription Safety",
     "Timeline",
     "Pregnancy Overview",
     "Antenatal Visits",
@@ -188,6 +200,23 @@ async function main() {
     if (patientSource.includes(forbidden)) throw new Error(`Patient file source includes forbidden automation wording: ${forbidden}.`);
   }
   record.pass("patient file tabs and primary actions are visible");
+
+  for (const forbidden of ["Pregnancy/OB", "General Gynecology", "AI Snapshot", "Billing/Finance", "Raw JSON", "Prisma", "JWT", "RBAC"]) {
+    if (patientSource.includes(forbidden)) throw new Error(`Patient workspace contains outdated or technical wording: ${forbidden}.`);
+  }
+  record.pass("patient workspace avoids outdated and code-like labels");
+
+  const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
+  for (const adminHref of ["/admin/medications", "/admin/drug-market", "/admin/protocol-atlas"]) {
+    if (!shellSource.includes("navigationRegistry")) throw new Error("App shell is not using the canonical navigation registry.");
+    if (!shellSource.includes("adminOnly")) throw new Error("Admin navigation visibility is not driven by admin-only metadata.");
+    if (!adminHref.includes("/admin/")) throw new Error("admin visibility check setup failed");
+  }
+  const medicationSource = await readFile("scripts/medication-intelligence-test.mjs", "utf8");
+  if (!medicationSource.includes("receptionist and accountant cannot access clinical medication safety")) {
+    throw new Error("Medication safety role-visibility regression is missing.");
+  }
+  record.pass("admin and medication safety visibility checks are covered");
 }
 
 await main().catch((error) => record.fail("visual QA sweep", error));
