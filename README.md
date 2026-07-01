@@ -6,6 +6,8 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+v0.9.3 automated QA stabilization is not released yet. Docker/PostgreSQL blocked the DB/API-backed validation on the remote machine, so no release tag has been created. The final tag `v0.9.3-automated-qa-stabilization` is forbidden until `npm run test:v093:patient-create` and `npm run test:v093:roles` pass without `V093_ALLOW_ENV_SKIP=1`.
+
 Earlier foundation: V0.7 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine v2 framework, and official medication metadata workflows.
 
 V0.7 clinic workflow spine adds investigation result metadata, critical-result acknowledgement, metadata-only patient document archive, consent templates/demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packets. It remains local/demo only and must not be used with real patient data or PHI files.
@@ -352,6 +354,27 @@ npm run prisma:seed
 npm run typecheck
 npm run build
 ```
+
+v0.9.3 automated browser-free QA:
+
+```powershell
+npm run dev:diagnose
+npm run test:v093:routes
+npm run test:v093:ui-text
+npm run test:v093:patient-create
+npm run test:v093:medication-ui
+npm run test:v093:roles
+```
+
+`test:v093:routes` and the runtime portion of `test:v093:medication-ui` expect the local Next web app to be reachable. `test:v093:patient-create` and `test:v093:roles` expect the local API, PostgreSQL, and seeded demo data to be reachable. These checks use fake/demo data only.
+
+When Docker/PostgreSQL are available, run the final validation gate:
+
+```powershell
+npm run test:v093:release
+```
+
+`V093_ALLOW_ENV_SKIP=1` can convert unavailable API/PostgreSQL failures in the API-backed v0.9.3 checks into a local skip/warn exit 0. That mode is not release-validating, and the release tag must not be created until the checks pass without it.
 
 ## CI
 

@@ -1,5 +1,27 @@
 # Current Status
 
+v0.9.3 Automated QA + Stability Hardening is in progress on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not released yet, no release tag has been created, and release tagging is forbidden until API-backed checks pass without `V093_ALLOW_ENV_SKIP=1`.
+
+Automated browser-free QA added:
+- `npm run test:v093:routes` verifies 35 important visible routes return clean HTML without 500s, raw JSON, conflict markers, stack traces, or runtime crash text.
+- `npm run test:v093:ui-text` scans normal frontend source areas for obvious code-like/developer text in visible UI.
+- `npm run test:v093:patient-create` verifies fake/demo patient creation, detail fetch, workspace route, and patient workspace tab source when the API and seeded DB are available.
+- `npm run test:v093:medication-ui` verifies normal medication and drug-market UI stays decluttered and free of technical/source/price/debug, commerce, stock, checkout, and dosing-instruction clutter.
+- `npm run test:v093:roles` verifies feasible owner/admin, doctor, receptionist, and accountant access/denial behavior when the API and seeded DB are available.
+- `npm run dev:diagnose` reports local Docker/PostgreSQL/API/port/env/Prisma readiness without printing secrets.
+- `npm run test:v093:release` runs the final v0.9.3 validation sequence when Docker/PostgreSQL are available. It does not commit, tag, push, reset the database, or remove Docker volumes.
+
+Latest local automated QA status:
+- PASS: `npm run typecheck`
+- PASS: `npm run build`
+- PASS: `npm run test:v093:routes` with Next web server running
+- PASS: `npm run test:v093:ui-text`
+- PASS: `npm run test:v093:medication-ui` with Next web server running
+- BLOCKED: API/DB-backed checks because Docker Desktop/PostgreSQL was not reachable from this session.
+- API-backed checks now print explicit `ENVIRONMENT BLOCKER` messages by default and fail nonzero. `V093_ALLOW_ENV_SKIP=1` converts only unavailable-environment failures into skip/warn exit 0 for local blocked machines; that mode is not release-validating.
+
+See `docs/V0_9_3_AUTOMATED_QA_REPORT.md`.
+
 Medication restore drill and verification Batch 4 for Bahrain and Oman are implemented.
 
 v0.9.2 Prij Heritage theme and medication UI declutter is in progress on this branch:

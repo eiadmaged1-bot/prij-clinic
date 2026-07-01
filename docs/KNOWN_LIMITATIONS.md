@@ -1,5 +1,11 @@
 # Known Limitations
 
+- v0.9.3 API-backed automated checks require Docker Desktop/PostgreSQL, a repaired Prisma client, seeded demo data, and the local API to be reachable.
+- In this session, Docker Desktop/PostgreSQL was not reachable, so `test:v093:patient-create`, `test:v093:roles`, and the full DB/API-backed test sweep remain blocked rather than passed. v0.9.3 is not released yet.
+- `V093_ALLOW_ENV_SKIP=1` is only a local blocked-machine escape hatch for API-backed v0.9.3 checks. It is not release-validating and must not be used before creating a release tag.
+- The release tag `v0.9.3-automated-qa-stabilization` must not be created until `npm run test:v093:patient-create` and `npm run test:v093:roles` pass without environment skip.
+- `npm run dev:diagnose` reports local environment readiness but does not fix Docker Desktop/PostgreSQL availability.
+- v0.9.3 route and medication runtime page checks require the Next web server to be running; source-only parts still run without a browser.
 - Oman MOH batch 4 leaves 4,500 Oman rows review-gated, including 71 currently low-confidence/blocked rows.
 - Bahrain NHRA batch 4 leaves 2,569 Bahrain rows review-gated.
 - Qatar, Kuwait, and Saudi source recovery remains diagnostic-only unless official files/endpoints are safely accessible.
