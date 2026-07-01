@@ -6,6 +6,19 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.3 Release Candidate
+
+Branch: `hardening/v0.9.3-automated-qa-stabilization`.
+
+CI Release Gate and normal CI have passed, but v0.9.3 is not released yet. The release tag remains blocked until final local Docker/PostgreSQL validation and manual browser QA both pass.
+
+Final local release validation:
+
+```powershell
+npm run dev:diagnose
+npm run test:v093:release
+```
+
 v0.9.3 automated QA stabilization is not released yet. Docker/PostgreSQL blocked the DB/API-backed validation on the remote machine, so no release tag has been created. The final tag `v0.9.3-automated-qa-stabilization` is forbidden until `npm run test:v093:patient-create` and `npm run test:v093:roles` pass without `V093_ALLOW_ENV_SKIP=1`.
 
 The dedicated GitHub Actions workflow `v0.9.3 Release Gate` runs on the hardening branch, pull requests targeting `ui/v0.9.2-prij-heritage-theme-and-medication-declutter`, and manual dispatch. It uses a demo-only PostgreSQL 16 service database, applies migrations, seeds demo data, starts the built API and web app, and runs the v0.9.3 automated QA without `V093_ALLOW_ENV_SKIP=1`. It does not create a release tag and does not replace final local/manual browser QA.

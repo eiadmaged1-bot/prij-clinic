@@ -1,15 +1,31 @@
 # Next Steps
 
-v0.9.3 automated QA next steps:
-- Watch the GitHub Actions `v0.9.3 Release Gate` workflow on branch `hardening/v0.9.3-automated-qa-stabilization`; it should run the v0.9.3 QA against a CI PostgreSQL service without `V093_ALLOW_ENV_SKIP=1`.
-- Treat any CI API/DB-backed failure as a real blocker. Do not convert CI to skip mode.
-- Run `npm run dev:diagnose` on the Docker-available machine to confirm Docker daemon, PostgreSQL, ports 3000/3001/5432, API health, DB health, env-file presence, and Prisma client status.
-- Start Docker Desktop locally, then run `npm run test:v093:release`.
-- If running manually, use `docker compose up -d postgres`, `npm run prisma:repair`, `npm run prisma:seed`, `npm run dev`, then rerun `npm run test:v093:patient-create` and `npm run test:v093:roles`.
-- Rerun the full requested existing test sweep after the API and DB are reachable if `npm run test:v093:release` cannot complete it automatically.
-- Keep `npm run test:v093:routes`, `npm run test:v093:ui-text`, and `npm run test:v093:medication-ui` in the release-candidate gate.
-- Do not create `v0.9.3-automated-qa-stabilization` until all API-backed checks pass without `V093_ALLOW_ENV_SKIP=1`.
-- Do not create a release tag from CI alone; final local DB/API validation and manual browser QA remain required.
+v0.9.3 release-candidate finalization steps:
+
+1. Return home and start Docker Desktop.
+2. Run `npm run dev:diagnose`.
+3. Run `npm run test:v093:release`.
+4. Run the manual browser QA checklist in `docs/V0_9_3_MANUAL_BROWSER_QA_CHECKLIST.md`.
+5. Run the guarded release command only after all checks pass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/v093-release-commands.ps1 -RequireAllChecksPassed
+```
+
+6. Push the release tag only after local validation and manual QA pass.
+
+Release controls:
+- CI Release Gate passed, and normal CI passed.
+- v0.9.3 is a release candidate, not a final release.
+- Do not create or push a tag from CI status alone.
+- Do not use `V093_ALLOW_ENV_SKIP=1` to claim release validation.
+- Do not use real patient data, real payment gateway, external AI, autonomous prescribing, or market strength/form as patient dosing.
+
+Optional local helper:
+
+```powershell
+npm run qa:v093:checklist
+```
 
 Medication data next steps:
 - Continue Oman manual review and consider a future verification batch from remaining strict high-confidence rows.

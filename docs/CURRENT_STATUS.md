@@ -1,6 +1,15 @@
 # Current Status
 
-v0.9.3 Automated QA + Stability Hardening is in progress on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not released yet, no release tag has been created, and release tagging is forbidden until API-backed checks pass without `V093_ALLOW_ENV_SKIP=1`.
+v0.9.3 Automated QA + Stability Hardening is now a release candidate on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not a final release, no release tag has been created, and release tagging is forbidden until final local Docker/PostgreSQL release validation and manual browser QA pass without `V093_ALLOW_ENV_SKIP=1`.
+
+Release-candidate status:
+- CI Release Gate: passed.
+- Normal CI: passed.
+- v0.9.3 status: release candidate, not final release.
+- Local Docker/PostgreSQL release validation: pending.
+- Manual browser QA: pending.
+- Release tag: not created.
+- Release-candidate base commit before the QA pack: `5b65630d39a6af035eaa089a1db54584243e7f92`.
 
 CI release gate status:
 - `.github/workflows/v093-release-gate.yml` adds the `v0.9.3 Release Gate` workflow for the hardening branch, pull requests targeting `ui/v0.9.2-prij-heritage-theme-and-medication-declutter`, and manual dispatch.
@@ -17,16 +26,21 @@ Automated browser-free QA added:
 - `npm run dev:diagnose` reports local Docker/PostgreSQL/API/port/env/Prisma readiness without printing secrets.
 - `npm run test:v093:release` runs the final v0.9.3 validation sequence when Docker/PostgreSQL are available. It does not commit, tag, push, reset the database, or remove Docker volumes.
 
-Latest local automated QA status:
+Latest automated QA status:
+- PASS: GitHub Actions `v0.9.3 Release Gate`
+- PASS: normal GitHub Actions CI
 - PASS: `npm run typecheck`
 - PASS: `npm run build`
 - PASS: `npm run test:v093:routes` with Next web server running
 - PASS: `npm run test:v093:ui-text`
 - PASS: `npm run test:v093:medication-ui` with Next web server running
 - BLOCKED: API/DB-backed checks because Docker Desktop/PostgreSQL was not reachable from this session.
+- PENDING: final local `npm run dev:diagnose`
+- PENDING: final local `npm run test:v093:release`
+- PENDING: manual browser QA
 - API-backed checks now print explicit `ENVIRONMENT BLOCKER` messages by default and fail nonzero. `V093_ALLOW_ENV_SKIP=1` converts only unavailable-environment failures into skip/warn exit 0 for local blocked machines; that mode is not release-validating.
 
-See `docs/V0_9_3_AUTOMATED_QA_REPORT.md`.
+See `docs/V0_9_3_AUTOMATED_QA_REPORT.md` and `docs/V0_9_3_RELEASE_CANDIDATE.md`.
 
 Medication restore drill and verification Batch 4 for Bahrain and Oman are implemented.
 

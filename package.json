@@ -91,6 +91,7 @@
     "test:v093:medication-ui": "node scripts/v093-medication-declutter-check.mjs",
     "test:v093:roles": "node scripts/v093-role-visibility-check.mjs",
     "test:v093:release": "powershell -ExecutionPolicy Bypass -File scripts/v093-final-release-check.ps1",
+    "qa:v093:checklist": "powershell -ExecutionPolicy Bypass -File scripts/v093-open-qa-checklist.ps1",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
     "test:official-medication-restore": "node scripts/official-medication-restore-test.mjs",
     "test:drug-market:source-recovery": "node scripts/drug-market-source-recovery-test.mjs",

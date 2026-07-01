@@ -1,5 +1,11 @@
 # Known Limitations
 
+- CI Release Gate passed and normal CI passed, but final local machine validation is still pending.
+- Manual browser QA is still pending.
+- v0.9.3 is a release candidate, not a final release.
+- The application is not production-ready.
+- Do not use real patient data.
+- No production security, privacy, legal, medical-device, or clinical-governance signoff has been completed.
 - v0.9.3 API-backed automated checks require Docker Desktop/PostgreSQL, a repaired Prisma client, seeded demo data, and the local API to be reachable.
 - The `v0.9.3 Release Gate` GitHub Actions workflow provides CI PostgreSQL coverage for the remote session blocker, but it is still not a release by itself and does not replace final local/manual browser QA.
 - The CI release gate must not use `V093_ALLOW_ENV_SKIP=1`; if API/DB-backed checks cannot run in CI, the workflow must fail.
