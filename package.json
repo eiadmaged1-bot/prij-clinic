@@ -102,6 +102,7 @@
     "db:v095:verify-reference": "node scripts/v095-reference-data-verify.mjs",
     "db:v096:report": "node scripts/v096-local-db-finalization-report.mjs",
     "db:v096:finalize-local-demo": "node scripts/v096-local-db-finalization-report.mjs --apply-cleanup",
+    "db:v096:ready-check": "node scripts/v096-local-demo-ready-check.mjs",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
     "test:official-medication-restore": "node scripts/official-medication-restore-test.mjs",
     "test:drug-market:source-recovery": "node scripts/drug-market-source-recovery-test.mjs",
