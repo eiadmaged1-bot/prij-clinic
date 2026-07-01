@@ -4,12 +4,14 @@ Source:
 - `OMAN_MOH_REGISTERED_PHARMACEUTICAL_PRODUCTS_WITH_PRICES`
 - Official Oman MOH Drug Safety Center price list.
 
-Current counts after v0.8.4 Batch 2:
+Current counts after v0.8.5 Batch 3:
 - Real rows: 5,100.
 - Product groups: 4,611.
-- Verified rows: 100.
-- Needs-review rows: 5,000.
-- Open official review items: 5,000.
+- Verified rows: 300.
+- Needs-review rows: 4,800.
+- Open official review items: 4,800.
+- High-confidence candidates remaining: 4,729.
+- Review-gated low-confidence/blocked rows: 71.
 - Demo rows excluded from real coverage/search by default.
 
 Commands:
@@ -21,7 +23,7 @@ npm run medication:oman:review:summary
 npm run medication:oman:verify:batch -- --limit 100 --reason "Official Oman MOH high-confidence sample verification"
 ```
 
-Batch 2 improved the Oman parser and verified 100 strict high-confidence rows with reason `Official Oman MOH high-confidence batch review`.
+Batch 2 improved the Oman parser and verified 100 strict high-confidence rows. Batch 3 verified another 200 strict high-confidence rows with reason `Official Oman MOH high-confidence verification batch 3`.
 Rows remain review-gated unless verified explicitly.
 
 QA checks:

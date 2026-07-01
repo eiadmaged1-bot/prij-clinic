@@ -46,3 +46,15 @@ Raw official JSON is not shown in normal UI. Protected admin review details may 
 - Review queue filters include Oman country/source, confidence, high-confidence candidates, and missing fields.
 
 Review decisions require a reason and remain Admin/Owner-only through medication verification permissions.
+
+## v0.8.5 Batch 3
+
+- Bahrain verified rows: 300.
+- Oman verified rows: 300.
+- Total verified rows: 600.
+- Open official review items: 7,669.
+- Bahrain high-confidence candidates remaining: 2,869.
+- Oman high-confidence candidates remaining: 4,729.
+- Oman review-gated low-confidence/blocked rows: 71.
+
+Batch verification remains reason-required, high-confidence-only, and Admin/Owner-only.

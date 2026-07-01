@@ -7,7 +7,7 @@ npm run medication:sources:freshness
 npm run medication:coverage:report
 ```
 
-Batch 2 freshness status:
+Batch 3 freshness status:
 - Bahrain NHRA registered medicine price list: `current_checked_today`.
 - Oman MOH registered pharmaceutical products with prices: `current_checked_today`.
 - Qatar MOPH: `failed`; official HTML did not expose a supported visible XLSX/source-file link.

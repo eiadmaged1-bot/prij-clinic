@@ -26,3 +26,5 @@ npm run medication:eda:lookup -- --type tradeName --query "minimum 3 letters"
 ```
 
 Short targeted queries and bulk enumeration remain rejected. Verification-code, CAPTCHA, login, session, and protected-source flows must not be bypassed.
+
+Owner intake supports official EDA CSV, XLSX, JSON, or parser-approved PDF files. Egypt remains official file upload plus explicit targeted lookup only; no bulk enumeration is allowed.

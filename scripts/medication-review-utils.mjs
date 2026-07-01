@@ -110,6 +110,7 @@ export async function reviewSummary({ countryCode } = {}) {
       retired: rows.filter((row) => row.verificationStatus === "retired").length
     },
     byCountry: groupRows(rows, "countryCode"),
+    coverageByCountry: countryCoverage(rows, variants),
     bySource: groupRows(rows, "sourceCode"),
     byImportRun: groupRows(rows, "importRunId"),
     byParserConfidence: {
@@ -389,6 +390,26 @@ function countReasons(reasons) {
     .map(([reason, count]) => ({ reason, count }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
+}
+
+function countryCoverage(rows, variants) {
+  const countries = [...new Set(rows.map((row) => row.countryCode))].sort();
+  return countries.map((countryCode) => {
+    const countryRows = rows.filter((row) => row.countryCode === countryCode);
+    const countryVariants = variants.filter((variant) => variant.countryCode === countryCode);
+    return {
+      countryCode,
+      realRows: countryRows.length,
+      products: new Set(countryVariants.map((variant) => variant.productId)).size,
+      variants: countryRows.length,
+      verified: countryRows.filter((row) => row.verificationStatus === "verified").length,
+      needsReview: countryRows.filter((row) => reviewableStatuses.includes(row.verificationStatus)).length,
+      rejected: countryRows.filter((row) => row.verificationStatus === "rejected").length,
+      retired: countryRows.filter((row) => row.verificationStatus === "retired").length,
+      highConfidenceCandidates: countryRows.filter((row) => row.highConfidenceCandidate).length,
+      lowConfidenceBlocked: countryRows.filter((row) => row.lowConfidenceCandidate && reviewableStatuses.includes(row.verificationStatus)).length
+    };
+  });
 }
 
 function countBy(items, selector) {

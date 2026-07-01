@@ -1,11 +1,12 @@
 # Next Steps
 
 Medication data next steps:
-- Continue Oman manual review and consider medication verification batch 3 from remaining strict high-confidence rows.
-- Continue Bahrain manual review beyond the first 100 verified rows.
+- Continue Oman manual review and consider a future verification batch from remaining strict high-confidence rows.
+- Continue Bahrain manual review beyond the 300 verified rows.
 - Recover Qatar/Kuwait/SFDA only through official public files or owner-provided official uploads.
 - Keep Egypt limited to official file upload and targeted lookup.
 - Add UAE/Saudi/Egypt official file intake when owner-provided files are available.
+- Periodically run `npm run medication:official-data:export` and verify the ignored local export.
 
 Engineering next steps:
 - Expand review queue UI with import-run selector backed by actual import run list.

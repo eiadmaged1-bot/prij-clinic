@@ -251,15 +251,19 @@ export function DrugMarketImportPanel() {
   return (
     <section className="panel">
       <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
-      <p className="muted">Only official or licensed files. Do not upload retail workflow data or patient data.</p>
+      <p className="muted">Upload official or licensed source files only. Do not upload pharmacy stock, checkout data, or patient data.</p>
       <div className="data-list">
         <article className="data-row">
           <strong>Workflow</strong>
-          <p className="muted">Select country and source, preview mapped columns, dry run, then commit rows as imported or needs review. Raw official fields stay in protected admin review details.</p>
+          <p className="muted">Select country and source, add source URL, file date, source label, and official notes, preview the first 20 normalized rows with confidence, dry run, then commit rows into the review queue. Raw official fields stay in protected admin review details.</p>
         </article>
         <article className="data-row">
           <strong>Accepted formats</strong>
-          <p className="muted">CSV and JSON are supported now. XLSX and PDF sources are tracked and require an approved parser path or official conversion before import.</p>
+          <p className="muted">XLSX, CSV, and JSON are supported for owner-provided official files. PDF is accepted where a parser exists, including current Oman-style price-list parsing.</p>
+        </article>
+        <article className="data-row">
+          <strong>Country/source intake</strong>
+          <p className="muted">Qatar MOPH, Kuwait MOH, Saudi SFDA, Egypt EDA, UAE MOHAP, Bahrain NHRA, and Oman MOH use official public sources or owner-provided official file upload paths only.</p>
         </article>
       </div>
     </section>

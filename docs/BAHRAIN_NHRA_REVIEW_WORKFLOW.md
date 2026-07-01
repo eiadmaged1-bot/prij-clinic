@@ -4,12 +4,13 @@ Source:
 - `BAHRAIN_NHRA_REGISTERED_MEDICINE_PRICE_LIST`
 - Official NHRA registered medicine price list.
 
-Current counts after Batch 1:
+Current counts after v0.8.5 Batch 3:
 - Real rows: 3,169.
 - Product groups: 1,850.
-- Verified rows: 100.
-- Remaining needs-review rows: 3,069.
-- Open official review items: 3,069.
+- Verified rows: 300.
+- Remaining needs-review rows: 2,869.
+- Open official review items: 2,869.
+- High-confidence candidates remaining: 2,869.
 - Demo rows excluded from real coverage/search by default.
 
 Commands:

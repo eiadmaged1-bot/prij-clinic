@@ -16,3 +16,12 @@ Blocked source classes:
 - external AI calls
 
 Official/source price is source metadata only, not a live shelf price or dispensing instruction.
+## v0.8.5 Source Recovery
+
+- Qatar MOPH: diagnostic-only until a supported official public file link or owner-provided official file is available.
+- Kuwait MOH: diagnostic-only until the official PDF is fetchable or an owner-provided official PDF/file is supplied.
+- Saudi SFDA: diagnostic-only for the current public HTML path because no parseable server-rendered table is exposed.
+- Egypt EDA: official file upload plus explicit targeted lookup only.
+- UAE MOHAP: approved API access or official owner-provided file only.
+
+No third-party mirrors, CAPTCHA/login/paywall/API-approval bypass, retail stock/order/checkout sources, or fake fallback rows are allowed.

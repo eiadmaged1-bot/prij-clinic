@@ -8,15 +8,15 @@ npm run medication:coverage:report
 npm run medication:review:summary
 ```
 
-Current v0.8.4 Batch 2 result:
+Current v0.8.5 Batch 3 result:
 - Real official rows: 8,269.
 - Bahrain NHRA rows: 3,169.
 - Oman MOH rows: 5,100.
 - Demo rows excluded: 23.
-- Verified rows: 200.
-- Bahrain verified rows: 100.
-- Oman verified rows: 100.
-- Remaining needs-review rows: 8,069.
+- Verified rows: 600.
+- Bahrain verified rows: 300.
+- Oman verified rows: 300.
+- Remaining needs-review rows: 7,669.
 - Rejected/retired rows: 0/0.
 
 Validation rules:
