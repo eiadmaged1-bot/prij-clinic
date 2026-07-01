@@ -3,20 +3,20 @@ import { MvpPage } from "../mvp-page";
 export default function QueuePage() {
   return (
     <MvpPage
-      eyebrow="Front desk"
-      title="Queue"
+      eyebrow="Reception"
+      title="Queue Board"
       items={[
-        "Today queue foundation",
-        "Priority is operational only",
-        "Call, complete, and cancel actions are audited"
+        "Checked-in patients appear for reception and doctor handoff.",
+        "Statuses include waiting, with doctor, completed, and cancelled.",
+        "Priority is operational only and is not emergency triage."
       ]}
       endpoint="/queue/today"
       collectionKey="queueTickets"
       createEndpoint="/queue/check-in"
-      createNote="Use a demo patient ID and optional appointment ID. Priority is operational only, not triage."
+      createNote="Use a demo patient file and optional appointment. Priority is operational only, not triage."
       createFields={[
-        { name: "patientId", label: "Patient ID", required: true },
-        { name: "appointmentId", label: "Appointment ID" },
+        { name: "patientId", label: "Patient file", required: true },
+        { name: "appointmentId", label: "Appointment reference" },
         { name: "priority", label: "Priority", defaultValue: "routine" }
       ]}
     />

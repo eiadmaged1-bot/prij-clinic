@@ -38,15 +38,16 @@ type DashboardSummary = {
   };
 };
 
-const workflow = ["Patient", "Appointment", "Queue", "Encounter", "Orders", "Report/OB", "Billing", "AI review"];
+const workflow = ["Reception", "Appointment", "Queue", "Doctor", "Orders", "Reports", "Finance", "Owner review"];
 
 const quickActions: Array<[string, string, string, IconName]> = [
   ["/patients/new", "New Patient", "Start demo registration with fake identifiers only.", "patients"],
   ["/appointments", "New Appointment", "Schedule a safe local visit.", "calendar"],
   ["/queue", "Queue Check-in", "Move a demo patient into today's queue.", "queue"],
   ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
-  ["/billing", "New Invoice", "Review demo invoices without payment gateway data.", "billing"],
-  ["/ai-drafts", "AI Draft Review", "Doctor review required before any use.", "ai"]
+  ["/billing", "Create Invoice", "Record manual clinic charges without a gateway.", "billing"],
+  ["/medications", "Search Medication", "Open official reference metadata and safety tools.", "prescription"],
+  ["/admin", "Owner Control Center", "Settings, services, roles, audit, backup status.", "admin"]
 ];
 
 const portalModules: Array<[string, string, string, string, string]> = [
@@ -136,6 +137,8 @@ export default function DashboardPage() {
     user?.permissions.includes("clinic_settings.manage");
 
   const isDoctorOnly = Boolean(user?.roles.includes("Doctor") && !canOpenAdmin);
+  const isReception = Boolean(user?.roles.includes("Reception") || user?.roles.includes("Receptionist"));
+  const isAccountant = Boolean(user?.roles.includes("Accountant"));
 
   if (isDoctorOnly) {
     return (
@@ -162,11 +165,58 @@ export default function DashboardPage() {
           <Metric label="Waiting queue" value={summary?.operational.waitingQueue ?? "-"} detail="Open the next patient when ready" />
           <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} detail="Today's clinic schedule" />
           <Metric label="Pending reports" value={summary?.operational.pendingReports ?? "-"} detail="Review manually" />
+          <Metric label="Medication reference" value="8,269" detail="Official rows for reference only" />
         </section>
         <section className="doctor-step-strip">
           {["Open patient", "Start visit", "Write note", "Prescription", "Orders", "Finish"].map((step, index) => (
             <span key={step}><b>{index + 1}</b>{step}</span>
           ))}
+        </section>
+      </AppShell>
+    );
+  }
+
+  if (isReception || isAccountant) {
+    return (
+      <AppShell>
+        <section className="page-header">
+          <div className="header-row">
+            <div>
+              <p className="eyebrow">{isAccountant ? "Finance workspace" : "Reception workspace"}</p>
+              <h1>{isAccountant ? "Daily finance" : "Front desk home"}</h1>
+            </div>
+            <span className="badge warning">Local Demo</span>
+          </div>
+          <p className="muted">
+            {isAccountant
+              ? "Collections, unpaid invoices, manual payments, and daily closing are visible here."
+              : "Create patient files, schedule visits, check in arrivals, and hand them off to the doctor."}
+          </p>
+        </section>
+        <SafetyAlert />
+        <section className="summary-grid">
+          <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
+          <Metric label="Waiting queue" value={summary?.operational.waitingQueue ?? "-"} />
+          <Metric label="Open invoices" value={summary?.billing.openInvoices ?? "-"} />
+          <Metric label="Collected today" value={summary?.billing.paymentsToday ?? "-"} />
+        </section>
+        <section className="panel">
+          <div className="section-heading">
+            <h2>{isAccountant ? "Finance actions" : "Reception flow"}</h2>
+            <span className="badge accent">Role-aware</span>
+          </div>
+          <div className="quick-grid">
+            {(isAccountant
+              ? quickActions.filter(([href]) => ["/billing", "/patients"].includes(href))
+              : quickActions.filter(([href]) => ["/patients/new", "/appointments", "/queue"].includes(href))
+            ).map(([href, label, description, icon]) => (
+              <Link className="quick-card" href={href} key={href}>
+                <ThreeDMedicalIcon name={icon} size="md" />
+                <strong>{label}</strong>
+                <span className="muted">{description}</span>
+              </Link>
+            ))}
+          </div>
         </section>
       </AppShell>
     );
@@ -272,19 +322,19 @@ export default function DashboardPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">V0.1 clinic command center</p>
-            <h1>Dashboard</h1>
+            <p className="eyebrow">Premium clinic OS</p>
+            <h1>Clinic Home</h1>
           </div>
           <div className="topbar-actions">
             <button className="button secondary compact" onClick={logout} type="button">
               Logout
             </button>
-            <span className="badge accent">AI disabled</span>
-            <span className="badge warning">Demo only</span>
+            <span className="badge accent">{user?.roles.join(", ") || "Staff"}</span>
+            <span className="badge warning">Local Demo</span>
           </div>
         </div>
         <p className="muted">
-          A safe local workflow view for clinic operations, clinical drafts, OB records, billing, and security checks.
+          A visible home for today&apos;s clinic flow: reception, queue, doctor workspace, orders, finance, medications, and owner controls.
         </p>
       </section>
 
@@ -293,8 +343,8 @@ export default function DashboardPage() {
       <section className="summary-grid" aria-label="Operational summary">
         <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
         <Metric label="Queue waiting" value={summary?.operational.waitingQueue ?? "-"} />
-        <Metric label="Pending reports" value={summary?.operational.pendingReports ?? "-"} />
-        <Metric label="Open invoices" value={summary?.billing.openInvoices ?? "-"} detail={`Payments today: ${summary?.billing.paymentsToday ?? "-"}`} />
+        <Metric label="Orders pending" value={summary?.operational.pendingReports ?? "-"} />
+        <Metric label="Unpaid invoices" value={summary?.billing.openInvoices ?? "-"} detail={`Revenue today: ${summary?.billing.paymentsToday ?? "-"}`} />
       </section>
 
       <section className="dashboard-grid">
@@ -361,10 +411,10 @@ export default function DashboardPage() {
       </section>
 
       <section className="summary-grid">
-        <Metric label="Active pregnancies" value={summary?.operational.activePregnancies ?? "-"} />
-        <Metric label="Draft ultrasounds" value={summary?.operational.draftUltrasounds ?? "-"} detail="Physician interpretation required" />
-        <Metric label="Pending AI drafts" value={summary?.safety.pendingAiDrafts ?? "-"} detail="Draft-only, review required" />
-        <Metric label="AI features" value={summary?.safety.aiEnabled ? "On" : "Off"} detail="External AI is off" />
+        <Metric label="Official rows" value="8,269" detail="Bahrain and Oman official reference data" />
+        <Metric label="Verified rows" value="1,200" detail="High-confidence rows verified" />
+        <Metric label="Review remaining" value="7,069" detail="Owner review queue remains open" />
+        <Metric label="Restore drill" value="Passed" detail="v0.8.6 isolated restore check" />
       </section>
     </AppShell>
   );

@@ -91,7 +91,7 @@ const tabs: TabConfig[] = [
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "orders", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No test orders yet. Order lab or radiology when needed.", permissions: ["investigation.read"] },
+  { key: "orders", label: "Orders", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No lab, radiology, or service order yet.", permissions: ["investigation.read"] },
   { key: "results", label: "Results", icon: "reports", endpoint: "/patients/:patientId/investigation-results", collectionKey: "investigationResults", empty: "No result metadata yet. Doctor review required.", permissions: ["investigation.result_read"] },
   { key: "files", label: "Reports", icon: "reports", endpoint: "/reports", collectionKey: "reports", empty: "No report record yet. Add report metadata only after doctor review.", permissions: ["report.read"] },
   { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
@@ -240,16 +240,33 @@ export default function PatientFilePage() {
           <ThreeDMedicalIcon name="patients" size="lg" />
         </div>
         <div>
-          <p className="eyebrow">Patient file</p>
+          <p className="eyebrow">Patient file workspace</p>
           <h1>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</h1>
           <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
+          <div className="workflow-band">
+            <span>{patient?.status ?? "Opening"}</span>
+            <span>Balance shown in Billing</span>
+            <span>Allergies tab</span>
+            <span>Medication safety available by role</span>
+          </div>
         </div>
         <div className="patient-primary-actions">
           <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
             <ThreeDMedicalIcon name="encounter" size="sm" />
-            Start Visit
+            New Encounter
           </Link>
-          <span className="badge">{patient?.status ?? "Loading"}</span>
+          <Link className="button secondary large" href="/calendar">
+            <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
+            New Appointment
+          </Link>
+          <Link className="button secondary large" href="/orders">
+            <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
+            New Order
+          </Link>
+          <Link className="button secondary large" href="/billing">
+            <ThreeDMedicalIcon name="billing" size="sm" tone="slate" />
+            New Invoice
+          </Link>
         </div>
       </section>
 

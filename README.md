@@ -1,6 +1,12 @@
 # Prij Clinic
 
-Clinic Management System V0.7 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine v2 framework, and drug-market metadata workflows.
+Clinic Management System V0.9 visible local/private clinic OS sprint for OB/GYN and women’s health workflows.
+
+V0.9 focuses on browser-visible product experience: premium login, role-aware dashboard, patient creation, central patient workspace, reception-to-doctor-to-finance flow, appointment/calendar/queue polish, Owner Control Center, service/price catalog visibility, finance basics, orders skeleton, consent/legal skeleton, and polished medication reference visibility for existing official data.
+
+It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
+
+Earlier foundation: V0.7 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine v2 framework, and official medication metadata workflows.
 
 V0.7 clinic workflow spine adds investigation result metadata, critical-result acknowledgement, metadata-only patient document archive, consent templates/demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packets. It remains local/demo only and must not be used with real patient data or PHI files.
 

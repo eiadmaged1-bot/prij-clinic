@@ -172,7 +172,7 @@ export default function AdminPage() {
           <Metric label="Staff users" value={summary.summary.users ?? "-"} />
           <Metric label="Roles" value={summary.summary.roles ?? "-"} />
           <Metric label="Services" value={summary.summary.services ?? "-"} />
-          <Metric label="AI mode" value={summary.summary.aiMode ?? "Disabled"} />
+          <Metric label="Official medication rows" value="8,269" />
         </section>
       ) : null}
 
@@ -193,9 +193,12 @@ export default function AdminPage() {
           ["Clinic Profile", "Clinic name, branch identity, and contact details are planned for a guarded settings flow."],
           ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
           ["Billing Settings", "Service prices, cost placeholders, and doctor share placeholders are active now. Taxes and gateways remain future work."],
+          ["Medication Data Operations", "8,269 official rows are preserved, 1,200 are verified, and 7,069 remain in owner review."],
+          ["Backup and Export Status", "The official medication export and isolated restore drill passed in v0.8.6. Local export files remain ignored."],
           ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
           ["Feature Flags", "AI stays disabled and draft-only. Future flags must remain audited and owner-controlled."],
-          ["Safety Settings", "Audit logs cannot be deleted and signed records cannot be silently hard-deleted."]
+          ["Safe Force Actions", "Force actions require a reason and audit entry. Signed clinical records are not silently hard-deleted."],
+          ["Safety Settings", "Audit logs cannot be deleted from normal UI and clinical changes remain auditable."]
         ].map(([label, description]) => (
           <article className="module-card" key={label}>
             <strong>{label}</strong>

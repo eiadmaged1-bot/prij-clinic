@@ -10,26 +10,36 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 type FormState = {
   medicalRecordNumber: string;
+  fullName: string;
   firstName: string;
   lastName: string;
   sex: string;
   patientType: string;
   dateOfBirth: string;
+  age: string;
   phone: string;
   email: string;
+  address: string;
+  nationalId: string;
+  referralSource: string;
   notes: string;
 };
 
 const initialState: FormState = {
   medicalRecordNumber: makeMrn(),
+  fullName: "",
   firstName: "",
   lastName: "",
   sex: "",
   patientType: "GENERAL",
   dateOfBirth: "",
+  age: "",
   phone: "",
   email: "",
-  notes: "Local V0.1 demo patient file only."
+  address: "",
+  nationalId: "",
+  referralSource: "",
+  notes: "Local demo patient file only."
 };
 
 export default function NewPatientPage() {
@@ -48,7 +58,32 @@ export default function NewPatientPage() {
     const token = sessionStorage.getItem("prijClinicToken");
 
     try {
-      const payload = Object.fromEntries(Object.entries(form).filter(([, value]) => value.trim() !== ""));
+      const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
+      const firstName = form.firstName.trim() || nameParts[0] || "";
+      const lastName = form.lastName.trim() || nameParts.slice(1).join(" ") || "Patient";
+      if (!firstName) {
+        throw new Error("Enter a full name or first name before creating the patient file.");
+      }
+      const noteParts = [
+        form.notes.trim(),
+        form.address.trim() ? `Address note: ${form.address.trim()}` : "",
+        form.nationalId.trim() ? `National ID note: ${form.nationalId.trim()}` : "",
+        form.referralSource.trim() ? `Referral source: ${form.referralSource.trim()}` : "",
+        form.age.trim() && !form.dateOfBirth.trim() ? `Age note: ${form.age.trim()}` : ""
+      ].filter(Boolean);
+      const payload = Object.fromEntries(
+        Object.entries({
+          medicalRecordNumber: form.medicalRecordNumber,
+          firstName,
+          lastName,
+          sex: form.sex,
+          patientType: form.patientType,
+          dateOfBirth: form.dateOfBirth,
+          phone: form.phone,
+          email: form.email,
+          notes: noteParts.join("\n")
+        }).filter(([, value]) => String(value).trim() !== "")
+      );
       const response = await fetch(`${apiUrl}/patients`, {
         method: "POST",
         credentials: "include",
@@ -95,7 +130,7 @@ export default function NewPatientPage() {
             Back to patients
           </Link>
         </div>
-        <p className="muted">Create the patient file first. Appointments, queue, clinical notes, billing, consents, and AI draft placeholders belong inside that file.</p>
+        <p className="muted">Create the patient file first. Appointments, queue, clinical notes, billing, orders, and consents belong inside that file.</p>
       </section>
 
       <SafetyAlert />
@@ -104,7 +139,7 @@ export default function NewPatientPage() {
         <div className="section-heading">
           <div>
             <h2>Patient file details</h2>
-            <p className="muted">Use fake demo details only. Do not enter real names, phone numbers, addresses, histories, or identifiers.</p>
+            <p className="muted">Use fake demo details only. Duplicate warning is planned for a later backend check.</p>
           </div>
           <span className="badge warning">No real patient data</span>
         </div>
@@ -125,12 +160,16 @@ export default function NewPatientPage() {
             </div>
           </label>
           <label>
+            Full name
+            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Demo Patient" value={form.fullName} />
+          </label>
+          <label>
             First name
-            <input onChange={(event) => update("firstName", event.target.value)} placeholder="Demo" required value={form.firstName} />
+            <input onChange={(event) => update("firstName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.firstName} />
           </label>
           <label>
             Last name
-            <input onChange={(event) => update("lastName", event.target.value)} placeholder="Patient" required value={form.lastName} />
+            <input onChange={(event) => update("lastName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.lastName} />
           </label>
           <label>
             Sex
@@ -155,12 +194,28 @@ export default function NewPatientPage() {
             <input onChange={(event) => update("dateOfBirth", event.target.value)} type="date" value={form.dateOfBirth} />
           </label>
           <label>
+            Age if DOB unknown
+            <input onChange={(event) => update("age", event.target.value)} placeholder="Optional demo age" value={form.age} />
+          </label>
+          <label>
             Phone
             <input onChange={(event) => update("phone", event.target.value)} placeholder="Demo phone only" value={form.phone} />
           </label>
           <label>
             Email
             <input onChange={(event) => update("email", event.target.value)} placeholder="demo@example.local" type="email" value={form.email} />
+          </label>
+          <label>
+            Address
+            <input onChange={(event) => update("address", event.target.value)} placeholder="Optional demo address note" value={form.address} />
+          </label>
+          <label>
+            National ID
+            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional demo identifier only" value={form.nationalId} />
+          </label>
+          <label>
+            Source / referral
+            <input onChange={(event) => update("referralSource", event.target.value)} placeholder="Walk-in, referral, campaign" value={form.referralSource} />
           </label>
           <label className="wide">
             Notes

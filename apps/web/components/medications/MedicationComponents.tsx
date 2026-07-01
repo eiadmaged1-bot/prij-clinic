@@ -172,7 +172,7 @@ export function DrugMarketSearchBox() {
 
   return (
     <section className="panel">
-      <div className="section-heading"><h2>Drug Market Search</h2><span className="badge">Strength/form variants only</span></div>
+      <div className="section-heading"><h2>Official Medicine Search</h2><span className="badge">Strength/form variants only</span></div>
       <form className="inline-form" onSubmit={submit}>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search trade, generic, family, ATC, strength, form, source, or country" />
         <button className="button" type="submit">Search</button>
@@ -226,12 +226,12 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
             <div><dt>ATC/class</dt><dd>{String(variant.atcCode ?? "Not listed")}</dd></div>
             <div><dt>Official/source price</dt><dd>{formatPrice(variant)}</dd></div>
             <div><dt>Source</dt><dd>{String(variant.sourceCode ?? variant.sourceName ?? "Not listed")}</dd></div>
-            <div><dt>Source file hash</dt><dd>{String(variant.sourceFileHash ?? "Not listed")}</dd></div>
+            <div><dt>Source fingerprint</dt><dd>{String(variant.sourceFileHash ?? "Not listed")}</dd></div>
             <div><dt>Source fetched</dt><dd>{formatDate(String(variant.sourceFetchedAt ?? ""))}</dd></div>
             <div><dt>Source published label/date</dt><dd>{String(variant.latestSourceLabel ?? "") || formatDate(String(variant.latestSourcePublishedAt ?? variant.sourcePublishedAt ?? ""))}</dd></div>
             <div><dt>Source freshness</dt><dd>{String(variant.sourceFreshnessStatus ?? "unknown")}</dd></div>
             <div><dt>Parser confidence</dt><dd>{formatConfidence(variant.parserConfidence)}</dd></div>
-            <div><dt>Protected official fields</dt><dd>{variant.hasOfficialRowJson ? "Available in admin review details" : "Not captured"}</dd></div>
+            <div><dt>Protected official details</dt><dd>{variant.hasOfficialRowJson ? "Available in admin review details" : "Not captured"}</dd></div>
           </dl>
         </article>
       ))}
@@ -251,11 +251,11 @@ export function DrugMarketImportPanel() {
   return (
     <section className="panel">
       <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
-      <p className="muted">Upload official or licensed source files only. Pharmacy stock, order, checkout, purchase, and patient data uploads are blocked.</p>
+      <p className="muted">Upload official or licensed source files only. Retail, fulfillment, and patient data uploads are blocked.</p>
       <div className="data-list">
         <article className="data-row">
           <strong>Workflow</strong>
-          <p className="muted">Select country and source, add source URL, file date, source label, and official notes, preview the first 20 normalized rows with confidence, dry run, then commit rows into the review queue. Raw official fields stay in protected admin review details.</p>
+          <p className="muted">Select country and source, add source URL, file date, source label, and official notes, preview the first 20 normalized rows with confidence, dry run, then commit rows into the review queue. Original official details stay protected for admin review.</p>
         </article>
         <article className="data-row">
           <strong>Accepted formats</strong>

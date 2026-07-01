@@ -14,7 +14,7 @@ async function main() {
   record.pass("theme registry includes required appearances");
 
   const loginSource = await readFile("apps/web/app/login/page.tsx", "utf8");
-  if (!loginSource.includes('demoEmail = "eyad"') || !loginSource.includes('demoPassword = "eyad"')) {
+  if (!loginSource.includes('demoEmail = "eyad"') || !loginSource.includes('demoPassword = "eyad"') || !loginSource.includes("Use Owner Demo Login")) {
     throw new Error("Login page does not expose local demo admin credentials.");
   }
   record.pass("login page renders local demo admin credentials");
@@ -26,7 +26,7 @@ async function main() {
   record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
   const registrySource = await readFile("apps/web/app/navigation-registry.ts", "utf8");
-  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Admin Control Center", "Appearance", "Accounts", "Guideline Center", "Medications", "Drug Market"]) {
+  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Owner Control Center", "Appearance", "Users and Roles", "Guidelines", "Medications", "Official Medicine Data"]) {
     if (!registrySource.includes(label)) throw new Error(`Navigation registry label missing: ${label}`);
   }
   record.pass("canonical navigation registry includes clinical and admin modules");

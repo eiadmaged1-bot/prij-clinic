@@ -40,7 +40,7 @@ async function main() {
   checks.push("login while authenticated shows current-session actions");
 
   const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
-  for (const label of ["user?.displayName", "user.loginId", "Accounts", "Logout"]) {
+  for (const label of ["user?.displayName", "primaryRole", "Owner", "Logout"]) {
     assert(shellSource.includes(label), `app shell missing session/topbar label: ${label}`);
   }
   checks.push("account session topbar source remains visible");

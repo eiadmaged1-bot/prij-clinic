@@ -43,8 +43,8 @@ const blockedWords = [
 ];
 
 const requiredText = {
-  "/login": ["Prij Clinic", "Sign in", "Use Admin Demo Login"],
-  "/dashboard": ["Dashboard", "Quick actions"],
+  "/login": ["Prij Clinic", "Sign in", "Use Owner Demo Login"],
+  "/dashboard": ["Clinic Home", "Quick actions"],
   "/doctor": ["Doctor Mode", "Open Patient", "Start Visit", "Waiting patients"],
   "/doctor/visit": ["Guided Visit", "Save Draft"],
   "/patients": ["Patient files", "New Patient File", "Search patient files"],
@@ -159,7 +159,7 @@ async function main() {
   record.pass("doctor mode cards and icon labels are visible");
 
   const patientHtml = await fetchHtml(`/patients/${patient.id}`);
-  for (const label of ["Patient file", "Start Visit"]) {
+  for (const label of ["Patient file", "New Encounter"]) {
     if (!visibleText(patientHtml).includes(label)) throw new Error(`Patient file missing ${label}.`);
   }
   const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
@@ -170,7 +170,7 @@ async function main() {
     "Appointments",
     "Encounters",
     "Prescriptions",
-    "Investigations",
+    "Orders",
     "Reports",
     "Pregnancy",
     "Ultrasound",

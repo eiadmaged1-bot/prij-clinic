@@ -31,7 +31,7 @@ type MvpPageProps = {
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-const navGroupOrder: NavItem["group"][] = ["Operations", "Clinical", "OB/Pregnancy", "Finance", "Safety/Admin", "Admin"];
+const navGroupOrder: NavItem["group"][] = ["Clinic Flow", "Clinical Work", "Reference", "Finance", "Owner", "Later"];
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -280,8 +280,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">PC</span>
-          <strong>Prij Clinic</strong>
-          <span>V0.1 controlled demo</span>
+          <strong>Prij Clinic OS</strong>
+          <span>Local clinic workspace</span>
         </Link>
 
         {visibleNavGroups.map((group) => (
@@ -289,7 +289,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
+                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical Work" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
@@ -301,14 +301,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="app-main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">Local pilot workspace</p>
-            <p className="muted">Use demo records only. Clinical decisions stay doctor-led.</p>
+            <p className="eyebrow">Clinic operations</p>
+            <p className="muted">Reception, doctor, finance, and owner work from one patient-centered workspace.</p>
           </div>
           <label className="portal-search" aria-label="Search patient files">
-            <span>Search</span>
-            <input placeholder="Find patient file or appointment" />
+            <span>Patient search</span>
+            <input placeholder="Name, file number, phone, or appointment" />
           </label>
           <div className="topbar-actions">
+            <Link className="button compact" href="/patients/new">
+              <ThreeDMedicalIcon name="patients" size="sm" />
+              New Patient
+            </Link>
+            <span className="badge warning">Local Demo</span>
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
                 <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
@@ -321,18 +326,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />
               <div className="user-menu-copy">
                 <strong>{user?.displayName ?? "Not signed in"}</strong>
-                <span>{user ? `${user.loginId ?? user.email} - ${user.roles.join(", ") || "Staff"}` : "Login required"}</span>
+                <span>{user ? `${primaryRole(user.roles)} role` : "Login required"}</span>
               </div>
               {user ? (
                 <>
-                  <Link className="button secondary compact" href="/dashboard">
-                    <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-                    Dashboard
-                  </Link>
                   {canOpenAdmin ? (
-                    <Link className="button secondary compact" href="/admin/accounts">
-                      <ThreeDMedicalIcon name="reception" size="sm" tone="violet" />
-                      Accounts
+                    <Link className="button secondary compact" href="/admin">
+                      <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
+                      Owner
                     </Link>
                   ) : null}
                   <button className="button secondary compact" onClick={signOut} type="button">
@@ -347,10 +348,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               )}
             </div>
-            <Link className="button secondary compact" href="/">
-              <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-              Home
-            </Link>
           </div>
         </header>
         {children}
@@ -363,9 +360,9 @@ export function SafetyAlert() {
   return (
     <section className="alert">
       <div>
-        <strong>Demo/local only - no real patient data.</strong>
+        <strong>Local demo only - no real patient data.</strong>
         <p className="muted">
-          AI remains disabled and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass review.
+          AI remains assistive and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass doctor review.
         </p>
       </div>
       <span className="badge danger">Not production-ready</span>
@@ -458,6 +455,10 @@ function isActive(pathname: string | null, href: string) {
   if (!pathname) return false;
   if (href === "/dashboard") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function primaryRole(roles: string[]) {
+  return roles[0] ?? "Staff";
 }
 
 function hasAnyPermission(permissions: string[], keys: string[]) {

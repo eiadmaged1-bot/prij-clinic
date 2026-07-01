@@ -51,7 +51,7 @@ export default function LoginPage() {
           <div>
             <p className="eyebrow">Staff access</p>
             <h1>Sign in</h1>
-            <p className="muted">Checking whether you already have an active session. Use Admin Demo Login if no active session is found.</p>
+            <p className="muted">Checking whether you already have an active session. Use Owner Demo Login if no active session is found.</p>
           </div>
           <div className="skeleton" aria-label="Checking session" />
         </section>
@@ -66,9 +66,7 @@ export default function LoginPage() {
           <div>
             <p className="eyebrow">Current session</p>
             <h1>Already logged in as {session.user.displayName}</h1>
-            <p className="muted">
-              {session.user.loginId ?? session.user.email} - {session.user.roles.join(", ") || "Staff"}
-            </p>
+            <p className="muted">{session.user.roles.join(", ") || "Staff"} access</p>
           </div>
           <div className="form-actions">
             <Link className="button" href="/dashboard">
@@ -95,40 +93,40 @@ export default function LoginPage() {
     <main className="page centered">
       <section className="login-shell">
         <div className="login-brand">
-          <p className="eyebrow">Staff access</p>
+            <p className="eyebrow">Premium clinic workspace</p>
           <h1>Prij Clinic</h1>
           <p className="muted">
-            Local V0.1 demo workspace for clinic workflow QA. Do not use real clinic credentials or real patient data.
+            A focused local clinic operating system for reception, doctors, finance, and owner review. Use demo data only.
           </p>
           <div className="workflow-band">
-            <span>Staff protected</span>
+            <span>Local Demo</span>
             <span>Audit logged</span>
-            <span>AI disabled</span>
+            <span>Doctor-led care</span>
           </div>
         </div>
 
         <form className="login-panel" onSubmit={submit}>
           <div>
-            <p className="eyebrow">Demo login</p>
+            <p className="eyebrow">Owner demo access</p>
             <h2>Sign in</h2>
-            <p className="muted">Use local demo staff credentials only. External AI and payment services are not enabled.</p>
+            <p className="muted">Use local demo staff credentials only. This is not a production clinic login.</p>
           </div>
 
           {session.message ? <p className="notice">{session.message}</p> : null}
 
           <div className="credential-card" aria-label="Demo owner credentials">
             <div>
-              <span className="eyebrow">Local Admin Demo</span>
+              <span className="eyebrow">Local Owner Demo</span>
               <strong>{demoEmail}</strong>
-              <span className="credential-value">{demoPassword}</span>
+              <span className="credential-value">Local demo password</span>
             </div>
             <button className="button secondary compact" onClick={useDemoLogin} type="button">
-              Use Admin Demo Login
+              Use Owner Demo Login
             </button>
           </div>
 
           <label>
-            Admin ID or email
+            Staff ID or email
             <input
               autoComplete="username"
               name="email"
@@ -157,7 +155,7 @@ export default function LoginPage() {
             {isSubmitting ? "Signing in" : "Sign in"}
           </button>
 
-          <p className="empty-state">Demo/local only - no real patient data, credentials, payment details, or report files.</p>
+          <p className="empty-state">Local demo only - no real patient data, payment details, secrets, or clinical report files.</p>
         </form>
       </section>
     </main>

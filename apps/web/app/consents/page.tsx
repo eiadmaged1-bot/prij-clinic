@@ -3,21 +3,21 @@ import { MvpPage } from "../mvp-page";
 export default function ConsentsPage() {
   return (
     <MvpPage
-      eyebrow="Consent and privacy"
-      title="Consents"
+      eyebrow="Consent and legal documents"
+      title="Consent Workspace"
       items={[
-        "Consent records require staff sign-in, patient access checks, and audit logging",
-        "V0.1 consent is a controlled foundation, not production legal consent enforcement",
-        "Real clinic consent text, signatures, retention, and privacy review are future requirements"
+        "Template list and patient consent records are visible for workflow review.",
+        "Statuses are draft, signed, and voided; void actions require a reason where supported.",
+        "Signature and print-friendly legal templates are placeholders until approved by the clinic."
       ]}
       collectionKey="consentRecords"
       createEndpoint="/consents"
-      createNote="Use a fake demo patient ID only. Do not enter legal signature text or real patient notes."
+      createNote="Use a fake demo patient file only. Do not enter real legal text, signatures, or patient notes."
       createFields={[
-        { name: "patientId", label: "Patient ID", required: true },
+        { name: "patientId", label: "Patient file", required: true },
         { name: "consentType", label: "Consent type", required: true, defaultValue: "treatment" },
-        { name: "status", label: "Status", required: true, defaultValue: "granted" },
-        { name: "notes", label: "Notes", defaultValue: "Local demo consent record only. Legal review required before real use." }
+        { name: "status", label: "Status", required: true, defaultValue: "draft" },
+        { name: "notes", label: "Notes", defaultValue: "Local demo consent placeholder. Legal review required before real use." }
       ]}
     />
   );

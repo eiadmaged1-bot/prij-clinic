@@ -9,6 +9,9 @@ Medication data next steps:
 - Periodically run `npm run medication:official-data:export`, verify the ignored local export, and run the isolated restore drill.
 
 Engineering next steps:
+- Run manual browser QA for `/login`, `/dashboard`, `/patients`, `/patients/new`, a patient file, `/calendar`, `/queue`, `/doctor`, `/billing`, `/admin`, `/orders`, `/medications`, and `/drug-market`.
+- Add richer appointment and queue status controls once backend status transitions are wired into the visible pages.
+- Add duplicate-patient warning logic behind the patient creation form.
+- Add service catalog editing as its own owner page if the current Owner Control Center becomes too dense.
 - Expand review queue UI with import-run selector backed by actual import run list.
-- Add richer protected admin drawer for raw official fields without exposing raw JSON in normal UI.
-- Add API-level integration tests for batch verification once a stable local auth test harness is available.
+- Add richer protected admin drawer for original official fields without exposing raw technical output in normal UI.
