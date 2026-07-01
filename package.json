@@ -100,6 +100,8 @@
     "db:v095:clean:apply": "node scripts/v095-clean-demo-operational-data.mjs --apply --confirm CLEAN_DEMO_OPERATIONAL_DATA",
     "db:v095:seed-investigations": "node scripts/seed-investigation-catalog.mjs",
     "db:v095:verify-reference": "node scripts/v095-reference-data-verify.mjs",
+    "db:v096:report": "node scripts/v096-local-db-finalization-report.mjs",
+    "db:v096:finalize-local-demo": "node scripts/v096-local-db-finalization-report.mjs --apply-cleanup",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
     "test:official-medication-restore": "node scripts/official-medication-restore-test.mjs",
     "test:drug-market:source-recovery": "node scripts/drug-market-source-recovery-test.mjs",
