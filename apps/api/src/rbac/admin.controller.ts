@@ -90,6 +90,12 @@ export class AdminController {
     return this.rbac.activateAccount(id, dto, user);
   }
 
+  @Post("accounts/:id/reactivate")
+  @Permissions("user.manage")
+  reactivateAccount(@Param("id") id: string, @Body() dto: AccountStatusChangeDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.activateAccount(id, dto, user);
+  }
+
   @Patch("accounts/:id/permissions")
   @Permissions("user.manage")
   updateAccountPermissions(@Param("id") id: string, @Body() dto: UpdateAccountPermissionsDto, @CurrentUser() user: AuthUser) {

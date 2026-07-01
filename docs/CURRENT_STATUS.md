@@ -1,5 +1,14 @@
 # Current Status
 
+v0.9.5 Data Hygiene + Reference Catalog + Eyad Account Authority is in progress on branch `data/v0.9.5-clean-reference-data-account-authority`. It adds guarded database audit/cleanup scripts, an investigation reference catalog seed, verification for reference-data preservation, and clearer Eyad protected account authority checks. It is not a release, no tag has been created, and final manual QA remains required.
+
+v0.9.5 safety status:
+- Demo cleanup is dry-run by default and targets only clearly demo/test/local patient-linked operational data.
+- Medication reference and official drug-market rows are preserved.
+- Investigation catalog/reference names are preserved and seeded as order/catalog names only.
+- `eyad` remains the protected local demo System Owner and can create local demo staff accounts for testing through the guarded account-management flow.
+- No real patient data, external AI, real payment gateway, retail checkout/stock/order behavior, autonomous prescribing, or medication dosing instructions were added.
+
 v0.9.4 Automated Browser Journey QA is in progress on branch `qa/v0.9.4-automated-browser-journey`. It adds Playwright Chromium browser journeys for login, dashboard, fake/demo patient creation, patient workspace tabs, clinic workflow pages, medication/drug-market declutter, and role visibility. It is QA infrastructure only: no release tag has been created, v0.9.3 is still not final, manual browser QA is still required, and Docker/PostgreSQL local validation remains a separate release blocker.
 
 v0.9.3 Automated QA + Stability Hardening is now a release candidate on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not a final release, no release tag has been created, and release tagging is forbidden until final local Docker/PostgreSQL release validation and manual browser QA pass without `V093_ALLOW_ENV_SKIP=1`.

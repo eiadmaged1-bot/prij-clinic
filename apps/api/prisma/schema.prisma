@@ -1055,6 +1055,25 @@ model DrugMarketMergeCandidate {
   @@index([status])
 }
 
+model InvestigationCatalogItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  code       String   @unique
+  name       String
+  category   String
+  discipline String
+  modality   String?
+  sampleType String?
+  active     Boolean  @default(true)
+  sortOrder  Int?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([category])
+  @@index([discipline])
+  @@index([active])
+  @@index([sortOrder])
+}
+
 model InvestigationOrder {
   id          String                   @id @default(uuid()) @db.Uuid
   orderNumber String?                  @unique

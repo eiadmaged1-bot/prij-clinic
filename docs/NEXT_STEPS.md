@@ -1,5 +1,29 @@
 # Next Steps
 
+v0.9.5 data hygiene/reference next steps:
+
+1. Let GitHub Actions run `v0.9.5 Data Hygiene Reference Gate` on `data/v0.9.5-clean-reference-data-account-authority`.
+2. When Docker/PostgreSQL are available locally, run:
+
+```powershell
+docker compose up -d postgres
+npm run prisma:repair
+npm run prisma:seed
+npm run db:v095:audit
+npm run db:v095:clean:dry-run
+npm run db:v095:verify-reference
+```
+
+3. Review the dry-run output before any apply cleanup.
+4. Apply cleanup only in local/dev/test/CI demo databases:
+
+```powershell
+APP_ENV=local npm run db:v095:clean:apply
+```
+
+5. Manually QA `eyad` account creation for Doctor, Receptionist, Nurse, and Accountant test accounts from `/admin/accounts`.
+6. Do not tag v0.9.3, v0.9.4, or v0.9.5 from this sprint.
+
 v0.9.4 automated browser journey QA next steps:
 
 1. Let GitHub Actions run `v0.9.4 Browser Journey QA` on `qa/v0.9.4-automated-browser-journey`.

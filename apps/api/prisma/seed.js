@@ -11,6 +11,7 @@ const { seedEmergencyObProtocols } = require("./seeds/womens-health-emergency-pr
 const { seedAubMenstrualProtocols } = require("./seeds/womens-health-aub-menstrual-protocols");
 const { seedContraceptionProtocols } = require("./seeds/womens-health-contraception-protocols");
 const { seedAntenatalRoutineProtocols } = require("./seeds/womens-health-antenatal-routine-protocols");
+const { seedInvestigationCatalog } = require("./seeds/investigation-catalog");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
@@ -1880,6 +1881,7 @@ async function main() {
   await seedContraceptionProtocols(prisma);
   await seedAntenatalRoutineProtocols(prisma);
   await seedGuidelineCenter(prisma, demoOwner);
+  await seedInvestigationCatalog(prisma);
   await seedMedicationIntelligence(prisma);
 
   if (!seedDemoData) {

@@ -6,6 +6,27 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.5 Data Hygiene + Reference Catalog + Eyad Account Authority
+
+Branch: `data/v0.9.5-clean-reference-data-account-authority`.
+
+v0.9.5 adds guarded local/demo database audit and cleanup scripts, an investigation reference catalog seed, reference-data preservation checks, and clearer protected `eyad` System Owner account authority. It is not a release and creates no tag.
+
+```powershell
+npm run db:v095:audit
+npm run db:v095:clean:dry-run
+npm run db:v095:verify-reference
+npm run db:v095:seed-investigations
+```
+
+Apply cleanup only after reviewing dry-run output and only in local/dev/test/CI demo databases:
+
+```powershell
+APP_ENV=local npm run db:v095:clean:apply
+```
+
+Cleanup targets only clearly demo/test/local patient-linked operational records. It preserves medication reference data, official drug-market metadata, investigation catalog rows, roles/permissions, audit logs, and the protected `eyad` account.
+
 ## v0.9.3 Release Candidate
 
 Branch: `hardening/v0.9.3-automated-qa-stabilization`.
@@ -313,6 +334,7 @@ PATCH /admin/accounts/:id
 POST /admin/accounts/:id/reset-password
 POST /admin/accounts/:id/deactivate
 POST /admin/accounts/:id/activate
+POST /admin/accounts/:id/reactivate
 PATCH /admin/accounts/:id/permissions
 GET  /admin/roles
 GET  /admin/permissions

@@ -1,0 +1,114 @@
+name: v0.9.5 Data Hygiene Reference Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - data/v0.9.5-clean-reference-data-account-authority
+  pull_request:
+    branches:
+      - qa/v0.9.4-automated-browser-journey
+
+jobs:
+  v095-data-hygiene-reference:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: prij_clinic_dev
+          POSTGRES_USER: prij_clinic_dev
+          POSTGRES_PASSWORD: prij_clinic_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_dev -d prij_clinic_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      CI: "true"
+      APP_ENV: ci
+      DATABASE_URL: postgresql://prij_clinic_dev:prij_clinic_dev_password@localhost:5432/prij_clinic_dev?schema=public
+      JWT_SECRET: ci_demo_jwt_secret_not_for_production
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      API_PORT: "3001"
+      API_URL: http://localhost:3001
+      APP_URL: http://localhost:3000
+      WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      DEMO_ADMIN_PASSWORD: eyad
+      DEMO_TEST_PASSWORD: LocalDev123!
+      SEED_DEMO_OWNER: "true"
+      SEED_DEMO_DATA: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Repair Prisma client
+        run: npm run prisma:repair
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed demo and reference data
+        run: npm run prisma:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Start API and web
+        run: |
+          npm run start:api > api.log 2>&1 &
+          echo $! > api.pid
+          npm run start:web > web.log 2>&1 &
+          echo $! > web.pid
+
+      - name: Wait for local app
+        run: npm run wait:local-app
+
+      - name: Audit data shape
+        run: npm run db:v095:audit
+
+      - name: Demo cleanup dry run
+        run: npm run db:v095:clean:dry-run
+
+      - name: Verify reference data and account authority
+        run: npm run db:v095:verify-reference
+
+      - name: Apply cleanup in throwaway CI database
+        run: npm run db:v095:clean:apply
+
+      - name: Re-verify after cleanup
+        run: npm run db:v095:verify-reference
+
+      - name: Run source UI text check
+        run: npm run test:v093:ui-text
+
+      - name: List Playwright journeys
+        run: npx playwright test --config=playwright.config.ts --list
+
+      - name: Print app logs on failure
+        if: failure()
+        run: |
+          echo "API log:"
+          cat api.log || true
+          echo "Web log:"
+          cat web.log || true

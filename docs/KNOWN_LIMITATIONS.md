@@ -1,5 +1,14 @@
 # Known Limitations
 
+- v0.9.5 is not a production data-retention or legal deletion policy.
+- v0.9.5 cleanup only targets clearly demo/test/local operational rows and must not be used to clean real patient records.
+- v0.9.5 apply cleanup is guarded by environment checks, but operators must still review dry-run output first.
+- Local endpoint account verification requires the API, PostgreSQL, migrations, and seeded demo data. If the API is unavailable, the verifier performs DB/source fallback checks and reports a warning instead of proving endpoint login behavior.
+- Investigation catalog rows are reference/order names only. They do not provide diagnostic interpretation or clinical recommendations.
+- Medication market strength/form/pack fields remain market metadata only and must not be used as patient dosing instructions.
+- v0.9.5 does not add external AI, a payment gateway, retail scraping, stock/order/checkout behavior, or production credential handling.
+- v0.9.5 does not create a release tag and does not finalize v0.9.3, v0.9.4, or v0.9.5.
+
 - v0.9.4 Playwright browser journeys require the web app, API, PostgreSQL, migrations, and seeded demo data. They are expected to run fully in GitHub Actions with a PostgreSQL service when local Docker is unavailable.
 - v0.9.4 browser QA accelerates manual review but does not replace final manual browser QA by the owner.
 - v0.9.4 does not release v0.9.3 or create any release tag.
