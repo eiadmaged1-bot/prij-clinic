@@ -1,5 +1,38 @@
 # Next Steps
 
+v0.10.1 official medication import operator next steps:
+
+1. Obtain authorized official medication registry/source files from the owner/admin.
+2. Place the files in `storage/official-medication-sources/`.
+3. Scan the inbox:
+
+```powershell
+npm run medication:v101:operator -- -Scan
+```
+
+4. Dry-run a selected file:
+
+```powershell
+npm run medication:v101:operator -- -DryRun -Source NHRA -Country BH -File "PATH"
+```
+
+5. Apply only after source and mapping review:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v101:operator -- -Apply -ConfirmApply -Source NHRA -Country BH -File "PATH"
+```
+
+6. Verify:
+
+```powershell
+npm run medication:v097:ready-check:strict
+npm run prescriptions:v097:medication-selection-check
+```
+
+7. If official rows remain 0, keep prescription medication selection blocked and document the warning honestly.
+8. Do not create fake rows, dose automation, stock/order/checkout imports, or a release tag.
+
 v0.10.0 official medication re-import next steps:
 
 1. Obtain Bahrain NHRA and Oman MOH official/public files or owner-approved official files.

@@ -1,5 +1,14 @@
 # Current Status
 
+v0.10.1 Official Medication Import Operator is in progress on branch `data/v0.10.1-official-medication-import-operator`. The old project medication artifact is unavailable and cannot be recovered from current project artifacts, so the app is being prepared for a real authorized official-medication import session instead of recreating rows.
+
+v0.10.1 status:
+- Admin page `/admin/drug-market/import` now shows official row counts, verified count, needs_review count, local inbox path, accepted file types, and dry-run-first operator commands.
+- Local inbox: `storage/official-medication-sources/`.
+- Official medication rows remain 0 until authorized official files are added and imported.
+- Prescription medication selection remains blocked until verified or needs_review official rows exist.
+- No fake medication rows, generated medication lists, patient dosing instructions, stock/order/checkout sources, real patient data, external AI, or release tag were added.
+
 v0.10.0 Official Medication Re-Import is in progress on branch `data/v0.10.0-official-medication-reimport`. It documents the official source registry, adds dry-run-first source acquisition into ignored local storage, adds a source-specific parser framework for Bahrain NHRA/Oman MOH/generic official spreadsheets, and adds synthetic parser fixtures only. Current local source acquisition list is empty, so no official file dry-run import or apply import was performed. Official medication rows remain 0 and verified medication rows remain 0.
 
 v0.10.0 safety status:

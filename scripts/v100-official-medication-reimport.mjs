@@ -44,6 +44,13 @@ if (isMain) {
     dbCountryCode: countryMap[String(args.country ?? "").toUpperCase()] ?? null,
     file: null,
     parser: null,
+    detectedColumns: [],
+    unmappedColumns: [],
+    rowCountEstimate: 0,
+    duplicateEstimate: 0,
+    countrySource: null,
+    importedVerificationPolicy: "needs_review by default; verified only when prior project verificationStatus=verified is explicit",
+    safetyWarning: "No dose, frequency, duration, route, or patient instructions are generated from market metadata.",
     rowsRead: 0,
     rowsMapped: 0,
     inserted: 0,
@@ -63,6 +70,11 @@ if (isMain) {
     report.file = input;
     const parsed = parseOfficialMedicationFile({ file: input, source: args.source ?? "GENERIC", country: args.country });
     report.parser = parsed.parser;
+    report.detectedColumns = parsed.detectedColumns;
+    report.unmappedColumns = parsed.unmappedColumns;
+    report.rowCountEstimate = parsed.rowsRead;
+    report.duplicateEstimate = estimateDuplicateRecords(parsed.records);
+    report.countrySource = { country: parsed.dbCountryCode, source: args.source ?? "GENERIC" };
     report.rowsRead = parsed.rowsRead;
     report.rowsMapped = parsed.records.length;
     report.verifiedRowsInSource = parsed.records.filter((row) => row.verificationStatus === "verified").length;
@@ -91,10 +103,13 @@ export function parseOfficialMedicationFile({ file, source = "GENERIC", country 
   if (!dbCountryCode) throw new Error("--country must be BH or OM for v100 re-import.");
   const rows = readRows(absolute, extension);
   const parser = parserName(source, extension);
+  const detectedColumns = detectColumns(rows);
+  const mappedColumns = new Set(Object.values(fieldAliases).flat().map(normalizeHeader));
+  const unmappedColumns = detectedColumns.filter((column) => !mappedColumns.has(normalizeHeader(column)) && column !== "__sheetName");
   const records = rows
     .map((row, index) => normalizeOfficialRow({ row, source, dbCountryCode, rowNumber: index + 1 }))
     .filter((record) => record.tradeName);
-  return { file: absolute, extension, parser, rowsRead: rows.length, records, dbCountryCode };
+  return { file: absolute, extension, parser, rowsRead: rows.length, records, dbCountryCode, detectedColumns, unmappedColumns };
 }
 
 export function normalizeOfficialRow({ row, source = "GENERIC", dbCountryCode, rowNumber = 0 }) {
@@ -363,6 +378,24 @@ function writeReport(report) {
   mkdirSync(storageReportDir, { recursive: true });
   const path = join(storageReportDir, `v100-reimport-report-${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
   writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`);
+}
+
+function detectColumns(rows) {
+  const columns = new Set();
+  for (const row of rows.slice(0, 50)) {
+    for (const key of Object.keys(row ?? {})) columns.add(key);
+  }
+  return [...columns].sort((a, b) => a.localeCompare(b));
+}
+
+function estimateDuplicateRecords(records) {
+  const seen = new Set();
+  let duplicates = 0;
+  for (const record of records) {
+    if (seen.has(record.sourceRowHash)) duplicates += 1;
+    else seen.add(record.sourceRowHash);
+  }
+  return duplicates;
 }
 
 function materiallyDifferent(existing, incoming) {

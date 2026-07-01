@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.10.1 adds an official medication import operator, but it does not recover the old missing medication artifact.
+- Official medication rows remain 0 until authorized official files are placed in `storage/official-medication-sources/` and explicitly applied.
+- The operator can scan, dry-run, and guard apply imports; it does not create medication rows from memory, synthetic fixtures, or generated lists.
+- Prescription medication selection remains blocked while there are no verified or needs_review official rows.
+- Market strength/form/pack fields are not patient dosing instructions, and the operator does not generate dose, frequency, duration, route, or directions.
+- Do not use stock/order/checkout sources, real patient data, external AI, or production-like environments for apply imports.
+
 - v0.10.0 prepares safe official medication re-import, but no Bahrain NHRA or Oman MOH official source file is currently acquired in local ignored storage.
 - v0.10.0 parser support is limited to reviewed CSV, XLSX/XLS, JSON, and JSONL source files. PDF/ZIP acquisition is allowed for safe storage, but parsing requires reviewed extraction or source-specific parser work before import.
 - Official medication rows and verified medication rows remain 0 until an official/public or owner-approved source file is acquired and imported.

@@ -6,6 +6,32 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.10.1 Official Medication Import Operator
+
+Branch: `data/v0.10.1-official-medication-import-operator`.
+
+The old project medication artifact is unavailable and cannot be recovered from current project artifacts. v0.10.1 prepares the app for a real authorized official-medication import session without creating fake rows or generated medication data.
+
+Local inbox:
+
+```powershell
+storage/official-medication-sources/
+```
+
+Operator commands:
+
+```powershell
+npm run medication:v101:import-status
+npm run medication:v101:operator -- -Scan
+npm run medication:v101:operator -- -DryRun -Source NHRA -Country BH -File "PATH"
+$env:APP_ENV="local"
+npm run medication:v101:operator -- -Apply -ConfirmApply -Source NHRA -Country BH -File "PATH"
+npm run medication:v097:ready-check:strict
+npm run prescriptions:v097:medication-selection-check
+```
+
+Official rows remain 0 until authorized official files are added and applied. Prescription medication selection remains blocked until verified or needs_review official rows exist. Imported strength/form/pack is market metadata only; doctors manually write patient directions. Do not use fake data, stock/order/checkout sources, real patient data, external AI, or release tags for this sprint.
+
 ## v0.10.0 Official Medication Re-Import
 
 Branch: `data/v0.10.0-official-medication-reimport`.
