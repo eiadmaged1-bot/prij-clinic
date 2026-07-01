@@ -255,7 +255,8 @@ export function MvpPage({
           </div>
           <form className="form-grid" onSubmit={submit}>
             {createFields.map((field) => {
-              const datalistId = suggestionsByField[field.name]?.length ? `${field.name}-suggestions` : undefined;
+              const suggestions = suggestionsByField[field.name] ?? [];
+              const datalistId = suggestions.length ? `${field.name}-suggestions` : undefined;
               return (
                 <label key={field.name}>
                   {field.label}
@@ -283,7 +284,7 @@ export function MvpPage({
                       />
                       {datalistId ? (
                         <datalist id={datalistId}>
-                          {suggestionsByField[field.name].map((suggestion) => (
+                          {suggestions.map((suggestion) => (
                             <option key={suggestion} value={suggestion} />
                           ))}
                         </datalist>
