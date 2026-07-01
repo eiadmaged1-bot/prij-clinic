@@ -6,6 +6,28 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.9 Official Medication File Intake + Restore Readiness
+
+Branch: `data/v0.9.9-official-medication-file-intake`.
+
+v0.9.9 adds a local owner/admin inbox for official medication files after v0.9.8 found no approved local source/export candidates. Owner-provided files go in `storage/official-medication-inbox/`, which is ignored except for `.gitkeep`.
+
+```powershell
+npm run medication:v099:inbox-scan
+npm run medication:v099:inbox-validate
+npm run medication:v099:restore-inbox:dry-run
+npm run medication:v099:intake-ready
+```
+
+Apply restore only after owner review and only in a local/dev/test/CI environment:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v099:restore-inbox:apply
+```
+
+No fake medication rows are created. Raw official files, Excel/PDF/ZIP files, reports, backups, storage contents, secrets, and local databases must not be committed. Prescription medication selection remains blocked until official rows exist.
+
 ## v0.9.7 Reference Data Restore + Prescription Trial Readiness
 
 Branch: `data/v0.9.7-reference-data-restore-prescription-readiness`.

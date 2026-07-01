@@ -41,6 +41,9 @@ uploads/
 storage/*
 !storage/
 !storage/README.md
+!storage/official-medication-inbox/
+storage/official-medication-inbox/*
+!storage/official-medication-inbox/.gitkeep
 apps/api/uploads/
 apps/api/storage/
 private/

@@ -1,5 +1,8 @@
 # Known Limitations
 
+- v0.9.9 adds a local official medication file inbox and restore-readiness workflow only. It does not import raw official files without a mapper and does not create fake medication rows.
+- v0.9.9 prescription medication selection remains blocked when official medication rows are absent.
+- v0.9.9 browser UI intentionally does not upload files; owner/admins must use the ignored local inbox until safe file-upload infrastructure is reviewed for this workflow.
 - v0.9.7 does not create or verify real medication data by itself. It restores prior approved official exports when present, otherwise reports a missing-source warning.
 - v0.9.7 prescription readiness only attaches medication reference metadata to draft prescription items. It does not generate dose, frequency, duration, route, or patient instructions.
 - Guideline/protocol readiness verifies metadata and seeded/demo content only. Full guideline document ingestion still requires owner-provided/open files and governance review.

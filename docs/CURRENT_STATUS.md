@@ -1,5 +1,15 @@
 # Current Status
 
+v0.9.9 Official Medication File Intake + Restore Readiness is in progress on branch `data/v0.9.9-official-medication-file-intake`. v0.9.8 found no approved local official medication source/export candidates, so v0.9.9 adds an ignored owner/admin inbox, scanner, validator, guarded restore-from-inbox wrapper, readiness report, and a local-inbox admin page at `/admin/drug-market/import`.
+
+v0.9.9 current medication truth:
+- Official medication candidates found locally before owner file intake: 0.
+- Official medication rows: 0 until an approved source/export is restored/imported.
+- Verified medication rows: 0 until a prior approved export explicitly carries verification status.
+- Medication restore is not applied by this sprint by default.
+- Prescription medication selection remains blocked until official rows exist.
+- No release tag has been created.
+
 v0.9.7 Reference Data Restore + Prescription Trial Readiness is in progress on branch `data/v0.9.7-reference-data-restore-prescription-readiness`. It adds guarded official medication source discovery/restore orchestration, medication/guideline/account/prescription readiness checks, and a CI readiness gate. Official medication rows must come from previous approved exports or owner-provided official files; absent sources are reported honestly and no fake official medication rows are created.
 
 v0.9.6 Local Demo Database Finalization is in progress on branch `data/v0.9.6-local-demo-db-finalization`. The guarded v0.9.5 local cleanup was applied with `APP_ENV=local` after a clear dry run. Baseline targeted 602 clearly demo/test/local patients and linked operational records; after cleanup, `npm run db:v095:audit` reported 0 patient-linked operational rows while preserving users, roles, permissions, `eyad`, audit logs, investigation catalog rows, medication reference/drug-market tables, service catalog, and setup/reference data.

@@ -1,5 +1,28 @@
 # Next Steps
 
+v0.9.9 official medication file intake next steps:
+
+1. Owner places official medication file/export in `storage/official-medication-inbox/`.
+2. Run:
+
+```powershell
+npm run medication:v099:inbox-scan
+npm run medication:v099:inbox-validate
+npm run medication:v099:intake-ready
+```
+
+3. If one file is `RESTORE_READY`, run `npm run medication:v099:restore-inbox:dry-run`.
+4. Apply only after owner review in local/dev/test/CI:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v099:restore-inbox:apply
+```
+
+5. If files are `NEEDS_MAPPER`, plan a focused parser/mapping sprint before import.
+6. Medication prescription selection remains blocked until official rows exist.
+7. Do not create a release tag from this sprint.
+
 v0.9.7 reference data readiness next steps:
 
 1. Run `npm run db:v097:prepare-reference`.
