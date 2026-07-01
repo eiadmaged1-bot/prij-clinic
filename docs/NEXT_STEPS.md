@@ -1,5 +1,21 @@
 # Next Steps
 
+v0.9.6 local demo database finalization next steps:
+
+1. Start the local API and web app against the cleaned local database.
+2. Rerun endpoint-backed account verification with the API reachable:
+
+```powershell
+npm run db:v095:verify-reference
+npm run db:v096:ready-check
+```
+
+3. Manually QA `/admin/accounts` as `eyad` for Doctor, Receptionist, Nurse, and Accountant demo account creation and login.
+4. Manually QA `/orders` and `/investigations` to confirm seeded investigation catalog names are visible for order selection.
+5. Restore/import official medication rows from approved local exports or owner-provided official files if this local DB needs full medication-reference QA. Do not create fake official rows.
+6. Keep generated reports in ignored `storage/local-db-finalization/`; do not commit them.
+7. Do not create a release tag from this sprint.
+
 v0.9.5 data hygiene/reference next steps:
 
 1. Let GitHub Actions run `v0.9.5 Data Hygiene Reference Gate` on `data/v0.9.5-clean-reference-data-account-authority`.

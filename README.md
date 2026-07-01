@@ -6,6 +6,23 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.6 Local Demo Database Finalization
+
+Branch: `data/v0.9.6-local-demo-db-finalization`.
+
+v0.9.6 finalizes the local/demo database state for manual QA using the guarded v0.9.5 cleanup. The local dry run targeted 602 clearly demo/test/local patients and linked operational records; cleanup apply reduced those patient-linked operational rows to 0 while preserving users, roles, permissions, `eyad`, audit logs, the 63-row investigation catalog, medication reference/drug-market tables when present, service catalog, and setup/reference data.
+
+```powershell
+npm run db:v096:report
+npm run db:v096:ready-check
+```
+
+Generated finalization reports are local ignored artifacts under `storage/local-db-finalization/` and must not be committed.
+
+Known local warning: official medication rows are absent in this local DB. Restore/import approved official medication data instead of creating fake official rows.
+
+No release tag has been created, and manual browser QA is still required.
+
 ## v0.9.5 Data Hygiene + Reference Catalog + Eyad Account Authority
 
 Branch: `data/v0.9.5-clean-reference-data-account-authority`.

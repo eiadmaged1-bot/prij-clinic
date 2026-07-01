@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.9.6 finalized the local/demo DB state for QA, but it is still not production data retention, legal deletion, clinical governance, or privacy certification.
+- v0.9.6 cleanup was applied only to clearly demo/test/local patient-linked operational records. It did not prove behavior for real patient records and must not be reused as a blind wipe.
+- API-backed account creation checks require the local API to be running. In this session, source/UI support was verified, but endpoint creation/login/denial proof remains a manual or full-stack check.
+- Official medication rows are absent in this local DB even though medication reference/market tables are preserved. The next step is restore/import from approved sources; do not fake official medication rows.
+- The v0.9.6 report artifacts are generated under ignored `storage/local-db-finalization/` and are not committed.
+- v0.9.6 does not create a release tag and does not replace manual browser QA.
+
 - v0.9.5 is not a production data-retention or legal deletion policy.
 - v0.9.5 cleanup only targets clearly demo/test/local operational rows and must not be used to clean real patient records.
 - v0.9.5 apply cleanup is guarded by environment checks, but operators must still review dry-run output first.

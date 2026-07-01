@@ -1,5 +1,20 @@
 # Current Status
 
+v0.9.6 Local Demo Database Finalization is in progress on branch `data/v0.9.6-local-demo-db-finalization`. The guarded v0.9.5 local cleanup was applied with `APP_ENV=local` after a clear dry run. Baseline targeted 602 clearly demo/test/local patients and linked operational records; after cleanup, `npm run db:v095:audit` reported 0 patient-linked operational rows while preserving users, roles, permissions, `eyad`, audit logs, investigation catalog rows, medication reference/drug-market tables, service catalog, and setup/reference data.
+
+v0.9.6 verification status:
+- PASS: `npm run prisma:repair`
+- PASS: `npm run prisma:migrate:deploy`
+- PASS: `npm run prisma:seed`
+- PASS: `npm run db:v095:audit` after cleanup
+- PASS/WARN: `npm run db:v095:verify-reference` passes with warnings for unavailable API endpoint checks and absent official medication rows.
+- PASS/WARN: `npm run db:v096:ready-check` passes with warnings for unavailable API endpoint checks and absent official medication rows.
+- Investigation catalog count: 63, including key OB/GYN investigation names.
+- `eyad` remains present, active, protected, Owner, and System Owner-authorized.
+- Doctor, Receptionist, Nurse, and Accountant account creation support is present in backend DTO/source and `/admin/accounts` UI. Endpoint proof still requires the API to be running.
+- Official medication rows are absent in this local DB; next step is restore/import official data, not fake rows.
+- No release tag has been created, and manual browser QA remains required.
+
 v0.9.5 Data Hygiene + Reference Catalog + Eyad Account Authority is in progress on branch `data/v0.9.5-clean-reference-data-account-authority`. It adds guarded database audit/cleanup scripts, an investigation reference catalog seed, verification for reference-data preservation, and clearer Eyad protected account authority checks. It is not a release, no tag has been created, and final manual QA remains required.
 
 v0.9.5 safety status:
