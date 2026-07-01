@@ -1,5 +1,15 @@
 # Current Status
 
+v0.9.9 Medication Provenance Recovery is in progress on branch `data/v0.9.9-medication-provenance-recovery`. It adds read-only provenance scanning, a guarded recovery-DB export helper, and a guarded recovered official medication import workflow. The scan found historical medication refs and tooling but no recoverable raw official export or old running DB with official rows. Current local official medication rows remain 0 and verified medication rows remain 0. No recovered export was created, no import was applied, and no fake medication rows were created.
+
+v0.9.9 search result:
+- Git medication-related refs found: 35.
+- Git file hits were scripts/docs/source code, not committed raw official medication exports.
+- Local project/worktree copies and `C:\Users\SuperUser` were searched for medication provenance paths.
+- Docker current `prij-clinic-postgres` reported `DrugMarketVariant total=15`, official non-demo rows 0, verified 0, needs_review 0.
+- Six project Postgres volumes were metadata-inspected, but not attached to a new server because that can mutate Postgres recovery state.
+- Remaining blocker: the previous export/old DB artifact containing the 8,269 official rows is not available in this workspace.
+
 v0.9.7 Reference Data Restore + Prescription Trial Readiness is in progress on branch `data/v0.9.7-reference-data-restore-prescription-readiness`. It adds guarded official medication source discovery/restore orchestration, medication/guideline/account/prescription readiness checks, and a CI readiness gate. Official medication rows must come from previous approved exports or owner-provided official files; absent sources are reported honestly and no fake official medication rows are created.
 
 v0.9.6 Local Demo Database Finalization is in progress on branch `data/v0.9.6-local-demo-db-finalization`. The guarded v0.9.5 local cleanup was applied with `APP_ENV=local` after a clear dry run. Baseline targeted 602 clearly demo/test/local patients and linked operational records; after cleanup, `npm run db:v095:audit` reported 0 patient-linked operational rows while preserving users, roles, permissions, `eyad`, audit logs, investigation catalog rows, medication reference/drug-market tables, service catalog, and setup/reference data.

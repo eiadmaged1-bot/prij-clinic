@@ -6,6 +6,20 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.9 Medication Provenance Recovery
+
+Branch: `data/v0.9.9-medication-provenance-recovery`.
+
+v0.9.9 searches project-owned artifacts for the previously imported Bahrain/Oman official medication reference data before asking for a new owner export. It adds read-only provenance scanning plus guarded recovery-DB export/import helpers.
+
+```powershell
+npm run medication:v099:provenance
+npm run medication:v099:export-from-recovery-db
+npm run medication:v099:import-recovered:dry-run
+```
+
+Current result: no recoverable raw official export or old running DB with official rows was found. Local official medication rows remain 0, verified rows remain 0, and no fake rows were created.
+
 ## v0.9.7 Reference Data Restore + Prescription Trial Readiness
 
 Branch: `data/v0.9.7-reference-data-restore-prescription-readiness`.

@@ -1,5 +1,27 @@
 # Next Steps
 
+v0.9.9 medication provenance recovery next steps:
+
+1. Keep `storage/medication-provenance-recovery/` ignored and do not commit recovered exports or reports.
+2. If the owner locates an old ignored export, DB dump, or old Postgres container, validate/export through:
+
+```powershell
+npm run medication:v099:provenance
+npm run medication:v099:export-from-recovery-db -- -ContainerName OLD_RECOVERY_CONTAINER -User DB_USER -Database DB_NAME
+npm run medication:v098:validate-candidate -- --file "storage/medication-provenance-recovery/official-medication-recovered.jsonl"
+npm run medication:v099:import-recovered:dry-run
+```
+
+3. Apply import only in local/dev/test/CI after the dry run is clean:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v099:import-recovered:apply
+```
+
+4. Do not claim strict medication readiness unless official rows exist and strict checks pass.
+5. Do not create a release tag from this sprint.
+
 v0.9.7 reference data readiness next steps:
 
 1. Run `npm run db:v097:prepare-reference`.

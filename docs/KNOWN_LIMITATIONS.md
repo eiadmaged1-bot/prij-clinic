@@ -1,5 +1,9 @@
 # Known Limitations
 
+- v0.9.9 recovered provenance from project history and local infrastructure metadata, but did not find a recoverable old official export or running DB with official medication rows. The blocker remains the unavailable ignored export/old DB artifact.
+- v0.9.9 Docker volume handling is metadata-only by default. Existing Postgres volumes were not attached to a new server because doing so can mutate recovery state.
+- v0.9.9 does not create fake medication rows, mark unverified rows verified, scrape retail/checkout/stock/order pages, or add patient dosing instructions.
+
 - v0.9.7 does not create or verify real medication data by itself. It restores prior approved official exports when present, otherwise reports a missing-source warning.
 - v0.9.7 prescription readiness only attaches medication reference metadata to draft prescription items. It does not generate dose, frequency, duration, route, or patient instructions.
 - Guideline/protocol readiness verifies metadata and seeded/demo content only. Full guideline document ingestion still requires owner-provided/open files and governance review.
