@@ -92,6 +92,9 @@
     "test:v093:roles": "node scripts/v093-role-visibility-check.mjs",
     "test:v093:release": "powershell -ExecutionPolicy Bypass -File scripts/v093-final-release-check.ps1",
     "qa:v093:checklist": "powershell -ExecutionPolicy Bypass -File scripts/v093-open-qa-checklist.ps1",
+    "test:v094:browser": "playwright test --config=playwright.config.ts",
+    "test:v094:browser:headed": "playwright test --config=playwright.config.ts --headed",
+    "test:v094:browser:report": "playwright show-report",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
     "test:official-medication-restore": "node scripts/official-medication-restore-test.mjs",
     "test:drug-market:source-recovery": "node scripts/drug-market-source-recovery-test.mjs",
@@ -148,6 +151,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/multer": "^2.1.0"
   }
 }

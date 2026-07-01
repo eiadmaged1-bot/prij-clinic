@@ -1,5 +1,7 @@
 # Current Status
 
+v0.9.4 Automated Browser Journey QA is in progress on branch `qa/v0.9.4-automated-browser-journey`. It adds Playwright Chromium browser journeys for login, dashboard, fake/demo patient creation, patient workspace tabs, clinic workflow pages, medication/drug-market declutter, and role visibility. It is QA infrastructure only: no release tag has been created, v0.9.3 is still not final, manual browser QA is still required, and Docker/PostgreSQL local validation remains a separate release blocker.
+
 v0.9.3 Automated QA + Stability Hardening is now a release candidate on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not a final release, no release tag has been created, and release tagging is forbidden until final local Docker/PostgreSQL release validation and manual browser QA pass without `V093_ALLOW_ENV_SKIP=1`.
 
 Release-candidate status:

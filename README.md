@@ -12,6 +12,21 @@ Branch: `hardening/v0.9.3-automated-qa-stabilization`.
 
 CI Release Gate and normal CI have passed, but v0.9.3 is not released yet. The release tag remains blocked until final local Docker/PostgreSQL validation and manual browser QA both pass.
 
+## v0.9.4 Automated Browser Journey QA
+
+Branch: `qa/v0.9.4-automated-browser-journey`.
+
+v0.9.4 adds Playwright Chromium browser journeys for login, dashboard, fake/demo patient creation, patient workspace tabs, clinic workflow pages, medication/drug-market declutter, and role visibility. It is automated QA infrastructure only. It does not release v0.9.3, does not create a release tag, and does not replace final manual browser QA.
+
+Run locally after the API, web app, PostgreSQL, migrations, and seeded demo data are available:
+
+```powershell
+npm run test:v094:browser
+npm run test:v094:browser:report
+```
+
+The GitHub Actions workflow is `.github/workflows/v094-browser-journey.yml`.
+
 Final local release validation:
 
 ```powershell

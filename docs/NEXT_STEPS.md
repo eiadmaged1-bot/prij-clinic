@@ -1,5 +1,13 @@
 # Next Steps
 
+v0.9.4 automated browser journey QA next steps:
+
+1. Let GitHub Actions run `v0.9.4 Browser Journey QA` on `qa/v0.9.4-automated-browser-journey`.
+2. When Docker/PostgreSQL are available locally, start the demo stack and run `npm run test:v094:browser`.
+3. Review the Playwright report with `npm run test:v094:browser:report` if failures occur.
+4. Use the browser QA output to shorten, not replace, final owner manual QA.
+5. Do not tag v0.9.3 or v0.9.4 until final local validation and manual browser QA pass.
+
 v0.9.3 release-candidate finalization steps:
 
 1. Return home and start Docker Desktop.

@@ -1,0 +1,117 @@
+name: v0.9.4 Browser Journey QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - qa/v0.9.4-automated-browser-journey
+  pull_request:
+    branches:
+      - hardening/v0.9.3-automated-qa-stabilization
+
+jobs:
+  v094-browser-journey:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: prij_clinic_dev
+          POSTGRES_USER: prij_clinic_dev
+          POSTGRES_PASSWORD: prij_clinic_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_dev -d prij_clinic_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      CI: "true"
+      DATABASE_URL: postgresql://prij_clinic_dev:prij_clinic_dev_password@localhost:5432/prij_clinic_dev?schema=public
+      JWT_SECRET: ci_demo_jwt_secret_not_for_production
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      API_PORT: "3001"
+      API_URL: http://localhost:3001
+      APP_URL: http://localhost:3000
+      WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      DEMO_TEST_PASSWORD: LocalDev123!
+      SEED_DEMO_OWNER: "true"
+      SEED_DEMO_DATA: "true"
+      APP_ENV: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Repair Prisma client
+        run: npm run prisma:repair
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed demo data
+        run: npm run prisma:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Start API and web
+        run: |
+          npm run start:api > api.log 2>&1 &
+          echo $! > api.pid
+          npm run start:web > web.log 2>&1 &
+          echo $! > web.pid
+
+      - name: Wait for local app
+        run: npm run wait:local-app
+
+      - name: Run source UI text check
+        run: npm run test:v093:ui-text
+
+      - name: Run v0.9.4 browser journey QA
+        run: npm run test:v094:browser
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v094-playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v094-playwright-test-results
+          path: test-results/
+          if-no-files-found: ignore
+
+      - name: Print app logs on failure
+        if: failure()
+        run: |
+          echo "API log:"
+          cat api.log || true
+          echo "Web log:"
+          cat web.log || true

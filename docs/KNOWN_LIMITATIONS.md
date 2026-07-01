@@ -1,5 +1,9 @@
 # Known Limitations
 
+- v0.9.4 Playwright browser journeys require the web app, API, PostgreSQL, migrations, and seeded demo data. They are expected to run fully in GitHub Actions with a PostgreSQL service when local Docker is unavailable.
+- v0.9.4 browser QA accelerates manual review but does not replace final manual browser QA by the owner.
+- v0.9.4 does not release v0.9.3 or create any release tag.
+
 - CI Release Gate passed and normal CI passed, but final local machine validation is still pending.
 - Manual browser QA is still pending.
 - v0.9.3 is a release candidate, not a final release.
