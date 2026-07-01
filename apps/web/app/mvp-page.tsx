@@ -11,10 +11,14 @@ import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 type Field = {
   name: string;
   label: string;
-  type?: "text" | "datetime-local" | "number";
+  type?: "text" | "datetime-local" | "number" | "select";
   required?: boolean;
   placeholder?: string;
   defaultValue?: string;
+  options?: { label: string; value: string }[];
+  suggestionsEndpoint?: string;
+  suggestionCollectionKey?: string;
+  suggestionLabelKey?: string;
 };
 
 type MvpPageProps = {
@@ -77,6 +81,7 @@ export function MvpPage({
   const [formState, setFormState] = useState<Record<string, string>>(() =>
     Object.fromEntries(createFields.map((field) => [field.name, field.defaultValue ?? ""]))
   );
+  const [suggestionsByField, setSuggestionsByField] = useState<Record<string, string[]>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const token = useMemo(() => {
@@ -89,6 +94,13 @@ export function MvpPage({
     void loadRows();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endpoint]);
+
+  useEffect(() => {
+    for (const field of createFields) {
+      if (field.suggestionsEndpoint) void loadSuggestions(field);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createFields.map((field) => field.suggestionsEndpoint ?? "").join("|")]);
 
   async function loadRows() {
     if (!endpoint) return;
@@ -123,6 +135,26 @@ export function MvpPage({
     }
   }
 
+  async function loadSuggestions(field: Field) {
+    if (!field.suggestionsEndpoint) return;
+    try {
+      const response = await fetch(`${apiUrl}${field.suggestionsEndpoint}`, {
+        credentials: "include",
+        headers: token ? { authorization: `Bearer ${token}` } : undefined
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as Record<string, unknown>;
+      const collection = field.suggestionCollectionKey ? data[field.suggestionCollectionKey] : data;
+      const labelKey = field.suggestionLabelKey ?? "name";
+      const suggestions = Array.isArray(collection)
+        ? collection.map((item) => (typeof item === "object" && item ? String((item as Record<string, unknown>)[labelKey] ?? "") : "")).filter(Boolean)
+        : [];
+      setSuggestionsByField((current) => ({ ...current, [field.name]: suggestions }));
+    } catch {
+      setSuggestionsByField((current) => ({ ...current, [field.name]: [] }));
+    }
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!createEndpoint) return;
@@ -138,7 +170,7 @@ export function MvpPage({
           "content-type": "application/json",
           ...(token ? { authorization: `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(buildPayload(createFields, formState))
+        body: JSON.stringify(buildPayload(createFields, formState, createEndpoint))
       });
 
       if (!response.ok) {
@@ -222,19 +254,45 @@ export function MvpPage({
             <span className="badge warning">No real data</span>
           </div>
           <form className="form-grid" onSubmit={submit}>
-            {createFields.map((field) => (
-              <label key={field.name}>
-                {field.label}
-                <input
-                  name={field.name}
-                  onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))}
-                  placeholder={field.placeholder}
-                  required={field.required}
-                  type={field.type ?? "text"}
-                  value={formState[field.name] ?? ""}
-                />
-              </label>
-            ))}
+            {createFields.map((field) => {
+              const datalistId = suggestionsByField[field.name]?.length ? `${field.name}-suggestions` : undefined;
+              return (
+                <label key={field.name}>
+                  {field.label}
+                  {field.type === "select" ? (
+                    <select
+                      name={field.name}
+                      onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))}
+                      required={field.required}
+                      value={formState[field.name] ?? ""}
+                    >
+                      {(field.options ?? []).map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <>
+                      <input
+                        list={datalistId}
+                        name={field.name}
+                        onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))}
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        type={field.type ?? "text"}
+                        value={formState[field.name] ?? ""}
+                      />
+                      {datalistId ? (
+                        <datalist id={datalistId}>
+                          {suggestionsByField[field.name].map((suggestion) => (
+                            <option key={suggestion} value={suggestion} />
+                          ))}
+                        </datalist>
+                      ) : null}
+                    </>
+                  )}
+                </label>
+              );
+            })}
             <button className="button" disabled={isSubmitting} type="submit">
               <ThreeDMedicalIcon name="files" size="sm" />
               {isSubmitting ? "Saving demo record" : "Create demo record"}
@@ -447,7 +505,23 @@ function labelize(value: string) {
   return friendly[value] ?? value.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
 }
 
-function buildPayload(fields: Field[], state: Record<string, string>) {
+function buildPayload(fields: Field[], state: Record<string, string>, createEndpoint?: string) {
+  if (createEndpoint === "/investigations/orders") {
+    return {
+      patientId: state.patientId?.trim(),
+      encounterId: state.encounterId?.trim() || undefined,
+      priority: state.priority?.trim() || "routine",
+      notes: state.notes?.trim() || undefined,
+      items: [
+        {
+          category: state.category?.trim() || "laboratory",
+          testName: state.testName?.trim(),
+          instructions: state.instructions?.trim() || undefined
+        }
+      ]
+    };
+  }
+
   const payload: Record<string, unknown> = {};
 
   for (const field of fields) {

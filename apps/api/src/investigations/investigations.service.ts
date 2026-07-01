@@ -49,6 +49,14 @@ export class InvestigationsService {
     }
   }
 
+  listCatalog() {
+    return this.prisma.investigationCatalogItem.findMany({
+      where: { active: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, category: true }
+    });
+  }
+
   listOrders(user: AuthUser) {
     return this.prisma.investigationOrder.findMany({
       where: { ...patientBranchScope(user), ...doctorScope(user) },

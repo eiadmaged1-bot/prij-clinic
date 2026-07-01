@@ -16,7 +16,31 @@ export default function OrdersPage() {
       createNote="Create demo-only orders from a patient file when possible. No external lab integration is connected."
       createFields={[
         { name: "patientId", label: "Patient file", required: true },
-        { name: "testName", label: "Order name", required: true, defaultValue: "Demo lab order" },
+        {
+          name: "category",
+          label: "Order category",
+          type: "select",
+          required: true,
+          defaultValue: "laboratory",
+          options: [
+            { label: "Laboratory", value: "laboratory" },
+            { label: "Radiology", value: "radiology" },
+            { label: "Ultrasound", value: "ultrasound" },
+            { label: "Pathology", value: "pathology" },
+            { label: "Cytology", value: "cytology" },
+            { label: "Procedure", value: "procedure" },
+            { label: "Other", value: "other" }
+          ]
+        },
+        {
+          name: "testName",
+          label: "Order name",
+          required: true,
+          defaultValue: "CBC",
+          suggestionsEndpoint: "/investigations/catalog",
+          suggestionCollectionKey: "investigationCatalog",
+          suggestionLabelKey: "name"
+        },
         { name: "priority", label: "Priority", defaultValue: "routine" },
         { name: "instructions", label: "Clinical reason" }
       ]}

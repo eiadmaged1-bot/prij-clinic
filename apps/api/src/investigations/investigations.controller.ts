@@ -18,6 +18,12 @@ export class InvestigationsController {
     return this.investigations.createOrder(dto, user);
   }
 
+  @Get("catalog")
+  @Permissions("investigation.read")
+  async listCatalog() {
+    return { investigationCatalog: await this.investigations.listCatalog() };
+  }
+
   @Get("orders")
   @Permissions("investigation.read")
   async listOrders(@CurrentUser() user: AuthUser) {
