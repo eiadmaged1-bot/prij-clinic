@@ -1,0 +1,107 @@
+name: v0.9.3 Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - hardening/v0.9.3-automated-qa-stabilization
+  pull_request:
+    branches:
+      - ui/v0.9.2-prij-heritage-theme-and-medication-declutter
+
+jobs:
+  v093-release-gate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: prij_clinic_dev
+          POSTGRES_USER: prij_clinic_dev
+          POSTGRES_PASSWORD: prij_clinic_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_dev -d prij_clinic_dev"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      CI: "true"
+      DATABASE_URL: postgresql://prij_clinic_dev:prij_clinic_dev_password@localhost:5432/prij_clinic_dev?schema=public
+      JWT_SECRET: ci_demo_jwt_secret_not_for_production
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      API_PORT: "3001"
+      API_URL: http://localhost:3001
+      APP_URL: http://localhost:3000
+      WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      DEMO_TEST_PASSWORD: LocalDev123!
+      SEED_DEMO_OWNER: "true"
+      SEED_DEMO_DATA: "true"
+      APP_ENV: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Repair Prisma client
+        run: npm run prisma:repair
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed demo data
+        run: npm run prisma:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Run source UI text check
+        run: npm run test:v093:ui-text
+
+      - name: Start API and web
+        run: |
+          npm run start:api > api.log 2>&1 &
+          echo $! > api.pid
+          npm run start:web > web.log 2>&1 &
+          echo $! > web.pid
+
+      - name: Wait for local app
+        run: npm run wait:local-app
+
+      - name: Run route QA
+        run: npm run test:v093:routes
+
+      - name: Run medication UI QA
+        run: npm run test:v093:medication-ui
+
+      - name: Run patient creation QA
+        run: npm run test:v093:patient-create
+
+      - name: Run role visibility QA
+        run: npm run test:v093:roles
+
+      - name: Print app logs on failure
+        if: failure()
+        run: |
+          echo "API log:"
+          cat api.log || true
+          echo "Web log:"
+          cat web.log || true

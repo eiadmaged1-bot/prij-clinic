@@ -1,6 +1,8 @@
 # Known Limitations
 
 - v0.9.3 API-backed automated checks require Docker Desktop/PostgreSQL, a repaired Prisma client, seeded demo data, and the local API to be reachable.
+- The `v0.9.3 Release Gate` GitHub Actions workflow provides CI PostgreSQL coverage for the remote session blocker, but it is still not a release by itself and does not replace final local/manual browser QA.
+- The CI release gate must not use `V093_ALLOW_ENV_SKIP=1`; if API/DB-backed checks cannot run in CI, the workflow must fail.
 - In this session, Docker Desktop/PostgreSQL was not reachable, so `test:v093:patient-create`, `test:v093:roles`, and the full DB/API-backed test sweep remain blocked rather than passed. v0.9.3 is not released yet.
 - `V093_ALLOW_ENV_SKIP=1` is only a local blocked-machine escape hatch for API-backed v0.9.3 checks. It is not release-validating and must not be used before creating a release tag.
 - The release tag `v0.9.3-automated-qa-stabilization` must not be created until `npm run test:v093:patient-create` and `npm run test:v093:roles` pass without environment skip.

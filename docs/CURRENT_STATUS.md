@@ -2,6 +2,12 @@
 
 v0.9.3 Automated QA + Stability Hardening is in progress on branch `hardening/v0.9.3-automated-qa-stabilization`. It is not released yet, no release tag has been created, and release tagging is forbidden until API-backed checks pass without `V093_ALLOW_ENV_SKIP=1`.
 
+CI release gate status:
+- `.github/workflows/v093-release-gate.yml` adds the `v0.9.3 Release Gate` workflow for the hardening branch, pull requests targeting `ui/v0.9.2-prij-heritage-theme-and-medication-declutter`, and manual dispatch.
+- The workflow uses a demo-only PostgreSQL 16 service database, applies existing migrations, seeds demo data, starts the built API and web app, and runs the v0.9.3 automated QA.
+- `V093_ALLOW_ENV_SKIP=1` is intentionally absent from the workflow. CI must fail if API/DB-backed checks cannot run.
+- The workflow does not create a release tag and does not replace final local DB/API validation or manual browser QA.
+
 Automated browser-free QA added:
 - `npm run test:v093:routes` verifies 35 important visible routes return clean HTML without 500s, raw JSON, conflict markers, stack traces, or runtime crash text.
 - `npm run test:v093:ui-text` scans normal frontend source areas for obvious code-like/developer text in visible UI.

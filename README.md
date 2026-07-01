@@ -8,6 +8,8 @@ It remains local/demo only and must not be used with real patient data, real pay
 
 v0.9.3 automated QA stabilization is not released yet. Docker/PostgreSQL blocked the DB/API-backed validation on the remote machine, so no release tag has been created. The final tag `v0.9.3-automated-qa-stabilization` is forbidden until `npm run test:v093:patient-create` and `npm run test:v093:roles` pass without `V093_ALLOW_ENV_SKIP=1`.
 
+The dedicated GitHub Actions workflow `v0.9.3 Release Gate` runs on the hardening branch, pull requests targeting `ui/v0.9.2-prij-heritage-theme-and-medication-declutter`, and manual dispatch. It uses a demo-only PostgreSQL 16 service database, applies migrations, seeds demo data, starts the built API and web app, and runs the v0.9.3 automated QA without `V093_ALLOW_ENV_SKIP=1`. It does not create a release tag and does not replace final local/manual browser QA.
+
 Earlier foundation: V0.7 unified local/private sprint for OB/GYN, general gynecology, demo finance workflows, medical calculators, OB dating, protocol-backed AI Management Snapshots, the local Guideline Center, Medication Intelligence Engine v2 framework, and official medication metadata workflows.
 
 V0.7 clinic workflow spine adds investigation result metadata, critical-result acknowledgement, metadata-only patient document archive, consent templates/demo signatures, referrals, patient tasks, internal notes, provider/department directories, timeline integration, dashboard workflow counts, and browser print packets. It remains local/demo only and must not be used with real patient data or PHI files.
@@ -375,6 +377,14 @@ npm run test:v093:release
 ```
 
 `V093_ALLOW_ENV_SKIP=1` can convert unavailable API/PostgreSQL failures in the API-backed v0.9.3 checks into a local skip/warn exit 0. That mode is not release-validating, and the release tag must not be created until the checks pass without it.
+
+GitHub Actions CI gate for v0.9.3:
+
+```text
+.github/workflows/v093-release-gate.yml
+```
+
+The workflow uses a CI PostgreSQL service and must fail if the API/DB-backed checks cannot run. Do not add `V093_ALLOW_ENV_SKIP=1` to this workflow. The release tag remains forbidden until this CI gate and final local DB/API plus manual browser validation pass.
 
 ## CI
 

@@ -29,6 +29,28 @@ v0.9.3 is not released yet.
 
 No release commit, release tag, or tag push has been completed. The tag `v0.9.3-automated-qa-stabilization` must not be created until the API-backed checks pass without `V093_ALLOW_ENV_SKIP=1`.
 
+## CI release gate
+
+`.github/workflows/v093-release-gate.yml` defines the `v0.9.3 Release Gate` workflow.
+
+It runs on:
+
+- Pushes to `hardening/v0.9.3-automated-qa-stabilization`.
+- Pull requests targeting `ui/v0.9.2-prij-heritage-theme-and-medication-declutter`.
+- Manual `workflow_dispatch`.
+
+The workflow uses Node.js 22 and a demo-only PostgreSQL 16 service database named `prij_clinic_dev`. It repairs the Prisma client, applies existing migrations, seeds demo data, typechecks, builds, starts the built API and Next web app, waits for local web/API/DB health, and runs:
+
+```text
+npm run test:v093:ui-text
+npm run test:v093:routes
+npm run test:v093:medication-ui
+npm run test:v093:patient-create
+npm run test:v093:roles
+```
+
+`V093_ALLOW_ENV_SKIP=1` is intentionally absent from CI. If API/DB-backed checks cannot run, the workflow must fail. The workflow does not create a release tag and does not replace final local DB/API validation or manual browser QA.
+
 ## Route QA coverage
 
 The route QA covers:
