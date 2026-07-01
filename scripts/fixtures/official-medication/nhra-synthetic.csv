@@ -1,0 +1,3 @@
+Fixture Warning,Trade Name,Generic Name,Strength,Dosage Form,Registration Number,Manufacturer,Status,verificationStatus
+TEST FIXTURE ONLY - NOT REAL MEDICATION DATA,Fixture BH Alpha,Fixture ingredient A,10 mg,Tablet,BH-FIX-001,Fixture Manufacturer,Active,
+TEST FIXTURE ONLY - NOT REAL MEDICATION DATA,Fixture BH Beta,Fixture ingredient B,20 mg,Capsule,BH-FIX-002,Fixture Manufacturer,Active,verified

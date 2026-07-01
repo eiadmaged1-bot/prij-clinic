@@ -119,6 +119,7 @@
     "medication:v099:export-from-recovery-db": "powershell -ExecutionPolicy Bypass -File scripts/v099-export-medication-from-recovery-db.ps1",
     "medication:v099:import-recovered:dry-run": "node scripts/v099-import-recovered-official-medications.mjs",
     "medication:v099:import-recovered:apply": "node scripts/v099-import-recovered-official-medications.mjs --apply --confirm IMPORT_RECOVERED_OFFICIAL_MEDICATIONS",
+    "test:v100:official-medication-reimport": "node scripts/v100-official-medication-reimport-test.mjs",
     "medication:v100:source-acquire": "node scripts/v100-official-medication-source-acquire.mjs",
     "medication:v100:source-list": "node scripts/v100-official-medication-source-acquire.mjs --list",
     "medication:v100:reimport:dry-run": "node scripts/v100-official-medication-reimport.mjs",
