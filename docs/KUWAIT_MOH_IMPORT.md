@@ -14,7 +14,7 @@ v0.8.2 behavior:
 - Extracts text with `pdf-parse` when an official PDF is accessible.
 - Routes all imported rows to review.
 
-Status on 2026-07-01: failed safely. The official drug price PDF candidate fetch failed; diagnostics record HTTP/fetch failure details where available. No unofficial mirrors or fallback rows were used.
+Status on 2026-07-01: failed safely. The official drug price list PDF candidate fetch failed; diagnostics record HTTP/fetch failure details where available. No unofficial mirrors or fallback rows were used.
 
 Owner intake:
 

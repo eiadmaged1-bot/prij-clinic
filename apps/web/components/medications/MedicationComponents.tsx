@@ -251,7 +251,7 @@ export function DrugMarketImportPanel() {
   return (
     <section className="panel">
       <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
-      <p className="muted">Upload official or licensed source files only. Do not upload pharmacy stock, checkout data, or patient data.</p>
+      <p className="muted">Upload official or licensed source files only. Pharmacy stock, order, checkout, purchase, and patient data uploads are blocked.</p>
       <div className="data-list">
         <article className="data-row">
           <strong>Workflow</strong>
@@ -263,7 +263,11 @@ export function DrugMarketImportPanel() {
         </article>
         <article className="data-row">
           <strong>Country/source intake</strong>
-          <p className="muted">Qatar MOPH, Kuwait MOH, Saudi SFDA, Egypt EDA, UAE MOHAP, Bahrain NHRA, and Oman MOH use official public sources or owner-provided official file upload paths only.</p>
+          <p className="muted">Egypt EDA, UAE MOHAP, Qatar MOPH, Kuwait MOH, Saudi SFDA, Bahrain NHRA, and Oman MOH use official public sources, approved APIs, or owner-provided official file upload paths only.</p>
+        </article>
+        <article className="data-row">
+          <strong>Blocked fallback</strong>
+          <p className="muted">No fake fallback rows are created when a public source fails or requires approval. Egypt remains official upload plus targeted lookup only; UAE remains approved API or official upload only.</p>
         </article>
       </div>
     </section>
@@ -274,10 +278,37 @@ export function DrugMarketCoverageDashboard() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
   const [status, setStatus] = useState("Loading coverage");
   useEffect(() => { void getDrugMarketCoverage().then((data) => { setRows(Array.isArray(data) ? data as Array<Record<string, unknown>> : []); setStatus(`${Array.isArray(data) ? data.length : 0} source coverage row(s)`); }).catch(() => setStatus("Coverage requires admin access")); }, []);
+  const bahrain = rows.find((row) => row.countryCode === "BHR" && String(row.sourceCode ?? "").includes("BAHRAIN_NHRA"));
+  const oman = rows.find((row) => row.countryCode === "OMN" && String(row.sourceCode ?? "").includes("OMAN_MOH_REGISTERED"));
+  const realRows = [bahrain, oman].reduce((sum, row) => sum + Number(row?.realRows ?? 0), 0);
+  const verifiedRows = [bahrain, oman].reduce((sum, row) => sum + Number(row?.verifiedRows ?? 0), 0);
+  const reviewRemaining = [bahrain, oman].reduce((sum, row) => sum + Number(row?.reviewItems ?? 0), 0);
+  const highConfidenceRemaining = [bahrain, oman].reduce((sum, row) => sum + Number(row?.highConfidenceCandidates ?? 0), 0);
+  const lowConfidenceBlocked = [bahrain, oman].reduce((sum, row) => sum + Number(row?.lowConfidenceBlocked ?? 0), 0);
   return (
     <section className="panel">
       <div className="section-heading"><h2>Coverage Dashboard</h2><span className="badge">Demo excluded</span></div>
       <p className="muted">{status}</p>
+      <div className="data-list two-column">
+        <article className="data-row">
+          <div className="data-row-header"><strong>Export and restore</strong><span className="badge">Local CLI</span></div>
+          <dl>
+            <div><dt>Export status</dt><dd>Latest local export verified before handoff</dd></div>
+            <div><dt>Last restore drill</dt><dd>Stored under ignored local restore-drill reports</dd></div>
+            <div><dt>Demo rows</dt><dd>Excluded from real coverage</dd></div>
+          </dl>
+        </article>
+        <article className="data-row">
+          <div className="data-row-header"><strong>Verification progress</strong><span className="badge">{String(verifiedRows)} verified</span></div>
+          <dl>
+            <div><dt>Real rows</dt><dd>{String(realRows)}</dd></div>
+            <div><dt>Review remaining</dt><dd>{String(reviewRemaining)}</dd></div>
+            <div><dt>High-confidence remaining</dt><dd>{String(highConfidenceRemaining)}</dd></div>
+            <div><dt>Low-confidence blocked</dt><dd>{String(lowConfidenceBlocked)}</dd></div>
+            <div><dt>Next action</dt><dd>Continue reason-required admin verification batches</dd></div>
+          </dl>
+        </article>
+      </div>
       <div className="data-list">
         {rows.slice(0, 24).map((row) => (
           <article className="data-row" key={String(row.sourceCode)}>
@@ -377,6 +408,13 @@ export function ReviewQueuePanel() {
     <section className="panel">
       <div className="section-heading"><h2>Review Queue</h2><span className="badge warning">Reason required</span></div>
       <p className="muted">{status}</p>
+      <div className="toolbar">
+        <button className={reviewStatus === "open" ? "button compact" : "button secondary compact"} onClick={() => setReviewStatus("open")} type="button">Needs review</button>
+        <button className={reviewStatus === "verified" ? "button compact" : "button secondary compact"} onClick={() => setReviewStatus("verified")} type="button">Verified</button>
+        <button className={reviewStatus === "" ? "button compact" : "button secondary compact"} onClick={() => setReviewStatus("")} type="button">Imported</button>
+        <button className={confidence === "high" ? "button compact" : "button secondary compact"} onClick={() => setConfidence(confidence === "high" ? "" : "high")} type="button">High confidence</button>
+        <button className={confidence === "low" ? "button compact" : "button secondary compact"} onClick={() => setConfidence(confidence === "low" ? "" : "low")} type="button">Low-confidence blocked</button>
+      </div>
       <form className="inline-form" onSubmit={(event) => event.preventDefault()}>
         <select value={countryCode} onChange={(event) => setCountryCode(event.target.value)}>
           <option value="">All countries</option>
@@ -420,6 +458,10 @@ export function ReviewQueuePanel() {
         <input min={1} max={1000} type="number" value={batchLimit} onChange={(event) => setBatchLimit(Number(event.target.value) || 100)} />
         <button className="button compact" onClick={() => void verifyBatch()} type="button">Verify high-confidence batch</button>
       </form>
+      <article className="data-row">
+        <div className="data-row-header"><strong>Batch 4 summary</strong><span className="badge">Bahrain 300 / Oman 300</span></div>
+        <p className="muted">Batch verification remains admin-only, reason-required, high-confidence only, and audited. Raw official JSON stays out of normal queue cards.</p>
+      </article>
       <div className="data-list">
         {items.slice(0, 100).map((item) => {
           const variant = item.variant as Record<string, unknown> | null;

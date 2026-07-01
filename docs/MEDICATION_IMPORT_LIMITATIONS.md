@@ -25,3 +25,13 @@ Official/source price is source metadata only, not a live shelf price or dispens
 - UAE MOHAP: approved API access or official owner-provided file only.
 
 No third-party mirrors, CAPTCHA/login/paywall/API-approval bypass, retail stock/order/checkout sources, or fake fallback rows are allowed.
+
+## v0.8.6 Source Recovery Diagnostics
+
+- Qatar MOPH: failed safely because the official pages and current XLSX candidate returned HTML without supported visible source-file links.
+- Kuwait MOH: failed safely because the official drug price list PDF candidate fetch failed.
+- Saudi SFDA: failed safely because the public list did not expose a parseable server-rendered table with `--max-pages 2`.
+- Egypt EDA: official file upload plus targeted lookup only; no bulk enumeration.
+- UAE MOHAP: approved API access or official upload only.
+
+No fake fallback rows were created.

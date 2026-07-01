@@ -13,7 +13,7 @@ v0.8.2 behavior:
 - Accepts XLSX content type, octet-stream with XLSX filename, or XLSX magic header.
 - If HTML is returned again, parses one additional official HTML hop and then stops.
 
-Status on 2026-07-01: failed safely. The official pages returned HTML and did not expose a supported public XLSX/source-file link to the importer. Candidate diagnostics record final URL, content type, and visible candidate count. No fallback rows were created.
+Status on 2026-07-01: failed safely. The official pages and current XLSX candidate returned HTML and did not expose a supported public XLSX/source-file link to the importer. Candidate diagnostics record final URL, content type, and visible candidate count. No fallback rows were created.
 
 Owner intake:
 

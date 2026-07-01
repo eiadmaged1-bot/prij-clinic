@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { parseArgs, prisma } from "./official-medication-utils.mjs";
+import { buildOfficialMedicationSummary, RESTORE_COMPATIBILITY_VERSION } from "./official-medication-data-summary.mjs";
 
 const args = parseArgs();
 const includeDemo = args["include-demo"] === "true";
@@ -11,6 +12,9 @@ mkdirSync(outputDir, { recursive: true });
 
 const exportedAt = new Date().toISOString();
 const commitHash = safeGit(["rev-parse", "HEAD"]);
+const branch = safeGit(["branch", "--show-current"]);
+const appVersion = readPackageVersion();
+const tagsAtHead = safeGit(["tag", "--points-at", "HEAD"]).split(/\r?\n/).filter(Boolean);
 const fileName = `official-medication-data-${exportedAt.replace(/[:.]/g, "-")}.jsonl`;
 const filePath = join(outputDir, fileName);
 const lines = [];
@@ -50,13 +54,21 @@ for (const row of mergeCandidates) add("DrugMarketMergeCandidate", row);
 
 const dataText = `${lines.join("\n")}\n`;
 const sha256 = createHash("sha256").update(dataText).digest("hex");
+const summary = await buildOfficialMedicationSummary(prisma, { includeDemo });
+summary.sourceCount = counts.DrugMarketSource ?? 0;
+summary.importRunCount = counts.DrugMarketImportRun ?? 0;
 const manifest = {
   type: "manifest",
   format: "official-medication-jsonl-v1",
+  restoreCompatibilityVersion: RESTORE_COMPATIBILITY_VERSION,
   exportedAt,
   commitHash,
+  branch,
+  appVersion,
+  tagsAtHead,
   includeDemo,
   counts,
+  summary,
   sha256,
   safety: {
     excludesRawSourceFiles: true,
@@ -72,6 +84,14 @@ await prisma.$disconnect();
 function safeGit(argv) {
   try {
     return execFileSync("git", argv, { encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+function readPackageVersion() {
+  try {
+    return JSON.parse(readFileSync(resolve("package.json"), "utf8")).version ?? "unknown";
   } catch {
     return "unknown";
   }

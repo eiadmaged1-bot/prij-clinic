@@ -13,7 +13,7 @@ v0.8.2 behavior:
 - Respects `--max-pages`.
 - Records a failed/blocked source status if the page is dynamic, times out, or lacks a parseable public table.
 
-Status on 2026-07-01: failed safely. The official public HTML path did not expose a parseable server-rendered table for the dry diagnostic. No bypass, login, CAPTCHA workaround, protected API use, or third-party mirror was used.
+Status on 2026-07-01: failed safely. The official public HTML path did not expose a parseable server-rendered table for the dry diagnostic with `--max-pages 2`. No bypass, login, CAPTCHA workaround, protected API use, or third-party mirror was used.
 
 Owner intake:
 
