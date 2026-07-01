@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { apiUnreachableMessage, getApiBaseUrl } from "@/lib/api-base-url";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 const tokenKey = "prijClinicToken";
 const sessionMessageKey = "prijClinicSessionMessage";
 
@@ -64,7 +64,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(tokenKey, storedToken);
     }
 
-    const response = await fetch(`${apiUrl}/auth/me`, {
+    const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
     }).catch(() => null);
@@ -96,15 +96,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const response = await fetch(`${apiUrl}/auth/login`, {
+    const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ identifier: input.identifier, password: input.password })
-    });
+    }).catch(() => null);
+
+    if (!response) {
+      throw new Error(apiUnreachableMessage);
+    }
+
+    if (response.status === 401) {
+      throw new Error("Invalid login ID or password.");
+    }
 
     if (!response.ok) {
-      throw new Error("Invalid login ID or password.");
+      throw new Error(apiUnreachableMessage);
     }
 
     const data = (await response.json()) as { token?: string; user?: SessionUser };
@@ -123,7 +131,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const storedToken = token ?? localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
-    await fetch(`${apiUrl}/auth/logout`, {
+    await fetch(`${getApiBaseUrl()}/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined

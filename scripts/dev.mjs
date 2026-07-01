@@ -1,7 +1,8 @@
 import { spawn, spawnSync } from "node:child_process";
 
 const isWindows = process.platform === "win32";
-const commands = ["dev:api", "dev:web"];
+const isLanMode = process.argv.includes("--lan");
+const commands = ["dev:api", isLanMode ? "dev:web:lan" : "dev:web"];
 let stopping = false;
 
 function spawnDev(script) {

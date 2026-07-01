@@ -1,4 +1,4 @@
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "./api-base-url";
 
 function authHeaders() {
   const token = typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken");
@@ -9,7 +9,7 @@ function authHeaders() {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, {
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
     credentials: "include",
     ...options,
     headers: {

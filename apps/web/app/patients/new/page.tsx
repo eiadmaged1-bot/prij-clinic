@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type FormState = {
   medicalRecordNumber: string;
@@ -84,7 +84,7 @@ export default function NewPatientPage() {
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
       );
-      const response = await fetch(`${apiUrl}/patients`, {
+      const response = await fetch(`${getApiBaseUrl()}/patients`, {
         method: "POST",
         credentials: "include",
         headers: {

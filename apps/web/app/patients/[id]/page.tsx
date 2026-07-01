@@ -10,7 +10,7 @@ import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMe
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Patient = {
   id: string;
@@ -144,7 +144,7 @@ export default function PatientFilePage() {
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
-    fetch(`${apiUrl}/patients/${patientId}`, {
+    fetch(`${getApiBaseUrl()}/patients/${patientId}`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
@@ -155,7 +155,7 @@ export default function PatientFilePage() {
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to open patient file."));
 
-    fetch(`${apiUrl}/auth/me`, {
+    fetch(`${getApiBaseUrl()}/auth/me`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
@@ -180,7 +180,7 @@ export default function PatientFilePage() {
           .map(async (tab) => {
             try {
               const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
-              const response = await fetch(`${apiUrl}${endpoint}`, {
+              const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
                 credentials: "include",
                 headers: token ? { authorization: `Bearer ${token}` } : undefined
               });
@@ -196,7 +196,7 @@ export default function PatientFilePage() {
       );
       setRelated(Object.fromEntries(pairs));
       try {
-        const timelineResponse = await fetch(`${apiUrl}/patients/${patientId}/timeline`, {
+        const timelineResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
         });
@@ -214,7 +214,7 @@ export default function PatientFilePage() {
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
     const token = sessionStorage.getItem("prijClinicToken");
     setActionStatus("Saving");
-    const response = await fetch(`${apiUrl}/patients/${patientId}/${endpoint}`, {
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patientId}/${endpoint}`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -620,7 +620,7 @@ function GynecologyWorkspace({ patient, visits }: { patient: Patient; visits: Gy
       ...formPayload(event.currentTarget)
     };
 
-    const response = await fetch(`${apiUrl}/patients/${patient.id}/gynecology-visits`, {
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/gynecology-visits`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -973,7 +973,7 @@ function AntenatalVisitCard({ patient, pregnancy }: { patient: Patient; pregnanc
       weightKg: "number",
       pulseBpm: "number"
     });
-    const response = await fetch(`${apiUrl}/pregnancies/${pregnancy.id}/antenatal-visits`, {
+    const response = await fetch(`${getApiBaseUrl()}/pregnancies/${pregnancy.id}/antenatal-visits`, {
       method: "POST",
       credentials: "include",
       headers: {
@@ -1077,7 +1077,7 @@ function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patient: Pat
       })
     };
 
-    const response = await fetch(`${apiUrl}/ob-ultrasounds`, {
+    const response = await fetch(`${getApiBaseUrl()}/ob-ultrasounds`, {
       method: "POST",
       credentials: "include",
       headers: {

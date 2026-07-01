@@ -9,10 +9,12 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:lan": "node scripts/dev.mjs --lan",
     "dev:diagnose": "powershell -ExecutionPolicy Bypass -File scripts/dev-environment-diagnose.ps1",
     "dev:stop": "powershell -ExecutionPolicy Bypass -File scripts/stop-dev-ports.ps1",
     "wait:local-app": "node scripts/wait-for-local-app.mjs",
     "dev:web": "npm run dev -w apps/web",
+    "dev:web:lan": "npm run dev:lan -w apps/web",
     "dev:api": "npm run dev -w apps/api",
     "build": "npm run build --workspaces --if-present",
     "build:api": "npm run build -w apps/api",

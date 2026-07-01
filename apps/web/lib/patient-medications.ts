@@ -1,4 +1,4 @@
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "./api-base-url";
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? sessionStorage.getItem("prijClinicToken") : null;
@@ -6,7 +6,7 @@ function authHeaders() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiUrl}${path}`, { credentials: "include", ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } });
+  const response = await fetch(`${getApiBaseUrl()}${path}`, { credentials: "include", ...init, headers: { ...authHeaders(), ...(init?.headers ?? {}) } });
   if (!response.ok) throw new Error("Could not load patient medication data.");
   return (await response.json()) as T;
 }

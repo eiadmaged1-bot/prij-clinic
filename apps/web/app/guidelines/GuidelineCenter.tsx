@@ -6,7 +6,7 @@ import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type GuidelineCenterProps = {
   view: "home" | "search" | "ask" | "sources" | "upload" | "imports" | "review" | "updates" | "private";
@@ -81,7 +81,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   }
 
   async function apiGet(path: string) {
-    const response = await fetch(`${apiUrl}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : undefined });
+    const response = await fetch(`${getApiBaseUrl()}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : undefined });
     if (!response.ok) return {};
     return response.json();
   }
@@ -97,7 +97,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   async function submitAsk(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Creating local evidence summary");
-    const response = await fetch(`${apiUrl}/guidelines/ask`, {
+    const response = await fetch(`${getApiBaseUrl()}/guidelines/ask`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -113,7 +113,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
 
   async function openSecureFile(document: Document, action: "view" | "download") {
     setMessage(action === "view" ? "Opening secure viewer" : "Preparing secure download");
-    const response = await fetch(`${apiUrl}/guidelines/documents/${document.id}/${action}`, {
+    const response = await fetch(`${getApiBaseUrl()}/guidelines/documents/${document.id}/${action}`, {
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     });
     if (!response.ok) {
@@ -138,7 +138,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   }
 
   async function setDownloadsAllowed(document: Document, downloadsAllowed: boolean) {
-    const response = await fetch(`${apiUrl}/guidelines/documents/${document.id}/file-access-settings`, {
+    const response = await fetch(`${getApiBaseUrl()}/guidelines/documents/${document.id}/file-access-settings`, {
       method: "PATCH",
       headers: {
         "content-type": "application/json",

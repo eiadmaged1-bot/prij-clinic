@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export default function ReferralPrintPage() {
   const params = useParams<{ id: string }>();
@@ -11,7 +11,7 @@ export default function ReferralPrintPage() {
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
-    void fetch(`${apiUrl}/referrals/${params.id}`, {
+    void fetch(`${getApiBaseUrl()}/referrals/${params.id}`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     }).then((response) => response.ok ? response.json() : null).then(setReferral);

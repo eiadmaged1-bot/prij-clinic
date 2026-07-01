@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Invoice = {
   id: string;
@@ -77,11 +77,11 @@ export default function BillingPage() {
     setError("");
     try {
       const [invoiceResponse, paymentResponse, serviceResponse, closingResponse, reportResponse] = await Promise.all([
-        fetch(`${apiUrl}/billing/invoices`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/billing/payments`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/billing/services`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/billing/daily-closing`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/billing/reports/finance`, { credentials: "include", headers })
+        fetch(`${getApiBaseUrl()}/billing/invoices`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/billing/payments`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/billing/services`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/billing/daily-closing`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/billing/reports/finance`, { credentials: "include", headers })
       ]);
 
       if ([invoiceResponse, paymentResponse, serviceResponse].some((response) => response.status === 401)) {
@@ -143,7 +143,7 @@ export default function BillingPage() {
     event.preventDefault();
     setMessage("");
     setError("");
-    const response = await fetch(`${apiUrl}/billing/patients/${patientId}/statement`, { credentials: "include", headers });
+    const response = await fetch(`${getApiBaseUrl()}/billing/patients/${patientId}/statement`, { credentials: "include", headers });
     if (!response.ok) {
       setError("Could not open patient statement. Check the patient file and your access.");
       return;
@@ -154,7 +154,7 @@ export default function BillingPage() {
   async function post(path: string, payload: Record<string, unknown>, success: string) {
     setMessage("");
     setError("");
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
       method: "POST",
       credentials: "include",
       headers,

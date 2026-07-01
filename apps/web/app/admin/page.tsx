@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type ServiceItem = {
   id: string;
@@ -77,10 +77,10 @@ export default function AdminPage() {
     setError("");
     try {
       const [summaryResponse, servicesResponse, usersResponse, rolesResponse] = await Promise.all([
-        fetch(`${apiUrl}/admin/control-center`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/admin/services`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/admin/users`, { credentials: "include", headers }),
-        fetch(`${apiUrl}/admin/roles`, { credentials: "include", headers })
+        fetch(`${getApiBaseUrl()}/admin/control-center`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/admin/services`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/admin/users`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/admin/roles`, { credentials: "include", headers })
       ]);
 
       if ([summaryResponse, servicesResponse, usersResponse, rolesResponse].some((response) => response.status === 401)) {
@@ -106,7 +106,7 @@ export default function AdminPage() {
     setMessage("");
     setError("");
     try {
-      const response = await fetch(`${apiUrl}/admin/services`, {
+      const response = await fetch(`${getApiBaseUrl()}/admin/services`, {
         method: "POST",
         credentials: "include",
         headers,
@@ -129,7 +129,7 @@ export default function AdminPage() {
   async function updateService(service: ServiceItem, patch: Partial<ServiceItem>) {
     setMessage("");
     setError("");
-    const response = await fetch(`${apiUrl}/admin/services/${service.id}`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/services/${service.id}`, {
       method: "PATCH",
       credentials: "include",
       headers,

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { AppThemeId, isThemeId, themes, useTheme } from "../../theme";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type AppearanceSettings = {
   defaultTheme: AppThemeId;
@@ -40,7 +40,7 @@ export default function AppearancePage() {
 
   async function loadSettings() {
     setError("");
-    const response = await fetch(`${apiUrl}/admin/settings/appearance`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/settings/appearance`, {
       credentials: "include",
       headers
     }).catch(() => null);
@@ -82,7 +82,7 @@ export default function AppearancePage() {
       allowUserThemeOverride: settings.allowUserThemeOverride
     };
 
-    const response = await fetch(`${apiUrl}/admin/settings/appearance`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/settings/appearance`, {
       method: "PATCH",
       credentials: "include",
       headers,

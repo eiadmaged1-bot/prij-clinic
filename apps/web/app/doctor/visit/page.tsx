@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 const steps = [
   ["Complaint", "What brought the patient today?", "Chief complaint"],
@@ -81,7 +81,7 @@ function GuidedVisitContent() {
 
   useEffect(() => {
     if (!patientId) return;
-    fetch(`${apiUrl}/patients/${patientId}`, {
+    fetch(`${getApiBaseUrl()}/patients/${patientId}`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
@@ -112,7 +112,7 @@ function GuidedVisitContent() {
         .join("\n")
     };
 
-    const response = await fetch(`${apiUrl}${encounterId ? `/encounters/${encounterId}` : `/patients/${patientId}/encounters`}`, {
+    const response = await fetch(`${getApiBaseUrl()}${encounterId ? `/encounters/${encounterId}` : `/patients/${patientId}/encounters`}`, {
       method: encounterId ? "PATCH" : "POST",
       credentials: "include",
       headers: {

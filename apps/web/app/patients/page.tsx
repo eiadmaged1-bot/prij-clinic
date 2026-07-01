@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Patient = {
   id: string;
@@ -44,7 +44,7 @@ export default function PatientsPage() {
     setError("");
 
     try {
-      const response = await fetch(`${apiUrl}/patients`, {
+      const response = await fetch(`${getApiBaseUrl()}/patients`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       });

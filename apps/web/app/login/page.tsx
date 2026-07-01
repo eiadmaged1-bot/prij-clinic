@@ -25,8 +25,8 @@ export default function LoginPage() {
     try {
       await session.login({ identifier: email, password });
       router.push("/dashboard");
-    } catch {
-      setError("Invalid login ID or password.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not sign in.");
     } finally {
       setIsSubmitting(false);
     }

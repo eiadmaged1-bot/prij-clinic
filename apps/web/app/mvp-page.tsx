@@ -33,7 +33,7 @@ type MvpPageProps = {
   primaryAction?: [string, string];
 };
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 const navGroupOrder: NavItem["group"][] = [
   "Dashboard",
@@ -109,7 +109,7 @@ export function MvpPage({
     setStatus("Loading records");
 
     try {
-      const response = await fetch(`${apiUrl}${endpoint}`, {
+      const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       });
@@ -138,7 +138,7 @@ export function MvpPage({
   async function loadSuggestions(field: Field) {
     if (!field.suggestionsEndpoint) return;
     try {
-      const response = await fetch(`${apiUrl}${field.suggestionsEndpoint}`, {
+      const response = await fetch(`${getApiBaseUrl()}${field.suggestionsEndpoint}`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       });
@@ -163,7 +163,7 @@ export function MvpPage({
     setError("");
 
     try {
-      const response = await fetch(`${apiUrl}${createEndpoint}`, {
+      const response = await fetch(`${getApiBaseUrl()}${createEndpoint}`, {
         method: "POST",
         credentials: "include",
         headers: {

@@ -5,7 +5,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { useSession } from "../../session";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 const reservedPermissions = ["system_owner.manage", "developer_owner.manage"];
 
 type Account = {
@@ -94,7 +94,7 @@ export default function AccountsPage() {
   async function loadAccounts() {
     setLoading(true);
     setError("");
-    const response = await fetch(`${apiUrl}/admin/accounts`, { credentials: "include", headers }).catch(() => null);
+    const response = await fetch(`${getApiBaseUrl()}/admin/accounts`, { credentials: "include", headers }).catch(() => null);
     setLoading(false);
 
     if (!response) {
@@ -169,7 +169,7 @@ export default function AccountsPage() {
   async function send(method: string, path: string, body: unknown, success: string) {
     setMessage("");
     setError("");
-    const response = await fetch(`${apiUrl}${path}`, {
+    const response = await fetch(`${getApiBaseUrl()}${path}`, {
       method,
       credentials: "include",
       headers,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export default function PatientVisitPacketPrintPage() {
   const params = useParams<{ id: string }>();
@@ -15,8 +15,8 @@ export default function PatientVisitPacketPrintPage() {
     const token = sessionStorage.getItem("prijClinicToken");
     const headers = token ? { authorization: `Bearer ${token}` } : undefined;
     void Promise.all([
-      fetch(`${apiUrl}/patients/${patientId}`, { credentials: "include", headers }).then((response) => response.ok ? response.json() : null),
-      fetch(`${apiUrl}/patients/${patientId}/timeline`, { credentials: "include", headers }).then((response) => response.ok ? response.json() : { items: [] })
+      fetch(`${getApiBaseUrl()}/patients/${patientId}`, { credentials: "include", headers }).then((response) => response.ok ? response.json() : null),
+      fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline`, { credentials: "include", headers }).then((response) => response.ok ? response.json() : { items: [] })
     ]).then(([patientData, timelineData]) => {
       setPatient(patientData);
       setTimeline(timelineData.items ?? []);

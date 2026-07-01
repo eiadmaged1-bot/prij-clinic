@@ -5,7 +5,7 @@ import { AppShell, SafetyAlert } from "../../mvp-page";
 import { CalculatorFormula } from "../../../lib/calculators";
 import { FormulaStatusBadge } from "../../../components/calculators/FormulaStatusBadge";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export default function AdminCalculatorsPage() {
   const [formulas, setFormulas] = useState<CalculatorFormula[]>([]);
@@ -17,7 +17,7 @@ export default function AdminCalculatorsPage() {
   }, []);
 
   async function load() {
-    const response = await fetch(`${apiUrl}/admin/calculators`, { credentials: "include", headers: authHeaders() });
+    const response = await fetch(`${getApiBaseUrl()}/admin/calculators`, { credentials: "include", headers: authHeaders() });
     if (!response.ok) {
       setStatus(response.status === 403 ? "Owner or Admin access is required." : "Could not load formula registry.");
       return;
@@ -39,7 +39,7 @@ export default function AdminCalculatorsPage() {
       limitationsJson: { warnings: String(form.get("warnings") ?? "").split("\n").map((line) => line.trim()).filter(Boolean) },
       reason: String(form.get("reason") ?? "")
     };
-    const response = await fetch(`${apiUrl}/admin/calculators/${selected.code}`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/calculators/${selected.code}`, {
       method: "PATCH",
       credentials: "include",
       headers: authHeaders(),

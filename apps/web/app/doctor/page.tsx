@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type QueueTicket = {
   id: string;
@@ -33,8 +33,8 @@ export default function DoctorModePage() {
     const headers = token ? { authorization: `Bearer ${token}` } : undefined;
 
     Promise.all([
-      fetch(`${apiUrl}/queue/today`, { credentials: "include", headers }),
-      fetch(`${apiUrl}/appointments`, { credentials: "include", headers })
+      fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }),
+      fetch(`${getApiBaseUrl()}/appointments`, { credentials: "include", headers })
     ])
       .then(async ([queueResponse, appointmentResponse]) => {
         const queueData = queueResponse.ok ? await queueResponse.json() : { queueTickets: [] };

@@ -7,7 +7,7 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type SafeUser = {
   id: string;
@@ -76,7 +76,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
 
-    fetch(`${apiUrl}/auth/me`, {
+    fetch(`${getApiBaseUrl()}/auth/me`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
@@ -89,7 +89,7 @@ export default function DashboardPage() {
       })
       .then((data) => {
         setUser(data.user);
-        return fetch(`${apiUrl}/dashboard/summary`, {
+        return fetch(`${getApiBaseUrl()}/dashboard/summary`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
         });
@@ -105,7 +105,7 @@ export default function DashboardPage() {
   async function logout() {
     const token = sessionStorage.getItem("prijClinicToken");
 
-    await fetch(`${apiUrl}/auth/logout`, {
+    await fetch(`${getApiBaseUrl()}/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
