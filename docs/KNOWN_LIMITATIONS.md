@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.10.0 prepares safe official medication re-import, but no Bahrain NHRA or Oman MOH official source file is currently acquired in local ignored storage.
+- v0.10.0 parser support is limited to reviewed CSV, XLSX/XLS, JSON, and JSONL source files. PDF/ZIP acquisition is allowed for safe storage, but parsing requires reviewed extraction or source-specific parser work before import.
+- Official medication rows and verified medication rows remain 0 until an official/public or owner-approved source file is acquired and imported.
+- Prescription medication selection must not be called strict-ready while official rows remain 0.
+
 - v0.9.9 recovered provenance from project history and local infrastructure metadata, but did not find a recoverable old official export or running DB with official medication rows. The blocker remains the unavailable ignored export/old DB artifact.
 - v0.9.9 Docker volume handling is metadata-only by default. Existing Postgres volumes were not attached to a new server because doing so can mutate recovery state.
 - v0.9.9 does not create fake medication rows, mark unverified rows verified, scrape retail/checkout/stock/order pages, or add patient dosing instructions.

@@ -1,5 +1,32 @@
 # Next Steps
 
+v0.10.0 official medication re-import next steps:
+
+1. Obtain Bahrain NHRA and Oman MOH official/public files or owner-approved official files.
+2. Place them only through the guarded acquisition helper:
+
+```powershell
+npm run medication:v100:source-acquire -- --file PATH --source NHRA --country BH --apply
+npm run medication:v100:source-acquire -- --file PATH --source OMAN_MOH --country OM --apply
+```
+
+3. Dry-run each import before apply:
+
+```powershell
+npm run medication:v100:reimport:dry-run -- --source NHRA --country BH --file PATH
+npm run medication:v100:reimport:dry-run -- --source OMAN_MOH --country OM --file PATH
+```
+
+4. Apply only after source and mapping review:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v100:reimport:apply -- --source NHRA --country BH --file PATH
+```
+
+5. Run `npm run medication:v097:ready-check` after any apply. Run strict readiness and prescription medication selection checks only if official rows exist.
+6. Do not create fake rows, scrape retail/stock/order/checkout pages, mark unverified rows verified, or create a release tag.
+
 v0.9.9 medication provenance recovery next steps:
 
 1. Keep `storage/medication-provenance-recovery/` ignored and do not commit recovered exports or reports.

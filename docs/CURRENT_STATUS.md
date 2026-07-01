@@ -1,5 +1,15 @@
 # Current Status
 
+v0.10.0 Official Medication Re-Import is in progress on branch `data/v0.10.0-official-medication-reimport`. It documents the official source registry, adds dry-run-first source acquisition into ignored local storage, adds a source-specific parser framework for Bahrain NHRA/Oman MOH/generic official spreadsheets, and adds synthetic parser fixtures only. Current local source acquisition list is empty, so no official file dry-run import or apply import was performed. Official medication rows remain 0 and verified medication rows remain 0.
+
+v0.10.0 safety status:
+- No fake medication rows were created.
+- No AI-generated medication list was used.
+- No retail, stock, cart, checkout, order, login, CAPTCHA, or paywall source was used.
+- Imported rows will default to `needs_review` unless a reviewed source explicitly contains prior project verified status.
+- Strength/form/pack remains market metadata only and never patient dosing instructions.
+- Strict medication readiness remains blocked until official rows exist.
+
 v0.9.9 Medication Provenance Recovery is in progress on branch `data/v0.9.9-medication-provenance-recovery`. It adds read-only provenance scanning, a guarded recovery-DB export helper, and a guarded recovered official medication import workflow. The scan found historical medication refs and tooling but no recoverable raw official export or old running DB with official rows. Current local official medication rows remain 0 and verified medication rows remain 0. No recovered export was created, no import was applied, and no fake medication rows were created.
 
 v0.9.9 search result:

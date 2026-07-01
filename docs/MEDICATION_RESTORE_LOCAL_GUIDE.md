@@ -2,6 +2,37 @@
 
 Official medication data must come from a previous approved export or owner-provided official source file. Do not create fake real medication data.
 
+## v0.10.0 Official Source Re-Import
+
+v0.10.0 adds a guarded path for re-importing official/public or owner-approved Bahrain NHRA and Oman MOH source files after v0.9.7-v0.9.9 found no recoverable old export or DB artifact.
+
+List acquired local source files:
+
+```powershell
+npm run medication:v100:source-list
+```
+
+Acquire a reviewed official file into ignored local storage:
+
+```powershell
+npm run medication:v100:source-acquire -- --file PATH --source NHRA --country BH --apply
+```
+
+Dry-run re-import:
+
+```powershell
+npm run medication:v100:reimport:dry-run -- --source NHRA --country BH --file PATH
+```
+
+Apply only after a clean dry run:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v100:reimport:apply -- --source NHRA --country BH --file PATH
+```
+
+All imported rows default to `needs_review` unless the file explicitly carries prior project `verificationStatus=verified`. No dosing instructions, frequency, duration, patient instructions, stock/order/checkout data, or patient records are imported.
+
 Find local candidates:
 
 ```powershell

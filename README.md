@@ -6,6 +6,22 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.10.0 Official Medication Re-Import
+
+Branch: `data/v0.10.0-official-medication-reimport`.
+
+v0.10.0 prepares a safe re-import path for official medication reference data after v0.9.7-v0.9.9 found no recoverable old raw export or DB artifact. The first targets are Bahrain NHRA and Oman MOH, matching the earlier project history of 8,269 official rows. The current local DB still has 0 official medication rows and 0 verified medication rows.
+
+```powershell
+npm run medication:v100:source-list
+npm run medication:v100:source-acquire -- --file PATH --source NHRA --country BH --apply
+npm run medication:v100:reimport:dry-run -- --source NHRA --country BH --file PATH
+$env:APP_ENV="local"
+npm run medication:v100:reimport:apply -- --source NHRA --country BH --file PATH
+```
+
+Rows default to `needs_review` unless an approved file explicitly contains prior project `verificationStatus=verified`. The workflow does not create fake rows, scrape retail/stock/order/checkout pages, generate dosing instructions, auto-prescribe, or commit raw official files.
+
 ## v0.9.9 Medication Provenance Recovery
 
 Branch: `data/v0.9.9-medication-provenance-recovery`.
