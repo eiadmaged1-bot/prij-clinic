@@ -121,6 +121,8 @@
     "medication:v099:import-recovered:apply": "node scripts/v099-import-recovered-official-medications.mjs --apply --confirm IMPORT_RECOVERED_OFFICIAL_MEDICATIONS",
     "medication:v100:source-acquire": "node scripts/v100-official-medication-source-acquire.mjs",
     "medication:v100:source-list": "node scripts/v100-official-medication-source-acquire.mjs --list",
+    "medication:v100:reimport:dry-run": "node scripts/v100-official-medication-reimport.mjs",
+    "medication:v100:reimport:apply": "node scripts/v100-official-medication-reimport.mjs --apply --confirm REIMPORT_OFFICIAL_MEDICATIONS",
     "accounts:v097:role-ready-check": "node scripts/v097-account-role-ready-check.mjs",
     "db:v097:prepare-reference": "powershell -ExecutionPolicy Bypass -File scripts/v097-prepare-reference-db.ps1",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
