@@ -19,7 +19,7 @@ async function main() {
   await waitForApi();
 
   const shell = await readFile("apps/web/app/mvp-page.tsx", "utf8");
-  includesAll(shell, ["Clinic Flow", "Clinical Work", "Reference", "Owner", "Local Demo", "New Patient", "Patient search"], "premium shell");
+  includesAll(shell, ["Dashboard", "Doctor workflow", "Medications", "Admin / Owner Control", "Local Demo", "New Patient", "Patient search"], "premium shell");
   excludesAll(shell, ["Prisma", "JWT", "RBAC", "raw JSON", "stack trace"], "premium shell");
   record.pass("premium shell and navigation wording are visible");
 
@@ -44,8 +44,8 @@ async function main() {
   record.pass("owner control center includes visible control sections");
 
   const medication = `${await readFile("apps/web/app/medications/page.tsx", "utf8")}\n${await readFile("apps/web/app/drug-market/page.tsx", "utf8")}\n${await readFile("apps/web/components/medications/MedicationComponents.tsx", "utf8")}`;
-  includesAll(medication, ["Official medication reference", "Official Medicine Data", "8,269", "1,200", "7,069", "Official Medicine Search", "Official/source price", "Source freshness"], "medication reference");
-  excludesAll(medication, ["how-to-take", "checkout", "purchase", "Pharmacy stock"], "medication reference");
+  includesAll(medication, ["Official medication reference", "Official Medicine Data", "8,269", "1,200", "7,069", "Official Medicine Search", "Verified", "Needs review"], "medication reference");
+  excludesAll(medication, ["Official/source price", "Official listed price", "Source price", "Import run", "Parser confidence", "Official row fields", "Row preview", "how-to-take", "checkout", "purchase", "Pharmacy stock"], "medication reference");
   record.pass("medication UI shows official status without patient-use or commerce wording");
 
   const orders = await readFile("apps/web/app/orders/page.tsx", "utf8");

@@ -10,6 +10,8 @@ Medication data next steps:
 
 Engineering next steps:
 - Run manual browser QA for `/login`, `/dashboard`, `/patients`, `/patients/new`, a patient file, `/calendar`, `/queue`, `/doctor`, `/billing`, `/admin`, `/orders`, `/medications`, and `/drug-market`.
+- Run Prij Heritage manual QA across shell, dashboard, patient file, doctor workflow, reception queue, calendar, finance, medications, drug-market product profiles, and owner/admin medication review.
+- Consider backend persistence improvements for theme defaults only if owner appearance requirements outgrow the current lightweight system.
 - Add richer appointment and queue status controls once backend status transitions are wired into the visible pages.
 - Add duplicate-patient warning logic behind the patient creation form.
 - Add service catalog editing as its own owner page if the current Owner Control Center becomes too dense.

@@ -2,10 +2,17 @@
 
 Medication restore drill and verification Batch 4 for Bahrain and Oman are implemented.
 
+v0.9.2 Prij Heritage theme and medication UI declutter is in progress on this branch:
+- `prij-heritage` is registered as the default frontend theme for this branch.
+- Tokens from `docs/design/prij-clinic-theme.html` are converted into app CSS variables and shell styling.
+- Reusable Prij Heritage component helpers are available in `apps/web/components/prij-heritage.tsx`.
+- Medication UI hides technical/source/price/debug labels from normal visible screens while preserving backend metadata.
+
 v0.9 visible experience work is in progress on the premium clinic OS browser experience:
 - Premium shell/navigation now exposes Home, Patients, Calendar, Queue, Doctor Workspace, Orders, Finance, Reports, Medications, Guidelines/Protocols, and Owner controls in role-aware groups.
 - Login, dashboard, patient creation, patient workspace, reception flow, doctor flow, owner control, finance, orders, consents, and medication reference pages have visible product polish.
 - Medication work remains display-only for existing v0.8.6 data; no new official source importers were added.
+- Normal medication UI uses simplified trust wording such as Verified, Needs review, Source-tracked, Bahrain data, and Oman data.
 
 Counts after v0.8.6 Batch 4:
 - Bahrain NHRA: 3,169 real rows, 600 verified, 2,569 needs review.

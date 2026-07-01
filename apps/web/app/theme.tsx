@@ -2,7 +2,7 @@
 
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
-export type AppThemeId = "clinic-premium" | "medicolize-portal" | "incision-portal" | "minimal-clean" | "compact-operations";
+export type AppThemeId = "prij-heritage" | "clinic-premium" | "medicolize-portal" | "incision-portal" | "minimal-clean" | "compact-operations";
 
 export type AppTheme = {
   id: AppThemeId;
@@ -12,6 +12,12 @@ export type AppTheme = {
 };
 
 export const themes: AppTheme[] = [
+  {
+    id: "prij-heritage",
+    name: "Prij Heritage",
+    description: "Warm paper workspace, ink sidebar, teal actions, terracotta active state, and patient-file-first clinic patterns.",
+    tone: "Heritage clinic OS"
+  },
   {
     id: "clinic-premium",
     name: "Original Premium",
@@ -44,7 +50,7 @@ export const themes: AppTheme[] = [
   }
 ];
 
-const fallbackTheme: AppThemeId = "clinic-premium";
+const fallbackTheme: AppThemeId = "prij-heritage";
 
 type ThemeContextValue = {
   theme: AppThemeId;

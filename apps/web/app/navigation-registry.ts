@@ -4,45 +4,46 @@ export type NavItem = {
   href: string;
   label: string;
   icon: IconName;
-  group: "Clinic Flow" | "Clinical Work" | "Reference" | "Finance" | "Later" | "Owner";
+  group: "Dashboard" | "Patients" | "Doctor workflow" | "Reception queue" | "Calendar" | "Finance" | "Orders" | "Medications" | "Admin / Owner Control";
   permissions?: string[];
   roles?: string[];
   adminOnly?: boolean;
 };
 
 export const navigationRegistry: NavItem[] = [
-  { href: "/dashboard", label: "Home", icon: "dashboard", group: "Clinic Flow" },
-  { href: "/patients", label: "Patients", icon: "patients", group: "Clinic Flow" },
-  { href: "/calendar", label: "Calendar", icon: "calendar", group: "Clinic Flow", permissions: ["appointment.read", "appointments.read"] },
-  { href: "/queue", label: "Queue", icon: "queue", group: "Clinic Flow", permissions: ["queue.read"] },
-  { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Clinic Flow", permissions: ["encounter.read", "encounter.create"] },
-  { href: "/orders", label: "Orders", icon: "investigations", group: "Clinic Flow", permissions: ["investigation.read"] },
-  { href: "/appointments", label: "Appointment Desk", icon: "calendar", group: "Later", permissions: ["appointment.read", "appointments.read"] },
-  { href: "/doctor/visit", label: "Guided Visit", icon: "encounter", group: "Clinical Work", permissions: ["encounter.create", "encounter.read"] },
-  { href: "/encounters", label: "Encounters", icon: "encounter", group: "Clinical Work", permissions: ["encounter.read"] },
-  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical Work", permissions: ["prescription.read"] },
-  { href: "/investigations", label: "Investigation Orders", icon: "investigations", group: "Clinical Work", permissions: ["investigation.read"] },
-  { href: "/reports", label: "Reports", icon: "reports", group: "Clinical Work", permissions: ["report.read"] },
-  { href: "/pregnancies", label: "Pregnancy", icon: "pregnancy", group: "Clinical Work", permissions: ["pregnancy.read", "pregnancy.manage"] },
-  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Clinical Work", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
-  { href: "/medications", label: "Medications", icon: "prescription", group: "Reference", permissions: ["medications.read", "medications.search"] },
-  { href: "/drug-market", label: "Official Medicine Data", icon: "prescription", group: "Reference", permissions: ["drug_market.read", "drug_market.search"] },
-  { href: "/protocol-atlas", label: "Protocols", icon: "ai", group: "Reference", permissions: ["protocol_atlas.read", "ai_management.read"] },
-  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Reference", permissions: ["guidelines.read", "guidelines.search"] },
-  { href: "/calculators", label: "Calculators", icon: "investigations", group: "Reference", permissions: ["calculator.read", "calculator.calculate"] },
+  { href: "/dashboard", label: "Clinic Home", icon: "dashboard", group: "Dashboard" },
+  { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients" },
+  { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients" },
+  { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Doctor workflow", permissions: ["encounter.read", "encounter.create"] },
+  { href: "/doctor/visit", label: "Guided Visit", icon: "encounter", group: "Doctor workflow", permissions: ["encounter.create", "encounter.read"] },
+  { href: "/queue", label: "Queue Board", icon: "queue", group: "Reception queue", permissions: ["queue.read"] },
+  { href: "/appointments", label: "Appointment Desk", icon: "calendar", group: "Reception queue", permissions: ["appointment.read", "appointments.read"] },
+  { href: "/calendar", label: "Clinic Calendar", icon: "calendar", group: "Calendar", permissions: ["appointment.read", "appointments.read"] },
+  { href: "/orders", label: "Orders", icon: "investigations", group: "Orders", permissions: ["investigation.read"] },
+  { href: "/investigations", label: "Investigations", icon: "investigations", group: "Orders", permissions: ["investigation.read"] },
+  { href: "/reports", label: "Reports", icon: "reports", group: "Orders", permissions: ["report.read"] },
   { href: "/billing", label: "Billing", icon: "billing", group: "Finance", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
   { href: "/finance", label: "Finance Home", icon: "billing", group: "Finance", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
-  { href: "/consents", label: "Consents", icon: "consent", group: "Later", permissions: ["patient.consent_read", "patient.consent_manage"] },
-  { href: "/documents", label: "Documents", icon: "files", group: "Later", permissions: ["patient_document.read"] },
-  { href: "/referrals", label: "Referrals", icon: "reports", group: "Later", permissions: ["referral.read"] },
-  { href: "/tasks", label: "Tasks", icon: "queue", group: "Later", permissions: ["patient_task.read"] },
-  { href: "/ai-drafts", label: "AI Draft Review", icon: "ai", group: "Later", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
-  { href: "/admin", label: "Owner Control Center", icon: "admin", group: "Owner", adminOnly: true },
-  { href: "/owner-control", label: "Owner Home", icon: "admin", group: "Owner", adminOnly: true },
-  { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Owner", adminOnly: true },
-  { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Owner", adminOnly: true },
-  { href: "/admin/medications", label: "Medication Reference Ops", icon: "prescription", group: "Owner", adminOnly: true },
-  { href: "/admin/drug-market/review-queue", label: "Medication Review", icon: "prescription", group: "Owner", adminOnly: true }
+  { href: "/medications", label: "Medication Reference", icon: "prescription", group: "Medications", permissions: ["medications.read", "medications.search"] },
+  { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medications", permissions: ["drug_market.read", "drug_market.search"] },
+  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Doctor workflow", permissions: ["prescription.read"] },
+  { href: "/encounters", label: "Encounters", icon: "encounter", group: "Doctor workflow", permissions: ["encounter.read"] },
+  { href: "/pregnancies", label: "Pregnancy", icon: "pregnancy", group: "Doctor workflow", permissions: ["pregnancy.read", "pregnancy.manage"] },
+  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Doctor workflow", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
+  { href: "/protocol-atlas", label: "Protocols", icon: "ai", group: "Doctor workflow", permissions: ["protocol_atlas.read", "ai_management.read"] },
+  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Doctor workflow", permissions: ["guidelines.read", "guidelines.search"] },
+  { href: "/calculators", label: "Calculators", icon: "investigations", group: "Doctor workflow", permissions: ["calculator.read", "calculator.calculate"] },
+  { href: "/consents", label: "Consents", icon: "consent", group: "Patients", permissions: ["patient.consent_read", "patient.consent_manage"] },
+  { href: "/documents", label: "Documents", icon: "files", group: "Patients", permissions: ["patient_document.read"] },
+  { href: "/referrals", label: "Referrals", icon: "reports", group: "Patients", permissions: ["referral.read"] },
+  { href: "/tasks", label: "Tasks", icon: "queue", group: "Patients", permissions: ["patient_task.read"] },
+  { href: "/ai-drafts", label: "AI Draft Review", icon: "ai", group: "Doctor workflow", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
+  { href: "/admin", label: "Owner Control", icon: "admin", group: "Admin / Owner Control", adminOnly: true },
+  { href: "/owner-control", label: "Owner Home", icon: "admin", group: "Admin / Owner Control", adminOnly: true },
+  { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin / Owner Control", adminOnly: true },
+  { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin / Owner Control", adminOnly: true },
+  { href: "/admin/medications", label: "Medication Ops", icon: "prescription", group: "Admin / Owner Control", adminOnly: true },
+  { href: "/admin/drug-market/review-queue", label: "Medication Review", icon: "prescription", group: "Admin / Owner Control", adminOnly: true }
 ];
 
 export type PatientTab = {

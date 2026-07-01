@@ -8,7 +8,7 @@ async function main() {
   await waitForApi();
 
   const themeSource = await readFile("apps/web/app/theme.tsx", "utf8");
-  for (const theme of ["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]) {
+  for (const theme of ["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]) {
     if (!themeSource.includes(`"${theme}"`)) throw new Error(`Theme ${theme} is missing from registry.`);
   }
   record.pass("theme registry includes required appearances");
@@ -26,7 +26,7 @@ async function main() {
   record.pass("Clinic Portal and Incision portal dashboard cards are implemented");
 
   const registrySource = await readFile("apps/web/app/navigation-registry.ts", "utf8");
-  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Owner Control Center", "Appearance", "Users and Roles", "Guidelines", "Medications", "Official Medicine Data"]) {
+  for (const label of ["/admin", "/admin/appearance", "/admin/accounts", "Owner Control", "Appearance", "Users and Roles", "Guidelines", "Medications", "Medicine Data"]) {
     if (!registrySource.includes(label)) throw new Error(`Navigation registry label missing: ${label}`);
   }
   record.pass("canonical navigation registry includes clinical and admin modules");
@@ -39,7 +39,7 @@ async function main() {
   record.pass("themes share one shell and density persists per browser");
 
   const cssSource = await readFile("apps/web/app/globals.css", "utf8");
-  for (const token of ["--density-font-scale", "--density-control-height", "--density-card-padding", "--density-sidebar-width", ':root[data-density="large"]', ':root[data-density="compact"]']) {
+  for (const token of ["--pc-ink", "--pc-paper", "--pc-teal", "--pc-terracotta", "--density-font-scale", "--density-control-height", "--density-card-padding", "--density-sidebar-width", ':root[data-density="large"]', ':root[data-density="compact"]']) {
     if (!cssSource.includes(token)) throw new Error(`Density token missing: ${token}`);
   }
   record.pass("comfort large compact density tokens are implemented");

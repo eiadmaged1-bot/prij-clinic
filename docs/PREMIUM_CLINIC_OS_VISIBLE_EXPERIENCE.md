@@ -17,7 +17,14 @@ This sprint makes the existing clinic infrastructure visible in the browser with
 - Finance: manual invoices, payments, daily closing, service catalog use, patient statement, and finance reports remain visible without a real gateway.
 - Orders: visible lab/radiology/service order skeleton at `/orders`.
 - Consents: visible consent/legal document skeleton with draft/signed/voided language and print/signature placeholders.
-- Medication reference: 8,269 official rows, 1,200 verified rows, 7,069 review remaining, Bahrain and Oman availability, official/source price labels, and source freshness.
+- Medication reference: 8,269 official rows, 1,200 verified rows, 7,069 review remaining, Bahrain and Oman availability, simplified trust badges, and non-technical updated/source-tracked wording.
+
+## V0.9.2 Prij Heritage Update
+
+- Prij Heritage is registered as the default branch theme.
+- Theme tokens use dark ink, warm paper, teal actions, terracotta accents, white card surfaces, and warm ink-tinted shadows.
+- The app shell uses patient search, grouped navigation, and role-aware Owner/Admin visibility.
+- Medication and drug-market screens hide registration, source price, import run, parser confidence, raw official row fields, and row preview labels from normal visible UI.
 
 ## Safety Boundaries
 

@@ -81,6 +81,8 @@
     "medication:oman:review:summary": "node scripts/oman-medication-review-summary.mjs",
     "medication:oman:verify:batch": "node scripts/oman-medication-verify-batch.mjs",
     "test:drug-market:verification": "node scripts/drug-market-verification-test.mjs",
+    "test:theme:prij-heritage": "node scripts/prij-heritage-theme-test.mjs",
+    "test:medication-ui-clean": "node scripts/medication-ui-clean-test.mjs",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",
     "test:official-medication-restore": "node scripts/official-medication-restore-test.mjs",
     "test:drug-market:source-recovery": "node scripts/drug-market-source-recovery-test.mjs",

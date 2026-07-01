@@ -13,3 +13,6 @@
 - Patient creation duplicate detection is documented as future work.
 - Finance remains manual. There is no real payment gateway, card handling, tax engine, or full ledger.
 - Medication reference pages show existing v0.8.6 official data status only; this sprint adds no new medication importer.
+- Prij Heritage uses CSS font stacks only; no font files are bundled.
+- Theme selection still uses the existing lightweight appearance/frontend theme system. No new backend theme engine was added.
+- Medication source metadata remains available to backend/admin workflows, but normal UI intentionally avoids technical source and price fields.

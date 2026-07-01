@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Prij Clinic — OS Theme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pc-ink:#16302C;
+    --pc-ink-2:#1E3F38;
+    --pc-ink-3:#295850;
+    --pc-paper:#FAF7F2;
+    --pc-surface:#FFFFFF;
+    --pc-surface-2:#F3EFE6;
+    --pc-teal:#2F6F62;
+    --pc-teal-light:#E4F0EC;
+    --pc-terracotta:#C6714B;
+    --pc-terracotta-light:#F6E4DA;
+    --pc-blush:#F3DCD3;
+    --pc-blush-text:#8C4A38;
+    --pc-text:#1B2624;
+    --pc-text-muted:#6E7C77;
+    --pc-text-soft:#97A19C;
+    --pc-border:#E6E0D4;
+    --pc-border-strong:#D8D0C0;
+    --pc-success:#3F8F6D;
+    --pc-success-light:#E1F0E7;
+    --pc-warning:#C98A2C;
+    --pc-warning-light:#FBEEDA;
+    --pc-danger:#B5484A;
+    --pc-danger-light:#F8E4E3;
+
+    --font-display:'Fraunces', serif;
+    --font-sans:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px;
+    --r-sm:8px; --r-md:12px; --r-lg:18px; --r-pill:999px;
+    --shadow-sm:0 1px 2px rgba(22,48,44,.06), 0 1px 1px rgba(22,48,44,.04);
+    --shadow-md:0 8px 20px rgba(22,48,44,.08), 0 2px 6px rgba(22,48,44,.05);
+    --shadow-lg:0 24px 48px rgba(22,48,44,.14), 0 6px 16px rgba(22,48,44,.08);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:var(--pc-paper); color:var(--pc-text); font-family:var(--font-sans); }
+  .prij-app{ display:flex; width:100%; min-height:900px; background:var(--pc-paper); }
+
+  /* ---------- SIDEBAR ---------- */
+  .pc-sidebar{ width:236px; flex-shrink:0; background:var(--pc-ink); color:#EDF3F0; display:flex; flex-direction:column; padding:var(--sp-6) var(--sp-4); }
+  .pc-brand{ display:flex; align-items:center; gap:10px; padding:0 var(--sp-2) var(--sp-8) var(--sp-2); }
+  .pc-brand-mark{ width:34px; height:34px; border-radius:10px; background:linear-gradient(155deg,var(--pc-teal),var(--pc-ink-3)); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-weight:600; font-size:17px; color:#EDF3F0; flex-shrink:0; }
+  .pc-brand-text{ line-height:1.1; }
+  .pc-brand-text .pc-name{ font-family:var(--font-display); font-size:18px; font-weight:600; letter-spacing:.2px; }
+  .pc-brand-text .pc-sub{ font-size:11px; color:#9FB3AC; letter-spacing:.06em; text-transform:uppercase; margin-top:2px; }
+
+  .pc-nav{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .pc-nav-item{ display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:var(--r-sm); font-size:14px; color:#B9CAC3; cursor:pointer; border-left:3px solid transparent; transition:background .15s ease, color .15s ease; user-select:none; }
+  .pc-nav-item svg{ width:18px; height:18px; flex-shrink:0; opacity:.85; }
+  .pc-nav-item:hover{ background:rgba(255,255,255,.05); color:#EDF3F0; }
+  .pc-nav-item.active{ background:rgba(255,255,255,.07); color:#FFFFFF; border-left:3px solid var(--pc-terracotta); font-weight:500; }
+  .pc-nav-section-label{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:#5F7A72; margin:var(--sp-5) var(--sp-2) var(--sp-2); }
+
+  .pc-sidebar-footer{ margin-top:var(--sp-6); padding-top:var(--sp-4); border-top:1px solid rgba(255,255,255,.08); display:flex; align-items:center; gap:10px; }
+  .pc-avatar-sm{ width:34px; height:34px; border-radius:50%; background:var(--pc-terracotta-light); color:var(--pc-blush-text); display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; flex-shrink:0; }
+  .pc-sidebar-footer .pc-who{ line-height:1.25; }
+  .pc-sidebar-footer .pc-who-name{ font-size:13px; color:#EDF3F0; font-weight:500; }
+  .pc-sidebar-footer .pc-who-role{ font-size:11.5px; color:#8FA69D; }
+
+  /* ---------- MAIN ---------- */
+  .pc-main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .pc-topbar{ height:68px; flex-shrink:0; background:var(--pc-surface); border-bottom:1px solid var(--pc-border); display:flex; align-items:center; gap:var(--sp-5); padding:0 var(--sp-6); }
+  .pc-search{ flex:1; max-width:460px; display:flex; align-items:center; gap:8px; background:var(--pc-surface-2); border:1px solid var(--pc-border); border-radius:var(--r-pill); padding:9px 16px; color:var(--pc-text-muted); }
+  .pc-search svg{ width:16px; height:16px; flex-shrink:0; opacity:.7; }
+  .pc-search input{ border:none; background:transparent; outline:none; font-family:var(--font-sans); font-size:13.5px; color:var(--pc-text); width:100%; }
+  .pc-search input::placeholder{ color:var(--pc-text-soft); }
+  .pc-topbar-spacer{ flex:1; }
+  .pc-icon-btn{ width:36px; height:36px; border-radius:var(--r-sm); border:1px solid var(--pc-border); background:var(--pc-surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--pc-text-muted); position:relative; }
+  .pc-icon-btn svg{ width:17px; height:17px; }
+  .pc-icon-btn .pc-dot{ position:absolute; top:6px; right:6px; width:7px; height:7px; border-radius:50%; background:var(--pc-terracotta); border:1.5px solid var(--pc-surface); }
+  .pc-btn-primary{ display:inline-flex; align-items:center; gap:8px; background:var(--pc-teal); color:#fff; border:none; border-radius:var(--r-sm); padding:9px 16px; font-family:var(--font-sans); font-size:13.5px; font-weight:500; cursor:pointer; box-shadow:var(--shadow-sm); }
+  .pc-btn-primary svg{ width:15px; height:15px; }
+  .pc-btn-secondary{ display:inline-flex; align-items:center; gap:8px; background:var(--pc-surface); color:var(--pc-text); border:1px solid var(--pc-border-strong); border-radius:var(--r-sm); padding:9px 16px; font-family:var(--font-sans); font-size:13.5px; font-weight:500; cursor:pointer; }
+
+  .pc-view{ padding:var(--sp-8) var(--sp-8) var(--sp-10); }
+  .pc-eyebrow{ font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--pc-teal); font-weight:600; margin-bottom:6px; }
+  .pc-h1{ font-family:var(--font-display); font-weight:600; font-size:28px; color:var(--pc-ink); margin:0; letter-spacing:.1px; }
+  .pc-lede{ font-size:14px; color:var(--pc-text-muted); margin-top:6px; max-width:560px; }
+
+  /* ---------- CARDS / KPI ---------- */
+  .pc-kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-4); margin-top:var(--sp-6); }
+  .pc-kpi{ background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:var(--r-md); padding:var(--sp-5); box-shadow:var(--shadow-sm); }
+  .pc-kpi-top{ display:flex; align-items:center; justify-content:space-between; }
+  .pc-kpi-icon{ width:34px; height:34px; border-radius:var(--r-sm); display:flex; align-items:center; justify-content:center; }
+  .pc-kpi-icon svg{ width:17px; height:17px; }
+  .pc-kpi-label{ font-size:12.5px; color:var(--pc-text-muted); margin-top:var(--sp-4); }
+  .pc-kpi-value{ font-family:var(--font-mono); font-size:26px; font-weight:500; color:var(--pc-ink); margin-top:4px; }
+  .pc-kpi-delta{ font-size:12px; margin-top:6px; display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:var(--r-pill); }
+  .pc-kpi-delta.up{ color:var(--pc-success); background:var(--pc-success-light); }
+  .pc-kpi-delta.down{ color:var(--pc-danger); background:var(--pc-danger-light); }
+
+  .pc-grid-2{ display:grid; grid-template-columns:1.55fr 1fr; gap:var(--sp-5); margin-top:var(--sp-6); align-items:start; }
+  .pc-card{ background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:var(--r-md); box-shadow:var(--shadow-sm); }
+  .pc-card-head{ display:flex; align-items:center; justify-content:space-between; padding:var(--sp-5) var(--sp-5) var(--sp-4); border-bottom:1px solid var(--pc-border); }
+  .pc-card-title{ font-size:14.5px; font-weight:600; color:var(--pc-ink); }
+  .pc-card-body{ padding:var(--sp-2) var(--sp-5) var(--sp-5); }
+  .pc-link-quiet{ font-size:12.5px; color:var(--pc-teal); font-weight:500; cursor:pointer; }
+
+  .pc-timeline-row{ display:flex; gap:var(--sp-4); padding:var(--sp-3) 0; border-bottom:1px solid var(--pc-border); align-items:center; }
+  .pc-timeline-row:last-child{ border-bottom:none; }
+  .pc-timeline-time{ font-family:var(--font-mono); font-size:12.5px; color:var(--pc-text-muted); width:56px; flex-shrink:0; }
+  .pc-timeline-dot{ width:8px; height:8px; border-radius:50%; background:var(--pc-teal); flex-shrink:0; }
+  .pc-timeline-body{ flex:1; min-width:0; }
+  .pc-timeline-name{ font-size:13.5px; font-weight:500; color:var(--pc-text); }
+  .pc-timeline-sub{ font-size:12px; color:var(--pc-text-muted); margin-top:1px; }
+
+  .pc-alert-row{ display:flex; gap:10px; padding:var(--sp-3) 0; border-bottom:1px solid var(--pc-border); align-items:flex-start; }
+  .pc-alert-row:last-child{ border-bottom:none; }
+  .pc-alert-dot{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+  .pc-alert-dot.warn{ background:var(--pc-warning); }
+  .pc-alert-dot.info{ background:var(--pc-teal); }
+  .pc-alert-dot.crit{ background:var(--pc-danger); }
+  .pc-alert-text{ font-size:13px; color:var(--pc-text); line-height:1.45; }
+  .pc-alert-sub{ font-size:11.5px; color:var(--pc-text-soft); margin-top:2px; }
+
+  /* ---------- CHIPS ---------- */
+  .pc-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; padding:3px 10px; border-radius:var(--r-pill); }
+  .pc-chip.teal{ background:var(--pc-teal-light); color:var(--pc-teal); }
+  .pc-chip.terracotta{ background:var(--pc-terracotta-light); color:var(--pc-blush-text); }
+  .pc-chip.warn{ background:var(--pc-warning-light); color:var(--pc-warning); }
+  .pc-chip.danger{ background:var(--pc-danger-light); color:var(--pc-danger); }
+  .pc-chip.success{ background:var(--pc-success-light); color:var(--pc-success); }
+  .pc-chip.neutral{ background:var(--pc-surface-2); color:var(--pc-text-muted); }
+
+  /* ---------- PATIENT FILE ---------- */
+  .pc-patient-header{ background:linear-gradient(120deg, var(--pc-ink) 0%, var(--pc-ink-3) 100%); border-radius:var(--r-lg); padding:var(--sp-6); color:#EDF3F0; box-shadow:var(--shadow-md); margin-top:var(--sp-5); }
+  .pc-patient-top{ display:flex; align-items:center; gap:var(--sp-4); }
+  .pc-patient-avatar{ width:56px; height:56px; border-radius:50%; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:20px; font-weight:600; flex-shrink:0; }
+  .pc-patient-name{ font-family:var(--font-display); font-size:24px; font-weight:600; letter-spacing:.2px; }
+  .pc-patient-meta{ font-family:var(--font-mono); font-size:12px; color:#B9CAC3; margin-top:4px; letter-spacing:.02em; }
+  .pc-patient-chips{ display:flex; gap:8px; margin-left:auto; flex-wrap:wrap; justify-content:flex-end; }
+  .pc-patient-chips .pc-chip{ background:rgba(255,255,255,.12); color:#EDF3F0; }
+  .pc-patient-chips .pc-chip.accent{ background:var(--pc-terracotta); color:#fff; }
+
+  .pc-ribbon{ margin-top:var(--sp-5); }
+  .pc-ribbon-label{ display:flex; justify-content:space-between; font-size:11.5px; color:#9FB3AC; margin-bottom:8px; }
+  .pc-ribbon-track{ display:flex; gap:3px; }
+  .pc-ribbon-seg{ height:6px; flex:1; border-radius:3px; background:rgba(255,255,255,.14); }
+  .pc-ribbon-seg.done{ background:var(--pc-terracotta); }
+  .pc-ribbon-seg.current{ background:#EDF3F0; }
+
+  .pc-tabs{ display:flex; gap:var(--sp-6); margin-top:var(--sp-6); border-bottom:1px solid var(--pc-border); }
+  .pc-tab{ font-size:13.5px; color:var(--pc-text-muted); padding:0 0 var(--sp-3); cursor:pointer; border-bottom:2px solid transparent; font-weight:500; }
+  .pc-tab.active{ color:var(--pc-ink); border-bottom:2px solid var(--pc-teal); }
+
+  .pc-vitals-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-4); margin-top:var(--sp-5); }
+  .pc-vital{ background:var(--pc-surface-2); border-radius:var(--r-sm); padding:var(--sp-4); }
+  .pc-vital-label{ font-size:11.5px; color:var(--pc-text-muted); }
+  .pc-vital-value{ font-family:var(--font-mono); font-size:18px; font-weight:500; color:var(--pc-ink); margin-top:4px; }
+
+  .pc-note-row{ display:flex; gap:var(--sp-3); padding:var(--sp-4) 0; border-bottom:1px solid var(--pc-border); }
+  .pc-note-row:last-child{ border-bottom:none; }
+  .pc-note-date{ font-family:var(--font-mono); font-size:11.5px; color:var(--pc-text-soft); width:78px; flex-shrink:0; padding-top:2px; }
+  .pc-note-body{ font-size:13px; color:var(--pc-text); line-height:1.55; }
+  .pc-note-doc{ font-size:11.5px; color:var(--pc-text-muted); margin-top:4px; }
+
+  /* ---------- TABLE ---------- */
+  .pc-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .pc-table th{ text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--pc-text-soft); font-weight:600; padding:0 var(--sp-3) var(--sp-3); border-bottom:1px solid var(--pc-border); }
+  .pc-table td{ padding:var(--sp-3); border-bottom:1px solid var(--pc-border); vertical-align:middle; }
+  .pc-table tr:last-child td{ border-bottom:none; }
+  .pc-table td.mono{ font-family:var(--font-mono); font-size:12.5px; color:var(--pc-text-muted); }
+  .pc-table-name{ font-weight:500; color:var(--pc-text); }
+  .pc-table-sub{ font-size:11.5px; color:var(--pc-text-muted); }
+
+  /* ---------- RECEPTION ---------- */
+  .pc-summary-strip{ display:flex; gap:var(--sp-4); margin-top:var(--sp-6); }
+  .pc-summary-pill{ flex:1; background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:var(--r-md); padding:var(--sp-4) var(--sp-5); }
+  .pc-summary-pill .n{ font-family:var(--font-mono); font-size:22px; font-weight:500; color:var(--pc-ink); }
+  .pc-summary-pill .l{ font-size:12px; color:var(--pc-text-muted); margin-top:2px; }
+
+  /* ---------- FINANCE ---------- */
+  .pc-package-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--sp-4); margin-top:var(--sp-6); }
+  .pc-package-card{ background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:var(--r-md); padding:var(--sp-5); box-shadow:var(--shadow-sm); }
+  .pc-package-card .price{ font-family:var(--font-mono); font-size:22px; font-weight:500; color:var(--pc-ink); margin:8px 0 4px; }
+
+  /* ---------- MEDICATION ---------- */
+  .pc-med-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:var(--sp-4); margin-top:var(--sp-6); }
+  .pc-med-card{ background:var(--pc-surface); border:1px solid var(--pc-border); border-radius:var(--r-md); padding:var(--sp-5); box-shadow:var(--shadow-sm); }
+  .pc-med-top{ display:flex; align-items:flex-start; justify-content:space-between; }
+  .pc-med-name{ font-family:var(--font-display); font-size:16.5px; font-weight:600; color:var(--pc-ink); }
+  .pc-med-cat{ font-size:11.5px; color:var(--pc-text-muted); margin-top:2px; }
+  .pc-med-dose{ font-family:var(--font-mono); font-size:12.5px; color:var(--pc-text); margin-top:var(--sp-4); background:var(--pc-surface-2); border-radius:var(--r-sm); padding:8px 10px; }
+  .pc-med-note{ font-size:12.5px; color:var(--pc-text-muted); margin-top:var(--sp-3); line-height:1.5; }
+
+  .pc-footer-note{ margin-top:var(--sp-10); font-size:11.5px; color:var(--pc-text-soft); text-align:center; }
+
+  [data-view]{ display:none; }
+  [data-view].active{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="prij-app">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <div class="pc-sidebar">
+    <div class="pc-brand">
+      <div class="pc-brand-mark">P</div>
+      <div class="pc-brand-text">
+        <div class="pc-name">Prij</div>
+        <div class="pc-sub">Clinic OS</div>
+      </div>
+    </div>
+
+    <div class="pc-nav">
+      <div class="pc-nav-item active" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="12" width="8" height="9" rx="2"/><rect x="3" y="14" width="8" height="7" rx="2"/></svg>
+        Dashboard
+      </div>
+      <div class="pc-nav-item" data-nav="patient">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
+        Patients
+      </div>
+      <div class="pc-nav-item" data-nav="doctor">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 3v4a3 3 0 006 0V3"/><path d="M12 13v3"/><circle cx="12" cy="18" r="3"/></svg>
+        Doctor workflow
+      </div>
+      <div class="pc-nav-item" data-nav="reception">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 10l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/></svg>
+        Reception queue
+      </div>
+      <div class="pc-nav-item" data-nav="finance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>
+        Finance
+      </div>
+      <div class="pc-nav-item" data-nav="medication">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="7" height="16" rx="3.5"/><path d="M4 12h7"/><circle cx="17" cy="15" r="4"/></svg>
+        Medications
+      </div>
+
+      <div class="pc-nav-section-label">System</div>
+      <div class="pc-nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.9 2.9l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.9-2.9l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.9-2.9l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.9 2.9l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1h.1a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+        Settings
+      </div>
+    </div>
+
+    <div class="pc-sidebar-footer">
+      <div class="pc-avatar-sm">AB</div>
+      <div class="pc-who">
+        <div class="pc-who-name">Dr. Aline Boateng</div>
+        <div class="pc-who-role">Owner &middot; OB/GYN</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="pc-main">
+
+    <div class="pc-topbar">
+      <div class="pc-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search patients, MRN, or visit ID">
+      </div>
+      <div class="pc-topbar-spacer"></div>
+      <div class="pc-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg><span class="pc-dot"></span></div>
+      <div class="pc-icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.6 2.6"/></svg></div>
+      <button class="pc-btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        New patient
+      </button>
+    </div>
+
+    <!-- ===================== VIEW: DASHBOARD ===================== -->
+    <div class="pc-view active" data-view="dashboard">
+      <div class="pc-eyebrow">Owner overview</div>
+      <h1 class="pc-h1">Good morning, Dr. Boateng</h1>
+      <p class="pc-lede">Wednesday, July 1 &middot; 14 appointments scheduled across 3 providers today.</p>
+
+      <div class="pc-kpi-row">
+        <div class="pc-kpi">
+          <div class="pc-kpi-top">
+            <div class="pc-kpi-icon" style="background:var(--pc-teal-light); color:var(--pc-teal);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg>
+            </div>
+          </div>
+          <div class="pc-kpi-label">Patients today</div>
+          <div class="pc-kpi-value">14</div>
+          <span class="pc-kpi-delta up">&#8593; 3 vs last week</span>
+        </div>
+        <div class="pc-kpi">
+          <div class="pc-kpi-top">
+            <div class="pc-kpi-icon" style="background:var(--pc-terracotta-light); color:var(--pc-blush-text);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+            </div>
+          </div>
+          <div class="pc-kpi-label">Revenue, month to date</div>
+          <div class="pc-kpi-value">$48.2k</div>
+          <span class="pc-kpi-delta up">&#8593; 8.4%</span>
+        </div>
+        <div class="pc-kpi">
+          <div class="pc-kpi-top">
+            <div class="pc-kpi-icon" style="background:var(--pc-warning-light); color:var(--pc-warning);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+            </div>
+          </div>
+          <div class="pc-kpi-label">Room occupancy</div>
+          <div class="pc-kpi-value">76%</div>
+          <span class="pc-kpi-delta down">&#8595; 4% vs target</span>
+        </div>
+        <div class="pc-kpi">
+          <div class="pc-kpi-top">
+            <div class="pc-kpi-icon" style="background:var(--pc-success-light); color:var(--pc-success);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+          </div>
+          <div class="pc-kpi-label">Patient satisfaction</div>
+          <div class="pc-kpi-value">4.8</div>
+          <span class="pc-kpi-delta up">&#8593; 0.1</span>
+        </div>
+      </div>
+
+      <div class="pc-grid-2">
+        <div class="pc-card">
+          <div class="pc-card-head">
+            <div class="pc-card-title">Today's schedule</div>
+            <div class="pc-link-quiet">View full calendar</div>
+          </div>
+          <div class="pc-card-body">
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">9:00</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Noa Kessler &middot; Prenatal check-in, week 24</div><div class="pc-timeline-sub">Dr. Boateng &middot; Room 2</div></div>
+              <span class="pc-chip teal">Confirmed</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">9:45</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Farida Osei &middot; Annual wellness exam</div><div class="pc-timeline-sub">Dr. Reyes &middot; Room 1</div></div>
+              <span class="pc-chip neutral">Waiting</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">10:30</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Priya Chandran &middot; Postpartum follow-up</div><div class="pc-timeline-sub">Dr. Boateng &middot; Room 2</div></div>
+              <span class="pc-chip teal">Confirmed</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">11:15</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Elin Andersson &middot; Ultrasound, week 32</div><div class="pc-timeline-sub">Dr. Voss &middot; Room 3</div></div>
+              <span class="pc-chip warn">Running late</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-card">
+          <div class="pc-card-head">
+            <div class="pc-card-title">Attention needed</div>
+            <span class="pc-chip terracotta">3 open</span>
+          </div>
+          <div class="pc-card-body">
+            <div class="pc-alert-row">
+              <div class="pc-alert-dot crit"></div>
+              <div><div class="pc-alert-text">Lab result flagged for Noa Kessler — glucose screen out of range</div><div class="pc-alert-sub">2 hours ago</div></div>
+            </div>
+            <div class="pc-alert-row">
+              <div class="pc-alert-dot warn"></div>
+              <div><div class="pc-alert-text">Room 3 ultrasound unit due for calibration</div><div class="pc-alert-sub">Today</div></div>
+            </div>
+            <div class="pc-alert-row">
+              <div class="pc-alert-dot info"></div>
+              <div><div class="pc-alert-text">4 unpaid invoices over 30 days</div><div class="pc-alert-sub">Finance</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: PATIENT FILE ===================== -->
+    <div class="pc-view" data-view="patient">
+      <div class="pc-eyebrow">Patient file</div>
+      <h1 class="pc-h1">Noa Kessler</h1>
+      <p class="pc-lede">Fictional demo record for interface preview purposes only.</p>
+
+      <div class="pc-patient-header">
+        <div class="pc-patient-top">
+          <div class="pc-patient-avatar">NK</div>
+          <div>
+            <div class="pc-patient-name">Noa Kessler</div>
+            <div class="pc-patient-meta">MRN 20481-A &middot; DOB 04 Mar 1994 &middot; Age 32</div>
+          </div>
+          <div class="pc-patient-chips">
+            <span class="pc-chip">Active patient</span>
+            <span class="pc-chip">Trimester 2</span>
+            <span class="pc-chip accent">Risk: monitor</span>
+          </div>
+        </div>
+        <div class="pc-ribbon">
+          <div class="pc-ribbon-label"><span>Pregnancy timeline</span><span>Week 24 of 40</span></div>
+          <div class="pc-ribbon-track">
+            <div class="pc-ribbon-seg done"></div><div class="pc-ribbon-seg done"></div><div class="pc-ribbon-seg done"></div><div class="pc-ribbon-seg done"></div>
+            <div class="pc-ribbon-seg done"></div><div class="pc-ribbon-seg done"></div><div class="pc-ribbon-seg current"></div>
+            <div class="pc-ribbon-seg"></div><div class="pc-ribbon-seg"></div><div class="pc-ribbon-seg"></div><div class="pc-ribbon-seg"></div><div class="pc-ribbon-seg"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc-tabs">
+        <div class="pc-tab active">Overview</div>
+        <div class="pc-tab">Visits</div>
+        <div class="pc-tab">Labs</div>
+        <div class="pc-tab">Prescriptions</div>
+        <div class="pc-tab">Billing</div>
+        <div class="pc-tab">Documents</div>
+      </div>
+
+      <div class="pc-vitals-grid">
+        <div class="pc-vital"><div class="pc-vital-label">Blood pressure</div><div class="pc-vital-value">118 / 76</div></div>
+        <div class="pc-vital"><div class="pc-vital-label">Weight</div><div class="pc-vital-value">68.4 kg</div></div>
+        <div class="pc-vital"><div class="pc-vital-label">Fundal height</div><div class="pc-vital-value">23 cm</div></div>
+        <div class="pc-vital"><div class="pc-vital-label">Fetal heart rate</div><div class="pc-vital-value">148 bpm</div></div>
+      </div>
+
+      <div class="pc-card" style="margin-top:var(--sp-5);">
+        <div class="pc-card-head"><div class="pc-card-title">Recent notes</div><div class="pc-link-quiet">Add note</div></div>
+        <div class="pc-card-body">
+          <div class="pc-note-row">
+            <div class="pc-note-date">Jun 24</div>
+            <div><div class="pc-note-body">Routine prenatal check-in. Glucose screen ordered following mild elevation last visit. Patient reports normal fetal movement.</div><div class="pc-note-doc">Dr. Aline Boateng</div></div>
+          </div>
+          <div class="pc-note-row">
+            <div class="pc-note-date">Jun 10</div>
+            <div><div class="pc-note-body">Anatomy ultrasound reviewed, no abnormalities noted. Discussed nutrition plan for second trimester.</div><div class="pc-note-doc">Dr. Aline Boateng</div></div>
+          </div>
+          <div class="pc-note-row">
+            <div class="pc-note-date">May 22</div>
+            <div><div class="pc-note-body">Initial second-trimester visit. Vitals stable, iron supplementation started.</div><div class="pc-note-doc">Dr. Wren Voss</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: DOCTOR WORKFLOW ===================== -->
+    <div class="pc-view" data-view="doctor">
+      <div class="pc-eyebrow">Doctor workflow</div>
+      <h1 class="pc-h1">Consultation queue</h1>
+      <p class="pc-lede">Dr. Boateng &middot; Room 2 &middot; 5 patients remaining today.</p>
+
+      <div class="pc-grid-2" style="grid-template-columns:1fr 1.3fr;">
+        <div class="pc-card">
+          <div class="pc-card-head"><div class="pc-card-title">Up next</div></div>
+          <div class="pc-card-body">
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">9:00</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Noa Kessler</div><div class="pc-timeline-sub">Prenatal check-in, week 24</div></div>
+              <span class="pc-chip teal">In room</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">10:30</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Priya Chandran</div><div class="pc-timeline-sub">Postpartum follow-up</div></div>
+              <span class="pc-chip neutral">Waiting</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">11:15</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Marisol Ferreira</div><div class="pc-timeline-sub">Annual wellness exam</div></div>
+              <span class="pc-chip neutral">Waiting</span>
+            </div>
+            <div class="pc-timeline-row">
+              <div class="pc-timeline-time">12:00</div><div class="pc-timeline-dot"></div>
+              <div class="pc-timeline-body"><div class="pc-timeline-name">Hana Tsujimoto</div><div class="pc-timeline-sub">Fertility consultation</div></div>
+              <span class="pc-chip neutral">Waiting</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-card">
+          <div class="pc-card-head"><div class="pc-card-title">Active consultation — Noa Kessler</div><span class="pc-chip terracotta">Week 24</span></div>
+          <div class="pc-card-body">
+            <div class="pc-vitals-grid" style="grid-template-columns:repeat(2,1fr);">
+              <div class="pc-vital"><div class="pc-vital-label">Blood pressure</div><div class="pc-vital-value">118 / 76</div></div>
+              <div class="pc-vital"><div class="pc-vital-label">Fetal heart rate</div><div class="pc-vital-value">148 bpm</div></div>
+            </div>
+            <div style="margin-top:var(--sp-5);">
+              <div class="pc-card-title" style="margin-bottom:8px;">Consultation notes</div>
+              <div style="background:var(--pc-surface-2); border-radius:var(--r-sm); padding:var(--sp-4); font-size:13px; color:var(--pc-text-muted); min-height:70px; line-height:1.5;">
+                Patient reports normal fetal movement, no cramping or bleeding. Discussed glucose screen results, scheduling dietitian referral.
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:var(--sp-4);">
+              <button class="pc-btn-primary">Order labs</button>
+              <button class="pc-btn-secondary">Prescribe</button>
+              <button class="pc-btn-secondary">Schedule follow-up</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: RECEPTION ===================== -->
+    <div class="pc-view" data-view="reception">
+      <div class="pc-eyebrow">Front desk</div>
+      <h1 class="pc-h1">Reception queue</h1>
+      <p class="pc-lede">Live check-in status across all rooms.</p>
+
+      <div class="pc-summary-strip">
+        <div class="pc-summary-pill"><div class="n">6</div><div class="l">Patients waiting</div></div>
+        <div class="pc-summary-pill"><div class="n">12 min</div><div class="l">Average wait time</div></div>
+        <div class="pc-summary-pill"><div class="n">3 / 4</div><div class="l">Rooms occupied</div></div>
+      </div>
+
+      <div class="pc-card" style="margin-top:var(--sp-6);">
+        <div class="pc-card-body" style="padding-top:var(--sp-5);">
+          <table class="pc-table">
+            <thead><tr><th>Patient</th><th>Appointment</th><th>Provider</th><th>Wait</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div class="pc-table-name">Farida Osei</div><div class="pc-table-sub">MRN 20117-C</div></td>
+                <td class="mono">9:45 AM</td><td>Dr. Reyes</td><td class="mono">18 min</td>
+                <td><span class="pc-chip neutral">Waiting</span></td>
+              </tr>
+              <tr>
+                <td><div class="pc-table-name">Priya Chandran</div><div class="pc-table-sub">MRN 19942-B</div></td>
+                <td class="mono">10:30 AM</td><td>Dr. Boateng</td><td class="mono">4 min</td>
+                <td><span class="pc-chip warn">Checking in</span></td>
+              </tr>
+              <tr>
+                <td><div class="pc-table-name">Elin Andersson</div><div class="pc-table-sub">MRN 20390-A</div></td>
+                <td class="mono">11:15 AM</td><td>Dr. Voss</td><td class="mono">&mdash;</td>
+                <td><span class="pc-chip teal">In room</span></td>
+              </tr>
+              <tr>
+                <td><div class="pc-table-name">Marisol Ferreira</div><div class="pc-table-sub">MRN 20255-D</div></td>
+                <td class="mono">11:15 AM</td><td>Dr. Reyes</td><td class="mono">9 min</td>
+                <td><span class="pc-chip neutral">Waiting</span></td>
+              </tr>
+              <tr>
+                <td><div class="pc-table-name">Hana Tsujimoto</div><div class="pc-table-sub">MRN 20418-B</div></td>
+                <td class="mono">12:00 PM</td><td>Dr. Boateng</td><td class="mono">&mdash;</td>
+                <td><span class="pc-chip success">Checked out</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: FINANCE ===================== -->
+    <div class="pc-view" data-view="finance">
+      <div class="pc-eyebrow">Finance</div>
+      <h1 class="pc-h1">Service catalog</h1>
+      <p class="pc-lede">Pricing and bundled care packages offered by the clinic.</p>
+
+      <div class="pc-package-row">
+        <div class="pc-package-card">
+          <span class="pc-chip terracotta">Package</span>
+          <div style="font-family:var(--font-display); font-size:17px; font-weight:600; margin-top:10px;">Full prenatal care</div>
+          <div class="price">$2,450</div>
+          <div style="font-size:12.5px; color:var(--pc-text-muted);">10 visits, 2 ultrasounds, glucose screen included</div>
+        </div>
+        <div class="pc-package-card">
+          <span class="pc-chip teal">Package</span>
+          <div style="font-family:var(--font-display); font-size:17px; font-weight:600; margin-top:10px;">Annual wellness bundle</div>
+          <div class="price">$390</div>
+          <div style="font-size:12.5px; color:var(--pc-text-muted);">Exam, pap smear, and bloodwork panel</div>
+        </div>
+        <div class="pc-package-card">
+          <span class="pc-chip neutral">Package</span>
+          <div style="font-family:var(--font-display); font-size:17px; font-weight:600; margin-top:10px;">Postpartum recovery</div>
+          <div class="price">$680</div>
+          <div style="font-size:12.5px; color:var(--pc-text-muted);">3 visits across 12 weeks, lactation consult</div>
+        </div>
+      </div>
+
+      <div class="pc-card" style="margin-top:var(--sp-6);">
+        <div class="pc-card-body" style="padding-top:var(--sp-5);">
+          <table class="pc-table">
+            <thead><tr><th>Service</th><th>Category</th><th>Duration</th><th>Price</th></tr></thead>
+            <tbody>
+              <tr><td class="pc-table-name">Prenatal check-in</td><td>Obstetrics</td><td class="mono">20 min</td><td class="mono">$145</td></tr>
+              <tr><td class="pc-table-name">Obstetric ultrasound</td><td>Imaging</td><td class="mono">30 min</td><td class="mono">$220</td></tr>
+              <tr><td class="pc-table-name">Annual wellness exam</td><td>Gynecology</td><td class="mono">40 min</td><td class="mono">$210</td></tr>
+              <tr><td class="pc-table-name">Fertility consultation</td><td>Fertility</td><td class="mono">45 min</td><td class="mono">$260</td></tr>
+              <tr><td class="pc-table-name">Postpartum follow-up</td><td>Obstetrics</td><td class="mono">25 min</td><td class="mono">$130</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== VIEW: MEDICATIONS ===================== -->
+    <div class="pc-view" data-view="medication">
+      <div class="pc-eyebrow">Reference</div>
+      <h1 class="pc-h1">Medication reference</h1>
+      <p class="pc-lede">Fictional dosage reference for interface preview — not clinical guidance.</p>
+
+      <div class="pc-search" style="max-width:340px; margin-top:var(--sp-5);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" placeholder="Search medications">
+      </div>
+
+      <div class="pc-med-grid">
+        <div class="pc-med-card">
+          <div class="pc-med-top">
+            <div><div class="pc-med-name">Ferrous sulfate</div><div class="pc-med-cat">Iron supplement</div></div>
+            <span class="pc-chip success">Safe</span>
+          </div>
+          <div class="pc-med-dose">Typical dose: 325 mg, once daily with food</div>
+          <div class="pc-med-note">Commonly used for iron-deficiency anemia during pregnancy. Advise on constipation management.</div>
+        </div>
+        <div class="pc-med-card">
+          <div class="pc-med-top">
+            <div><div class="pc-med-name">Doxylamine / pyridoxine</div><div class="pc-med-cat">Antiemetic</div></div>
+            <span class="pc-chip success">Safe</span>
+          </div>
+          <div class="pc-med-dose">Typical dose: 1 tablet at bedtime, up to 4/day</div>
+          <div class="pc-med-note">First-line option for nausea in early pregnancy. May cause drowsiness.</div>
+        </div>
+        <div class="pc-med-card">
+          <div class="pc-med-top">
+            <div><div class="pc-med-name">Misoprostol</div><div class="pc-med-cat">Prostaglandin</div></div>
+            <span class="pc-chip warn">Caution</span>
+          </div>
+          <div class="pc-med-dose">Indication-specific dosing — provider review required</div>
+          <div class="pc-med-note">Use restricted to specific obstetric indications under direct supervision.</div>
+        </div>
+        <div class="pc-med-card">
+          <div class="pc-med-top">
+            <div><div class="pc-med-name">Isotretinoin</div><div class="pc-med-cat">Retinoid</div></div>
+            <span class="pc-chip danger">Avoid in pregnancy</span>
+          </div>
+          <div class="pc-med-dose">Contraindicated — teratogenic risk</div>
+          <div class="pc-med-note">Confirm negative pregnancy status and contraception plan before any prescription.</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="pc-footer-note">Prij Clinic OS &middot; interface concept &middot; all patient names and data are fictional</p>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.pc-nav-item[data-nav]').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.querySelectorAll('.pc-nav-item[data-nav]').forEach(function(i){ i.classList.remove('active'); });
+      item.classList.add('active');
+      var target = item.getAttribute('data-nav');
+      document.querySelectorAll('[data-view]').forEach(function(v){ v.classList.remove('active'); });
+      document.querySelector('[data-view="' + target + '"]').classList.add('active');
+    });
+  });
+  document.querySelectorAll('.pc-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.pc-tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>

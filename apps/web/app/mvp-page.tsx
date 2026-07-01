@@ -31,7 +31,17 @@ type MvpPageProps = {
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-const navGroupOrder: NavItem["group"][] = ["Clinic Flow", "Clinical Work", "Reference", "Finance", "Owner", "Later"];
+const navGroupOrder: NavItem["group"][] = [
+  "Dashboard",
+  "Patients",
+  "Doctor workflow",
+  "Reception queue",
+  "Calendar",
+  "Finance",
+  "Orders",
+  "Medications",
+  "Admin / Owner Control"
+];
 
 const displayKeys = [
   "medicalRecordNumber",
@@ -279,9 +289,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <main className={`app-shell theme-${theme} comfort-${comfort}`} data-density={comfort}>
       <aside className="sidebar">
         <Link className="brand" href="/dashboard">
-          <span className="brand-mark">PC</span>
+          <span className="brand-mark">P</span>
           <strong>Prij Clinic OS</strong>
-          <span>Local clinic workspace</span>
+          <span>Women&apos;s health</span>
         </Link>
 
         {visibleNavGroups.map((group) => (
@@ -289,7 +299,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical Work" ? "navy" : "teal"} />
+                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Doctor workflow" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
@@ -302,7 +312,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="topbar">
           <div>
             <p className="eyebrow">Clinic operations</p>
-            <p className="muted">Reception, doctor, finance, and owner work from one patient-centered workspace.</p>
+            <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
           </div>
           <label className="portal-search" aria-label="Search patient files">
             <span>Patient search</span>

@@ -48,7 +48,8 @@ try {
   assert(parser.includes("parseOmanPricePdfTextV2") && parser.includes("rawBlockText"), "Oman parser preserves raw block text");
   assert(service.includes("hasCommerceFieldKey") && service.includes("highConfidenceOnly"), "batch verification blocks unsafe low-confidence metadata");
   assert(search.includes("officialPriceText") && search.includes("matchingSourceIds"), "Oman rows searchable by official price and source");
-  assert(ui.includes("Official/source price") && ui.includes("Source freshness") && ui.includes("Confidence buckets"), "review and profile UI shows trust metadata");
+  assert(ui.includes("Verified") && ui.includes("Needs review") && ui.includes("Source-tracked"), "review and profile UI shows simplified trust metadata");
+  assert(!ui.includes("Official/source price") && !ui.includes("Parser confidence") && !ui.includes("Official row fields") && !ui.includes("Row preview"), "review and profile UI hides technical source fields");
   const unsafeOmanRow = await prisma.drugMarketVariant.findFirst({
     where: {
       sourceId: source?.id,

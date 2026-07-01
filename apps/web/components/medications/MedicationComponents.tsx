@@ -189,14 +189,14 @@ export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }
     <article className="data-row">
       <div className="data-row-header">
         <strong>{product.tradeName}</strong>
-        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Verified official row" : "Needs review"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
+        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Verified" : "Needs review"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
         <div><dt>Drug family</dt><dd>{product.family || "Not listed"}</dd></div>
         <div><dt>Variants</dt><dd><StrengthVariantList variants={product.variantSummary ?? []} /></dd></div>
-        <div><dt>Review status</dt><dd>{verified ? "verified row present" : product.verificationStatus ?? "needs review"}</dd></div>
-        <div><dt>Source freshness</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not imported yet"}</dd></div>
+        <div><dt>Review status</dt><dd>{verified ? "Verified" : product.verificationStatus === "verified" ? "Verified" : "Needs review"}</dd></div>
+        <div><dt>Updated</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not listed"}</dd></div>
       </dl>
       <Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link>
     </article>
@@ -213,25 +213,20 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
       {variants.map((variant) => (
         <article className="data-row" key={String(variant.id)}>
           <div className="data-row-header">
-            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Official/source row</span>} <CountryBadge label={String(variant.countryCode ?? "Unknown")} /></span>
+            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Source-tracked</span>} <CountryBadge label={String(variant.countryCode ?? "Unknown")} /></span>
             <span className={variant.verificationStatus === "verified" ? "badge accent" : "badge warning"}>{variant.verificationStatus === "verified" ? "Verified" : "Needs review"}</span>
           </div>
           <strong>{String(variant.countryCode)} · {String(variant.strengthText ?? "variant")}</strong>
-          <p className="muted">{[variant.dosageForm, variant.route, variant.packageText, variant.registrationNumber].filter(Boolean).join(" · ")}</p>
+          <p className="muted">{[variant.dosageForm, variant.route, variant.packageText].filter(Boolean).join(" · ") || "Market reference metadata"}</p>
           <dl>
             <div><dt>Generic/scientific name</dt><dd>{String(variant.genericName ?? "Not listed")}</dd></div>
             <div><dt>Strength/form/pack</dt><dd>{[variant.strengthText, variant.dosageForm, variant.packageText].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
             <div><dt>Manufacturer</dt><dd>{String(variant.manufacturer ?? "Not listed")}</dd></div>
             <div><dt>Marketing company</dt><dd>{String(variant.marketingCompany ?? "Not listed")}</dd></div>
             <div><dt>ATC/class</dt><dd>{String(variant.atcCode ?? "Not listed")}</dd></div>
-            <div><dt>Official/source price</dt><dd>{formatPrice(variant)}</dd></div>
-            <div><dt>Source</dt><dd>{String(variant.sourceCode ?? variant.sourceName ?? "Not listed")}</dd></div>
-            <div><dt>Source fingerprint</dt><dd>{String(variant.sourceFileHash ?? "Not listed")}</dd></div>
-            <div><dt>Source fetched</dt><dd>{formatDate(String(variant.sourceFetchedAt ?? ""))}</dd></div>
-            <div><dt>Source published label/date</dt><dd>{String(variant.latestSourceLabel ?? "") || formatDate(String(variant.latestSourcePublishedAt ?? variant.sourcePublishedAt ?? ""))}</dd></div>
-            <div><dt>Source freshness</dt><dd>{String(variant.sourceFreshnessStatus ?? "unknown")}</dd></div>
-            <div><dt>Parser confidence</dt><dd>{formatConfidence(variant.parserConfidence)}</dd></div>
-            <div><dt>Protected official details</dt><dd>{variant.hasOfficialRowJson ? "Available in admin review details" : "Not captured"}</dd></div>
+            <div><dt>Source country</dt><dd>{sourceCountryLabel(String(variant.countryCode ?? ""))}</dd></div>
+            <div><dt>Data status</dt><dd>{variant.hasOfficialRowJson ? "Official data available" : "Source-tracked"}</dd></div>
+            <div><dt>Updated</dt><dd>{String(variant.latestSourceLabel ?? "") || formatDate(String(variant.latestSourcePublishedAt ?? variant.sourcePublishedAt ?? variant.sourceFetchedAt ?? ""))}</dd></div>
           </dl>
         </article>
       ))}
@@ -243,8 +238,8 @@ export function AvailabilitySummary({ availabilities }: { availabilities: Array<
   return <p className="muted">{availabilities.map((item) => `${item.countryCode}: ${item.variantCount}`).join(" · ") || "No availability summary yet"}</p>;
 }
 
-export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null; officialPriceText?: string | null; currency?: string | null; verificationStatus?: string | null; sourceCode?: string | null }> }) {
-  return <span>{variants.map((variant) => `${variant.countryCode} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""}${variant.officialPriceText ? ` - official/source price ${variant.officialPriceText} ${variant.currency ?? ""}` : ""} ${variant.verificationStatus === "verified" ? "Verified" : "Needs review"} ${variant.sourceCode ?? ""}`.trim()).join(", ") || "No variants listed"}</span>;
+export function StrengthVariantList({ variants }: { variants: Array<{ countryCode?: string; strengthText?: string | null; dosageForm?: string | null; verificationStatus?: string | null }> }) {
+  return <span>{variants.map((variant) => `${variant.countryCode ?? ""} ${variant.strengthText ?? ""} ${variant.dosageForm ?? ""} ${variant.verificationStatus === "verified" ? "Verified" : "Needs review"}`.trim()).join(", ") || "No variants listed"}</span>;
 }
 
 export function DrugMarketImportPanel() {
@@ -322,8 +317,8 @@ export function DrugMarketCoverageDashboard() {
               <div><dt>Rejected/retired</dt><dd>{String(row.rowsRejected ?? 0)} / {String(row.rowsRetired ?? 0)}</dd></div>
               <div><dt>Demo rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
               <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
-              <div><dt>Parser confidence</dt><dd>{formatConfidence(row.parserConfidenceAverage)}</dd></div>
-              <div><dt>Confidence buckets</dt><dd>{formatConfidenceBuckets(row.parserConfidenceDistribution)}</dd></div>
+              <div><dt>Trust level</dt><dd>{confidenceBucket(row.parserConfidenceAverage)}</dd></div>
+              <div><dt>Review mix</dt><dd>{formatConfidenceBuckets(row.parserConfidenceDistribution)}</dd></div>
               <div><dt>Next action</dt><dd>{String(row.requiredNextAction ?? "Review source status")}</dd></div>
             </dl>
           </article>
@@ -430,7 +425,7 @@ export function ReviewQueuePanel() {
           <option value="">All sources</option>
           {sources.map((source) => <option key={String(source.code)} value={String(source.code)}>{String(source.countryCode ?? "ALL")} - {String(source.code)}</option>)}
         </select>
-        <input value="" readOnly placeholder="Import run filter appears in row preview" />
+        <input value="" readOnly placeholder="Filter by country or source" />
         <select value={reviewStatus} onChange={(event) => setReviewStatus(event.target.value)}>
           <option value="open">Open</option>
           <option value="verified">Verified</option>
@@ -447,8 +442,7 @@ export function ReviewQueuePanel() {
           <option value="missing_generic">Missing generic</option>
           <option value="missing_strength">Missing strength</option>
           <option value="missing_dosage_form">Missing dosage form</option>
-          <option value="missing_price">Missing price</option>
-          <option value="registration_number_missing">Registration missing</option>
+          <option value="missing_source_metadata">Needs source check</option>
         </select>
         <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Review decision reason" />
         <label><input checked={highConfidenceOnly} onChange={(event) => setHighConfidenceOnly(event.target.checked)} type="checkbox" /> High-confidence candidates</label>
@@ -472,18 +466,18 @@ export function ReviewQueuePanel() {
                 <span className="badge">{String(item.status ?? "open")}</span>
               </div>
               <p className="muted">{String(item.reason ?? "Official row requires review")}</p>
-              <p className="muted">{item.highConfidenceCandidate ? "High-confidence candidate" : "Low-confidence or incomplete candidate"} · Missing: {((item.missingFields as string[]) ?? []).join(", ") || "none flagged"}</p>
+              <p className="muted">{item.highConfidenceCandidate ? "High confidence" : "Manual review needed"} · {friendlyMissingFields(item.missingFields)}</p>
               <dl>
                 <div><dt>Country</dt><dd>{String(variant?.countryCode ?? "Not listed")}</dd></div>
-                <div><dt>Import run</dt><dd>{String(variant?.importRunId ?? "Not listed")}</dd></div>
                 <div><dt>Generic</dt><dd>{String(variant?.genericName ?? "Not listed")}</dd></div>
                 <div><dt>Strength/form</dt><dd>{[variant?.strengthText, variant?.dosageForm, variant?.route].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
-                <div><dt>Registration</dt><dd>{String(variant?.registrationNumber ?? "Not listed")}</dd></div>
-                <div><dt>Official/source price</dt><dd>{formatPrice(variant ?? {})}</dd></div>
-                <div><dt>Parser confidence</dt><dd>{formatConfidence(variant?.parserConfidence)}</dd></div>
-                <div><dt>Official row fields</dt><dd>{variant?.hasOfficialRowJson ? "Protected admin drawer available" : "Not captured"}</dd></div>
-                <div><dt>Row preview</dt><dd>{[variant?.countryCode, variant?.sourceRowHash ? "row hash captured" : "", variant?.sourceFetchedAt ? "source fetched" : ""].filter(Boolean).join(" / ") || "Not listed"}</dd></div>
+                <div><dt>Trust level</dt><dd>{confidenceBucket(variant?.parserConfidence)}</dd></div>
+                <div><dt>Data status</dt><dd>{variant?.hasOfficialRowJson ? "Official data available" : "Source-tracked"}</dd></div>
               </dl>
+              <details className="notice">
+                <summary>Advanced source audit</summary>
+                <p className="muted">Owner/Admin source tracking is preserved for verification, export, restore, and audit workflows.</p>
+              </details>
               <div className="toolbar">
                 {variant?.productId ? <Link className="button secondary compact" href={`/drug-market/products/${String(variant.productId)}`}>Open profile</Link> : null}
                 <button className="button compact" type="button" onClick={() => void decide(variant?.id, "verify")}>Verify</button>
@@ -518,21 +512,37 @@ function formatDate(value?: string | null) {
   return Number.isNaN(date.getTime()) ? "Not listed" : date.toLocaleDateString();
 }
 
-function formatConfidence(value: unknown) {
-  return typeof value === "number" ? `${Math.round(value * 100)}%` : "Not scored";
-}
-
-function formatPrice(variant: Record<string, unknown>) {
-  const text = variant.officialPriceText ?? variant.priceText;
-  const amount = variant.officialPriceAmount;
-  const currency = variant.currency;
-  if (text) return `${String(text)}${currency ? ` ${String(currency)}` : ""}`;
-  if (amount) return `${String(amount)}${currency ? ` ${String(currency)}` : ""}`;
-  return "Not listed";
-}
-
 function formatConfidenceBuckets(value: unknown) {
-  if (!value || typeof value !== "object") return "Not scored";
+  if (!value || typeof value !== "object") return "Manual review needed";
   const buckets = value as Record<string, unknown>;
-  return `>=90 ${String(buckets.gte090 ?? 0)} / >=80 ${String(buckets.gte080 ?? 0)} / >=70 ${String(buckets.gte070 ?? 0)} / >=60 ${String(buckets.gte060 ?? 0)} / <60 ${String(buckets.lt060 ?? 0)}`;
+  return `High confidence ${String(buckets.gte090 ?? 0)} / Manual review needed ${String(buckets.lt060 ?? 0)}`;
+}
+
+function confidenceBucket(value: unknown) {
+  const score = typeof value === "number" ? value : Number(value ?? 0);
+  if (score >= 0.8) return "High confidence";
+  if (score >= 0.65) return "Source-tracked";
+  return "Manual review needed";
+}
+
+function friendlyMissingFields(value: unknown) {
+  const fields = Array.isArray(value) ? value : [];
+  if (fields.length === 0) return "No visible issues flagged";
+  if (fields.some((field) => String(field).includes("generic"))) return "Needs generic name review";
+  if (fields.some((field) => String(field).includes("strength") || String(field).includes("dosage_form"))) return "Needs strength/form review";
+  if (fields.some((field) => String(field).includes("source"))) return "Needs source review";
+  return "Manual review needed";
+}
+
+function sourceCountryLabel(countryCode: string) {
+  const labels: Record<string, string> = {
+    BHR: "Bahrain data",
+    OMN: "Oman data",
+    QAT: "Qatar data",
+    KWT: "Kuwait data",
+    KSA: "Saudi data",
+    EG: "Egypt data",
+    UAE: "UAE data"
+  };
+  return labels[countryCode] ?? (countryCode || "Source-tracked");
 }
