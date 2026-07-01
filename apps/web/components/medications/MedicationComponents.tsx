@@ -243,11 +243,48 @@ export function StrengthVariantList({ variants }: { variants: Array<{ countryCod
 }
 
 export function DrugMarketImportPanel() {
+  const [rows, setRows] = useState<Array<Record<string, unknown>>>([]);
+  const [status, setStatus] = useState("Loading official medication status");
+  useEffect(() => {
+    void getDrugMarketCoverage()
+      .then((data) => {
+        const coverageRows = Array.isArray(data) ? data as Array<Record<string, unknown>> : [];
+        setRows(coverageRows);
+        setStatus(`${coverageRows.length} source coverage row(s) available`);
+      })
+      .catch(() => setStatus("Coverage requires admin access"));
+  }, []);
+  const bahrain = rows.find((row) => row.countryCode === "BHR" && String(row.sourceCode ?? "").includes("BAHRAIN_NHRA"));
+  const oman = rows.find((row) => row.countryCode === "OMN" && String(row.sourceCode ?? "").includes("OMAN_MOH_REGISTERED"));
+  const registryRows = [bahrain, oman];
+  const officialRows = registryRows.reduce((sum, row) => sum + Number(row?.rowsImported ?? 0), 0);
+  const verifiedRows = registryRows.reduce((sum, row) => sum + Number(row?.rowsVerified ?? 0), 0);
+  const needsReviewRows = registryRows.reduce((sum, row) => sum + Number(row?.rowsNeedsReview ?? 0), 0);
   return (
     <section className="panel">
       <div className="section-heading"><h2>Official File Import</h2><span className="badge warning">Admin only</span></div>
       <p className="muted">Upload official or licensed source files only. Retail, fulfillment, and patient data uploads are blocked.</p>
+      <p className="warning-text">{officialRows > 0 ? "Official medication rows are present and remain review-gated until verified." : "No official medication rows are available until official files are acquired and imported."}</p>
       <div className="data-list">
+        <article className="data-row">
+          <strong>v0.10.0 re-import status</strong>
+          <dl>
+            <div><dt>Coverage</dt><dd>{status}</dd></div>
+            <div><dt>Current official rows</dt><dd>{String(officialRows)}</dd></div>
+            <div><dt>Verified rows</dt><dd>{String(verifiedRows)}</dd></div>
+            <div><dt>Needs review rows</dt><dd>{String(needsReviewRows)}</dd></div>
+            <div><dt>Bahrain NHRA</dt><dd>{String(bahrain?.coverageStatus ?? "needs re-import")}</dd></div>
+            <div><dt>Oman MOH</dt><dd>{String(oman?.coverageStatus ?? "needs re-import")}</dd></div>
+            <div><dt>Acquisition manifest</dt><dd>Stored locally under ignored storage; check with the source-list command.</dd></div>
+          </dl>
+        </article>
+        <article className="data-row">
+          <strong>Admin/developer commands</strong>
+          <pre><code>{`npm run medication:v100:source-list
+npm run medication:v100:source-acquire -- --file PATH --source NHRA --country BH --apply
+npm run medication:v100:reimport:dry-run -- --source NHRA --country BH --file PATH
+$env:APP_ENV="local"; npm run medication:v100:reimport:apply -- --source NHRA --country BH --file PATH`}</code></pre>
+        </article>
         <article className="data-row">
           <strong>Workflow</strong>
           <p className="muted">Select country and source, add source URL, file date, source label, and official notes, preview the first 20 normalized rows with confidence, dry run, then commit rows into the review queue. Original official details stay protected for admin review.</p>
