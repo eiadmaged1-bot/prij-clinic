@@ -1,5 +1,14 @@
 # Next Steps
 
+v0.9.7 reference data readiness next steps:
+
+1. Run `npm run db:v097:prepare-reference`.
+2. If an approved previous official medication export is found, apply restore with `APP_ENV=local npm run medication:v097:restore:apply`.
+3. Run `npm run medication:v097:ready-check:strict` after restore.
+4. Run `npm run guidelines:v097:ready-check`, `npm run accounts:v097:role-ready-check`, and, when medication rows exist, `npm run prescriptions:v097:medication-selection-check`.
+5. Start manual browser QA only after readiness checks pass or warnings are accepted as known blockers.
+6. Do not create a release tag from this sprint.
+
 v0.9.6 local demo database finalization next steps:
 
 1. Start the local API and web app against the cleaned local database.

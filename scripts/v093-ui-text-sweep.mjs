@@ -43,6 +43,8 @@ const adminSecurityPaths = [
 
 const internalLinePatterns = [
   /NEXT_PUBLIC_API_URL/,
+  /localApiBaseUrl/,
+  /hostname ===/,
   /const apiUrl =/,
   /\bfetch\(/,
   /\bendpoint:/,

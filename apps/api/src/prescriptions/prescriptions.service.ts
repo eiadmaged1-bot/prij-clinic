@@ -28,7 +28,7 @@ export class PrescriptionsService {
           encounterId: dto.encounterId ?? null,
           doctorId: user.id,
           notes: clean(dto.notes),
-          items: { create: dto.items.map(toItemCreate) }
+          items: { create: await this.resolveItems(dto.items) }
         },
         include: { items: true, patient: true, encounter: true }
       });
@@ -105,7 +105,7 @@ export class PrescriptionsService {
           ? {
               items: {
                 deleteMany: {},
-                create: dto.items.map(toItemCreate)
+                create: await this.resolveItems(dto.items)
               }
             }
           : {})
@@ -156,6 +156,56 @@ export class PrescriptionsService {
     }
     throw error;
   }
+
+  private async resolveItems(items: PrescriptionItemDto[]) {
+    return Promise.all(items.map((item) => resolvePrescriptionItem(this.prisma, item)));
+  }
+}
+
+async function resolvePrescriptionItem(prisma: PrismaService, item: PrescriptionItemDto) {
+  const base = toItemCreate(item);
+  if (item.drugMarketVariantId) {
+    const variant = await prisma.drugMarketVariant.findFirst({
+      where: {
+        id: item.drugMarketVariantId,
+        isDemo: false,
+        verificationStatus: { in: ["verified", "needs_review"] }
+      },
+      include: { product: true }
+    });
+    if (!variant) throw new BadRequestException("Medication market reference was not found or is not review-ready.");
+    return {
+      ...base,
+      medicationProductId: null,
+      drugMarketVariantId: variant.id,
+      medicationName: item.medicationName?.trim() || variant.tradeName,
+      genericName: variant.genericName ?? variant.product.genericName,
+      brandName: variant.product.tradeName,
+      tradeName: variant.tradeName,
+      strengthText: variant.strengthText,
+      dosageForm: variant.dosageForm
+    };
+  }
+
+  if (item.medicationProductId) {
+    const product = await prisma.medicationProduct.findFirst({
+      where: { id: item.medicationProductId, verificationStatus: { in: ["verified", "needs_review"] } }
+    });
+    if (!product) throw new BadRequestException("Medication product reference was not found or is not review-ready.");
+    return {
+      ...base,
+      medicationProductId: product.id,
+      drugMarketVariantId: null,
+      medicationName: item.medicationName?.trim() || product.brandName || product.genericName,
+      genericName: product.genericName,
+      brandName: product.brandName,
+      tradeName: product.brandName,
+      strengthText: product.strengthText,
+      dosageForm: product.dosageForm
+    };
+  }
+
+  return base;
 }
 
 function toItemCreate(item: PrescriptionItemDto) {

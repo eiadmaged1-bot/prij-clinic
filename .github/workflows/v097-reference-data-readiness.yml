@@ -1,0 +1,84 @@
+name: v0.9.7 Reference Data Readiness Gate
+
+on:
+  push:
+    branches:
+      - data/v0.9.7-reference-data-restore-prescription-readiness
+  pull_request:
+    branches:
+      - data/v0.9.6-local-demo-db-finalization
+  workflow_dispatch:
+
+jobs:
+  reference-data-readiness:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: prij
+          POSTGRES_PASSWORD: prij
+          POSTGRES_DB: prij_clinic_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij -d prij_clinic_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      APP_ENV: ci
+      NODE_ENV: test
+      API_PORT: 3001
+      APP_URL: http://localhost:3000
+      API_URL: http://localhost:3001
+      DATABASE_URL: postgresql://prij:prij@localhost:5432/prij_clinic_ci
+      JWT_SECRET: ci-demo-secret-only-change-me
+      JWT_EXPIRES_IN: 1h
+      SEED_DEMO_OWNER: "true"
+      SEED_DEMO_DATA: "true"
+      DEMO_OWNER_EMAIL: owner@prij.local
+      DEMO_OWNER_PASSWORD: LocalDev123!
+      AI_PROVIDER: disabled
+      AI_FEATURES_ENABLED: "false"
+      GUIDELINE_VAULT_ENCRYPTION_KEY_ID: ci-demo-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:repair
+      - run: npm run prisma:migrate:deploy
+      - run: npm run prisma:seed
+      - run: APP_ENV=ci npm run db:v095:clean:dry-run
+      - run: APP_ENV=ci npm run db:v095:clean:apply
+      - run: npm run db:v096:ready-check
+      - run: npm run medication:v097:find-sources
+      - run: npm run medication:v097:ready-check
+      - run: npm run guidelines:v097:ready-check
+      - name: Start local app
+        run: npm run dev &
+      - run: npm run wait:local-app
+      - run: npm run accounts:v097:role-ready-check
+      - name: Prescription medication selection when rows exist
+        shell: bash
+        run: |
+          count=$(node - <<'NODE'
+          const { PrismaClient } = require("@prisma/client");
+          const prisma = new PrismaClient();
+          prisma.drugMarketVariant.count({ where: { isDemo: false, verificationStatus: { in: ["verified", "needs_review"] } } })
+            .then((count) => { console.log(count); return prisma.$disconnect(); })
+            .catch((error) => { console.error(error); process.exit(1); });
+          NODE
+          )
+          if [ "$count" -gt 0 ]; then
+            npm run prescriptions:v097:medication-selection-check
+          else
+            echo "WARN no seeded medication rows; prescription selection check skipped"
+          fi
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:v093:ui-text
+      - run: npx playwright test --config=playwright.config.ts --list

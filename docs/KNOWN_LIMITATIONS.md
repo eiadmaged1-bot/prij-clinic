@@ -1,5 +1,9 @@
 # Known Limitations
 
+- v0.9.7 does not create or verify real medication data by itself. It restores prior approved official exports when present, otherwise reports a missing-source warning.
+- v0.9.7 prescription readiness only attaches medication reference metadata to draft prescription items. It does not generate dose, frequency, duration, route, or patient instructions.
+- Guideline/protocol readiness verifies metadata and seeded/demo content only. Full guideline document ingestion still requires owner-provided/open files and governance review.
+
 - v0.9.6 finalized the local/demo DB state for QA, but it is still not production data retention, legal deletion, clinical governance, or privacy certification.
 - v0.9.6 cleanup was applied only to clearly demo/test/local patient-linked operational records. It did not prove behavior for real patient records and must not be reused as a blind wipe.
 - API-backed account creation checks require the local API to be running. In this session, source/UI support was verified, but endpoint creation/login/denial proof remains a manual or full-stack check.

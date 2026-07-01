@@ -6,6 +6,30 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.9.7 Reference Data Restore + Prescription Trial Readiness
+
+Branch: `data/v0.9.7-reference-data-restore-prescription-readiness`.
+
+v0.9.7 prepares the cleaned local demo database for reference-data manual QA. It can discover prior official medication exports, dry-run or apply guarded restore of official medication reference metadata, verify medication/guideline readiness, prove prescription draft reference selection without dosing automation, and verify `eyad` account creation/Receptionist denials.
+
+```powershell
+npm run db:v097:prepare-reference
+npm run medication:v097:find-sources
+npm run medication:v097:restore:dry-run
+npm run medication:v097:ready-check
+npm run guidelines:v097:ready-check
+npm run accounts:v097:role-ready-check
+```
+
+Apply medication restore only with explicit local confirmation:
+
+```powershell
+$env:APP_ENV="local"
+npm run medication:v097:restore:apply
+```
+
+No fake official medication data, patient dosing automation, external AI, stock/order/checkout behavior, real patient data, or release tag is added.
+
 ## v0.9.6 Local Demo Database Finalization
 
 Branch: `data/v0.9.6-local-demo-db-finalization`.

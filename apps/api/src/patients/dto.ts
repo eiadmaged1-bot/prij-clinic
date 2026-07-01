@@ -181,6 +181,14 @@ export class PatientContextPrescriptionItemDto {
   medicationName!: string;
 
   @IsOptional()
+  @IsUUID()
+  medicationProductId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  drugMarketVariantId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(80)
   dose?: string;
