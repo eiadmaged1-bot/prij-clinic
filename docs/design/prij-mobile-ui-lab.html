@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prij Mobile UI Lab</title>
+  <style>
+:root {
+  color-scheme: light;
+  --background: #faf7f2;
+  --background-soft: #fbf8f3;
+  --surface: #ffffff;
+  --surface-muted: #f3efe6;
+  --surface-strong: #e4f0ec;
+  --border: #e6e0d4;
+  --border-strong: #d8d0c0;
+  --foreground: #1b2624;
+  --muted: #6e7c77;
+  --muted-strong: #295850;
+  --navy: #16302c;
+  --navy-soft: #1e3f38;
+  --accent: #2f6f62;
+  --accent-dark: #295850;
+  --accent-soft: #e4f0ec;
+  --warning: #c98a2c;
+  --danger: #b5484a;
+  --danger-soft: #f8e4e3;
+  --shadow-sm: 0 1px 2px rgb(22 48 44 / 6%), 0 1px 1px rgb(22 48 44 / 4%);
+  --shadow-md: 0 8px 20px rgb(22 48 44 / 8%), 0 2px 6px rgb(22 48 44 / 5%);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --space: 1rem;
+  --sidebar-width: 17.5rem;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body[data-theme="clinic-premium"] {
+  --background: #eef4f6; --background-soft: #f7fafb; --surface-muted: #f4f8f9; --surface-strong: #e7f6f6;
+  --border: #d8e5e8; --border-strong: #b9d0d6; --foreground: #11212d; --muted: #5d7080;
+  --muted-strong: #344a5a; --navy: #071826; --navy-soft: #10283a; --accent: #0f8f8c;
+  --accent-dark: #0b6f71; --accent-soft: #dff7f6; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+}
+body[data-theme="minimal-clean"] {
+  --background: #f8fafc; --background-soft: #ffffff; --surface-muted: #f8fafc; --surface-strong: #eef2f7;
+  --border: #e2e8f0; --border-strong: #cbd5e1; --foreground: #172033; --muted: #64748b;
+  --muted-strong: #334155; --navy: #ffffff; --navy-soft: #f8fafc; --accent: #0f766e;
+  --accent-dark: #115e59; --accent-soft: #ccfbf1; --shadow-sm: 0 6px 18px rgb(15 23 42 / 6%);
+}
+body[data-theme="compact-operations"] {
+  --background: #eef3f5; --background-soft: #f8fbfc; --surface-muted: #f4f7f8;
+  --border: #d5e0e4; --foreground: #132332; --muted: #536879; --accent: #0b7f7d;
+  --accent-dark: #095f61; --accent-soft: #dff7f6; --radius-sm: 5px; --radius-md: 7px; --radius-lg: 10px;
+  --space: .72rem; --sidebar-width: 16rem;
+}
+body[data-theme="dark-navy"] {
+  color-scheme: dark; --background: #07111d; --background-soft: #0b1724; --surface: #101f2d;
+  --surface-muted: #132839; --surface-strong: #12333e; --border: #22384a; --border-strong: #315166;
+  --foreground: #eef8fb; --muted: #a8bac6; --muted-strong: #d5e3ea; --navy: #050c15;
+  --navy-soft: #0b1724; --accent: #2dd4bf; --accent-dark: #5eead4; --accent-soft: #12333e;
+  --shadow-sm: 0 8px 24px rgb(0 0 0 / 22%); --shadow-md: 0 18px 55px rgb(0 0 0 / 32%);
+}
+body[data-theme="mobile-focus"] {
+  --background: #f7fafb; --background-soft: #ffffff; --surface-muted: #f2f7f7; --border: #d7e5e4;
+  --foreground: #102033; --muted: #4e6570; --navy: #102033; --navy-soft: #173546; --accent: #0f8f8c;
+  --accent-dark: #0b6f71; --accent-soft: #e3faf8; --radius-sm: 10px; --radius-md: 12px; --radius-lg: 16px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; max-width: 100%; overflow-x: hidden; }
+body {
+  background: linear-gradient(135deg, var(--background-soft), var(--background));
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.5;
+}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.08; }
+h2 { font-size: 1.08rem; }
+h3 { font-size: 1rem; }
+.lab-toolbar {
+  position: sticky; top: 0; z-index: 80; display: flex; flex-wrap: wrap; gap: .65rem; align-items: center;
+  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px); padding: .75rem 1rem;
+}
+.control-group { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+.control-group span { color: var(--muted); font-size: .8rem; font-weight: 800; text-transform: uppercase; }
+.preview-shell { width: 100%; margin: 0 auto; transition: width 160ms ease; }
+.preview-shell.mobile { width: min(390px, 100%); border-inline: 1px solid var(--border); }
+.preview-shell.tablet { width: min(768px, 100%); border-inline: 1px solid var(--border); }
+.page { padding: 1rem; }
+.login-screen { display: grid; min-height: 48rem; place-items: center; padding: 1rem; }
+.login-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .7fr); width: min(100%, 70rem); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md); }
+.login-brand { display: grid; align-content: center; gap: 1rem; background: linear-gradient(135deg, var(--navy), var(--accent-dark)); color: #fff; padding: clamp(1.5rem, 5vw, 4rem); }
+.login-panel, .panel, .card { display: grid; gap: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-sm); padding: calc(var(--space) * 1.15); }
+.login-panel { border: 0; border-radius: 0; box-shadow: none; }
+.app-shell { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; overflow: auto; display: grid; align-content: start; gap: 1rem; background: linear-gradient(180deg, var(--navy), var(--navy-soft)); color: #dcebf0; padding: 1.25rem; }
+.brand { display: grid; gap: .25rem; color: #fff; font-weight: 900; }
+.brand-mark { display: grid; width: 2.4rem; height: 2.4rem; place-items: center; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--accent), #0ea5b7); }
+.nav-group { display: grid; gap: .35rem; }
+.nav-title, .eyebrow { color: var(--accent-dark); font-size: .74rem; font-weight: 850; text-transform: uppercase; }
+.sidebar .nav-title { color: #8eb0ba; }
+.nav-item { display: flex; align-items: center; justify-content: space-between; min-height: 2.75rem; border: 1px solid transparent; border-radius: var(--radius-sm); color: inherit; padding: .62rem .72rem; font-weight: 760; }
+.nav-item.active, .nav-item:hover { border-color: rgb(255 255 255 / 14%); background: rgb(255 255 255 / 9%); }
+.app-main { min-width: 0; padding: calc(var(--space) * 1.4); }
+.topbar, .header-row, .section-heading, .actions, .workflow-band, .patient-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
+.mobile-topbar { display: none; position: sticky; top: 0; z-index: 30; border-bottom: 1px solid var(--border); background: var(--surface); padding: .75rem; }
+.drawer-backdrop { display: none; position: fixed; inset: 0; z-index: 35; border: 0; background: rgb(7 24 38 / 48%); }
+.drawer-backdrop.open { display: block; }
+.page-header { display: grid; gap: .55rem; margin-bottom: 1rem; }
+.muted { color: var(--muted); }
+.button, .chip-button { display: inline-flex; min-height: 2.8rem; align-items: center; justify-content: center; gap: .45rem; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-weight: 820; padding: .65rem .9rem; }
+.button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--foreground); }
+.button:disabled { opacity: .65; cursor: not-allowed; }
+.badge { display: inline-flex; width: fit-content; align-items: center; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted-strong); font-size: .78rem; font-weight: 850; padding: .32rem .6rem; }
+.badge.accent { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); background: var(--accent-soft); color: var(--accent-dark); }
+.badge.warning { border-color: rgb(201 138 44 / 28%); background: #fff7e8; color: var(--warning); }
+.badge.danger { border-color: rgb(181 72 74 / 25%); background: var(--danger-soft); color: var(--danger); }
+.alert, .empty-state { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); padding: .9rem 1rem; }
+.grid, .dashboard-grid, .content-grid, .summary-grid, .form-grid, .card-grid, .mobile-card-list, .profile-grid { display: grid; gap: .9rem; }
+.dashboard-grid { grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); }
+.content-grid { grid-template-columns: minmax(17rem, .8fr) minmax(0, 1.2fr); }
+.summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wide { grid-column: 1 / -1; }
+.metric-card, .data-row, .account-row, .protocol-card { display: grid; gap: .5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); padding: .95rem; }
+.metric-card strong { font-size: 1.9rem; line-height: 1; }
+.data-row-header { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: space-between; }
+.profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.profile-grid div { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-muted); padding: .75rem; }
+dt { color: var(--muted); font-size: .78rem; font-weight: 850; text-transform: uppercase; }
+dd { margin: .15rem 0 0; font-weight: 800; }
+label { display: grid; gap: .4rem; color: var(--muted-strong); font-size: .9rem; font-weight: 760; }
+input, select, textarea { width: 100%; min-height: 2.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--foreground); padding: .75rem .85rem; }
+textarea { min-height: 6rem; resize: vertical; }
+.patient-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-lg); background: linear-gradient(120deg, var(--navy), var(--accent-dark)); color: #edf3f0; padding: 1.2rem; }
+.patient-hero h1, .patient-hero .eyebrow, .patient-hero .muted { color: #edf3f0; }
+.avatar { display: grid; width: 3.3rem; height: 3.3rem; place-items: center; border-radius: var(--radius-md); background: rgb(255 255 255 / 12%); font-weight: 900; }
+.tabs { display: flex; gap: .55rem; overflow-x: auto; padding-bottom: .35rem; scroll-snap-type: x proximity; }
+.tab { flex: 0 0 auto; min-height: 3rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--foreground); font-weight: 820; padding: .6rem .85rem; scroll-snap-align: start; }
+.tab.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
+.desktop-table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.desktop-table th, .desktop-table td { border-bottom: 1px solid var(--border); padding: .75rem; text-align: left; }
+.desktop-table th { background: var(--surface-muted); color: var(--muted-strong); font-size: .78rem; text-transform: uppercase; }
+.mobile-card-list { display: none; }
+.safety-list { display: flex; flex-wrap: wrap; gap: .5rem; }
+.phone-frame { width: min(390px, 100%); margin: 0 auto; border-inline: 1px solid var(--border); background: var(--background); }
+@media (max-width: 980px) {
+  .app-shell, .login-shell, .dashboard-grid, .content-grid { grid-template-columns: 1fr; }
+  .mobile-topbar { display: flex; justify-content: space-between; align-items: center; }
+  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: min(20rem, calc(100vw - 3rem)); max-width: calc(100vw - 3rem); height: 100dvh; transform: translateX(-105%); transition: transform 180ms ease; }
+  .sidebar.open { transform: translateX(0); }
+  .topbar { align-items: stretch; flex-direction: column; }
+  .summary-grid, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .page, .app-main { padding: .85rem; }
+  h1 { font-size: 2rem; }
+  .summary-grid, .card-grid, .form-grid, .profile-grid { grid-template-columns: 1fr; }
+  .button, .patient-actions .button { width: 100%; }
+  .header-row, .section-heading, .alert, .workflow-band, .actions, .patient-actions { align-items: stretch; flex-direction: column; }
+  .patient-hero { grid-template-columns: 1fr; }
+  .desktop-table { display: none; }
+  .mobile-card-list { display: grid; }
+}
+</style>
+</head>
+<body data-theme="prij-heritage">
+  
+<div class="lab-toolbar">
+  <strong>Prij Mobile UI Lab</strong>
+  <div class="control-group" aria-label="Theme switcher">
+    <span>Theme</span>
+    <button class="chip-button" data-theme="prij-heritage" type="button">Prij Heritage</button><button class="chip-button" data-theme="clinic-premium" type="button">Clinic Premium</button><button class="chip-button" data-theme="minimal-clean" type="button">Minimal Clean</button><button class="chip-button" data-theme="compact-operations" type="button">Compact Operations</button><button class="chip-button" data-theme="dark-navy" type="button">Dark Navy</button><button class="chip-button" data-theme="mobile-focus" type="button">Mobile Focus</button>
+  </div>
+  <div class="control-group" aria-label="Viewport preview">
+    <span>Preview</span>
+    <button class="chip-button" data-viewport="mobile" type="button">Mobile 390px</button>
+    <button class="chip-button" data-viewport="tablet" type="button">Tablet 768px</button>
+    <button class="chip-button" data-viewport="desktop" type="button">Desktop full</button>
+  </div>
+</div>
+  <div class="preview-shell mobile">
+    <div class="phone-frame">
+<section class="login-screen" aria-label="Login screen">
+  <div class="login-shell">
+    <div class="login-brand">
+      <p class="eyebrow">Premium clinic workspace</p>
+      <h1>Prij Clinic</h1>
+      <p>Standalone local design lab for the clinic shell, cards, forms, tables, and mobile states.</p>
+      <div class="workflow-band"><span class="badge">No API calls</span><span class="badge">No real patient data</span><span class="badge">Doctor-led care</span></div>
+    </div>
+    <form class="login-panel">
+      <div><p class="eyebrow">Staff access</p><h2>Sign in</h2><p class="muted">Static offline form state only.</p></div>
+      <label>Staff ID or email<input value="Local placeholder" /></label>
+      <label>Password<input type="password" value="" placeholder="Not stored" /></label>
+      <button class="button" type="button">Sign in</button>
+      <p class="empty-state">Local demo only - no real patient data, payment details, secrets, or clinical report files.</p>
+    </form>
+  </div>
+</section>
+<button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation"></button>
+<main class="app-shell">
+  
+<aside class="sidebar" id="drawer">
+  <div class="brand"><span class="brand-mark">P</span><strong>Prij Clinic OS</strong><span class="muted">Women's health</span></div>
+  <nav class="nav-group" aria-label="Dashboard"><span class="nav-title">Dashboard</span><a class="nav-item active">Dashboard <span>●</span></a></nav>
+  <nav class="nav-group" aria-label="Patients"><span class="nav-title">Patients</span><a class="nav-item">Patient files</a><a class="nav-item">New patient</a></nav>
+  <nav class="nav-group" aria-label="Doctor workflow"><span class="nav-title">Doctor workflow</span><a class="nav-item">Encounters</a><a class="nav-item">Orders</a><a class="nav-item">Guidelines</a></nav>
+  <nav class="nav-group" aria-label="Admin"><span class="nav-title">Admin / Owner Control</span><a class="nav-item">Accounts</a><a class="nav-item">Official Medication Import</a></nav>
+</aside>
+  <div class="app-main">
+    <header class="mobile-topbar"><strong>Prij Clinic</strong><button class="button secondary" id="menuButton" type="button">Menu</button></header>
+    <header class="topbar">
+      <div><p class="eyebrow">Clinic operations</p><p class="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p></div>
+      <div class="actions"><button class="button secondary" type="button">Patient search</button><span class="badge warning">Local HTML lab</span></div>
+    </header>
+    
+<section class="page-header">
+  <div class="header-row">
+    <div><p class="eyebrow">Registration</p><h1>Patient files</h1></div>
+    <button class="button" type="button">New patient</button>
+  </div>
+  <p class="muted">Neutral placeholders only. The lab does not read or write patient records.</p>
+</section>
+
+<section class="alert">
+  <div>
+    <strong>Local HTML lab only - no real patient data.</strong>
+    <p class="muted">No API calls, no Next.js runtime, no database writes, and no clinical output approval. Doctor approval required for real clinical records.</p>
+  </div>
+  <span class="badge danger">Draft support only</span>
+</section>
+<section class="dashboard-grid">
+  <div class="panel">
+    <div class="section-heading"><div><h2>Patient list</h2><p class="muted">Mobile card-list replacement for table views.</p></div><span class="badge warning">No patient selected</span></div>
+    <label>Search patient files<input placeholder="Patient file" /></label>
+    <table class="desktop-table" aria-label="Patient table mock">
+      <thead><tr><th>File</th><th>Status</th><th>Next action</th></tr></thead>
+      <tbody><tr><td>Patient file</td><td><span class="badge">Placeholder</span></td><td><button class="button secondary" type="button">Open</button></td></tr></tbody>
+    </table>
+    <div class="mobile-card-list">
+      <article class="data-row"><div class="data-row-header"><strong>Patient file</strong><span class="badge">Placeholder</span></div><p class="muted">No patient selected</p><button class="button secondary" type="button">Open</button></article>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="section-heading"><div><h2>New patient form</h2><p class="muted">One column on phone.</p></div><span class="badge warning">No real patient data</span></div>
+    <form class="form-grid">
+      <label>File label<input placeholder="Patient file" /></label>
+      <label>Patient type<select><option>New patient</option><option>Patient file</option></select></label>
+      <label>Contact placeholder<input placeholder="Reference metadata only" /></label>
+      <label>Registration note<input placeholder="No patient selected" /></label>
+      <label class="wide">Notes<textarea placeholder="No real patient data"></textarea></label>
+      <div class="actions wide"><button class="button" type="button">Save visual state</button><button class="button secondary" type="button">Cancel</button></div>
+    </form>
+  </div>
+</section>
+<section class="patient-hero">
+  <div class="avatar">PF</div>
+  <div><p class="eyebrow">Patient file workspace</p><h1>Patient file</h1><p class="muted">No patient selected | Reference metadata only</p><div class="workflow-band"><span>Doctor approval required</span><span>Draft support only</span><span>No real patient data</span></div></div>
+  <div class="patient-actions"><button class="button">New encounter</button><button class="button secondary">New order</button></div>
+</section>
+<section class="tabs" aria-label="Scrollable patient tabs">
+  <button class="tab active" type="button">Summary</button><button class="tab " type="button">Medical</button><button class="tab " type="button">Clinical</button><button class="tab " type="button">Appointments</button><button class="tab " type="button">Encounters</button><button class="tab " type="button">Prescriptions</button><button class="tab " type="button">Orders</button><button class="tab " type="button">Results</button><button class="tab " type="button">Reports</button><button class="tab " type="button">Guidelines</button><button class="tab " type="button">Timeline</button>
+</section>
+<section class="content-grid">
+  <article class="panel"><div class="section-heading"><h2>Patient workspace</h2><span class="badge accent">Scrollable tabs</span></div><dl class="profile-grid"><div><dt>File</dt><dd>Patient file</dd></div><div><dt>Status</dt><dd>No patient selected</dd></div><div><dt>Safety</dt><dd>Doctor approval required</dd></div><div><dt>AI</dt><dd>Draft support only</dd></div></dl></article>
+  <article class="panel"><div class="section-heading"><h2>Orders / investigations</h2><span class="badge">Reference metadata only</span></div><div class="empty-state"><span>No order rows in this static lab.</span><span class="badge warning">Doctor review required</span></div></article>
+</section>
+<section class="summary-grid">
+  <article class="metric-card"><span>Queue</span><strong>0</strong><p class="muted">Static placeholder</p></article>
+  <article class="metric-card"><span>Official medication rows</span><strong>0</strong><p class="muted">Medication selection blocked until official rows exist</p></article>
+  <article class="metric-card"><span>Guidelines</span><strong>Ready</strong><p class="muted">Guideline library ready</p></article>
+  <article class="metric-card"><span>Review</span><strong>Required</strong><p class="muted">Doctor approval required</p></article>
+</section>
+<section class="card-grid">
+  <article class="card"><h2>Guideline / protocol browser</h2><p class="muted">Guideline library ready. Reference metadata only.</p><div class="safety-list"><span class="badge accent">Reference metadata only</span><span class="badge warning">Doctor approval required</span></div></article>
+  <article class="card"><h2>Admin accounts</h2><p class="muted">RBAC visual states only. No account creation and no credentials stored.</p><div class="safety-list"><span class="badge">Owner/Admin</span><span class="badge danger">Protected access</span></div></article>
+  <article class="card"><h2>Official medication import status</h2><p class="muted">Official medication rows: 0</p><p class="empty-state">Medication prescription selection blocked until official rows exist</p></article>
+</section>
+<section class="panel">
+  <div class="section-heading"><div><h2>Buttons, badges, alerts, tables, forms</h2><p class="muted">Shared component styling snapshot.</p></div><span class="badge accent">Offline</span></div>
+  <div class="actions"><button class="button">Primary</button><button class="button secondary">Secondary</button><button class="button" disabled>Blocked</button><span class="badge">Neutral</span><span class="badge warning">Warning</span><span class="badge danger">Blocked</span></div>
+  <div class="alert"><div><strong>Medication prescription selection blocked until official rows exist</strong><p class="muted">No medication names, rows, dosing instructions, or clinical directions are included.</p></div><span class="badge danger">Official medication rows: 0</span></div>
+</section>
+  </div>
+</main></div>
+  </div>
+  <script>
+const preview = document.querySelector(".preview-shell");
+document.querySelectorAll("[data-theme]").forEach((button) => {
+  button.addEventListener("click", () => document.body.dataset.theme = button.dataset.theme);
+});
+document.querySelectorAll("[data-viewport]").forEach((button) => {
+  button.addEventListener("click", () => {
+    preview.classList.remove("mobile", "tablet");
+    if (button.dataset.viewport !== "desktop") preview.classList.add(button.dataset.viewport);
+  });
+});
+const drawer = document.getElementById("drawer");
+const backdrop = document.getElementById("drawerBackdrop");
+const menuButton = document.getElementById("menuButton");
+function closeDrawer() { drawer?.classList.remove("open"); backdrop?.classList.remove("open"); }
+menuButton?.addEventListener("click", () => { drawer?.classList.add("open"); backdrop?.classList.add("open"); });
+backdrop?.addEventListener("click", closeDrawer);
+document.querySelectorAll(".nav-item").forEach((item) => item.addEventListener("click", closeDrawer));
+</script>
+</body>
+</html>
