@@ -1,5 +1,15 @@
 # Current Status
 
+v0.10.2 Mobile Browser Usability + LAN Phone QA is in progress on branch `ui/v0.10.2-mobile-browser-usability`.
+
+v0.10.2 status:
+- Mobile shell now uses a topbar menu button and slide-out drawer while desktop keeps the sidebar.
+- Shared CSS was hardened against 360px horizontal overflow with safer wrapping, shrinkable flex/grid children, full-width phone controls, and scrollable patient tabs.
+- Key patient, admin, drug-market import, guideline, protocol, orders, and investigation views inherit mobile card/form behavior.
+- LAN phone browsing is documented in `docs/MOBILE_LAN_TESTING.md`.
+- Mobile Playwright QA was added under `tests/v102` with `expectNoHorizontalOverflow`.
+- Official medication rows remain 0 locally; no medication data, fake rows, external AI, real patient data, real payment gateway, release tag, or production CORS weakening was added.
+
 v0.10.1 Official Medication Import Operator is in progress on branch `data/v0.10.1-official-medication-import-operator`. The old project medication artifact is unavailable and cannot be recovered from current project artifacts, so the app is being prepared for a real authorized official-medication import session instead of recreating rows.
 
 v0.10.1 status:

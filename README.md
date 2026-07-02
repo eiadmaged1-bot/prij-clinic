@@ -6,6 +6,29 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.10.2 Mobile Browser Usability + LAN Phone QA
+
+Branch: `ui/v0.10.2-mobile-browser-usability`.
+
+v0.10.2 makes the local demo usable from phone browsers over LAN. Desktop keeps the sidebar; phone/tablet widths use a topbar menu button and slide-out drawer. Forms, cards, patient tabs, admin pages, guideline/protocol browsing, and drug-market import status are hardened against small-screen horizontal overflow.
+
+LAN testing:
+
+```powershell
+ipconfig
+npm run dev
+```
+
+Open `http://PC_IP:3000` on a phone on the same Wi-Fi and verify `http://PC_IP:3001/health`. See `docs/MOBILE_LAN_TESTING.md` and `docs/MANUAL_QA_MOBILE_CHECKLIST.md`.
+
+Mobile QA:
+
+```powershell
+npm run test:v102:mobile
+```
+
+No medication data, fake official rows, external AI, real patient data, payment gateway, production CORS weakening, or release tag is added.
+
 ## v0.10.1 Official Medication Import Operator
 
 Branch: `data/v0.10.1-official-medication-import-operator`.

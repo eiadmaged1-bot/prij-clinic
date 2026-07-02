@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./tests/v094",
+  testDir: "./tests",
   timeout: 45_000,
   expect: {
     timeout: 8_000
@@ -13,12 +13,12 @@ export default defineConfig({
     baseURL: process.env.WEB_URL || process.env.APP_URL || "http://localhost:3000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure"
+    video: "off"
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      use: { ...devices["Desktop Chrome"], channel: process.env.PLAYWRIGHT_CHANNEL || "chrome" }
     }
   ],
   outputDir: "test-results"

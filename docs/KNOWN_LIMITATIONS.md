@@ -1,5 +1,11 @@
 # Known Limitations
 
+- v0.10.2 improves mobile browser usability but does not certify production mobile support, medical-device behavior, privacy compliance, or clinical governance.
+- LAN phone browsing depends on same-Wi-Fi routing, local firewall rules, and local dev servers on ports 3000 and 3001.
+- Mobile Playwright checks require the local web app, API, PostgreSQL, migrations, and demo credentials to be reachable.
+- Manual iPhone Safari and Android Chrome QA remains required after automated checks.
+- v0.10.2 does not add medication data, fake official rows, external AI, a payment gateway, or release tags.
+
 - v0.10.1 adds an official medication import operator, but it does not recover the old missing medication artifact.
 - Official medication rows remain 0 until authorized official files are placed in `storage/official-medication-sources/` and explicitly applied.
 - The operator can scan, dry-run, and guard apply imports; it does not create medication rows from memory, synthetic fixtures, or generated lists.

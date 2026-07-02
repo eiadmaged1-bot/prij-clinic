@@ -309,6 +309,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [comfort, setComfort] = useState("comfortable");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
@@ -333,6 +334,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [router, status]);
 
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
+
   function setComfortMode(next: string) {
     setComfort(next);
     localStorage.setItem("prijDensityMode", next);
@@ -346,7 +351,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <main className={`app-shell theme-${theme} comfort-${comfort}`} data-density={comfort}>
-      <aside className="sidebar">
+      <button
+        aria-label="Close navigation"
+        className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
+        onClick={() => setMobileNavOpen(false)}
+        type="button"
+      />
+      <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">P</span>
           <strong>Prij Clinic OS</strong>
@@ -357,7 +368,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <nav className="nav-group" key={group.title} aria-label={group.title}>
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label, icon]) => (
-                <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href}>
+                <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
                   <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Doctor workflow" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
@@ -369,9 +380,21 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="app-main">
         <header className="topbar">
-          <div>
-            <p className="eyebrow">Clinic operations</p>
-            <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
+          <div className="topbar-title">
+            <button
+              aria-controls="clinic-mobile-navigation"
+              aria-expanded={mobileNavOpen}
+              className="button secondary compact mobile-menu-button"
+              onClick={() => setMobileNavOpen(true)}
+              type="button"
+            >
+              <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
+              Menu
+            </button>
+            <div>
+              <p className="eyebrow">Clinic operations</p>
+              <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
+            </div>
           </div>
           <label className="portal-search" aria-label="Search patient files">
             <span>Patient search</span>

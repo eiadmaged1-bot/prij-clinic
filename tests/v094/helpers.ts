@@ -144,9 +144,9 @@ export async function createDemoPatient(page: Page) {
   await page.getByLabel(/^phone$/i).fill("01000000000");
   await page.getByLabel(/notes/i).fill("Automated browser QA fake demo patient only.");
   await page.getByRole("button", { name: /save and open patient file/i }).click();
-  await page.waitForURL(/\/patients\/[^/]+$/, { timeout: 20_000 });
+  await page.waitForURL(/\/patients\/(?!new(?:$|[/?#]))[^/?#]+$/, { timeout: 20_000 });
 
-  const patientId = page.url().match(/\/patients\/([^/?#]+)/)?.[1];
+  const patientId = page.url().match(/\/patients\/(?!new(?:$|[/?#]))([^/?#]+)/)?.[1];
   if (!patientId) {
     throw new Error(`Patient creation did not redirect to a patient workspace. Current URL: ${page.url()}`);
   }

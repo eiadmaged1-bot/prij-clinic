@@ -1,5 +1,23 @@
 # Next Steps
 
+v0.10.2 mobile browser usability next steps:
+
+1. Start local dev:
+
+```powershell
+npm run dev
+```
+
+2. Run automated mobile QA:
+
+```powershell
+npm run test:v102:mobile
+```
+
+3. Perform manual phone QA from `docs/MANUAL_QA_MOBILE_CHECKLIST.md` on iPhone Safari and Android Chrome over LAN.
+4. Use `docs/MOBILE_LAN_TESTING.md` to open `http://PC_IP:3000` and verify `http://PC_IP:3001/health`.
+5. Keep official medication selection blocked while official rows remain 0. Do not create fake medication rows or a release tag.
+
 v0.10.1 official medication import operator next steps:
 
 1. Obtain authorized official medication registry/source files from the owner/admin.

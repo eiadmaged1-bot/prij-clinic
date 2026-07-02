@@ -16,7 +16,8 @@ function isLocalDemoLanOrigin(origin: string) {
     const octets = url.hostname.split(".").map((part) => Number(part));
     const first = octets[0] ?? Number.NaN;
     const second = octets[1] ?? Number.NaN;
-    const isWebPort = url.port === "3000";
+    const isPrimaryWebPort = url.port === "3000";
+    const isLoopbackDevPort = /^300\d$/.test(url.port);
     const isHttp = url.protocol === "http:" || url.protocol === "https:";
     const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
     const isPrivateLan =
@@ -25,7 +26,7 @@ function isLocalDemoLanOrigin(origin: string) {
       (first === 192 && second === 168) ||
       (first === 100 && second >= 64 && second <= 127);
 
-    return isHttp && isWebPort && (isLocalhost || isPrivateLan);
+    return isHttp && ((isLocalhost && isLoopbackDevPort) || (isPrivateLan && isPrimaryWebPort));
   } catch {
     return false;
   }
