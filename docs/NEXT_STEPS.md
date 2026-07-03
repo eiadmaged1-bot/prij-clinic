@@ -1,5 +1,41 @@
 # Next Steps
 
+v0.12.0 real app clinic workspace next steps:
+
+1. Run the new source and browser checks:
+
+```powershell
+npm run test:v120:no-fake-ui
+npm run test:v120:workspace
+```
+
+2. Run the preserved security/runtime checks before merge:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:security:document-upload
+npm run test:db:queue-date
+npm run test:db:encounter-void
+npm run test:v093:ui-text
+npm run typecheck
+npm run build
+```
+
+3. Start phone QA with the exact Tailscale/LAN profile:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+```
+
+4. On the phone, confirm login, Dashboard, Patients, Patient File, Queue, Prescriptions, and Appearance have no hydration overlay or horizontal page scroll.
+5. Keep clinical AI draft-only, prescription writing doctor-controlled, Drug Market reference-only, and admin links role-aware.
+6. Do not create a release tag from this sprint.
+
 v0.11.6 real app heading position and responsive shell next steps:
 
 1. Keep the responsive heading thresholds unchanged:

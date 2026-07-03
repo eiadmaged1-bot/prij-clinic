@@ -1359,8 +1359,8 @@ function PatientActionPanel({
       ) : null}
 
       {open === "consent" ? (
-        <form className="form-grid" onSubmit={handleSubmit("consents", () => ({ consentType: "treatment", status: "granted", notes: "Local demo consent placeholder." }))}>
-          <p className="muted">Record a local demo treatment consent placeholder. Real legal text is not included.</p>
+        <form className="form-grid" onSubmit={handleSubmit("consents", () => ({ consentType: "treatment", status: "granted", notes: "Local consent workflow note. Legal text is not included." }))}>
+          <p className="muted">Record local treatment consent status. Real legal text is not included.</p>
           <button className="button" type="submit">Record consent</button>
         </form>
       ) : null}

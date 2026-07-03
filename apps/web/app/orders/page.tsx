@@ -36,7 +36,6 @@ export default function OrdersPage() {
           name: "testName",
           label: "Order name",
           required: true,
-          defaultValue: "CBC",
           suggestionsEndpoint: "/investigations/catalog",
           suggestionCollectionKey: "investigationCatalog",
           suggestionLabelKey: "name"

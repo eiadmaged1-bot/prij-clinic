@@ -41,9 +41,9 @@ type DashboardSummary = {
 const workflow = ["Reception", "Appointment", "Queue", "Doctor", "Orders", "Reports", "Finance", "Owner review"];
 
 const quickActions: Array<[string, string, string, IconName]> = [
-  ["/patients/new", "New Patient", "Start demo registration with fake identifiers only.", "patients"],
+  ["/patients/new", "New Patient", "Start a local training registration without real patient data.", "patients"],
   ["/appointments", "New Appointment", "Schedule a safe local visit.", "calendar"],
-  ["/queue", "Queue Check-in", "Move a demo patient into today's queue.", "queue"],
+  ["/queue", "Queue Check-in", "Move a local patient file into today's queue.", "queue"],
   ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
   ["/billing", "Create Invoice", "Record manual clinic charges without a gateway.", "billing"],
   ["/medications", "Search Medication", "Open official reference metadata and safety tools.", "prescription"],
@@ -410,11 +410,12 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="summary-grid">
-        <Metric label="Official rows" value="8,269" detail="Bahrain and Oman official reference data" />
-        <Metric label="Verified rows" value="1,200" detail="High-confidence rows verified" />
-        <Metric label="Review remaining" value="7,069" detail="Owner review queue remains open" />
-        <Metric label="Restore drill" value="Passed" detail="v0.8.6 isolated restore check" />
+      <section className="panel">
+        <div className="section-heading">
+          <h2>Medication reference status</h2>
+          <Link className="button secondary compact" href="/medications">Open reference</Link>
+        </div>
+        <p className="empty-state">Medication reference rows are loaded only from official or owner-approved imports. If no reference data is available, prescription selection must stay manual and doctor-controlled.</p>
       </section>
     </AppShell>
   );

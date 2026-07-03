@@ -1,5 +1,17 @@
 # Current Status
 
+v0.12.0 Real App Clinic Workspace Upgrade is in progress on branch `leap/v0.12.0-real-app-clinic-workspace-upgrade`.
+
+v0.12.0 status:
+- Real app navigation now follows clinic workflow groups: Today, Patients, Clinical, Operations, Knowledge, Medication Reference, and Admin.
+- Reusable real-app clinic/layout primitives were added under `apps/web/components/clinic` and `apps/web/components/layout`.
+- Shared workflow pages inherit cleaner bounded panels, safer local-workflow copy, and honest empty states through `MvpPage`.
+- Dashboard no longer shows hardcoded medication-reference counts; it points to reference availability and doctor-controlled prescription behavior.
+- Patient registration and patient-file action wording no longer shows fake patient/contact placeholders or default clinical test values.
+- Added `scripts/v120-real-app-no-fake-ui-data-check.mjs`, `npm run test:v120:no-fake-ui`, and `tests/v120/real-app-clinic-workspace.spec.ts`.
+- No database/schema, CORS, auth/RBAC, audit-log, Tailscale/LAN, image metadata, upload-policy, queue-date, encounter-branch, or encounter-voiding behavior was changed.
+- No release tag has been created.
+
 v0.11.6 Real App Heading Position + Responsive Shell Finalization is in progress on branch `fix/v0.11.6-real-app-heading-position-responsive-shell`.
 
 v0.11.6 status:

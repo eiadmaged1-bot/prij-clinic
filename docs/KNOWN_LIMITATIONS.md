@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.12.0 upgrades the real Next.js clinic workspace UI, but it is not production security, privacy, medical-device, or clinical-governance certification.
+- The new v0.12 workspace Playwright spec needs the real app, API, database, migrations, and owner login to be reachable.
+- Physical phone QA remains required for Tailscale browser behavior, firewall routing, touch drawer ergonomics, and real mobile viewport behavior.
+- Queue, calendar, orders, prescriptions, and investigations remain bounded by the existing backend workflow support; no external integrations were added.
+- Medication reference data must come from official or owner-approved imports. No fake rows, automatic dosing, AI prescribing, stock, cart, checkout, or buy workflow is added.
+- Real patient data and production PHI uploads remain forbidden.
+
 - v0.11.6 fixes the automated real app heading y-position regression for `/dashboard` and `/prescriptions`, but it is not production mobile, privacy, security, medical-device, or clinical-governance certification.
 - Physical phone QA is still required for real Tailscale browser behavior, local firewall routing, and touch drawer ergonomics.
 - The shell topbar is intentionally compact below `1200px`; secondary utility controls should be exposed through future deliberate navigation/settings work instead of being stacked above clinical page headings.

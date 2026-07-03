@@ -12,12 +12,12 @@ export default function ConsentsPage() {
       ]}
       collectionKey="consentRecords"
       createEndpoint="/consents"
-      createNote="Use a fake demo patient file only. Do not enter real legal text, signatures, or patient notes."
+      createNote="Use a local training patient file only. Do not enter real legal text, signatures, or patient notes."
       createFields={[
         { name: "patientId", label: "Patient file", required: true },
         { name: "consentType", label: "Consent type", required: true, defaultValue: "treatment" },
         { name: "status", label: "Status", required: true, defaultValue: "draft" },
-        { name: "notes", label: "Notes", defaultValue: "Local demo consent placeholder. Legal review required before real use." }
+        { name: "notes", label: "Notes", defaultValue: "Local consent workflow note. Legal review required before real use." }
       ]}
     />
   );

@@ -284,6 +284,27 @@ Every UI surface remains demo/local only: no real patient data, no real payment 
 
 See `docs/V0_6_MASTER_UNIFIED_AUDIT.md`.
 
+## v0.12.0 Real App Clinic Workspace Upgrade
+
+Branch: `leap/v0.12.0-real-app-clinic-workspace-upgrade`.
+
+v0.12.0 upgrades the real Next.js app workspace toward the approved v0.11 premium clinic UI while preserving v0.11.5 security/runtime/schema hardening. The real app shell now uses clinic workflow navigation groups, adds reusable clinic/layout primitives, improves shared workflow pages, and adds no-fake-UI plus real-app workspace browser checks.
+
+Run:
+
+```powershell
+npm run test:v120:no-fake-ui
+npm run test:v120:workspace
+```
+
+Phone QA:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+```
+
+No schema, CORS, auth/RBAC, audit, Tailscale/LAN, image metadata, upload policy, queue-date, encounter-branch, or encounter-voiding behavior is weakened. AI remains draft-only, prescriptions remain doctor-controlled, and Drug Market remains reference/import/review only.
+
 ## V0.5.2 Integration Status
 
 - Medical Calculator Suite is integrated with `CalculatorFormula`, `PatientCalculation`, formula registry, safe handler-based formula engine, `/calculators`, `/admin/calculators`, calculator tests, and admin RBAC.

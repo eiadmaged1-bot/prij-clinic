@@ -2475,13 +2475,21 @@ button.obgyn-template-card {
     height: 100dvh;
     max-height: none;
     overflow-y: auto;
-    transform: translateX(-105%);
+    transform: translateX(calc(-100% - 2rem));
     transition: transform 180ms ease;
     box-shadow: var(--shadow-md);
   }
 
+  .sidebar:not(.open) .nav-item {
+    transform: translateX(-120vw);
+  }
+
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .sidebar.open .nav-item {
+    transform: none;
   }
 
   .mobile-nav-backdrop {

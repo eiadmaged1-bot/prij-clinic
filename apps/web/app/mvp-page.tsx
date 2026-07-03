@@ -36,15 +36,13 @@ type MvpPageProps = {
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
 const navGroupOrder: NavItem["group"][] = [
-  "Dashboard",
+  "Today",
   "Patients",
-  "Doctor workflow",
-  "Reception queue",
-  "Calendar",
-  "Finance",
-  "Orders",
-  "Medications",
-  "Admin / Owner Control"
+  "Clinical",
+  "Operations",
+  "Knowledge",
+  "Medication Reference",
+  "Admin"
 ];
 
 const displayKeys = [
@@ -207,7 +205,7 @@ export function MvpPage({
           </div>
         </div>
         <p className="muted">
-          Use fake demo records only. This V0.1 interface is for local workflow review and is not ready for real patient use.
+          Use local training records only. This interface is for workflow review and is not ready for real patient use.
         </p>
       </section>
 
@@ -216,8 +214,8 @@ export function MvpPage({
       <section className="content-grid">
         <div className="panel">
           <div className="section-heading">
-              <h2>{title} focus</h2>
-            <span className="badge">V0.1</span>
+              <h2>{title} workflow</h2>
+            <span className="badge">Clinic OS</span>
           </div>
           <ul className="feature-list">
             {items.map((item) => (
@@ -229,7 +227,7 @@ export function MvpPage({
         <div className="panel">
           <div className="section-heading">
             <div>
-              <h2>Demo records</h2>
+              <h2>Records</h2>
               <p className="muted">Status: {status}</p>
             </div>
             {endpoint ? (
@@ -240,7 +238,7 @@ export function MvpPage({
             ) : null}
           </div>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState icon="files">This page is ready for new demo entries.</EmptyState>}
+          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState icon="files">No records are loaded for this workspace yet.</EmptyState>}
         </div>
       </section>
 
@@ -248,10 +246,10 @@ export function MvpPage({
         <section className="panel">
           <div className="section-heading">
             <div>
-              <h2>Safe demo form</h2>
+              <h2>Safe local form</h2>
               {createNote ? <p className="muted">{createNote}</p> : null}
             </div>
-            <span className="badge warning">No real data</span>
+            <span className="badge warning">No real patient data</span>
           </div>
           <form className="form-grid" onSubmit={submit}>
             {createFields.map((field) => {
@@ -296,7 +294,7 @@ export function MvpPage({
             })}
             <button className="button" disabled={isSubmitting} type="submit">
               <ThreeDMedicalIcon name="files" size="sm" />
-              {isSubmitting ? "Saving demo record" : "Create demo record"}
+              {isSubmitting ? "Saving record" : "Create record"}
             </button>
           </form>
         </section>
@@ -360,7 +358,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">P</span>
-          <strong>Prij Clinic OS</strong>
+        <strong>Prij Clinic</strong>
           <span>Women&apos;s health</span>
         </Link>
 
@@ -369,7 +367,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Doctor workflow" ? "navy" : "teal"} />
+                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
@@ -393,7 +391,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
             <strong className="mobile-topbar-brand">Prij Clinic</strong>
             <div>
-              <p className="eyebrow">Clinic operations</p>
+            <p className="eyebrow">Clinic operations</p>
               <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
             </div>
           </div>
@@ -453,7 +451,7 @@ export function SafetyAlert() {
   return (
     <section className="alert">
       <div>
-        <strong>Local demo only - no real patient data.</strong>
+        <strong>Local workflow review only - no real patient data.</strong>
         <p className="muted">
           AI remains assistive and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass doctor review.
         </p>
@@ -469,7 +467,7 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
   }
 
   if (rows.length === 0) {
-    return <EmptyState>No demo records yet. Sign in and use the local demo data before workflow review.</EmptyState>;
+    return <EmptyState>No records yet.</EmptyState>;
   }
 
   return (
@@ -484,7 +482,7 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
             ) : (
               <strong>{rowLabel(row)}</strong>
             )}
-            <span className="badge">{String(row.status ?? row.reviewStatus ?? row.category ?? "demo")}</span>
+            <span className="badge">{String(row.status ?? row.reviewStatus ?? row.category ?? "record")}</span>
           </div>
           <dl>
             {displayKeys
@@ -513,7 +511,7 @@ function EmptyState({ children, icon = "files" }: { children: ReactNode; icon?: 
 }
 
 function rowLabel(row: Record<string, unknown>) {
-  return String(row.displayName ?? row.invoiceNumber ?? row.title ?? row.medicalRecordNumber ?? row.id ?? "Demo row");
+  return String(row.displayName ?? row.invoiceNumber ?? row.title ?? row.medicalRecordNumber ?? row.id ?? "Record");
 }
 
 function labelize(value: string) {

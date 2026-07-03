@@ -4,46 +4,38 @@ export type NavItem = {
   href: string;
   label: string;
   icon: IconName;
-  group: "Dashboard" | "Patients" | "Doctor workflow" | "Reception queue" | "Calendar" | "Finance" | "Orders" | "Medications" | "Admin / Owner Control";
+  group: "Today" | "Patients" | "Clinical" | "Operations" | "Knowledge" | "Medication Reference" | "Admin";
   permissions?: string[];
   roles?: string[];
   adminOnly?: boolean;
 };
 
 export const navigationRegistry: NavItem[] = [
-  { href: "/dashboard", label: "Clinic Home", icon: "dashboard", group: "Dashboard" },
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Today" },
+  { href: "/queue", label: "Queue", icon: "queue", group: "Today", permissions: ["queue.read"] },
+  { href: "/calendar", label: "Calendar", icon: "calendar", group: "Today", permissions: ["appointment.read", "appointments.read"] },
   { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients" },
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients" },
-  { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Doctor workflow", permissions: ["encounter.read", "encounter.create"] },
-  { href: "/doctor/visit", label: "Guided Visit", icon: "encounter", group: "Doctor workflow", permissions: ["encounter.create", "encounter.read"] },
-  { href: "/queue", label: "Queue Board", icon: "queue", group: "Reception queue", permissions: ["queue.read"] },
-  { href: "/appointments", label: "Appointment Desk", icon: "calendar", group: "Reception queue", permissions: ["appointment.read", "appointments.read"] },
-  { href: "/calendar", label: "Clinic Calendar", icon: "calendar", group: "Calendar", permissions: ["appointment.read", "appointments.read"] },
-  { href: "/orders", label: "Orders", icon: "investigations", group: "Orders", permissions: ["investigation.read"] },
-  { href: "/investigations", label: "Investigations", icon: "investigations", group: "Orders", permissions: ["investigation.read"] },
-  { href: "/reports", label: "Reports", icon: "reports", group: "Orders", permissions: ["report.read"] },
-  { href: "/billing", label: "Billing", icon: "billing", group: "Finance", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
-  { href: "/finance", label: "Finance Home", icon: "billing", group: "Finance", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
-  { href: "/medications", label: "Medication Reference", icon: "prescription", group: "Medications", permissions: ["medications.read", "medications.search"] },
-  { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medications", permissions: ["drug_market.read", "drug_market.search"] },
-  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Doctor workflow", permissions: ["prescription.read"] },
-  { href: "/encounters", label: "Encounters", icon: "encounter", group: "Doctor workflow", permissions: ["encounter.read"] },
-  { href: "/pregnancies", label: "Pregnancy", icon: "pregnancy", group: "Doctor workflow", permissions: ["pregnancy.read", "pregnancy.manage"] },
-  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Doctor workflow", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
-  { href: "/protocol-atlas", label: "Protocols", icon: "ai", group: "Doctor workflow", permissions: ["protocol_atlas.read", "ai_management.read"] },
-  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Doctor workflow", permissions: ["guidelines.read", "guidelines.search"] },
-  { href: "/calculators", label: "Calculators", icon: "investigations", group: "Doctor workflow", permissions: ["calculator.read", "calculator.calculate"] },
-  { href: "/consents", label: "Consents", icon: "consent", group: "Patients", permissions: ["patient.consent_read", "patient.consent_manage"] },
-  { href: "/documents", label: "Documents", icon: "files", group: "Patients", permissions: ["patient_document.read"] },
-  { href: "/referrals", label: "Referrals", icon: "reports", group: "Patients", permissions: ["referral.read"] },
-  { href: "/tasks", label: "Tasks", icon: "queue", group: "Patients", permissions: ["patient_task.read"] },
-  { href: "/ai-drafts", label: "AI Draft Review", icon: "ai", group: "Doctor workflow", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
-  { href: "/admin", label: "Owner Control", icon: "admin", group: "Admin / Owner Control", adminOnly: true },
-  { href: "/owner-control", label: "Owner Home", icon: "admin", group: "Admin / Owner Control", adminOnly: true },
-  { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin / Owner Control", adminOnly: true },
-  { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin / Owner Control", adminOnly: true },
-  { href: "/admin/medications", label: "Medication Ops", icon: "prescription", group: "Admin / Owner Control", adminOnly: true },
-  { href: "/admin/drug-market/review-queue", label: "Medication Review", icon: "prescription", group: "Admin / Owner Control", adminOnly: true }
+  { href: "/doctor/visit", label: "Doctor Visit", icon: "encounter", group: "Clinical", permissions: ["encounter.create", "encounter.read"] },
+  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical", permissions: ["prescription.read"] },
+  { href: "/orders", label: "Orders", icon: "investigations", group: "Clinical", permissions: ["investigation.read"] },
+  { href: "/investigations", label: "Investigations", icon: "investigations", group: "Clinical", permissions: ["investigation.read"] },
+  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Clinical", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
+  { href: "/encounters", label: "Encounters", icon: "encounter", group: "Clinical", permissions: ["encounter.read"] },
+  { href: "/billing", label: "Billing", icon: "billing", group: "Operations", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
+  { href: "/finance", label: "Finance", icon: "billing", group: "Operations", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
+  { href: "/referrals", label: "Referrals", icon: "reports", group: "Operations", permissions: ["referral.read"] },
+  { href: "/tasks", label: "Tasks", icon: "queue", group: "Operations", permissions: ["patient_task.read"] },
+  { href: "/documents", label: "Documents", icon: "files", group: "Operations", permissions: ["patient_document.read"] },
+  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Knowledge", permissions: ["guidelines.read", "guidelines.search"] },
+  { href: "/protocol-atlas", label: "Protocol Atlas", icon: "ai", group: "Knowledge", permissions: ["protocol_atlas.read", "ai_management.read"] },
+  { href: "/ai-drafts", label: "AI Drafts", icon: "ai", group: "Knowledge", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
+  { href: "/medications", label: "Medications", icon: "prescription", group: "Medication Reference", permissions: ["medications.read", "medications.search"] },
+  { href: "/drug-market", label: "Drug Market", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
+  { href: "/admin/accounts", label: "Accounts", icon: "reception", group: "Admin", adminOnly: true },
+  { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
+  { href: "/owner-control", label: "Owner Control", icon: "admin", group: "Admin", adminOnly: true },
+  { href: "/admin", label: "Admin Home", icon: "admin", group: "Admin", adminOnly: true }
 ];
 
 export type PatientTab = {

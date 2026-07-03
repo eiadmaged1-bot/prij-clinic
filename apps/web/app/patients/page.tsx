@@ -79,7 +79,7 @@ export default function PatientsPage() {
             New Patient File
           </Link>
         </div>
-        <p className="muted">Find or create a demo-safe patient file, then work from inside that file.</p>
+        <p className="muted">Find or create a local training patient file, then work from inside that file.</p>
       </section>
 
       <SafetyAlert />
@@ -117,7 +117,7 @@ export default function PatientsPage() {
         {status === "Loading" ? <div className="skeleton" /> : null}
 
         {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
-          <div className="empty-state">No patient files match this view. Create a new demo patient file to begin.</div>
+          <div className="empty-state">No patient files match this view. Create a local training patient file to begin.</div>
         ) : null}
 
         {filtered.length > 0 ? (
@@ -128,7 +128,7 @@ export default function PatientsPage() {
                   <div className="patient-list-title">
                     <ThreeDMedicalIcon name="patients" size="sm" />
                     <div>
-                      <strong>{patient.firstName} {patient.lastName}</strong>
+                      <strong>{patientDisplayName(patient)}</strong>
                       <span className="muted">{patient.sex || "Sex not set"} {patient.dateOfBirth ? `- ${patient.dateOfBirth.slice(0, 10)}` : ""}</span>
                     </div>
                   </div>
@@ -137,7 +137,7 @@ export default function PatientsPage() {
                 <dl>
                   <div>
                     <dt>File number</dt>
-                    <dd>{patient.medicalRecordNumber}</dd>
+                    <dd>{patientFileNumber(patient)}</dd>
                   </div>
                   <div>
                     <dt>Contact</dt>
@@ -155,4 +155,20 @@ export default function PatientsPage() {
       </section>
     </AppShell>
   );
+}
+
+function patientDisplayName(patient: Patient) {
+  const name = `${patient.firstName} ${patient.lastName}`.trim();
+  if (isSeededTrainingRecord(patient) || /^demo\b/i.test(name)) {
+    return "Local training record";
+  }
+  return name || "Patient file";
+}
+
+function patientFileNumber(patient: Patient) {
+  return isSeededTrainingRecord(patient) ? "Local training file" : patient.medicalRecordNumber;
+}
+
+function isSeededTrainingRecord(patient: Patient) {
+  return /^DEMO[-_]/i.test(patient.medicalRecordNumber) || /^Demo\b/i.test(`${patient.firstName} ${patient.lastName}`.trim());
 }

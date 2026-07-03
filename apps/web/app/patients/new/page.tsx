@@ -39,7 +39,7 @@ const initialState: FormState = {
   address: "",
   nationalId: "",
   referralSource: "",
-  notes: "Local demo patient file only."
+  notes: "Local workflow review file only."
 };
 
 export default function NewPatientPage() {
@@ -139,7 +139,7 @@ export default function NewPatientPage() {
         <div className="section-heading">
           <div>
             <h2>Patient file details</h2>
-            <p className="muted">Use fake demo details only. Duplicate warning is planned for a later backend check.</p>
+            <p className="muted">Use local training details only. Duplicate warning is planned for a later backend check.</p>
           </div>
           <span className="badge warning">No real patient data</span>
         </div>
@@ -161,7 +161,7 @@ export default function NewPatientPage() {
           </label>
           <label>
             Full name
-            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Demo Patient" value={form.fullName} />
+            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Enter local training name" value={form.fullName} />
           </label>
           <label>
             First name
@@ -199,19 +199,19 @@ export default function NewPatientPage() {
           </label>
           <label>
             Phone
-            <input onChange={(event) => update("phone", event.target.value)} placeholder="Demo phone only" value={form.phone} />
+            <input onChange={(event) => update("phone", event.target.value)} placeholder="Local training contact only" value={form.phone} />
           </label>
           <label>
             Email
-            <input onChange={(event) => update("email", event.target.value)} placeholder="demo@example.local" type="email" value={form.email} />
+            <input onChange={(event) => update("email", event.target.value)} placeholder="Local training email only" type="email" value={form.email} />
           </label>
           <label>
             Address
-            <input onChange={(event) => update("address", event.target.value)} placeholder="Optional demo address note" value={form.address} />
+            <input onChange={(event) => update("address", event.target.value)} placeholder="Optional local address note" value={form.address} />
           </label>
           <label>
             National ID
-            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional demo identifier only" value={form.nationalId} />
+            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional local identifier only" value={form.nationalId} />
           </label>
           <label>
             Source / referral
@@ -242,5 +242,5 @@ export default function NewPatientPage() {
 }
 
 function makeMrn() {
-  return `DEMO-PAT-${Date.now().toString().slice(-8)}`;
+  return `LOCAL-PAT-${Date.now().toString().slice(-8)}`;
 }

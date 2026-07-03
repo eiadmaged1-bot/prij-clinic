@@ -13,7 +13,7 @@ export default function QueuePage() {
       endpoint="/queue/today"
       collectionKey="queueTickets"
       createEndpoint="/queue/check-in"
-      createNote="Use a demo patient file and optional appointment. Priority is operational only, not triage."
+      createNote="Use a local training patient file and optional appointment. Priority is operational only, not triage."
       createFields={[
         { name: "patientId", label: "Patient file", required: true },
         { name: "appointmentId", label: "Appointment reference" },
