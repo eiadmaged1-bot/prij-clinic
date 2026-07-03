@@ -44,6 +44,26 @@ function assertThrowsMessage(fn, messagePart) {
 }
 
 {
+  const { getApiBaseUrl } = loadApiBaseUrl(
+    { NODE_ENV: "development", NEXT_PUBLIC_LAN_API_ORIGIN: "http://100.127.4.46:3001" },
+    { hostname: "100.127.4.46", protocol: "http:" }
+  );
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "explicit Tailscale API origin wins");
+}
+
+{
+  const { getApiBaseUrl, resolveConfiguredLanApiOrigin, isTailscaleOrCgnatIpv4 } = loadApiBaseUrl({
+    NODE_ENV: "development",
+    APP_ENV: "local",
+    NEXT_PUBLIC_LAN_DEV_HOST: "100.127.4.46",
+    NEXT_PUBLIC_LAN_DEV_API_PORT: "3001"
+  });
+  assert.equal(isTailscaleOrCgnatIpv4("100.127.4.46"), true, "Tailscale/CGNAT host is recognized");
+  assert.equal(resolveConfiguredLanApiOrigin(), "http://100.127.4.46:3001", "configured Tailscale host resolves");
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "configured Tailscale host is used");
+}
+
+{
   const { resolveConfiguredLanApiOrigin, isSafeDevApiOrigin } = loadApiBaseUrl({
     NODE_ENV: "development",
     NEXT_PUBLIC_LAN_API_ORIGIN: "http://prij-clinic.local:3001"
@@ -63,6 +83,14 @@ function assertThrowsMessage(fn, messagePart) {
 {
   const { getApiBaseUrl } = loadApiBaseUrl(
     { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
+    { hostname: "100.127.4.46", protocol: "http:" }
+  );
+  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
+}
+
+{
+  const { getApiBaseUrl } = loadApiBaseUrl(
+    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
     { hostname: "8.8.8.8", protocol: "http:" }
   );
   assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
@@ -77,12 +105,35 @@ function assertThrowsMessage(fn, messagePart) {
 }
 
 {
+  const { getApiBaseUrl, resolveConfiguredLanApiOrigin } = loadApiBaseUrl(
+    {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_APP_ENV: "production",
+      NEXT_PUBLIC_LAN_API_ORIGIN: "http://100.127.4.46:3001",
+      NEXT_PUBLIC_LAN_DEV_HOST: "100.127.4.46"
+    },
+    { hostname: "100.127.4.46", protocol: "https:" }
+  );
+  assert.equal(resolveConfiguredLanApiOrigin(), undefined, "production ignores explicit HTTP LAN API origin");
+  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
+}
+
+{
+  const { getApiBaseUrl } = loadApiBaseUrl(
+    { NODE_ENV: "production", NEXT_PUBLIC_APP_ENV: "production", NEXT_PUBLIC_API_URL: "https://api.clinic.example" },
+    { hostname: "clinic.example", protocol: "https:" }
+  );
+  assert.equal(getApiBaseUrl(), "https://api.clinic.example", "production exact HTTPS API origin is accepted");
+}
+
+{
   const { isSafeDevApiOrigin, resolveConfiguredLanApiOrigin } = loadApiBaseUrl({
     NODE_ENV: "development",
     NEXT_PUBLIC_LAN_API_ORIGIN: "http://*.example.test:3001"
   });
   assert.equal(isSafeDevApiOrigin("http://*.example.test:3001"), false, "wildcard origin is rejected");
   assert.equal(isSafeDevApiOrigin("not a url"), false, "malformed origin is rejected");
+  assert.equal(isSafeDevApiOrigin("http://100.64.0.0/10"), false, "CIDR-like origin is rejected");
   assert.equal(resolveConfiguredLanApiOrigin(), undefined, "malformed configured LAN origin is ignored");
 }
 

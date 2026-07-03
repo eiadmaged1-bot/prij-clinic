@@ -1,5 +1,27 @@
 # Next Steps
 
+v0.11.5 real app responsive shell and Tailscale login next steps:
+
+1. Start the exact LAN phone profile when testing through Tailscale:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+```
+
+2. Open `http://100.127.4.46:3000` on the phone and confirm API calls target `http://100.127.4.46:3001`.
+3. If Windows blocks access, run the documented firewall commands manually from an elevated PowerShell; do not run them from app scripts.
+4. Run:
+
+```powershell
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:v114:responsive-shell
+```
+
+5. Confirm manually that `/dashboard` and `/prescriptions` never render navigation as a large full-width grid and that Dashboard Patient Search remains normal size at 360, 390, 768, 1024, 1366, 1440, and 1920 widths.
+6. Do not create a release tag from this sprint.
+
 v0.11.3 mobile header and Patient File polish next steps:
 
 1. Start the static phone QA server:

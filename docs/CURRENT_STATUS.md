@@ -1,5 +1,15 @@
 # Current Status
 
+v0.11.5 Real App Responsive Shell + Tailscale LAN Login Stability is in progress on branch `integration/v0.11.5-real-app-tailscale-responsive-login`.
+
+v0.11.5 status:
+- Real Next.js app shell now uses desktop sidebar at `>=1200px` and topbar/drawer below that, preventing the navigation from becoming a large full-width grid above content.
+- Dashboard Patient Search topbar control is bounded to normal card/input size and wraps with New Patient, Local Demo, density controls, owner badge, and logout controls.
+- `/prescriptions` inherits the stable app shell and remains safety/reference-only with no commerce or dosing automation wording.
+- Root `<html>` uses `suppressHydrationWarning` to tolerate browser/Tailscale tooling attributes such as `__gcrremoteframetoken`.
+- Tailscale phone dev uses explicit exact host configuration only; `100.64.0.0/10` wildcard/subnet CORS remains rejected.
+- No backend clinical/schema changes were made beyond LAN runtime binding/configuration.
+
 v0.11.3 Mobile Header + Patient File Polish is in progress on branch `ui/v0.11.3-mobile-header-patient-file-polish`.
 
 v0.11.3 status:

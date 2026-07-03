@@ -51,6 +51,17 @@ function assertConfigThrows(env, messagePart) {
   assert.equal(cors.isCorsOriginAllowed("http://prij-clinic.local:3000", config), true, ".local exact origin allowed");
 }
 
+{
+  const { cors, config } = withConfig({ APP_ENV: "local", CORS_ORIGINS: "http://100.127.4.46:3000" });
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), true, "exact configured Tailscale origin allowed");
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.47:3000", config), false, "unconfigured Tailscale origin rejected");
+}
+
+{
+  const { cors, config } = withConfig({ APP_ENV: "local", CORS_ORIGINS: "http://localhost:3000" });
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), false, "absent Tailscale origin rejected");
+}
+
 for (const cidr of ["192.168.1.0/24", "10.0.0.0/8", "172.16.0.0/12"]) {
   const { cors, config } = withConfig({
     APP_ENV: "local",
@@ -69,9 +80,13 @@ for (const cidr of ["8.8.8.0/24", "1.1.1.0/24", "0.0.0.0/0"]) {
   assertConfigThrows({ APP_ENV: "local", CORS_PRIVATE_CIDRS: cidr }, "CORS private CIDR");
 }
 
+assertConfigThrows({ APP_ENV: "local", CORS_PRIVATE_CIDRS: "100.64.0.0/10" }, "CORS private CIDR");
+
 assertConfigThrows({ APP_ENV: "local", CORS_ORIGINS: "*" }, "Invalid CORS origin");
 assertConfigThrows({ APP_ENV: "production", CORS_PRIVATE_CIDRS: "192.168.1.0/24" }, "forbidden");
 assertConfigThrows({ APP_ENV: "staging", CORS_PRIVATE_CIDRS: "10.0.0.0/8" }, "forbidden");
+assertConfigThrows({ APP_ENV: "staging", CORS_ORIGINS: "http://100.127.4.46:3000" }, "HTTP CORS origin");
+assertConfigThrows({ APP_ENV: "production", CORS_ORIGINS: "http://192.168.1.50:3000" }, "HTTP CORS origin");
 
 {
   const { cors, config } = withConfig({ APP_ENV: "production", CORS_ORIGINS: "https://clinic.example.test" });

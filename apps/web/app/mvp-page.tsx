@@ -391,6 +391,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
               Menu
             </button>
+            <strong className="mobile-topbar-brand">Prij Clinic</strong>
             <div>
               <p className="eyebrow">Clinic operations</p>
               <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>

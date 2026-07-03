@@ -55,6 +55,34 @@ export function isPrivateIpv4(hostname: string) {
   return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
 }
 
+export function isTailscaleOrCgnatIpv4(hostname: string) {
+  const parts = hostname.split(".");
+  if (parts.length !== 4) {
+    return false;
+  }
+
+  const octets = parts.map((part) => {
+    if (!/^\d{1,3}$/.test(part)) {
+      return Number.NaN;
+    }
+
+    if (part.length > 1 && part.startsWith("0")) {
+      return Number.NaN;
+    }
+
+    const value = Number(part);
+    return value >= 0 && value <= 255 ? value : Number.NaN;
+  });
+
+  if (octets.some((octet) => Number.isNaN(octet))) {
+    return false;
+  }
+
+  const first = octets[0] ?? Number.NaN;
+  const second = octets[1] ?? Number.NaN;
+  return first === 100 && second >= 64 && second <= 127;
+}
+
 export function isMdnsLocalHost(hostname: string) {
   const normalized = hostname.toLowerCase();
   if (!normalized.endsWith(".local") || normalized === ".local") {
@@ -83,7 +111,30 @@ export function isSafeDevApiOrigin(origin: string) {
       return false;
     }
 
-    return isLocalhost(hostname) || isPrivateIpv4(hostname) || isMdnsLocalHost(hostname);
+    return isLocalhost(hostname) || isPrivateIpv4(hostname) || isMdnsLocalHost(hostname) || isTailscaleOrCgnatIpv4(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function isSafeConfiguredApiOrigin(origin: string) {
+  if (isDevelopmentRuntime()) {
+    return isSafeDevApiOrigin(origin);
+  }
+
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      url.pathname === "/" &&
+      !url.search &&
+      !url.hash &&
+      !hostname.includes("*")
+    );
   } catch {
     return false;
   }
@@ -92,11 +143,19 @@ export function isSafeDevApiOrigin(origin: string) {
 export function resolveConfiguredLanApiOrigin() {
   const explicitLanOrigin = process.env.NEXT_PUBLIC_LAN_API_ORIGIN?.trim();
   if (explicitLanOrigin) {
-    return isSafeDevApiOrigin(explicitLanOrigin) ? trimTrailingSlash(explicitLanOrigin) : undefined;
+    return isDevelopmentRuntime() && isSafeDevApiOrigin(explicitLanOrigin) ? trimTrailingSlash(explicitLanOrigin) : undefined;
   }
 
   const lanHost = process.env.NEXT_PUBLIC_LAN_DEV_HOST?.trim();
-  if (!lanHost || lanHost.includes("*") || (!isPrivateIpv4(lanHost) && !isMdnsLocalHost(lanHost.toLowerCase()))) {
+  if (!isDevelopmentRuntime()) {
+    return undefined;
+  }
+
+  if (
+    !lanHost ||
+    lanHost.includes("*") ||
+    (!isPrivateIpv4(lanHost) && !isMdnsLocalHost(lanHost.toLowerCase()) && !isTailscaleOrCgnatIpv4(lanHost))
+  ) {
     return undefined;
   }
 
@@ -111,7 +170,7 @@ export function resolveConfiguredLanApiOrigin() {
 
 function resolveConfiguredApiUrl() {
   for (const value of configuredApiUrls()) {
-    if (isSafeDevApiOrigin(value)) {
+    if (isSafeConfiguredApiOrigin(value)) {
       return trimTrailingSlash(value);
     }
   }

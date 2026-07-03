@@ -6,6 +6,18 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.11.5 Real App Tailscale Responsive Login
+
+The real Next.js app shell now keeps desktop navigation in a fixed left rail at `>=1200px` and uses a topbar/drawer below that, including phone widths. Dashboard Patient Search is bounded to normal input/card sizing, and `/prescriptions` starts under the shell without a large navigation panel above it.
+
+For phone testing through the exact Tailscale host:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+```
+
+Open `http://100.127.4.46:3000`; the browser API base is explicitly configured as `http://100.127.4.46:3001`. CORS remains exact-origin only; no wildcard or broad Tailscale subnet is allowed. See `docs/V0_11_5_REAL_APP_TAILSCALE_RESPONSIVE_LOGIN.md`.
+
 ## v0.10.5 LAN CORS Hardening
 
 Branch: `security/v0.10.5-lan-cors-hardening`.

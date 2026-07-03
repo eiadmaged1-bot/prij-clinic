@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.11.5 stabilizes the real app shell and exact Tailscale local profile, but it is not a production mobile, privacy, security, medical-device, or clinical-governance certification.
+- Tailscale phone login still depends on the dev servers running, exact `100.127.4.46` profile variables, Tailscale routing, and local firewall allowance.
+- Broad `100.64.0.0/10` CORS, wildcard origins, public CIDRs, and HTTP LAN origins in staging/production remain intentionally unsupported.
+- Manual phone QA is still required because automated tests cannot validate the physical phone browser and network path from this session.
+
 - v0.11.3 is a static HTML mobile polish sprint only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, backend behavior, or security posture.
 - Patient File tab clipping was fixed in the generated static lab, but physical phone QA still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall allowance.
 - The mobile header and Patient File polish do not add backend preferences, API calls, real auth, real patient data, medication dosing, AI diagnosis, AI prescribing, commerce behavior, schema changes, CORS changes, image metadata changes, or a release tag.

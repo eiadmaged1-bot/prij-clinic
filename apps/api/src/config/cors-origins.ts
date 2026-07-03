@@ -28,7 +28,7 @@ function isStrictEnvironment(environment: RuntimeEnvironment) {
   return environment === "production" || environment === "staging";
 }
 
-function normalizeOrigin(origin: string) {
+function normalizeOrigin(origin: string, environment: RuntimeEnvironment) {
   const value = origin.trim();
   if (!value || value === "*" || value.includes("*")) {
     throw new Error(`Invalid CORS origin: ${origin}`);
@@ -44,6 +44,10 @@ function normalizeOrigin(origin: string) {
     url.hash
   ) {
     throw new Error(`Invalid CORS origin: ${origin}`);
+  }
+
+  if (isStrictEnvironment(environment) && url.protocol === "http:") {
+    throw new Error(`HTTP CORS origin is forbidden in ${environment}: ${origin}`);
   }
 
   return url.origin;
@@ -142,7 +146,7 @@ function parseExactOrigins(environment: RuntimeEnvironment) {
     return new Set(defaultDevelopmentOrigins);
   }
 
-  return new Set(values.map(normalizeOrigin));
+  return new Set(values.map((origin) => normalizeOrigin(origin, environment)));
 }
 
 function parsePrivateCidrs(environment: RuntimeEnvironment) {
