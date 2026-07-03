@@ -1,5 +1,39 @@
 # Next Steps
 
+v0.10.9 schema integrity remediation next steps:
+
+1. Keep `QueueTicket.queueDate` uniqueness on `[branchId, queueDate, queueNumber]`; do not return to `checkedInAt` uniqueness.
+2. Keep `Encounter.branchId` required and resolved from linked patient/branch context.
+3. For any future legacy local DB, run the dry-run first:
+
+```powershell
+npm run db:v109:queue-duplicates:dry-run
+```
+
+4. Apply only in local/dev/test after reviewing the exact ticket plan:
+
+```powershell
+$env:APP_ENV="local"
+npm run db:v109:queue-duplicates:apply
+npm run db:v109:queue-migration-ready
+```
+
+5. Continue using the v0.10.9 test list before merging schema-integrity work:
+
+```powershell
+npm run test:db:queue-date
+npm run test:db:encounter-void
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:security:image-metadata
+npm run test:security:document-upload
+npm run typecheck
+npm run build
+npm run test:security:ci
+npm run test:security:expanded
+npm run test:accounts:rbac
+```
+
 v0.10.5 LAN CORS hardening next steps:
 
 1. Prefer explicit local LAN profiles for phone testing:

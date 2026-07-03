@@ -19,6 +19,10 @@ const appEnv = process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "
 const isProduction = appEnv === "production";
 const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA !== "false";
 
+function toUtcDateOnly(input = new Date()) {
+  return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+}
+
 if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true")) {
   throw new Error("Production seed refuses demo data. Set SEED_DEMO_DATA=false and SEED_DEMO_OWNER=false.");
 }
@@ -1985,14 +1989,17 @@ async function main() {
   });
 
   if (!existingTicket) {
+    const checkedInAt = new Date();
     await prisma.queueTicket.create({
       data: {
         branchId: mainBranch.id,
         patientId: demoPatientA.id,
         appointmentId: demoAppointment.id,
         queueNumber: 1,
+        queueDate: toUtcDateOnly(checkedInAt),
         status: "waiting",
-        priority: "routine"
+        priority: "routine",
+        checkedInAt
       }
     });
   }

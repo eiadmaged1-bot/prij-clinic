@@ -12,6 +12,7 @@ import {
 } from "../auth/reference-scope";
 import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { toUtcDateOnly } from "../queue/queue-date";
 import {
   CreatePatientDto,
   PatientContextAppointmentDto,
@@ -276,7 +277,10 @@ export class PatientsService {
 
   async createEncounter(id: string, dto: PatientContextEncounterDto, user: AuthUser) {
     const patient = await this.get(id, user);
-    const branchId = patient.branchId ?? (await this.resolveBranchId(user));
+    const branchId = patient.branchId;
+    if (!branchId) {
+      throw new BadRequestException("Patient branch is required to create an encounter.");
+    }
     await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId: id, requireDoctorScope: true });
     const encounter = await this.prisma.encounter.create({
       data: {
@@ -694,10 +698,6 @@ function toDateTime(value?: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function toUtcDateOnly(input = new Date()): Date {
-  return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
 }
 
 function isUniqueViolation(error: unknown) {

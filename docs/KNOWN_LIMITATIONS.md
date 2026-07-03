@@ -1,5 +1,11 @@
 # Known Limitations
 
+- v0.10.9 confirms local schema integrity remediation for the configured DB only; it is not a production data-retention, privacy, or clinical-governance signoff.
+- The v0.10.9 duplicate remediation script is local/dev/test guarded and should not be run against staging or production.
+- The configured local DB already had the expected legacy duplicate resolved before this run, so the apply script was not rerun in this session.
+- `_prisma_migrations` contains a successful schema-hardening row and an older unfinished local row for the same migration name; deploy reports no pending migrations, but this local history should be reviewed before treating it as a production migration pattern.
+- Existing warnings remain: AI routes are mock/draft-only, broad authenticated routes may not have denied-role assertions, and doctor patient reads are branch-scoped because patient-to-doctor assignment is not modeled.
+
 - v0.10.5 hardens LAN development profiles but does not certify production hosting, privacy compliance, medical-device behavior, or clinical governance.
 - LAN testing still depends on same-Wi-Fi routing, local firewall rules, and correctly configured explicit origins.
 - `.local` profiles require working mDNS/Bonjour resolution on each device.

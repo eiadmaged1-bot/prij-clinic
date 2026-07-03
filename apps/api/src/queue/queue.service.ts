@@ -6,6 +6,7 @@ import { assertCanReferenceAppointment, assertCanReferencePatient } from "../aut
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto } from "./dto";
+import { toUtcDateOnly } from "./queue-date";
 
 @Injectable()
 export class QueueService {
@@ -184,10 +185,6 @@ export class QueueService {
 
     return branch.id;
   }
-}
-
-function toUtcDateOnly(input = new Date()): Date {
-  return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
 }
 
 function isUniqueViolation(error: unknown) {

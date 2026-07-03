@@ -1,5 +1,16 @@
 # Current Status
 
+v0.10.9 Schema Integrity Compile + Migration Remediation is in progress on branch `fix/v0.10.9-schema-integrity-compile-and-migration`.
+
+v0.10.9 status:
+- Queue ticket creation uses UTC date-only `queueDate` values, and seeded demo queue tickets now set `checkedInAt` plus `queueDate` explicitly.
+- Encounter creation keeps the required `branchId` from patient branch context and fails safely if branch context is missing.
+- Raw-SQL local remediation scripts were added for legacy duplicate queue tickets before/around the queue-date migration boundary.
+- The configured local DB currently has no duplicate queue groups; ticket `9fb69f14-399a-41d9-b944-d88991e16bee` remains queue `1`, and ticket `61cbcf2e-136f-4d2f-8a3b-014dac6ece3b` is preserved at queue `10`.
+- `npm run prisma:migrate:deploy` reports no pending migrations; schema hardening has a successful local migration row finished at `2026-07-03T09:12:53.515Z`.
+- No DB reset, queue-ticket delete, table drop, migration guard bypass, schema weakening, release tag, real patient data, or production medical claim was added.
+- Requested DB/API/security/type/build tests passed locally; see `docs/V0_10_9_SCHEMA_INTEGRITY_REMEDIATION.md`.
+
 v0.10.5 LAN CORS Hardening is in progress on branch `security/v0.10.5-lan-cors-hardening`.
 
 v0.10.5 status:
