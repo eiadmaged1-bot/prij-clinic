@@ -7,11 +7,14 @@ import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIc
 import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
 import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
+import { MedicationSafetyTerminal } from "../../../components/medications/MedicationSafetyTerminal";
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
+import { searchMedications, type MedicationResult } from "@/lib/medications";
 
 type Patient = {
   id: string;
@@ -100,6 +103,7 @@ const tabs: TabConfig[] = [
   { key: "medical", label: "Medical", icon: "doctor", empty: "Medical history and clinical context appear here.", permissions: ["encounter.read", "prescription.read", "pregnancy.read", "patient_medications.read"] },
   { key: "history-sheet", label: "History Sheet", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "care-assist", label: "Care Assist", icon: "ai", empty: "Completeness and safety review prompts appear here.", permissions: ["care_assist.read", "care_assist.evaluate"] },
+  { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
   { key: "clinical", label: "Clinical", icon: "encounter", empty: "Clinical workflow shortcuts appear here.", permissions: ["encounter.read", "encounter.create"] },
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
@@ -264,10 +268,10 @@ export default function PatientFilePage() {
           </div>
         </div>
         <div className="patient-primary-actions">
-          <Link className="button large" href={patient ? `/doctor/visit?patientId=${patient.id}` : "/patients"}>
+          <button className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
             <ThreeDMedicalIcon name="encounter" size="sm" />
-            New Encounter
-          </Link>
+            Start Visit
+          </button>
           <Link className="button secondary large" href="/calendar">
             <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
             New Appointment
@@ -318,6 +322,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "care-assist" ? <CareAssistPanel patientId={patient.id} historySheetId={String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined} prescriptionId={String((related.prescriptions ?? [])[0]?.id ?? "") || undefined} encounterId={String((related.visits ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((related.orders ?? [])[0]?.id ?? "") || undefined} /> : null}
+          {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={() => window.location.reload()} /> : null}
           {active.key === "clinical" ? <ClinicalPanel patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "print-packet" ? <PrintPacketPanel patient={patient} related={related} timelineItems={timelineItems} /> : null}
@@ -341,7 +346,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
+          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "doctor-visit" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -452,7 +457,7 @@ function MedicalPanel({ patient, related }: { patient: Patient; related: Record<
 
 function ClinicalPanel({ patient, visits }: { patient: Patient; visits: GynecologyVisit[] }) {
   const cards: Array<[string, string, string, IconName]> = [
-    [`/doctor/visit?patientId=${patient.id}`, "Start Visit", "Open the guided visit workflow for doctor-authored notes.", "encounter"],
+    [`/patients/${patient.id}`, "Start Visit", "Open the guided visit workflow from the Doctor Visit tab.", "encounter"],
     ["/protocol-atlas", "Protocol Atlas", "Search verified local protocol summaries when clinically appropriate.", "ai"],
     ["/calculators", "Calculators", "Use deterministic calculator tools with doctor review.", "investigations"],
     ["/guidelines", "Guideline Center", "Search local evidence-library content with citations.", "reports"]
@@ -476,6 +481,221 @@ function ClinicalPanel({ patient, visits }: { patient: Patient; visits: Gynecolo
       </section>
       <GynecologyWorkspace patient={patient} visits={visits} />
     </>
+  );
+}
+
+function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void }) {
+  const [visit, setVisit] = useState<DoctorVisitState | null>(null);
+  const [status, setStatus] = useState("Open or start a visit.");
+  const [selectedMedication, setSelectedMedication] = useState<MedicationResult | null>(null);
+  const [hoveredMedication, setHoveredMedication] = useState<MedicationResult | null>(null);
+  const [medicationQuery, setMedicationQuery] = useState("");
+  const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
+  const [selectedInvestigation, setSelectedInvestigation] = useState<ReferenceResult | null>(null);
+  const [hint, setHint] = useState("");
+  const encounterId = String(visit?.encounter?.id ?? "");
+  const latestHistorySheetId = String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined;
+  const terminalMedication = hoveredMedication ?? selectedMedication;
+
+  useEffect(() => {
+    void getCurrentDoctorVisit(patient.id)
+      .then((data) => {
+        setVisit(data);
+        setStatus(data.encounter ? "Draft visit open." : "No active draft visit.");
+      })
+      .catch(() => setStatus("Doctor visit requires clinical access."));
+  }, [patient.id]);
+
+  useEffect(() => {
+    if (!medicationQuery.trim()) {
+      setMedicationResults([]);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      void searchMedications(medicationQuery)
+        .then((data) => setMedicationResults((data.results ?? []).filter((row) => row.genericName || row.type === "generic_medication").slice(0, 8)))
+        .catch(() => setMedicationResults([]));
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [medicationQuery]);
+
+  async function startVisit() {
+    setStatus("Starting visit");
+    try {
+      const data = await startDoctorVisit(patient.id);
+      setVisit(data);
+      setStatus("Draft visit open.");
+    } catch {
+      setStatus("Could not start visit. Check clinical role and permissions.");
+    }
+  }
+
+  async function saveEncounter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!encounterId) return;
+    const payload = values(event.currentTarget, ["chiefComplaint", "historyText", "examText", "assessmentText", "planText"]) as Record<string, string>;
+    await updateDoctorVisit(patient.id, encounterId, payload);
+    setStatus("Encounter draft saved.");
+    setVisit(await getCurrentDoctorVisit(patient.id));
+  }
+
+  async function addPrescription(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!encounterId || !selectedMedication) return;
+    const form = event.currentTarget;
+    const payload = values(form, ["instructions"]);
+    const genericName = selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName ?? "Generic medication";
+    await submitVisitAction(patient.id, "prescriptions", {
+      encounterId,
+      items: [{
+        medicationName: genericName,
+        medicationGenericId: selectedMedication.type === "generic_medication" ? selectedMedication.id : undefined,
+        instructions: payload.instructions
+      }]
+    });
+    setStatus("Prescription draft updated with generic medication.");
+    setVisit(await getCurrentDoctorVisit(patient.id));
+    form.reset();
+  }
+
+  async function addInvestigation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!encounterId || !selectedInvestigation) return;
+    const payload = values(event.currentTarget, ["instructions"]);
+    await submitVisitAction(patient.id, "investigations", {
+      encounterId,
+      priority: "routine",
+      items: [{ category: selectedInvestigation.category ?? "laboratory", testName: selectedInvestigation.label, instructions: payload.instructions }]
+    });
+    setStatus("Investigation request added.");
+    setVisit(await getCurrentDoctorVisit(patient.id));
+  }
+
+  async function addFollowUp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!encounterId) return;
+    await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string });
+    setStatus("Follow-up task added.");
+    setVisit(await getCurrentDoctorVisit(patient.id));
+  }
+
+  async function loadPacket() {
+    if (!encounterId) return;
+    setVisit(await getDoctorVisitPacket(patient.id, encounterId));
+    setStatus("Visit packet refreshed.");
+  }
+
+  return (
+    <section className="panel doctor-visit-flow">
+      <div className="section-heading">
+        <div>
+          <h2>Doctor Visit Flow</h2>
+          <p className="muted">History, Care Assist, encounter draft, generic prescription, investigations, follow-up, and print packet.</p>
+        </div>
+        <button className="button" type="button" onClick={() => void startVisit()}>Start Visit</button>
+      </div>
+      <div className="workflow-band">
+        {(visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Print Packet"]).map((step) => <span key={step}>{step}</span>)}
+      </div>
+      <p className="muted">{status}</p>
+      {!encounterId ? <p className="warning-text">Start a visit before adding encounter, prescription, investigation, or follow-up items.</p> : null}
+
+      <div className="doctor-friendly-grid">
+        <section className="panel">
+          <h3>History</h3>
+          <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload) => { await submitVisitAction(patient.id, endpoint, payload); onReload(); }} status={status} />
+        </section>
+        <CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} />
+      </div>
+
+      <form className="panel form-grid" onSubmit={(event) => void saveEncounter(event)}>
+        <div className="section-heading"><h3>Encounter Draft</h3><span className="badge warning">Doctor review required</span></div>
+        <label>Chief complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label>
+        <label>HPI<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
+        <label>Examination notes<textarea name="examText" defaultValue={String(visit?.encounter?.examText ?? "")} /></label>
+        <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
+        <label>Doctor plan<textarea name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
+        <button className="button" type="submit" disabled={!encounterId}>Save draft</button>
+      </form>
+
+      <div className="doctor-friendly-grid">
+        <form className="panel form-grid" onSubmit={(event) => void addPrescription(event)}>
+          <div className="section-heading"><h3>Prescription Draft</h3><span className="badge warning">Generic-first</span></div>
+          <label>Search generic medication<input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Search generic name or class" /></label>
+          <div className="data-list">
+            {medicationResults.map((row) => (
+              <button className="data-row" key={`${row.type}-${row.id}`} type="button" onClick={() => setSelectedMedication(row)} onFocus={() => setHoveredMedication(row)} onMouseEnter={() => setHoveredMedication(row)} onMouseLeave={() => setHoveredMedication(null)}>
+                <strong>{row.genericName ?? row.brandName ?? row.tradeName ?? "Generic medication"}</strong>
+                <span className="badge">{row.familyName ?? row.family ?? row.className ?? "Generic visible"}</span>
+                {row.tradeName || row.brandName ? <span className="muted">Trade/search match: {row.tradeName ?? row.brandName}</span> : null}
+              </button>
+            ))}
+          </div>
+          {selectedMedication ? <p className="notice">Selected generic: {selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName}</p> : null}
+          <label>Manual doctor instructions<textarea name="instructions" placeholder="Manual instructions only" /></label>
+          <button className="button" type="submit" disabled={!encounterId || !selectedMedication}>Add generic medication to draft</button>
+          <p className="muted">Dose, frequency, and duration are not auto-filled.</p>
+        </form>
+        <MedicationSafetyTerminal medication={terminalMedication} title="Medication Safety Terminal" />
+      </div>
+
+      <div className="doctor-friendly-grid">
+        <form className="panel form-grid" onSubmit={(event) => void addInvestigation(event)}>
+          <div className="section-heading"><h3>Investigations</h3><span className="badge">Request only</span></div>
+          <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={setSelectedInvestigation} />
+          <label>Clinical reason<textarea name="instructions" /></label>
+          <button className="button" type="submit" disabled={!encounterId || !selectedInvestigation}>Add requested investigation</button>
+        </form>
+        <section className="panel">
+          <h3>Clinical Note Terminal</h3>
+          <p className="muted">Doctor review required. Notes stay here unless inserted into a draft field by the doctor.</p>
+          <div className="form-actions">
+            <button className="button secondary" type="button" onClick={() => setHint("Doctor review required. No automated diagnosis is generated. Consider documenting differential considerations manually if clinically relevant.")}>Show clinical considerations</button>
+            <button className="button secondary" type="button" onClick={() => setHint("Doctor review required. Medication options are not generated from unsourced safety data in this build.")}>Show medication options for review</button>
+            <button className="button secondary" type="button" onClick={() => setHint("Doctor review required. No saved doctor-written dosing template is available.")}>Show dosing note from saved template</button>
+            <button className="button secondary" type="button" onClick={() => setHint("")}>Dismiss note</button>
+          </div>
+          {hint ? <p className="notice">{hint}</p> : <p className="muted">No note selected.</p>}
+          <button className="button" type="button" disabled={!hint} onClick={() => setStatus("Selected note remains side-panel only until a draft insertion target is chosen.")}>Insert selected note into draft</button>
+        </section>
+      </div>
+
+      <form className="panel form-grid" onSubmit={(event) => void addFollowUp(event)}>
+        <div className="section-heading"><h3>Follow-up</h3><span className="badge">Manual task</span></div>
+        <label>Follow-up date<input name="dueAt" type="date" /></label>
+        <label>Task title<input name="title" placeholder="Follow-up visit" /></label>
+        <label>Note<textarea name="note" /></label>
+        <button className="button" type="submit" disabled={!encounterId}>Add follow-up task</button>
+      </form>
+
+      <section className="panel printable-summary">
+        <div className="section-heading no-print">
+          <h3>Print Packet</h3>
+          <div className="form-actions">
+            <button className="button secondary" type="button" disabled={!encounterId} onClick={() => void loadPacket()}>Refresh packet</button>
+            <button className="button" type="button" disabled={!encounterId} onClick={() => window.print()}>Print packet</button>
+          </div>
+        </div>
+        <VisitPacketPreview visit={visit} patient={patient} />
+      </section>
+    </section>
+  );
+}
+
+function VisitPacketPreview({ visit, patient }: { visit: DoctorVisitState | null; patient: Patient }) {
+  const prescriptions = visit?.prescriptions ?? [];
+  const orders = visit?.investigationOrders ?? [];
+  const followUps = visit?.followUps ?? [];
+  return (
+    <div className="print-packet">
+      <h2>{patient.firstName} {patient.lastName}</h2>
+      <p>File {patient.medicalRecordNumber} | Doctor review required</p>
+      <section><h3>Encounter</h3><p>{String(visit?.encounter?.chiefComplaint ?? "No chief complaint saved.")}</p></section>
+      <section><h3>History</h3><p>{String(visit?.historySheet?.chiefComplaint ?? "No history sheet summary saved.")}</p></section>
+      <section><h3>Prescriptions</h3>{prescriptions.length ? prescriptions.map((prescription, index) => <p key={String(prescription.id ?? index)}>{String((prescription.items as Record<string, unknown>[] | undefined)?.map((item) => item.genericName ?? item.medicationName).join(", ") ?? "Generic medication")}</p>) : <p>No prescription draft in this visit.</p>}</section>
+      <section><h3>Requested investigations</h3>{orders.length ? orders.map((order, index) => <p key={String(order.id ?? index)}>{String((order.items as Record<string, unknown>[] | undefined)?.map((item) => item.testName).join(", ") ?? "Investigation request")}</p>) : <p>No investigation requests in this visit.</p>}</section>
+      <section><h3>Follow-up</h3>{followUps.length ? followUps.map((task, index) => <p key={String(task.id ?? index)}>{String(task.title ?? "Follow-up")} {String(task.dueAt ?? "").slice(0, 10)}</p>) : <p>No follow-up task saved.</p>}</section>
+    </div>
   );
 }
 
@@ -1581,6 +1801,21 @@ function ActionForm({
 function values(form: HTMLFormElement, keys: string[]) {
   const formData = new FormData(form);
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "").trim()]).filter(([, value]) => value));
+}
+
+async function submitVisitAction(patientId: string, endpoint: string, payload: Record<string, unknown>) {
+  const token = sessionStorage.getItem("prijClinicToken");
+  const response = await fetch(`${getApiBaseUrl()}/patients/${patientId}/${endpoint}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!response.ok) throw new Error("Could not save visit action.");
+  return response.json() as Promise<Record<string, unknown>>;
 }
 
 function formPayload(form: HTMLFormElement, numericFields: Record<string, "number"> = {}) {
