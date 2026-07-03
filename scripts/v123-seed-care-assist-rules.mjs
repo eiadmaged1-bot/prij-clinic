@@ -3,6 +3,12 @@ import { createPrisma } from "./v121-reference-utils.mjs";
 const prisma = createPrisma();
 
 const rules = [
+  rule("MISSING_CHIEF_COMPLAINT", "Missing chief complaint", "DOCUMENTATION_COMPLETENESS", "HISTORY_SHEET", "LOW", ["chiefComplaint"], "Chief complaint is not documented.", "Review chief complaint"),
+  rule("MISSING_HPI", "Missing HPI", "DOCUMENTATION_COMPLETENESS", "HISTORY_SHEET", "LOW", ["historyOfPresentIllness"], "History of present illness is not documented.", "Review HPI"),
+  rule("MISSING_MENSTRUAL_HISTORY", "Missing menstrual history", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "MODERATE", ["menstrualHistory"], "Menstrual history is not documented.", "Review menstrual history"),
+  rule("MISSING_OB_HISTORY", "Missing OB history", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "MODERATE", ["obstetricHistory"], "OB history is not documented.", "Review OB history"),
+  rule("MISSING_CONTRACEPTION_HISTORY", "Missing contraception history", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "LOW", ["contraceptionHistory"], "Contraception history is not documented.", "Review contraception history"),
+  rule("MISSING_PREVIOUS_INVESTIGATIONS", "Missing previous investigations", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "LOW", ["previousInvestigations"], "Previous investigations are not documented.", "Review previous investigations"),
   rule("MISSING_ALLERGY_HISTORY", "Missing allergy history", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "MODERATE", ["allergyHistory"], "Allergy history is not documented. Add the status or note that it was reviewed.", "Review allergy history"),
   rule("MISSING_MEDICATION_HISTORY", "Missing medication history", "HISTORY_COMPLETENESS", "HISTORY_SHEET", "MODERATE", ["medicationHistory"], "Medication history is not documented. Add current/past medication entries or note that it was reviewed.", "Review medication history"),
   rule("MISSING_PREGNANCY_STATUS_BEFORE_PRESCRIPTION", "Missing pregnancy status before prescription safety review", "PREGNANCY_SAFETY", "PRESCRIPTION", "HIGH", ["pregnancyStatus"], "Pregnancy status is not visible for this prescription safety review. Doctor review required.", "Review pregnancy status"),
@@ -22,6 +28,8 @@ const rules = [
 ];
 
 try {
+  await seedPermissions();
+
   for (const item of rules) {
     await prisma.careAssistRule.upsert({
       where: { code: item.code },
@@ -83,4 +91,39 @@ function rule(code, title, category, appliesTo, severity, missingFields, message
     sourceName: "Prij Clinic v0.12.3 local safety boundary",
     isActive: true
   };
+}
+
+async function seedPermissions() {
+  const permissionKeys = [
+    "care_assist.read",
+    "care_assist.evaluate",
+    "care_assist.decide",
+    "care_assist.manage",
+    "medication_safety_profile.manage"
+  ];
+  const grants = {
+    Owner: permissionKeys,
+    Admin: permissionKeys,
+    Doctor: ["care_assist.read", "care_assist.evaluate", "care_assist.decide"]
+  };
+  const permissionByKey = new Map();
+  for (const key of permissionKeys) {
+    const permission = await prisma.permission.upsert({
+      where: { key },
+      update: { description: `Foundation permission for ${key} access.`, riskLevel: key.includes("manage") ? "high" : "medium" },
+      create: { key, description: `Foundation permission for ${key} access.`, riskLevel: key.includes("manage") ? "high" : "medium" }
+    });
+    permissionByKey.set(key, permission);
+  }
+  for (const [roleName, keys] of Object.entries(grants)) {
+    const role = await prisma.role.findUnique({ where: { name: roleName } });
+    if (!role) continue;
+    for (const key of keys) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_permissionId: { roleId: role.id, permissionId: permissionByKey.get(key).id } },
+        update: {},
+        create: { roleId: role.id, permissionId: permissionByKey.get(key).id }
+      });
+    }
+  }
 }

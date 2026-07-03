@@ -183,6 +183,16 @@ const medicationPermissions = [
 
 permissions.push(...medicationPermissions);
 
+const careAssistPermissions = [
+  "care_assist.read",
+  "care_assist.evaluate",
+  "care_assist.decide",
+  "care_assist.manage",
+  "medication_safety_profile.manage"
+];
+
+permissions.push(...careAssistPermissions);
+
 const workflowSpinePermissions = [
   "investigation.result_read",
   "investigation.result_create",
@@ -281,6 +291,11 @@ const rolePermissionKeys = {
     "medications.safety_check",
     "medications.review_alerts",
     "medications.override_alerts",
+    "care_assist.read",
+    "care_assist.evaluate",
+    "care_assist.decide",
+    "care_assist.manage",
+    "medication_safety_profile.manage",
     "patient_medications.read",
     "patient_medications.write",
     "patient_allergies.read",
@@ -382,6 +397,9 @@ const rolePermissionKeys = {
     "medications.safety_check",
     "medications.review_alerts",
     "medications.override_alerts",
+    "care_assist.read",
+    "care_assist.evaluate",
+    "care_assist.decide",
     "patient_medications.read",
     "patient_medications.write",
     "patient_allergies.read",

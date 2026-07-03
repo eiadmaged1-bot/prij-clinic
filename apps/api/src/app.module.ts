@@ -6,6 +6,7 @@ import { AppointmentsModule } from "./appointments/appointments.module";
 import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
 import { CalculatorsModule } from "./calculators/calculators.module";
+import { CareAssistModule } from "./care-assist/care-assist.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { ConsentTemplatesModule } from "./consent-templates/consent-templates.module";
 import { ClinicDirectoryModule } from "./clinic-directory/clinic-directory.module";
@@ -62,6 +63,7 @@ import { UsersModule } from "./users/users.module";
     PregnancyModule,
     BillingModule,
     CalculatorsModule,
+    CareAssistModule,
     DashboardModule,
     MedicationsModule,
     DrugMarketModule,
