@@ -189,6 +189,8 @@
     "test:v121:reference-baseline": "node scripts/v121-reference-baseline-test.mjs",
     "test:v122:clinical-reference": "node scripts/v122-reference-clinical-catalog-test.mjs",
     "test:v123:care-assist-safety": "node scripts/v123-care-assist-safety-test.mjs",
+    "test:v124:doctor-visit-flow": "node scripts/v124-doctor-visit-flow-test.mjs",
+    "test:v124:clinical-safety-wording": "node scripts/v124-clinical-safety-wording-test.mjs",
     "test:protocol-atlas": "node scripts/protocol-atlas-test.mjs",
     "test:ai-management": "node scripts/ai-management-test.mjs",
     "test:workflow:spine": "node scripts/clinic-workflow-spine-test.mjs",
