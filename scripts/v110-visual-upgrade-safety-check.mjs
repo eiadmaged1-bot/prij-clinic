@@ -100,6 +100,40 @@ const files = [
 ];
 const issues = files.flatMap((file) => findLineIssues(file, readFileSync(file, "utf8")));
 
+const requiredGeneratedChecks = [
+  {
+    file: resolve(root, "ui-export", "index.html"),
+    id: "mobile menu first",
+    pattern: /<header class="mobile-topbar">\s*<button class="button secondary mobile-menu-button"/i
+  },
+  {
+    file: resolve(root, "ui-export", "index.html"),
+    id: "mobile header spacer",
+    pattern: /<span class="mobile-topbar-spacer" aria-hidden="true"><\/span>/i
+  },
+  {
+    file: resolve(root, "ui-export", "assets", "styles.css"),
+    id: "body horizontal overflow guard",
+    pattern: /html,\s*body\s*\{[^}]*max-width:\s*100%;[^}]*overflow-x:\s*hidden;/is
+  },
+  {
+    file: resolve(root, "ui-export", "assets", "styles.css"),
+    id: "tab strip horizontal scroll only",
+    pattern: /\.tabs\s*\{[^}]*width:\s*100%;[^}]*overflow-x:\s*auto;[^}]*white-space:\s*nowrap;/is
+  },
+  {
+    file: resolve(root, "ui-export", "assets", "app.js"),
+    id: "active tab visibility",
+    pattern: /scrollIntoView\(\{\s*behavior:\s*"smooth",\s*block:\s*"nearest",\s*inline:\s*"center"\s*\}\)/i
+  }
+];
+
+for (const check of requiredGeneratedChecks) {
+  if (!existsSync(check.file) || !check.pattern.test(readFileSync(check.file, "utf8"))) {
+    issues.push({ file: check.file, line: 1, id: check.id, text: "Required v0.11.3 mobile polish marker missing." });
+  }
+}
+
 if (issues.length) {
   console.error("v0.11 visual safety check failed:");
   for (const issue of issues) {

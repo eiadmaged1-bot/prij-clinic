@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.11.3 is a static HTML mobile polish sprint only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, backend behavior, or security posture.
+- Patient File tab clipping was fixed in the generated static lab, but physical phone QA still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall allowance.
+- The mobile header and Patient File polish do not add backend preferences, API calls, real auth, real patient data, medication dosing, AI diagnosis, AI prescribing, commerce behavior, schema changes, CORS changes, image metadata changes, or a release tag.
+- Theme switching remains local static preview behavior through `localStorage`; it is not a database-backed user preference system.
+
 - v0.11.2 integrates secure backend/schema hardening with the static visual lab only. It is not a production security, privacy, medical-device, clinical-governance, or release signoff.
 - No backend changes are introduced by the UI import; static HTML remains a local visual lab with no API dependency.
 - Phone LAN QA still requires `npm run design:serve-html`, a physical phone on the same Wi-Fi, reachable LAN routing, and local firewall allowance.
