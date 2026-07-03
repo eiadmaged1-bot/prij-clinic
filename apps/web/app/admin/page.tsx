@@ -11,11 +11,19 @@ type ServiceItem = {
   code: string;
   name: string;
   category: string;
-  price: string;
+  price: string | null;
   currency: string;
   active: boolean;
   costAmount?: string | null;
   doctorShareAmount?: string | null;
+  reviewStatus?: string;
+};
+
+type MedicationReadiness = {
+  officialRows: number;
+  verifiedRows: number;
+  status: string;
+  warning?: string | null;
 };
 
 type SafeUser = {
@@ -42,7 +50,7 @@ const emptyService = {
   code: "",
   name: "",
   category: "Consultation",
-  price: "0",
+  price: "",
   currency: "EGP",
   costAmount: "",
   doctorShareAmount: ""
@@ -53,6 +61,7 @@ export default function AdminPage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [roles, setRoles] = useState<RoleSummary[]>([]);
+  const [medicationReadiness, setMedicationReadiness] = useState<MedicationReadiness | null>(null);
   const [form, setForm] = useState(emptyService);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -76,11 +85,12 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const [summaryResponse, servicesResponse, usersResponse, rolesResponse] = await Promise.all([
+      const [summaryResponse, servicesResponse, usersResponse, rolesResponse, medicationResponse] = await Promise.all([
         fetch(`${getApiBaseUrl()}/admin/control-center`, { credentials: "include", headers }),
         fetch(`${getApiBaseUrl()}/admin/services`, { credentials: "include", headers }),
         fetch(`${getApiBaseUrl()}/admin/users`, { credentials: "include", headers }),
-        fetch(`${getApiBaseUrl()}/admin/roles`, { credentials: "include", headers })
+        fetch(`${getApiBaseUrl()}/admin/roles`, { credentials: "include", headers }),
+        fetch(`${getApiBaseUrl()}/reference/medication-readiness`, { credentials: "include", headers })
       ]);
 
       if ([summaryResponse, servicesResponse, usersResponse, rolesResponse].some((response) => response.status === 401)) {
@@ -94,6 +104,7 @@ export default function AdminPage() {
       setServices(((await servicesResponse.json()) as { services: ServiceItem[] }).services ?? []);
       setUsers(((await usersResponse.json()) as { users: SafeUser[] }).users ?? []);
       setRoles(((await rolesResponse.json()) as { roles: RoleSummary[] }).roles ?? []);
+      if (medicationResponse.ok) setMedicationReadiness((await medicationResponse.json()) as MedicationReadiness);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Unable to load Admin.");
     } finally {
@@ -112,7 +123,7 @@ export default function AdminPage() {
         headers,
         body: JSON.stringify({
           ...form,
-          price: Number(form.price),
+          price: form.price ? Number(form.price) : undefined,
           costAmount: form.costAmount ? Number(form.costAmount) : undefined,
           doctorShareAmount: form.doctorShareAmount ? Number(form.doctorShareAmount) : undefined
         })
@@ -172,7 +183,7 @@ export default function AdminPage() {
           <Metric label="Staff users" value={summary.summary.users ?? "-"} />
           <Metric label="Roles" value={summary.summary.roles ?? "-"} />
           <Metric label="Services" value={summary.summary.services ?? "-"} />
-          <Metric label="Official medication rows" value="8,269" />
+          <Metric label="Official medication rows" value={medicationReadiness?.officialRows ?? "-"} />
         </section>
       ) : null}
 
@@ -193,7 +204,7 @@ export default function AdminPage() {
           ["Clinic Profile", "Clinic name, branch identity, and contact details are planned for a guarded settings flow."],
           ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
           ["Billing Settings", "Service prices, cost placeholders, and doctor share placeholders are active now. Taxes and gateways remain future work."],
-          ["Medication Data Operations", "8,269 official rows are preserved, 1,200 are verified, and 7,069 remain in owner review."],
+          ["Medication Data Operations", medicationReadiness ? `${medicationReadiness.officialRows} official rows, ${medicationReadiness.verifiedRows} verified rows. ${medicationReadiness.warning ?? "Rows remain review-gated."}` : "Medication readiness is reported from the reference API when available."],
           ["Backup and Export Status", "The official medication export and isolated restore drill passed in v0.8.6. Local export files remain ignored."],
           ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
           ["Feature Flags", "AI stays disabled and draft-only. Future flags must remain audited and owner-controlled."],
@@ -231,7 +242,7 @@ export default function AdminPage() {
             </label>
             <label>
               Price
-              <input min="0" onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} required type="number" value={form.price} />
+              <input min="0" onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))} type="number" value={form.price} />
             </label>
             <label>
               Cost placeholder
@@ -258,9 +269,10 @@ export default function AdminPage() {
                   <label>
                     Price
                     <input
-                      defaultValue={String(service.price)}
+                      defaultValue={service.price === null ? "" : String(service.price)}
+                      placeholder={service.price === null ? "Review required" : undefined}
                       onBlur={(event) => {
-                        if (event.target.value !== String(service.price)) {
+                        if (event.target.value !== String(service.price ?? "")) {
                           void updateService(service, { price: event.target.value });
                         }
                       }}

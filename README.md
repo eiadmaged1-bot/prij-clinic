@@ -6,6 +6,23 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.12.1 Clean Local Database Baseline
+
+Use the v0.12.1 commands to inspect, clean, seed reference catalogs, and verify a local/development clinic baseline without fake operational patient data.
+
+```powershell
+npm run db:v121:inventory
+npm run db:v121:baseline:dry-run
+$env:APP_ENV="local"
+npm run db:v121:baseline:apply
+npm run db:v121:verify-clean
+npm run db:v121:medications:ready
+```
+
+The cleanup preserves users, roles, permissions, owner/admin accounts, branches, audit logs, migrations, guideline/protocol rows, medication/drug-market reference rows, and reference catalogs. Generated reports are written under ignored `storage/local-db-reports/`.
+
+Medication data is not invented. If official medication rows are zero, readiness reports a warning until approved official sources are imported.
+
 ## v0.11.5 Real App Tailscale Responsive Login
 
 The real Next.js app shell now keeps desktop navigation in a fixed left rail at `>=1200px` and uses a topbar/drawer below that, including phone widths. Dashboard Patient Search is bounded to normal input/card sizing, and `/prescriptions` starts under the shell without a large navigation panel above it.

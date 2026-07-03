@@ -1,5 +1,17 @@
 # Current Status
 
+v0.12.1 Clean Database + Real Reference Foundation is in progress on branch `data/v0.12.1-clean-db-reference-foundation`.
+
+v0.12.1 status:
+- Adds guarded local/dev/test database inventory, cleanup, baseline, verification, and test scripts for a clean local clinic baseline.
+- Cleanup is dry-run by default and apply is fail-closed outside local/dev/development/test/CI.
+- Cleanup preserves users, roles, permissions, owner/admin accounts, branches, audit logs, migrations, clinical protocols, guidelines, medication/drug-market reference/import tables, investigation catalog, service catalog, operation catalog, and system settings.
+- Adds an operation/procedure catalog for surgical history and expands investigation/service reference foundations.
+- Service catalog rows can be unpriced with `price_review_required`; seeded services do not use fake prices.
+- Medication readiness reports official and verified counts honestly. If official rows are zero, it warns and does not create fake medication rows.
+- Adds authenticated read-only `/reference/investigations`, `/reference/operations`, `/reference/services`, and `/reference/medication-readiness` endpoints.
+- No fake patients, encounters, prescriptions, invoices, appointments, investigation results, medication rows, dosing automation, AI diagnosis, AI prescribing, stock/cart/checkout/buy workflow, CORS weakening, or release tag is added.
+
 v0.12.0 Real App Clinic Workspace Upgrade is in progress on branch `leap/v0.12.0-real-app-clinic-workspace-upgrade`.
 
 v0.12.0 status:

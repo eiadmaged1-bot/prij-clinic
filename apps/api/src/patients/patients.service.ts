@@ -586,6 +586,7 @@ async function resolvePatientInvoiceItems(
     if (item.serviceItemId) {
       const service = await prisma.serviceItem.findFirst({ where: { id: item.serviceItemId, active: true } });
       if (!service) throw new BadRequestException("Selected service is not active or was not found.");
+      if (service.price === null) throw new BadRequestException("Selected service is not priced yet and requires finance review before invoicing.");
       resolved.push({
         serviceItemId: service.id,
         description: item.description?.trim() || service.name,
@@ -605,6 +606,9 @@ async function resolvePatientInvoiceItems(
 }
 
 function invoiceItemCreate(item: PatientInvoiceInputItem) {
+  if (item.unitAmount === undefined) {
+    throw new BadRequestException("Selected service is not priced yet and requires finance review before invoicing.");
+  }
   const unitAmount = money(item.unitAmount);
   return {
     serviceItemId: item.serviceItemId ?? null,

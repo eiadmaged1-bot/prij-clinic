@@ -421,7 +421,7 @@ export class RbacService {
         code: dto.code.trim().toUpperCase(),
         name: dto.name.trim(),
         category: dto.category.trim(),
-        price: money(dto.price),
+        price: dto.price === undefined ? null : money(dto.price),
         currency: (dto.currency || "EGP").trim().toUpperCase(),
         active: dto.active ?? true,
         costAmount: dto.costAmount === undefined ? null : money(dto.costAmount),
@@ -438,7 +438,7 @@ export class RbacService {
       severity: "high",
       metadataJson: {
         code: service.code,
-        price: service.price.toString(),
+        price: service.price?.toString() ?? null,
         currency: service.currency,
         active: service.active,
         hasCostPlaceholder: service.costAmount !== null,
@@ -476,8 +476,8 @@ export class RbacService {
       reason: dto.active === false ? "Service deactivated from admin control center." : undefined,
       metadataJson: {
         changedFields: Object.keys(dto),
-        fromPrice: existing.price.toString(),
-        toPrice: service.price.toString(),
+        fromPrice: existing.price?.toString() ?? null,
+        toPrice: service.price?.toString() ?? null,
         active: service.active,
         hasCostPlaceholder: service.costAmount !== null,
         hasDoctorSharePlaceholder: service.doctorShareAmount !== null

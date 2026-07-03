@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.12.1 creates a local/dev clean-baseline process, not a production deletion, retention, legal, privacy, or clinical-governance policy.
+- Apply cleanup is for local/dev/development/test/CI only and must not be run against staging or production.
+- Full local baseline mode deletes all local operational patient rows; operators must review dry-run output before apply.
+- Service catalog seed rows are unpriced and review-required. Billing rejects unpriced catalog services until finance review adds real prices.
+- Medication reference readiness remains warning-only when official rows are zero. The project must restore/import approved official rows instead of generating medication data.
+- Operation and investigation catalogs are reference names only. They do not provide diagnosis, indication, treatment recommendation, or automated clinical advice.
+
 - v0.12.0 upgrades the real Next.js clinic workspace UI, but it is not production security, privacy, medical-device, or clinical-governance certification.
 - The new v0.12 workspace Playwright spec needs the real app, API, database, migrations, and owner login to be reachable.
 - Physical phone QA remains required for Tailscale browser behavior, firewall routing, touch drawer ergonomics, and real mobile viewport behavior.

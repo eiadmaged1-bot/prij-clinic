@@ -30,6 +30,7 @@ import { QueueModule } from "./queue/queue.module";
 import { RbacModule } from "./rbac/rbac.module";
 import { ReportsModule } from "./reports/reports.module";
 import { ReferralsModule } from "./referrals/referrals.module";
+import { ReferenceModule } from "./reference/reference.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -54,6 +55,7 @@ import { UsersModule } from "./users/users.module";
     ReportsModule,
     PatientDocumentsModule,
     ReferralsModule,
+    ReferenceModule,
     PatientTasksModule,
     PatientInternalNotesModule,
     ClinicDirectoryModule,

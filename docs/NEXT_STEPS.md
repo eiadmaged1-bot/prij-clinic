@@ -1,5 +1,39 @@
 # Next Steps
 
+v0.12.1 clean database/reference foundation next steps:
+
+1. Run the baseline sequence:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:v121:inventory
+npm run db:v121:baseline:dry-run
+$env:APP_ENV="local"
+npm run db:v121:baseline:apply
+npm run db:v121:verify-clean
+npm run db:v121:medications:ready
+npm run test:v121:reference-baseline
+```
+
+2. Run preserved app/security checks:
+
+```powershell
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:security:document-upload
+npm run test:v120:no-fake-ui
+npm run typecheck
+npm run build
+```
+
+3. Treat official medication row count `0` as a warning that requires approved source import, not as a reason to seed fake rows.
+4. Keep generated reports under `storage/local-db-reports/` ignored and uncommitted.
+5. Do not create a release tag from this sprint.
+
 v0.12.0 real app clinic workspace next steps:
 
 1. Run the new source and browser checks:

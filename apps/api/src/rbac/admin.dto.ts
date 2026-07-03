@@ -14,10 +14,11 @@ export class CreateServiceItemDto {
   @MaxLength(80)
   category!: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  price!: number;
+  price?: number;
 
   @IsOptional()
   @IsString()

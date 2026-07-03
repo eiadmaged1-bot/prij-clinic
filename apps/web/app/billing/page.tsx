@@ -32,9 +32,10 @@ type ServiceItem = {
   code: string;
   name: string;
   category: string;
-  price: string;
+  price: string | null;
   currency: string;
   active: boolean;
+  reviewStatus?: string;
 };
 
 type Closing = {
@@ -206,7 +207,9 @@ export default function BillingPage() {
             <select name="serviceItemId">
               <option value="">Manual line</option>
               {services.map((service) => (
-                <option key={service.id} value={service.id}>{service.name} - {service.price} {service.currency}</option>
+                <option disabled={service.price === null} key={service.id} value={service.id}>
+                  {service.name} - {service.price === null ? "price review required" : `${service.price} ${service.currency}`}
+                </option>
               ))}
             </select>
           </label>
