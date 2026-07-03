@@ -1,5 +1,35 @@
 # Next Steps
 
+v0.11.0 visual upgrade import next steps:
+
+1. Regenerate the static handoff:
+
+```powershell
+npm run design:export-html
+```
+
+2. Run the visual-import safety scan:
+
+```powershell
+npm run design:v110:safety-check
+```
+
+3. Run mobile static QA:
+
+```powershell
+npm run design:test-mobile-html
+```
+
+4. Start the local static server:
+
+```powershell
+npm run design:serve-html
+```
+
+5. Open the printed LAN URL on a phone connected to the same Wi-Fi and verify Dashboard-first loading, no login gate, hamburger drawer behavior, sidebar navigation, patient file tabs, doctor workspace SOAP tabs, prescription safety-only wording, Drug Market non-commerce behavior, no horizontal scroll, and theme switching.
+6. Do not commit the source ZIP, `.tmp`, generated ZIPs, screenshots, `.env`, storage, uploads, logs, backups, DB files, `test-results`, or `playwright-report`.
+7. Do not create a release tag from this sprint.
+
 v0.10.4 mobile-stable static HTML lab next steps:
 
 1. Regenerate the static handoff:

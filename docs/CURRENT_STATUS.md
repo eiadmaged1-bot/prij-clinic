@@ -1,5 +1,15 @@
 # Current Status
 
+v0.11.0 Visual Upgrade Import is in progress on branch `ui/v0.11.0-visual-upgrade-import`.
+
+v0.11.0 status:
+- Static design reference ZIP inspected: `incoming/visual-upgrade/prij-clinic-visual-upgrade-v0_11.zip`.
+- Visual system imported into `scripts/export-ui-theme-html.mjs`; raw ZIP HTML was not used as an app replacement.
+- Generated static lab keeps Dashboard-first behavior, no login gate, local navigation, mobile drawer, theme switching, patient tabs, and safety-only prescription/drug-market wording.
+- Generated outputs remain `ui-export/index.html`, `ui-export/assets/*`, `docs/design/prij-ui-theme-lab.html`, and `docs/design/prij-mobile-ui-lab.html`.
+- Added `npm run design:v110:safety-check` for generated HTML/CSS/JS safety scanning.
+- No backend, database schema, clinical logic, real auth, API calls, CORS/security hardening, image sanitizer, storage policy, real patient data, medication data, AI diagnosis, AI prescribing, commerce workflow, generated ZIP, screenshot, or release tag is added.
+
 v0.10.4 Mobile-Stable Static HTML Lab is in progress on branch `ui/v0.10.4-mobile-stable-html-lab`.
 
 v0.10.4 status:

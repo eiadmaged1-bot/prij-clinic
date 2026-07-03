@@ -1,5 +1,11 @@
 # Known Limitations
 
+- v0.11.0 imports a visual design system into the static HTML lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, backend behavior, or security posture.
+- The ZIP `incoming/visual-upgrade/prij-clinic-visual-upgrade-v0_11.zip` is a design reference only and must not be committed.
+- v0.11.0 does not add real patient data, medication data, API calls, real authentication, AI diagnosis, AI prescribing, medication dosing instructions, stock/order/cart/checkout behavior, payment behavior, schema changes, backend code changes, or a release tag.
+- Phone testing still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall rules.
+- Generated package zips, screenshots, Playwright reports, test results, storage, uploads, logs, backups, DB files, and environment files remain local artifacts and must not be committed.
+
 - v0.10.4 is a static HTML design lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, or backend behavior.
 - `ui-export/index.html` can be opened directly, but phone testing should use `npm run design:serve-html` because `file://` paths and phone browsers differ from a served static site.
 - LAN phone testing depends on same-Wi-Fi routing and local firewall rules.

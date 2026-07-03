@@ -15,8 +15,22 @@
         <span class="brand-text"><strong>Prij Clinic</strong><span>Static HTML Lab</span></span>
       </div>
       <nav class="nav-group" aria-label="Main sections">
-        <span class="nav-title">Sections</span>
-        <button class="nav-item" type="button" data-section-target="dashboard">Dashboard<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="login-preview">Login Preview<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="patients">Patients<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="patient-file">Patient File<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="doctor-workspace">Doctor Workspace<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="calendar">Calendar<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="queue">Queue<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="prescriptions">Prescriptions<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="investigations">Investigations<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="billing">Billing<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="admin">Admin<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="drug-market">Drug Market<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="guidelines">Guidelines<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="protocol-atlas">Protocol Atlas<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="theme-gallery">Theme Gallery<span aria-hidden="true">&gt;</span></button>
+
+          <span class="nav-group-label">Workspace</span>
+          <button class="nav-item" type="button" data-section-target="dashboard">Dashboard<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="queue">Queue<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="calendar">Calendar<span aria-hidden="true">&gt;</span></button>
+
+          <span class="nav-group-label">Patients</span>
+          <button class="nav-item" type="button" data-section-target="patients">Patients<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="patient-file">Patient File<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="doctor-workspace">Doctor Workspace<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="prescriptions">Prescriptions<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="investigations">Investigations<span aria-hidden="true">&gt;</span></button>
+
+          <span class="nav-group-label">Operations</span>
+          <button class="nav-item" type="button" data-section-target="billing">Billing<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="admin">Admin<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="drug-market">Drug Market<span aria-hidden="true">&gt;</span></button>
+
+          <span class="nav-group-label">Knowledge</span>
+          <button class="nav-item" type="button" data-section-target="guidelines">Guidelines<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="protocol-atlas">Protocol Atlas<span aria-hidden="true">&gt;</span></button>
+
+          <span class="nav-group-label">Preview</span>
+          <button class="nav-item" type="button" data-section-target="login-preview">Login Preview<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="theme-gallery">Theme Gallery<span aria-hidden="true">&gt;</span></button>
+
       </nav>
     </aside>
     <main class="main">
@@ -29,7 +43,7 @@
       </header>
       <section class="top-tools" aria-label="Lab controls">
         <div>
-          <p class="eyebrow">v0.10.4 Mobile-Stable Static HTML Lab</p>
+          <p class="eyebrow">v0.11.0 Visual Upgrade Static HTML Lab</p>
           <p class="muted">One static shell. No API calls, Docker, login, uploads, secrets, or real patient data.</p>
         </div>
         <div class="chip-row" aria-label="Theme switcher">
@@ -127,11 +141,14 @@
 
     </header>
       <section class="notice danger"><div><strong>Doctor approval required.</strong><p>Clinical output here is visual draft content only.</p></div><span class="badge danger">Draft-only</span></section>
+      <section class="tabs soap-tabs" aria-label="SOAP workspace tabs">
+        <button class="tab active" type="button">Subjective</button><button class="tab " type="button">Objective</button><button class="tab " type="button">Assessment</button><button class="tab " type="button">Plan</button>
+      </section>
       <section class="card-grid two">
-        <article class="card"><h2>Complaint</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Exam</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Assessment</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Plan</h2><textarea placeholder="Doctor-authored plan placeholder"></textarea></article>
+        <article class="card status-draft"><h2>Complaint</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card status-draft"><h2>Exam</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card status-blocked"><h2>Assessment</h2><textarea placeholder="Doctor-authored assessment placeholder"></textarea></article>
+        <article class="card status-review"><h2>Plan</h2><textarea placeholder="Doctor-authored plan placeholder"></textarea></article>
       </section></section><section class="section" id="calendar" data-section="calendar" aria-label="Calendar">
 
     <header class="section-header">
