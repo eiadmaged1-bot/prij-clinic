@@ -1,5 +1,15 @@
 # Current Status
 
+v0.11.3 Mobile Header + Patient File Polish is in progress on branch `ui/v0.11.3-mobile-header-patient-file-polish`.
+
+v0.11.3 status:
+- Mobile static HTML header now uses a compact left Menu button, centered Prij Clinic / UI Lab brand, and a right-side spacer to keep the brand visually centered.
+- Patient File mobile tabs now constrain horizontal scrolling to the tab strip, keep first/last tabs readable, and scroll the active tab into view when selected.
+- Patient File mobile hero is more compact, with a smaller PF badge and less oversized `Doctor Workspace` button.
+- Static UI remains API-free and preserves Dashboard-first behavior, Appearance in the mobile drawer, local theme persistence, drawer close after navigation, prescription safety-only content, and non-commerce drug-market wording.
+- No backend, API, database, schema, CORS, image metadata stripping, `QueueTicket.queueDate`, `Encounter.branchId`, real patient data, real auth, medication dosing, AI diagnosis, AI prescribing, commerce wording, or release tag was added.
+- Verification passed: `git diff --check` with line-ending warnings only, `npm run design:export-html`, `npm run design:v110:safety-check`, `npm run design:test-mobile-html`, `npm run test:v093:ui-text`, `npm run typecheck`, and `npm run build`.
+
 v0.11.2 Secure Visual Static Lab Integration is in progress on branch `integration/v0.11.2-secure-visual-static-lab`.
 
 v0.11.2 status:

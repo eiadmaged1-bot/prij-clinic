@@ -387,12 +387,14 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 .nav-item.active::before { content: ""; position: absolute; left: -0.65rem; top: 0.5rem; bottom: 0.5rem; width: 3px; border-radius: 3px; background: var(--brand-mint); }
 .main { min-width: 0; display: grid; align-content: start; gap: 1rem; padding: 1rem; }
 .mobile-topbar {
-  display: none; min-height: var(--topbar-height); align-items: center; justify-content: space-between; gap: 0.75rem;
+  display: none; min-height: var(--topbar-height); align-items: center; grid-template-columns: minmax(68px, 1fr) auto minmax(68px, 1fr); gap: 0.5rem;
   position: sticky; top: 0; z-index: 30; margin: -1rem -1rem 0; padding: calc(0.65rem + env(safe-area-inset-top)) 1rem 0.65rem;
   border-bottom: 1px solid rgb(255 255 255 / 10%); background: var(--brand-strong); color: #eef7f4;
 }
-.mobile-topbar .brand { border: 0; padding: 0; }
+.mobile-topbar .brand { justify-self: center; border: 0; padding: 0; text-align: left; }
 .mobile-topbar .brand-mark { width: 32px; height: 32px; border-radius: var(--radius-sm); }
+.mobile-menu-button { justify-self: start; min-height: 38px; width: auto; padding: 0.5rem 0.72rem; }
+.mobile-topbar-spacer { width: 68px; height: 1px; justify-self: end; }
 .drawer-overlay {
   display: none; position: fixed; inset: 0; z-index: 50; border: 0; background: rgb(7 17 29 / 56%);
 }
@@ -459,8 +461,11 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 }
 .patient-hero p, .patient-hero .eyebrow { color: #eef8fb; }
 .avatar { display: grid; width: 52px; height: 52px; place-items: center; border-radius: var(--radius); background: rgb(255 255 255 / 14%); font-weight: 900; }
-.tabs { display: flex; gap: 0.25rem; overflow-x: auto; padding-bottom: 0; max-width: 100%; border-bottom: 1px solid var(--border); }
-.tab { flex: 0 0 auto; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--muted); padding: 0.65rem 0.9rem; font-weight: 800; white-space: nowrap; }
+.tabs {
+  display: flex; width: 100%; max-width: 100%; min-width: 0; gap: 0.25rem; overflow-x: auto; overflow-y: hidden;
+  padding: 0 0.35rem; border-bottom: 1px solid var(--border); white-space: nowrap; scroll-padding-inline: 0.75rem;
+}
+.tab { flex: 0 0 auto; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--muted); padding: 0.65rem 0.9rem; font-weight: 800; white-space: nowrap; scroll-snap-align: center; }
 .tab.active { border-bottom-color: var(--brand); color: var(--brand-strong); }
 .soap-tabs { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 0.5rem; box-shadow: var(--shadow-sm); }
 .profile-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -473,7 +478,7 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
 .mobile-list { display: none; }
 @media (max-width: 1024px) {
   .app-shell { grid-template-columns: 1fr; }
-  .mobile-topbar { display: flex; }
+  .mobile-topbar { display: grid; }
   .sidebar {
     position: fixed; inset: 0 auto 0 0; z-index: 60; width: min(86vw, 320px); max-width: calc(100vw - 28px);
     transform: translateX(-104%); transition: transform 180ms ease; box-shadow: 24px 0 60px rgb(0 0 0 / 24%);
@@ -490,6 +495,13 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
   .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
   .metric-grid, .card-grid, .card-grid.two, .profile-grid, .schedule-grid { grid-template-columns: 1fr; }
   .button, .chip-button { width: 100%; }
+  .mobile-menu-button { width: auto; }
+  .patient-hero { gap: 0.65rem; padding: 0.85rem; min-height: 0; }
+  .patient-hero .avatar { width: 42px; height: 42px; border-radius: var(--radius-sm); font-size: 0.82rem; }
+  .patient-hero h1 { font-size: 1.55rem; }
+  .patient-hero .button { min-height: 38px; width: fit-content; padding: 0.5rem 0.72rem; justify-self: start; font-size: 0.88rem; }
+  .tabs { padding-inline: 0.75rem; scroll-snap-type: x proximity; }
+  .tab { min-height: 42px; padding: 0.58rem 0.78rem; }
   .login-brand { min-height: 240px; }
   .table-wrap { display: none; }
   .mobile-list { display: grid; gap: 0.8rem; }
@@ -498,6 +510,11 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
   h1 { font-size: 1.75rem; }
   .notice, .panel, .card, .metric, .list-card { padding: 0.85rem; }
   .brand-text strong { font-size: 0.95rem; }
+  .mobile-topbar { grid-template-columns: minmax(60px, 1fr) auto minmax(60px, 1fr); padding-inline: 0.75rem; }
+  .mobile-topbar .brand { gap: 0.5rem; }
+  .mobile-topbar .brand-mark { width: 30px; height: 30px; }
+  .mobile-topbar-spacer { width: 60px; }
+  .mobile-menu-button { min-height: 36px; padding-inline: 0.62rem; }
 }
 `;
 
@@ -548,6 +565,7 @@ const js = String.raw`
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
       tabButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+      button.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       const panel = document.querySelector("[data-tab-panel]");
       if (panel) {
         panel.dataset.tabPanel = button.dataset.tab;
@@ -589,11 +607,12 @@ function htmlDocument(title) {
     </aside>
     <main class="main">
       <header class="mobile-topbar">
+        <button class="button secondary mobile-menu-button" type="button" aria-expanded="false" data-menu-button>Menu</button>
         <div class="brand">
           <span class="brand-mark">P</span>
           <span class="brand-text"><strong>Prij Clinic</strong><span>UI Lab</span></span>
         </div>
-        <button class="button secondary" type="button" aria-expanded="false" data-menu-button>Menu</button>
+        <span class="mobile-topbar-spacer" aria-hidden="true"></span>
       </header>
       ${sections.map((section) => `<section class="section" id="${section.id}" data-section="${section.id}" aria-label="${section.label}">${section.html}</section>`).join("")}
     </main>

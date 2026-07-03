@@ -45,6 +45,7 @@
   tabButtons.forEach((button) => {
     button.addEventListener("click", () => {
       tabButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+      button.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
       const panel = document.querySelector("[data-tab-panel]");
       if (panel) {
         panel.dataset.tabPanel = button.dataset.tab;

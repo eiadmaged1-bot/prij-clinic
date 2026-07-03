@@ -1,5 +1,19 @@
 # Next Steps
 
+v0.11.3 mobile header and Patient File polish next steps:
+
+1. Start the static phone QA server:
+
+```powershell
+npm run design:serve-html
+```
+
+2. On a phone connected to the same Wi-Fi, verify the mobile header has Menu on the left, Prij Clinic / UI Lab centered, and no large theme/settings buttons in the topbar.
+3. Open Patient File and verify Summary is not clipped, Investigations is readable, the active tab stays visible, and only the tab strip scrolls horizontally.
+4. Confirm there is no body-level horizontal page scroll, Appearance remains in the mobile menu, theme switching persists, and the drawer closes after navigation.
+5. Keep future work scoped to static HTML unless a separate backend/security sprint explicitly owns API, database, schema, CORS, storage, or auth changes.
+6. Do not create a release tag from this sprint.
+
 v0.11.2 secure visual static lab integration next steps:
 
 1. Keep backend/security/schema ownership unchanged while using the v0.11.1 static UI output as the visual lab surface.
