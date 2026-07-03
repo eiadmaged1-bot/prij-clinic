@@ -15,6 +15,10 @@ export class PrescriptionItemDto {
   drugMarketVariantId?: string;
 
   @IsOptional()
+  @IsUUID()
+  medicationGenericId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(80)
   dose?: string;

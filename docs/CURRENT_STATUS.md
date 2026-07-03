@@ -276,3 +276,17 @@ Visible experience safety:
 - Patient document storage remains `metadata_only` by default.
 - Local demo file storage is restricted to sanitized output in local/dev/test.
 - Production local patient file storage fails closed.
+# Current Status
+
+v0.12.2 adds clinical reference catalogs and the patient history workspace on top of the v0.12.1 clean reference foundation.
+
+Implemented:
+- Generic medication catalog with 35 seeded non-controlled generic rows.
+- Medication search tags/classes with 26 tags and 26 class/family rows.
+- Controlled generic medication rows are not seeded by default.
+- Investigation catalog has 94 active rows locally after duplicate-name consolidation; total catalog rows are 120.
+- Operation catalog expanded to 55 active rows locally after seed.
+- Patient history sheet backend and patient workspace History Sheet tab.
+- Prescription generic-name selection via `MedicationGeneric`.
+
+Safety boundaries remain active: no real patient data, no trade-name medication catalog, no pricing/inventory/sales wording, no automated dosing, no AI prescribing, and doctor review remains required.

@@ -25,6 +25,10 @@ import {
   PatientContextQueueDto,
   PatientContextReportDto,
   PatientContextUltrasoundDto,
+  PatientHistorySheetDto,
+  PatientInvestigationHistoryDto,
+  PatientMedicationHistoryDto,
+  PatientOperationHistoryDto,
   UpdatePatientDto
 } from "./dto";
 
@@ -136,6 +140,7 @@ export class PatientsService {
       referrals,
       patientTasks,
       patientInternalNotes
+      // v0.12.2 history rows are loaded separately through the history sheet workspace.
     ] = await Promise.all([
       this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { doctor: true } }),
       this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user) } }),
@@ -195,6 +200,147 @@ export class PatientsService {
     });
 
     return { patientId: patient.id, items };
+  }
+
+  async historySheets(id: string, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const [historySheets, operationHistory, medicationHistory, investigationHistory] = await Promise.all([
+      this.prisma.patientHistorySheet.findMany({
+        where: { patientId: id },
+        orderBy: { createdAt: "desc" },
+        include: { operationHistoryItems: true, medicationHistoryItems: true, investigationHistoryItems: true, createdByUser: true, updatedByUser: true }
+      }),
+      this.prisma.patientOperationHistoryItem.findMany({ where: { patientId: id }, orderBy: { createdAt: "desc" } }),
+      this.prisma.patientMedicationHistoryItem.findMany({ where: { patientId: id }, orderBy: { createdAt: "desc" } }),
+      this.prisma.patientInvestigationHistoryItem.findMany({ where: { patientId: id }, orderBy: { createdAt: "desc" } })
+    ]);
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient_history.read",
+      resourceType: "patient",
+      resourceId: patient.id,
+      branchId: patient.branchId,
+      severity: "medium",
+      metadataJson: { sheetCount: historySheets.length }
+    });
+
+    return { historySheets, operationHistory, medicationHistory, investigationHistory };
+  }
+
+  async createHistorySheet(id: string, dto: PatientHistorySheetDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const sheet = await this.prisma.patientHistorySheet.create({
+      data: {
+        patientId: id,
+        title: clean(dto.title) ?? "OB/GYN history sheet",
+        status: clean(dto.status) ?? "draft",
+        chiefComplaint: clean(dto.chiefComplaint),
+        historyOfPresentIllness: clean(dto.historyOfPresentIllness),
+        menstrualHistory: jsonOrNull(dto.menstrualHistory),
+        obstetricHistory: jsonOrNull(dto.obstetricHistory),
+        gynecologicalHistory: jsonOrNull(dto.gynecologicalHistory),
+        contraceptionHistory: jsonOrNull(dto.contraceptionHistory),
+        infertilityHistory: jsonOrNull(dto.infertilityHistory),
+        pastMedicalHistory: jsonOrNull(dto.pastMedicalHistory),
+        allergyHistory: jsonOrNull(dto.allergyHistory),
+        familyHistory: jsonOrNull(dto.familyHistory),
+        socialHistory: jsonOrNull(dto.socialHistory),
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      },
+      include: { operationHistoryItems: true, medicationHistoryItems: true, investigationHistoryItems: true }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_history_sheet.created", resourceType: "patient_history_sheet", resourceId: sheet.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, changedFields: Object.keys(dto) } });
+    return sheet;
+  }
+
+  async updateHistorySheet(id: string, historySheetId: string, dto: PatientHistorySheetDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.assertHistorySheet(id, historySheetId);
+    const sheet = await this.prisma.patientHistorySheet.update({
+      where: { id: historySheetId },
+      data: {
+        ...(dto.title !== undefined ? { title: clean(dto.title) ?? "OB/GYN history sheet" } : {}),
+        ...(dto.status !== undefined ? { status: clean(dto.status) ?? "draft" } : {}),
+        ...(dto.chiefComplaint !== undefined ? { chiefComplaint: clean(dto.chiefComplaint) } : {}),
+        ...(dto.historyOfPresentIllness !== undefined ? { historyOfPresentIllness: clean(dto.historyOfPresentIllness) } : {}),
+        ...(dto.menstrualHistory !== undefined ? { menstrualHistory: jsonOrNull(dto.menstrualHistory) } : {}),
+        ...(dto.obstetricHistory !== undefined ? { obstetricHistory: jsonOrNull(dto.obstetricHistory) } : {}),
+        ...(dto.gynecologicalHistory !== undefined ? { gynecologicalHistory: jsonOrNull(dto.gynecologicalHistory) } : {}),
+        ...(dto.contraceptionHistory !== undefined ? { contraceptionHistory: jsonOrNull(dto.contraceptionHistory) } : {}),
+        ...(dto.infertilityHistory !== undefined ? { infertilityHistory: jsonOrNull(dto.infertilityHistory) } : {}),
+        ...(dto.pastMedicalHistory !== undefined ? { pastMedicalHistory: jsonOrNull(dto.pastMedicalHistory) } : {}),
+        ...(dto.allergyHistory !== undefined ? { allergyHistory: jsonOrNull(dto.allergyHistory) } : {}),
+        ...(dto.familyHistory !== undefined ? { familyHistory: jsonOrNull(dto.familyHistory) } : {}),
+        ...(dto.socialHistory !== undefined ? { socialHistory: jsonOrNull(dto.socialHistory) } : {}),
+        ...(dto.notes !== undefined ? { notes: clean(dto.notes) } : {}),
+        updatedByUserId: user.id
+      },
+      include: { operationHistoryItems: true, medicationHistoryItems: true, investigationHistoryItems: true }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_history_sheet.updated", resourceType: "patient_history_sheet", resourceId: sheet.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, changedFields: Object.keys(dto) } });
+    return sheet;
+  }
+
+  async createOperationHistory(id: string, dto: PatientOperationHistoryDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.assertHistorySheet(id, dto.historySheetId);
+    const catalog = dto.operationCatalogItemId ? await this.prisma.operationCatalogItem.findFirst({ where: { id: dto.operationCatalogItemId, isActive: true } }) : null;
+    if (dto.operationCatalogItemId && !catalog) throw new BadRequestException("Operation catalog item was not found.");
+    const item = await this.prisma.patientOperationHistoryItem.create({
+      data: {
+        patientId: id,
+        historySheetId: dto.historySheetId ?? null,
+        operationCatalogItemId: catalog?.id ?? null,
+        operationNameSnapshot: catalog?.name ?? dto.operationNameSnapshot.trim(),
+        approximateDate: dto.approximateDate ? new Date(dto.approximateDate) : null,
+        year: dto.year ?? null,
+        notes: clean(dto.notes)
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_operation_history.created", resourceType: "patient_operation_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(catalog) } });
+    return item;
+  }
+
+  async createMedicationHistory(id: string, dto: PatientMedicationHistoryDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.assertHistorySheet(id, dto.historySheetId);
+    const generic = dto.medicationGenericId ? await this.prisma.medicationGeneric.findFirst({ where: { id: dto.medicationGenericId, isActive: true, isControlled: false } }) : null;
+    if (dto.medicationGenericId && !generic) throw new BadRequestException("Generic medication reference was not found or is not available for normal selection.");
+    const item = await this.prisma.patientMedicationHistoryItem.create({
+      data: {
+        patientId: id,
+        historySheetId: dto.historySheetId ?? null,
+        medicationGenericId: generic?.id ?? null,
+        genericNameSnapshot: generic?.genericName ?? dto.genericNameSnapshot.trim(),
+        familyNameSnapshot: generic?.familyName ?? clean(dto.familyNameSnapshot),
+        currentOrPast: clean(dto.currentOrPast) ?? "past",
+        notes: clean(dto.notes)
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_medication_history.created", resourceType: "patient_medication_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(generic) } });
+    return item;
+  }
+
+  async createInvestigationHistory(id: string, dto: PatientInvestigationHistoryDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.assertHistorySheet(id, dto.historySheetId);
+    const catalog = dto.investigationCatalogItemId ? await this.prisma.investigationCatalogItem.findFirst({ where: { id: dto.investigationCatalogItemId, active: true } }) : null;
+    if (dto.investigationCatalogItemId && !catalog) throw new BadRequestException("Investigation catalog item was not found.");
+    const item = await this.prisma.patientInvestigationHistoryItem.create({
+      data: {
+        patientId: id,
+        historySheetId: dto.historySheetId ?? null,
+        investigationCatalogItemId: catalog?.id ?? null,
+        investigationNameSnapshot: catalog?.name ?? dto.investigationNameSnapshot.trim(),
+        context: clean(dto.context) ?? "previous",
+        date: dto.date ? new Date(dto.date) : null,
+        notes: clean(dto.notes)
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_investigation_history.created", resourceType: "patient_investigation_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(catalog) } });
+    return item;
   }
 
   async update(id: string, dto: UpdatePatientDto, user: AuthUser) {
@@ -536,6 +682,13 @@ export class PatientsService {
     }
     return fetus;
   }
+
+  private async assertHistorySheet(patientId: string, historySheetId?: string) {
+    if (!historySheetId) return null;
+    const sheet = await this.prisma.patientHistorySheet.findFirst({ where: { id: historySheetId, patientId } });
+    if (!sheet) throw new NotFoundException("History sheet not found.");
+    return sheet;
+  }
 }
 
 function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string) {
@@ -647,9 +800,14 @@ function clean(value?: string) {
   return value?.trim() || null;
 }
 
+function jsonOrNull(value?: Record<string, unknown>): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  if (!value || !Object.keys(value).length) return Prisma.JsonNull;
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 async function resolvePrescriptionItem(
   prisma: PrismaService,
-  item: { medicationName: string; medicationProductId?: string; drugMarketVariantId?: string; dose?: string; frequency?: string; instructions?: string }
+  item: { medicationName: string; medicationProductId?: string; drugMarketVariantId?: string; medicationGenericId?: string; dose?: string; frequency?: string; instructions?: string }
 ) {
   const base = {
     medicationName: item.medicationName.trim(),
@@ -657,6 +815,23 @@ async function resolvePrescriptionItem(
     frequency: clean(item.frequency),
     instructions: clean(item.instructions)
   };
+
+  if (item.medicationGenericId) {
+    const generic = await prisma.medicationGeneric.findFirst({ where: { id: item.medicationGenericId, isActive: true, isControlled: false } });
+    if (!generic) throw new BadRequestException("Generic medication reference was not found or is not available for normal selection.");
+    return {
+      ...base,
+      medicationGenericId: generic.id,
+      medicationProductId: null,
+      drugMarketVariantId: null,
+      medicationName: generic.genericName,
+      genericName: generic.genericName,
+      brandName: null,
+      tradeName: null,
+      strengthText: null,
+      dosageForm: null
+    };
+  }
 
   if (item.drugMarketVariantId) {
     const variant = await prisma.drugMarketVariant.findFirst({

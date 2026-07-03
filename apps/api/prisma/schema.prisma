@@ -75,6 +75,8 @@ model User {
   signedEncounters                   Encounter[]                 @relation("EncountersSignedBy")
   voidedEncounters                   Encounter[]                 @relation("EncountersVoidedBy")
   doctorPrescriptions                Prescription[]              @relation("PrescriptionsDoctor")
+  createdPatientHistorySheets        PatientHistorySheet[]       @relation("PatientHistorySheetsCreatedBy")
+  updatedPatientHistorySheets        PatientHistorySheet[]       @relation("PatientHistorySheetsUpdatedBy")
   doctorInvestigationOrders          InvestigationOrder[]        @relation("InvestigationOrdersDoctor")
   uploadedReports                    Report[]                    @relation("ReportsUploadedBy")
   reviewedReports                    Report[]                    @relation("ReportsReviewedBy")
@@ -184,6 +186,10 @@ model Patient {
   queueTickets           QueueTicket[]
   encounters             Encounter[]
   prescriptions          Prescription[]
+  historySheets          PatientHistorySheet[]
+  operationHistoryItems  PatientOperationHistoryItem[]
+  medicationHistoryItems PatientMedicationHistoryItem[]
+  investigationHistoryItems PatientInvestigationHistoryItem[]
   investigationOrders    InvestigationOrder[]
   reports                Report[]
   investigationResults   InvestigationResult[]
@@ -458,12 +464,94 @@ model PrescriptionItem {
   tradeName           String?
   strengthText        String?
   dosageForm          String?
+  medicationGenericId String? @db.Uuid
 
-  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  prescription       Prescription        @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medicationGeneric  MedicationGeneric?  @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)
 
   @@index([prescriptionId])
   @@index([medicationProductId])
   @@index([drugMarketVariantId])
+  @@index([medicationGenericId])
+}
+
+model MedicationGeneric {
+  id                 String   @id @default(uuid()) @db.Uuid
+  genericName        String
+  normalizedName     String   @unique
+  familyName         String?
+  className          String?
+  pharmacologicClass String?
+  parentClass        String?
+  isControlled       Boolean  @default(false)
+  isAntibiotic       Boolean  @default(false)
+  isActive           Boolean  @default(true)
+  sourceType         String   @default("curated_reference")
+  reviewStatus       String   @default("reviewed")
+  aliases            Json?
+  notes              String?
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
+
+  tags                    MedicationGenericTag[]
+  prescriptionItems       PrescriptionItem[]
+  patientMedicationHistory PatientMedicationHistoryItem[]
+
+  @@index([genericName])
+  @@index([familyName])
+  @@index([className])
+  @@index([pharmacologicClass])
+  @@index([isControlled])
+  @@index([isAntibiotic])
+  @@index([isActive])
+  @@index([reviewStatus])
+}
+
+model MedicationSearchTag {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  normalizedName String   @unique
+  type           String
+  aliases        Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  medications MedicationGenericTag[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+model MedicationGenericTag {
+  medicationGenericId   String   @db.Uuid
+  medicationSearchTagId String   @db.Uuid
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+
+  medication MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  tag        MedicationSearchTag @relation(fields: [medicationSearchTagId], references: [id], onDelete: Cascade)
+
+  @@id([medicationGenericId, medicationSearchTagId])
+  @@index([medicationSearchTagId])
+}
+
+model MedicationClass {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  normalizedName String   @unique
+  parentId       String?  @db.Uuid
+  type           String
+  aliases        Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
+
+  parent   MedicationClass?  @relation("MedicationClassHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children MedicationClass[] @relation("MedicationClassHierarchy")
+
+  @@index([parentId])
+  @@index([type])
+  @@index([isActive])
 }
 
 model DrugFamily {
@@ -1079,6 +1167,8 @@ model InvestigationCatalogItem {
   createdAt  DateTime @default(now()) @db.Timestamptz(3)
   updatedAt  DateTime @updatedAt @db.Timestamptz(3)
 
+  patientInvestigationHistory PatientInvestigationHistoryItem[]
+
   @@index([category])
   @@index([discipline])
   @@index([active])
@@ -1102,6 +1192,8 @@ model OperationCatalogItem {
   createdAt      DateTime @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime @updatedAt @db.Timestamptz(3)
 
+  patientOperationHistory PatientOperationHistoryItem[]
+
   @@index([category])
   @@index([specialty])
   @@index([bodySystem])
@@ -1109,6 +1201,106 @@ model OperationCatalogItem {
   @@index([isSurgical])
   @@index([isActive])
   @@index([reviewStatus])
+}
+
+model PatientHistorySheet {
+  id                       String   @id @default(uuid()) @db.Uuid
+  patientId                String   @db.Uuid
+  title                    String
+  status                   String   @default("draft")
+  chiefComplaint           String?
+  historyOfPresentIllness  String?
+  menstrualHistory         Json?
+  obstetricHistory         Json?
+  gynecologicalHistory     Json?
+  contraceptionHistory     Json?
+  infertilityHistory       Json?
+  pastMedicalHistory       Json?
+  allergyHistory           Json?
+  familyHistory            Json?
+  socialHistory            Json?
+  notes                    String?
+  createdByUserId          String   @db.Uuid
+  updatedByUserId          String?  @db.Uuid
+  createdAt                DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime @updatedAt @db.Timestamptz(3)
+
+  patient                    Patient                           @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdByUser              User                              @relation("PatientHistorySheetsCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  updatedByUser              User?                             @relation("PatientHistorySheetsUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  operationHistoryItems      PatientOperationHistoryItem[]
+  medicationHistoryItems     PatientMedicationHistoryItem[]
+  investigationHistoryItems  PatientInvestigationHistoryItem[]
+
+  @@index([patientId, createdAt])
+  @@index([status])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+}
+
+model PatientOperationHistoryItem {
+  id                     String    @id @default(uuid()) @db.Uuid
+  patientId              String    @db.Uuid
+  historySheetId         String?   @db.Uuid
+  operationCatalogItemId String?   @db.Uuid
+  operationNameSnapshot  String
+  approximateDate        DateTime? @db.Date
+  year                   Int?
+  notes                  String?
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+
+  patient              Patient               @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  historySheet         PatientHistorySheet?  @relation(fields: [historySheetId], references: [id], onDelete: SetNull)
+  operationCatalogItem OperationCatalogItem? @relation(fields: [operationCatalogItemId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([historySheetId])
+  @@index([operationCatalogItemId])
+}
+
+model PatientMedicationHistoryItem {
+  id                    String   @id @default(uuid()) @db.Uuid
+  patientId             String   @db.Uuid
+  historySheetId        String?  @db.Uuid
+  medicationGenericId   String?  @db.Uuid
+  genericNameSnapshot   String
+  familyNameSnapshot    String?
+  currentOrPast         String   @default("past")
+  notes                 String?
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+
+  patient           Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  historySheet      PatientHistorySheet? @relation(fields: [historySheetId], references: [id], onDelete: SetNull)
+  medicationGeneric MedicationGeneric?   @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([historySheetId])
+  @@index([medicationGenericId])
+  @@index([currentOrPast])
+}
+
+model PatientInvestigationHistoryItem {
+  id                         String    @id @default(uuid()) @db.Uuid
+  patientId                  String    @db.Uuid
+  historySheetId             String?   @db.Uuid
+  investigationCatalogItemId String?   @db.Uuid
+  investigationNameSnapshot  String
+  context                    String    @default("previous")
+  date                       DateTime? @db.Date
+  notes                      String?
+  createdAt                  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime  @updatedAt @db.Timestamptz(3)
+
+  patient                  Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  historySheet             PatientHistorySheet?      @relation(fields: [historySheetId], references: [id], onDelete: SetNull)
+  investigationCatalogItem InvestigationCatalogItem? @relation(fields: [investigationCatalogItemId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([historySheetId])
+  @@index([investigationCatalogItemId])
+  @@index([context])
 }
 
 model InvestigationOrder {

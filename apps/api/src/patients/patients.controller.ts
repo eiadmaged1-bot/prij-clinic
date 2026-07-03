@@ -16,6 +16,10 @@ import {
   PatientContextQueueDto,
   PatientContextReportDto,
   PatientContextUltrasoundDto,
+  PatientHistorySheetDto,
+  PatientInvestigationHistoryDto,
+  PatientMedicationHistoryDto,
+  PatientOperationHistoryDto,
   UpdatePatientDto
 } from "./dto";
 import { PatientsService } from "./patients.service";
@@ -47,6 +51,42 @@ export class PatientsController {
   @Permissions("patient.read")
   timeline(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.patients.timeline(id, user);
+  }
+
+  @Get(":id/history-sheets")
+  @Permissions("patient.read")
+  historySheets(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.historySheets(id, user);
+  }
+
+  @Post(":id/history-sheets")
+  @Permissions("encounter.create")
+  createHistorySheet(@Param("id") id: string, @Body() dto: PatientHistorySheetDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createHistorySheet(id, dto, user);
+  }
+
+  @Patch(":id/history-sheets/:historySheetId")
+  @Permissions("encounter.create")
+  updateHistorySheet(@Param("id") id: string, @Param("historySheetId") historySheetId: string, @Body() dto: PatientHistorySheetDto, @CurrentUser() user: AuthUser) {
+    return this.patients.updateHistorySheet(id, historySheetId, dto, user);
+  }
+
+  @Post(":id/operation-history")
+  @Permissions("encounter.create")
+  createOperationHistory(@Param("id") id: string, @Body() dto: PatientOperationHistoryDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createOperationHistory(id, dto, user);
+  }
+
+  @Post(":id/medication-history")
+  @Permissions("encounter.create")
+  createMedicationHistory(@Param("id") id: string, @Body() dto: PatientMedicationHistoryDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createMedicationHistory(id, dto, user);
+  }
+
+  @Post(":id/investigation-history")
+  @Permissions("encounter.create")
+  createInvestigationHistory(@Param("id") id: string, @Body() dto: PatientInvestigationHistoryDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createInvestigationHistory(id, dto, user);
   }
 
   @Post(":id/appointments")

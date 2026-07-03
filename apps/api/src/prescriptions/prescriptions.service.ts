@@ -164,6 +164,25 @@ export class PrescriptionsService {
 
 async function resolvePrescriptionItem(prisma: PrismaService, item: PrescriptionItemDto) {
   const base = toItemCreate(item);
+  if (item.medicationGenericId) {
+    const generic = await prisma.medicationGeneric.findFirst({
+      where: { id: item.medicationGenericId, isActive: true, isControlled: false }
+    });
+    if (!generic) throw new BadRequestException("Generic medication reference was not found or is not available for normal selection.");
+    return {
+      ...base,
+      medicationGenericId: generic.id,
+      medicationProductId: null,
+      drugMarketVariantId: null,
+      medicationName: generic.genericName,
+      genericName: generic.genericName,
+      brandName: null,
+      tradeName: null,
+      strengthText: null,
+      dosageForm: null
+    };
+  }
+
   if (item.drugMarketVariantId) {
     const variant = await prisma.drugMarketVariant.findFirst({
       where: {

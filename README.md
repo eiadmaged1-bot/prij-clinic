@@ -6,6 +6,19 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.12.2 Clinical Reference + History Workspace
+
+v0.12.2 adds generic medication reference lookup, investigation and operation catalog search, structured OB/GYN history sheets, and generic-name prescription selection.
+
+```powershell
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run db:v122:seed:clinical-reference
+npm run test:v122:clinical-reference
+```
+
+Medication reference remains generic-name only: no trade names, brand names, pricing, inventory, stock, sales, dosing automation, AI prescribing, or treatment ranking. Investigation catalog usage is for requests/history only, operation catalog usage is for past surgical history only, and patient history sheets are structured documentation only.
+
 ## v0.12.1 Clean Local Database Baseline
 
 Use the v0.12.1 commands to inspect, clean, seed reference catalogs, and verify a local/development clinic baseline without fake operational patient data.

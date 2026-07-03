@@ -84,9 +84,20 @@ type TimelineItem = {
   href?: string;
 };
 
+type ReferenceResult = {
+  id: string;
+  label: string;
+  type: string;
+  genericName?: string;
+  familyName?: string | null;
+  category?: string;
+  specialty?: string;
+};
+
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "medical", label: "Medical", icon: "doctor", empty: "Medical history and clinical context appear here.", permissions: ["encounter.read", "prescription.read", "pregnancy.read", "patient_medications.read"] },
+  { key: "history-sheet", label: "History Sheet", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "clinical", label: "Clinical", icon: "encounter", empty: "Clinical workflow shortcuts appear here.", permissions: ["encounter.read", "encounter.create"] },
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
@@ -298,6 +309,7 @@ export default function PatientFilePage() {
 
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
           {active.key === "medical" ? <MedicalPanel patient={patient} related={related} /> : null}
+          {active.key === "history-sheet" ? <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} /> : null}
           {active.key === "clinical" ? <ClinicalPanel patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "print-packet" ? <PrintPacketPanel patient={patient} related={related} timelineItems={timelineItems} /> : null}
@@ -321,7 +333,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
+          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -1214,6 +1226,163 @@ function DoctorTemplateCards() {
   );
 }
 
+function HistorySheetWorkspace({
+  related,
+  onSubmit,
+  status
+}: {
+  related: Record<string, Record<string, unknown>[]>;
+  onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+  status: string;
+}) {
+  const sheets = related["history-sheet"] ?? [];
+  const latestSheet = sheets[0];
+  const sheetId = latestSheet?.id ? String(latestSheet.id) : "";
+  const [operation, setOperation] = useState<ReferenceResult | null>(null);
+  const [medication, setMedication] = useState<ReferenceResult | null>(null);
+  const [investigation, setInvestigation] = useState<ReferenceResult | null>(null);
+
+  function handleSheetSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const payload = {
+      title: "OB/GYN history sheet",
+      status: "draft",
+      chiefComplaint: String(new FormData(form).get("chiefComplaint") ?? "").trim(),
+      historyOfPresentIllness: String(new FormData(form).get("historyOfPresentIllness") ?? "").trim(),
+      menstrualHistory: values(form, ["lmp", "cycleRegularity", "cycleInterval", "duration", "bleedingAmount", "dysmenorrhea", "intermenstrualBleeding", "postcoitalBleeding"]),
+      obstetricHistory: values(form, ["gravida", "para", "abortions", "livingChildren", "edd", "previousCsCount", "previousVaginalDeliveryCount", "previousEctopicPregnancy", "previousMiscarriage", "previousStillbirth", "previousPretermBirth"]),
+      gynecologicalHistory: values(form, ["vaginalDischarge", "pelvicPain", "dyspareunia", "menopauseStatus"]),
+      contraceptionHistory: values(form, ["contraceptionHistory"]),
+      infertilityHistory: values(form, ["infertilityHistory"]),
+      pastMedicalHistory: values(form, ["pastMedicalHistory"]),
+      allergyHistory: values(form, ["allergyHistory"]),
+      familyHistory: values(form, ["familyHistory"]),
+      socialHistory: values(form, ["socialHistory"]),
+      notes: String(new FormData(form).get("notes") ?? "").trim()
+    };
+    void onSubmit("history-sheets", payload);
+  }
+
+  function submitHistoryItem(endpoint: string, payload: Record<string, unknown>) {
+    void onSubmit(endpoint, { historySheetId: sheetId || undefined, ...payload });
+  }
+
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <h2>OB/GYN history sheet</h2>
+          <p className="muted">Structured documentation for doctor review. Catalogs are lookup references only.</p>
+        </div>
+        {status ? <span className="badge">{status}</span> : <span className="badge">{sheets.length} sheet(s)</span>}
+      </div>
+
+      <form className="form-grid" onSubmit={handleSheetSubmit}>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Presenting history</legend>
+          <label>Chief complaint<input name="chiefComplaint" defaultValue={String(latestSheet?.chiefComplaint ?? "")} /></label>
+          <label>History of present illness<textarea name="historyOfPresentIllness" defaultValue={String(latestSheet?.historyOfPresentIllness ?? "")} /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Obstetric history</legend>
+          <label>Gravida<input name="gravida" type="number" min="0" /></label>
+          <label>Para<input name="para" type="number" min="0" /></label>
+          <label>Abortions<input name="abortions" type="number" min="0" /></label>
+          <label>Living children<input name="livingChildren" type="number" min="0" /></label>
+          <label>LMP<input name="lmp" type="date" /></label>
+          <label>EDD<input name="edd" type="date" /></label>
+          <label>Previous CS count<input name="previousCsCount" type="number" min="0" /></label>
+          <label>Previous vaginal delivery count<input name="previousVaginalDeliveryCount" type="number" min="0" /></label>
+          <label>Previous ectopic pregnancy<input name="previousEctopicPregnancy" /></label>
+          <label>Previous miscarriage<input name="previousMiscarriage" /></label>
+          <label>Previous stillbirth<input name="previousStillbirth" /></label>
+          <label>Previous preterm birth<input name="previousPretermBirth" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Gynecology history</legend>
+          <label>Cycle regularity<input name="cycleRegularity" /></label>
+          <label>Cycle interval<input name="cycleInterval" /></label>
+          <label>Duration<input name="duration" /></label>
+          <label>Amount of bleeding<input name="bleedingAmount" /></label>
+          <label>Dysmenorrhea<input name="dysmenorrhea" /></label>
+          <label>Intermenstrual bleeding<input name="intermenstrualBleeding" /></label>
+          <label>Postcoital bleeding<input name="postcoitalBleeding" /></label>
+          <label>Vaginal discharge<input name="vaginalDischarge" /></label>
+          <label>Pelvic pain<input name="pelvicPain" /></label>
+          <label>Dyspareunia<input name="dyspareunia" /></label>
+          <label>Menopause status<input name="menopauseStatus" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Background history</legend>
+          <label>Contraception history<textarea name="contraceptionHistory" /></label>
+          <label>Infertility history<textarea name="infertilityHistory" /></label>
+          <label>Past medical history<textarea name="pastMedicalHistory" /></label>
+          <label>Allergy history<textarea name="allergyHistory" /></label>
+          <label>Family history<textarea name="familyHistory" /></label>
+          <label>Social history<textarea name="socialHistory" /></label>
+          <label>Notes/free text<textarea name="notes" defaultValue={String(latestSheet?.notes ?? "")} /></label>
+        </fieldset>
+        <button className="button" type="submit">Save history sheet</button>
+      </form>
+
+      <div className="doctor-friendly-grid">
+        <ReferencePicker title="Past operation" endpoint="/reference/operations/search" placeholder="Search operation/procedure" selected={operation} onSelect={setOperation} />
+        <ReferencePicker title="Medication history" endpoint="/reference/medications/search" placeholder="Search generic name or class" selected={medication} onSelect={setMedication} />
+        <ReferencePicker title="Previous investigation" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={investigation} onSelect={setInvestigation} />
+      </div>
+      <div className="form-actions no-print">
+        <button className="button secondary" type="button" disabled={!operation} onClick={() => operation && submitHistoryItem("operation-history", { operationCatalogItemId: operation.id, operationNameSnapshot: operation.label })}>Add operation</button>
+        <button className="button secondary" type="button" disabled={!medication} onClick={() => medication && submitHistoryItem("medication-history", { medicationGenericId: medication.type === "generic_medication" ? medication.id : undefined, genericNameSnapshot: medication.genericName ?? medication.label, familyNameSnapshot: medication.familyName ?? undefined, currentOrPast: "past" })}>Add medication</button>
+        <button className="button secondary" type="button" disabled={!investigation} onClick={() => investigation && submitHistoryItem("investigation-history", { investigationCatalogItemId: investigation.id, investigationNameSnapshot: investigation.label, context: "previous" })}>Add investigation</button>
+      </div>
+      <RelatedPanel config={{ key: "history-sheet", label: "Saved history sheets", icon: "doctor", empty: "No structured history sheet yet." }} rows={sheets} />
+    </section>
+  );
+}
+
+function ReferencePicker({ title, endpoint, placeholder, selected, onSelect }: { title: string; endpoint: string; placeholder: string; selected: ReferenceResult | null; onSelect: (result: ReferenceResult | null) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ReferenceResult[]>([]);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    const token = sessionStorage.getItem("prijClinicToken");
+    const timeout = window.setTimeout(() => {
+      fetch(`${getApiBaseUrl()}${endpoint}?q=${encodeURIComponent(query)}`, {
+        credentials: "include",
+        headers: token ? { authorization: `Bearer ${token}` } : undefined
+      })
+        .then(async (response) => response.ok ? response.json() : { results: [] })
+        .then((data: { results?: ReferenceResult[] }) => setResults(data.results ?? []))
+        .catch(() => setResults([]));
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [endpoint, query]);
+
+  return (
+    <article className="panel">
+      <h3>{title}</h3>
+      <label>
+        Search
+        <input value={query} placeholder={placeholder} onChange={(event) => setQuery(event.target.value)} />
+      </label>
+      {selected ? <p className="notice">Selected: {selected.label}</p> : null}
+      <div className="data-list">
+        {results.slice(0, 6).map((result) => (
+          <button className="data-row" key={`${result.type}-${result.id}`} type="button" onClick={() => onSelect(result)}>
+            <strong>{result.label}</strong>
+            <span className="badge">{result.type.replaceAll("_", " ")}</span>
+          </button>
+        ))}
+      </div>
+    </article>
+  );
+}
+
 function PatientActionPanel({
   onSubmit,
   status,
@@ -1225,6 +1394,7 @@ function PatientActionPanel({
   related: Record<string, Record<string, unknown>[]>;
 }) {
   const [open, setOpen] = useState("appointment");
+  const [selectedGeneric, setSelectedGeneric] = useState<ReferenceResult | null>(null);
   const invoices = related.billing ?? [];
   const actions: Array<[string, string, IconName]> = [
     ["appointment", "Appointment", "calendar"],
@@ -1283,16 +1453,23 @@ function PatientActionPanel({
       ) : null}
 
       {open === "prescription" ? (
-        <ActionForm
-          fields={[
-            ["medicationName", "Medicine", "text", true],
-            ["dose", "Dose", "text", false],
-            ["frequency", "Frequency", "text", false],
-            ["instructions", "Instructions", "text", false]
-          ]}
-          onSubmit={handleSubmit("prescriptions", (form) => ({ items: [values(form, ["medicationName", "dose", "frequency", "instructions"])] }))}
-          submitLabel="Add prescription"
-        />
+        <form className="form-grid" onSubmit={handleSubmit("prescriptions", (form) => {
+          const item = values(form, ["medicationName", "dose", "frequency", "instructions"]);
+          return {
+            items: [{
+              ...item,
+              medicationName: selectedGeneric?.genericName ?? selectedGeneric?.label ?? String(item.medicationName ?? ""),
+              medicationGenericId: selectedGeneric?.type === "generic_medication" ? selectedGeneric.id : undefined
+            }]
+          };
+        })}>
+          <ReferencePicker title="Generic medication lookup" endpoint="/reference/medications/search" placeholder="Search generic name, class, or function" selected={selectedGeneric} onSelect={setSelectedGeneric} />
+          <label>Manual generic name<input name="medicationName" required={!selectedGeneric} placeholder="Generic name only" /></label>
+          <label>Dose<input name="dose" /></label>
+          <label>Frequency<input name="frequency" /></label>
+          <label>Instructions<input name="instructions" /></label>
+          <button className="button" type="submit">Add prescription</button>
+        </form>
       ) : null}
 
       {open === "order" ? (

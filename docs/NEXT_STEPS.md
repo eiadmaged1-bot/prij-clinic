@@ -521,3 +521,11 @@ Engineering next steps:
 - Add an approved external object storage provider before accepting real PHI files.
 - Add download/preview endpoints with RBAC, patient scope, consent checks, expiring access, and audit logs.
 - Review PDF/non-image handling before production use.
+# Next Steps
+
+v0.12.3:
+- Add Care Assist as draft-only clinician support.
+- Add pregnancy/lactation medication safety profiles.
+- Keep all AI clinical output review-gated and doctor-approved before record changes.
+- Add controlled-medication RBAC review gates before any controlled generic rows are selectable.
+- Improve print layouts for prescriptions and requested investigations after clinical template review.

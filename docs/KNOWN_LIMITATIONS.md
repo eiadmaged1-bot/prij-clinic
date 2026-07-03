@@ -147,3 +147,13 @@
 - Patient document upload integration tests require a running local API and database.
 - PDFs and non-image files are not production-ready PHI storage.
 - No malware scanning or external production object storage provider is configured yet.
+# Known Limitations
+
+v0.12.2 limitations:
+- Medication generic seed is intentionally limited and not a complete formulary.
+- Controlled generic medication rows are not seeded by default.
+- Medication lookup does not provide dosing, frequency, duration, instructions, treatment choice, or safety advice.
+- Investigation catalog is request/history metadata only and does not interpret results.
+- Operation catalog is history documentation only and does not imply procedure planning.
+- Patient history sheet UI saves structured fields but does not diagnose or automate clinical decisions.
+- v0.12.3 is expected to add Care Assist and pregnancy/lactation safety profiles as draft-only support.

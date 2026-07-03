@@ -8,6 +8,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
@@ -187,6 +188,10 @@ export class PatientContextPrescriptionItemDto {
   @IsOptional()
   @IsUUID()
   drugMarketVariantId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  medicationGenericId?: string;
 
   @IsOptional()
   @IsString()
@@ -459,5 +464,155 @@ export class PatientContextConsentDto {
   @IsOptional()
   @IsString()
   @MaxLength(500)
+  notes?: string;
+}
+
+export class PatientHistorySheetDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  status?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  chiefComplaint?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  historyOfPresentIllness?: string;
+
+  @IsOptional()
+  @IsObject()
+  menstrualHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  obstetricHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  gynecologicalHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  contraceptionHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  infertilityHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  pastMedicalHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  allergyHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  familyHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  socialHistory?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  notes?: string;
+}
+
+export class PatientOperationHistoryDto {
+  @IsOptional()
+  @IsUUID()
+  historySheetId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  operationCatalogItemId?: string;
+
+  @IsString()
+  @MaxLength(180)
+  operationNameSnapshot!: string;
+
+  @IsOptional()
+  @IsDateString()
+  approximateDate?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  year?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+}
+
+export class PatientMedicationHistoryDto {
+  @IsOptional()
+  @IsUUID()
+  historySheetId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  medicationGenericId?: string;
+
+  @IsString()
+  @MaxLength(180)
+  genericNameSnapshot!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  familyNameSnapshot?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  currentOrPast?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+}
+
+export class PatientInvestigationHistoryDto {
+  @IsOptional()
+  @IsUUID()
+  historySheetId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  investigationCatalogItemId?: string;
+
+  @IsString()
+  @MaxLength(180)
+  investigationNameSnapshot!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  context?: string;
+
+  @IsOptional()
+  @IsDateString()
+  date?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
   notes?: string;
 }
