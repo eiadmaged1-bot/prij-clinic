@@ -193,7 +193,7 @@ export function MvpPage({
         <div className="header-row">
           <div>
             <p className="eyebrow">{eyebrow}</p>
-            <h1>{title}</h1>
+            <h1 data-testid="page-heading">{title}</h1>
           </div>
           <div className="topbar-actions">
             {primaryAction ? (

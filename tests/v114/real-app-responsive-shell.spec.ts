@@ -76,7 +76,10 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 async function expectHeadingNearTop(page: Page, path: string) {
-  const heading = page.getByRole("heading", { name: path === "/prescriptions" ? /prescriptions/i : /clinic home|clinic apps|clinic command|front desk home|daily finance|good morning/i }).first();
+  const primaryHeading = page.getByTestId("page-heading").first();
+  const heading = (await primaryHeading.count()) > 0
+    ? primaryHeading
+    : page.getByRole("heading", { name: path === "/prescriptions" ? /^prescriptions$/i : /clinic home|clinic apps|clinic command|front desk home|daily finance|good morning/i }).first();
   await expect(heading).toBeVisible();
   const box = await heading.boundingBox();
   expect(box?.y ?? 9999).toBeLessThan(path === "/prescriptions" ? 260 : 320);

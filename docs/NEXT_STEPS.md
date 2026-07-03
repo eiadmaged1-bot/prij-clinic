@@ -1,5 +1,25 @@
 # Next Steps
 
+v0.11.6 real app heading position and responsive shell next steps:
+
+1. Keep the responsive heading thresholds unchanged:
+
+```powershell
+npm run test:v114:responsive-shell
+```
+
+2. When testing through Tailscale, start the exact local LAN profile:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+```
+
+3. Confirm `/dashboard` and `/prescriptions` show the primary page heading near the top after the compact shell topbar at 360, 390, 768, 1024, 1280, 1366, 1440, and 1920 widths.
+4. Keep the drawer fixed/off-canvas below `1200px`; do not let closed navigation reserve page height.
+5. Keep topbar utility controls from stacking above route headings on mobile/tablet.
+6. Continue to reject wildcard/subnet Tailscale CORS and keep exact-origin local profiles only.
+7. Do not create a release tag from this sprint.
+
 v0.11.5 real app responsive shell and Tailscale login next steps:
 
 1. Start the exact LAN phone profile when testing through Tailscale:

@@ -6,12 +6,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-if ($HostIp -notmatch '^\d{1,3}(\.\d{1,3}){3}$') {
+if ([string]::IsNullOrWhiteSpace($HostIp) -or $HostIp -notmatch '^\d{1,3}(\.\d{1,3}){3}$') {
   throw "HostIp must be an explicit IPv4 address, for example 100.127.4.46."
 }
 
 $octets = $HostIp.Split(".") | ForEach-Object { [int]$_ }
-if (($octets | Where-Object { $_ -lt 0 -or $_ -gt 255 }).Count -gt 0) {
+$invalidOctets = @($octets | Where-Object { $_ -lt 0 -or $_ -gt 255 })
+if ($invalidOctets.Count -gt 0) {
   throw "HostIp contains an invalid IPv4 octet."
 }
 
