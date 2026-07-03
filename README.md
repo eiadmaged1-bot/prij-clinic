@@ -6,6 +6,23 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.10.4 Mobile-Stable Static HTML Lab
+
+Branch: `ui/v0.10.4-mobile-stable-html-lab`.
+
+v0.10.4 rebuilds the static HTML theme lab as one mobile-first handoff shell at `ui-export/index.html`. It opens to Dashboard, uses section/hash navigation without API calls, and includes a phone drawer, local theme switching, mobile-safe cards/tables, and designer handoff docs.
+
+Static lab commands:
+
+```powershell
+npm run design:export-html
+npm run design:serve-html
+npm run design:test-mobile-html
+npm run design:package-html
+```
+
+Use `npm run design:serve-html` for phone testing; it serves only `ui-export` and prints localhost plus LAN URLs. No real auth, patient data, medication data, secrets, uploads, API/database access, external AI, release tag, or production-ready claim is included.
+
 ## v0.10.2 Mobile Browser Usability + LAN Phone QA
 
 Branch: `ui/v0.10.2-mobile-browser-usability`.

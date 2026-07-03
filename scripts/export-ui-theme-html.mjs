@@ -1,660 +1,681 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { networkInterfaces } from "node:os";
+import { dirname, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
+const exportDir = resolve(root, "ui-export");
 const designDir = resolve(root, "docs", "design");
-const desktopPath = resolve(designDir, "prij-ui-theme-lab.html");
-const mobilePath = resolve(designDir, "prij-mobile-ui-lab.html");
-
-mkdirSync(designDir, { recursive: true });
+const storageExportDir = resolve(root, "storage", "ui-export");
+const zipPath = resolve(storageExportDir, "prij-clinic-html-theme-lab-v0.10.4-mobile-stable.zip");
+const shouldPackage = process.argv.includes("--package");
 
 const themes = [
-  ["prij-heritage", "Prij Heritage"],
-  ["clinic-premium", "Clinic Premium"],
-  ["minimal-clean", "Minimal Clean"],
-  ["compact-operations", "Compact Operations"],
-  ["dark-navy", "Dark Navy"],
-  ["mobile-focus", "Mobile Focus"]
+  { id: "clinic-premium", label: "Clinic Premium" },
+  { id: "prij-heritage", label: "Prij Heritage" },
+  { id: "medicolize-portal", label: "Medicolize Portal" },
+  { id: "incision-portal", label: "Incision Portal" },
+  { id: "minimal-clean", label: "Minimal Clean" },
+  { id: "compact-operations", label: "Compact Operations" },
+  { id: "dark-navy", label: "Dark Navy" }
 ];
 
 const navItems = [
-  ["login", "Login"],
   ["dashboard", "Dashboard"],
+  ["login-preview", "Login Preview"],
   ["patients", "Patients"],
-  ["new-patient", "New Patient"],
-  ["workspace", "Patient Workspace"],
+  ["patient-file", "Patient File"],
+  ["doctor-workspace", "Doctor Workspace"],
   ["calendar", "Calendar"],
   ["queue", "Queue"],
-  ["doctor-visit", "Doctor Visit"],
-  ["orders", "Orders / Investigations"],
   ["prescriptions", "Prescriptions"],
+  ["investigations", "Investigations"],
   ["billing", "Billing"],
+  ["admin", "Admin"],
+  ["drug-market", "Drug Market"],
   ["guidelines", "Guidelines"],
   ["protocol-atlas", "Protocol Atlas"],
-  ["admin-accounts", "Admin Accounts"],
-  ["medication-import", "Official Medication Import"],
-  ["settings-themes", "Settings / Themes"]
+  ["theme-gallery", "Theme Gallery"]
 ];
 
-const patientTabs = [
-  "Summary",
-  "Medical",
-  "Clinical",
-  "Appointments",
-  "Encounters",
-  "Prescriptions",
-  "Investigations",
-  "Reports",
-  "Pregnancy",
-  "Ultrasound",
-  "Billing",
-  "Consents",
-  "AI Drafts",
-  "Timeline"
-];
+function badge(text, tone = "") {
+  return `<span class="badge ${tone}">${text}</span>`;
+}
 
-const defaultSectionId = "dashboard";
+function sectionHeader(kicker, title, description, action = "") {
+  return `
+    <header class="section-header">
+      <div>
+        <p class="eyebrow">${kicker}</p>
+        <h1>${title}</h1>
+        <p class="muted">${description}</p>
+      </div>
+      ${action}
+    </header>`;
+}
+
+const safetyBanner = `
+  <section class="notice warning">
+    <div>
+      <strong>Static UI lab only.</strong>
+      <p>No API calls, login session, uploads, secrets, real patient data, or medication data are included.</p>
+    </div>
+    ${badge("Doctor review required", "danger")}
+  </section>`;
+
+const sections = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    html: `
+      ${sectionHeader("Owner overview", "Dashboard", "Mobile-stable static clinic operations preview.")}
+      ${safetyBanner}
+      <section class="metric-grid">
+        <article class="metric"><span>Appointments</span><strong>0</strong><p>Placeholder schedule state.</p></article>
+        <article class="metric"><span>Queue</span><strong>0</strong><p>No live waiting room data.</p></article>
+        <article class="metric"><span>Patient files</span><strong>0</strong><p>No real patient records.</p></article>
+        <article class="metric"><span>Draft reviews</span><strong>0</strong><p>Doctor approval remains mandatory.</p></article>
+      </section>
+      <section class="card-grid">
+        <article class="card"><h2>Today</h2><p>Clinic day preview with neutral counts and no live data.</p>${badge("Static", "accent")}</article>
+        <article class="card"><h2>Safety</h2><p>Clinical content is draft-only until reviewed by a doctor.</p>${badge("Assistive only", "danger")}</article>
+        <article class="card"><h2>Handoff</h2><p>Use the local server for phone review on the same Wi-Fi network.</p>${badge("Designer ready", "accent")}</article>
+      </section>`
+  },
+  {
+    id: "login-preview",
+    label: "Login Preview",
+    html: `
+      <section class="login-preview-panel">
+        <div class="login-brand">
+          <p class="eyebrow">Visual preview</p>
+          <h1>Prij Clinic</h1>
+          <p>Standalone design lab for OB/GYN and women's health clinic workflows.</p>
+          <div class="chip-row">${badge("No real auth")}${badge("No session")}${badge("No API")}</div>
+        </div>
+        <form class="login-card" aria-label="Visual login preview">
+          <div><p class="eyebrow">Login preview</p><h2>Staff sign in</h2><p class="muted">Fields are visual only and do not store anything.</p></div>
+          <label>Email placeholder<input value="staff@example.invalid" autocomplete="off" /></label>
+          <label>Password placeholder<input type="password" placeholder="Not stored" autocomplete="off" /></label>
+          <button class="button primary" type="button" data-section-target="dashboard">Enter UI Lab</button>
+        </form>
+      </section>`
+  },
+  {
+    id: "patients",
+    label: "Patients",
+    html: `
+      ${sectionHeader("Registration", "Patients", "Search, empty state, desktop table, and mobile cards.", '<button class="button primary" type="button" data-section-target="patient-file">Open Patient File</button>')}
+      <section class="panel">
+        <label>Search patient file<input placeholder="Name, phone, or MRN placeholder" /></label>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>File</th><th>Status</th><th>Last activity</th><th>Action</th></tr></thead>
+            <tbody><tr><td>Patient file placeholder</td><td>${badge("No real data")}</td><td>None</td><td><button class="button secondary" type="button" data-section-target="patient-file">Open</button></td></tr></tbody>
+          </table>
+        </div>
+        <div class="mobile-list">
+          <article class="list-card"><strong>Patient file placeholder</strong><p>No real patient data in this static lab.</p><button class="button secondary" type="button" data-section-target="patient-file">Open</button></article>
+        </div>
+      </section>`
+  },
+  {
+    id: "patient-file",
+    label: "Patient File",
+    html: `
+      <section class="patient-hero">
+        <div class="avatar" aria-hidden="true">PF</div>
+        <div><p class="eyebrow">Patient file</p><h1>Patient Profile</h1><p>Neutral placeholder file for layout review only.</p></div>
+        <button class="button secondary" type="button" data-section-target="doctor-workspace">Doctor Workspace</button>
+      </section>
+      <section class="tabs" aria-label="Patient file tabs">
+        ${["Summary", "Encounters", "Prescriptions", "Investigations", "Reports", "Billing", "Consents", "Timeline"].map((tab, index) => `<button class="tab ${index === 0 ? "active" : ""}" type="button" data-tab="${tab.toLowerCase()}">${tab}</button>`).join("")}
+      </section>
+      <section class="panel tab-panel" data-tab-panel="summary">
+        <h2>Summary</h2>
+        <div class="profile-grid">
+          <div><span>MRN</span><strong>Pending</strong></div>
+          <div><span>Consent</span><strong>Not captured in lab</strong></div>
+          <div><span>Allergies</span><strong>Not recorded here</strong></div>
+          <div><span>Audit</span><strong>Required for real changes</strong></div>
+        </div>
+      </section>`
+  },
+  {
+    id: "doctor-workspace",
+    label: "Doctor Workspace",
+    html: `
+      ${sectionHeader("Encounter", "Doctor Workspace", "Draft encounter workspace with approval reminders.")}
+      <section class="notice danger"><div><strong>Doctor approval required.</strong><p>Clinical output here is visual draft content only.</p></div>${badge("Draft-only", "danger")}</section>
+      <section class="card-grid two">
+        <article class="card"><h2>Complaint</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card"><h2>Exam</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card"><h2>Assessment</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card"><h2>Plan</h2><textarea placeholder="Doctor-authored plan placeholder"></textarea></article>
+      </section>`
+  },
+  {
+    id: "calendar",
+    label: "Calendar",
+    html: `
+      ${sectionHeader("Schedule", "Calendar", "Responsive doctor calendar cards.")}
+      <section class="schedule-grid">
+        ${["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, index) => `<article class="list-card"><strong>${day}</strong><p>Clinic block ${index + 1}</p>${badge(index % 2 ? "Pending" : "Confirmed", index % 2 ? "warning" : "success")}<button class="button secondary" type="button">Open Day</button></article>`).join("")}
+      </section>`
+  },
+  {
+    id: "queue",
+    label: "Queue",
+    html: `
+      ${sectionHeader("Reception", "Queue", "Touch-friendly queue actions.")}
+      <section class="card-grid">
+        ${["Waiting", "In room", "Complete"].map((status) => `<article class="card"><div class="row"><strong>Patient file</strong>${badge(status, status === "Waiting" ? "warning" : "success")}</div><p>Placeholder queue state.</p><div class="button-row"><button class="button primary" type="button">Call</button><button class="button secondary" type="button">Move</button></div></article>`).join("")}
+      </section>`
+  },
+  {
+    id: "prescriptions",
+    label: "Prescriptions",
+    html: `
+      ${sectionHeader("Medication safety", "Prescriptions", "Blocked reference state with doctor-controlled patient directions.")}
+      <section class="notice danger"><div><strong>Medication reference blocked.</strong><p>No medication rows are included. Doctors write patient directions manually in the real workflow.</p></div>${badge("Blocked", "danger")}</section>
+      <section class="panel"><h2>Prescription Draft</h2><p>No preset patient medication instructions or medication records are shown in this static export.</p></section>`
+  },
+  {
+    id: "investigations",
+    label: "Investigations",
+    html: `
+      ${sectionHeader("Orders", "Investigations", "Catalog and result-review layout without file uploads.")}
+      <section class="panel"><label>Catalog search<input placeholder="Search investigation name" /></label><div class="chip-row">${["CBC", "AMH", "Pap Smear", "Pelvic Ultrasound", "Beta-hCG"].map((name) => badge(name)).join("")}</div></section>
+      <section class="card-grid two"><article class="card"><h2>Draft order</h2><p>Doctor approval required before real orders.</p></article><article class="card"><h2>Results</h2><p>No upload control is included in this static lab.</p></article></section>`
+  },
+  {
+    id: "billing",
+    label: "Billing",
+    html: `
+      ${sectionHeader("Finance", "Billing", "Invoice and payment layout using neutral placeholders.")}
+      <section class="card-grid">
+        <article class="card"><h2>Invoice</h2><p>Neutral invoice placeholder.</p></article>
+        <article class="card"><h2>Payment</h2><p>No real payment data or gateway.</p></article>
+        <article class="card"><h2>Daily close</h2><p>Owner review placeholder.</p></article>
+      </section>`
+  },
+  {
+    id: "admin",
+    label: "Admin",
+    html: `
+      ${sectionHeader("Controls", "Admin", "Role and permission visual review without real account creation.")}
+      <section class="notice warning"><div><strong>Visual only.</strong><p>No real accounts, passwords, or sessions are created here.</p></div>${badge("Protected workflow")}</section>
+      <section class="card-grid">${["Doctor", "Reception", "Nurse", "Accountant", "Owner"].map((role) => `<article class="card"><h2>${role}</h2><p>Role card placeholder.</p>${badge("Scoped")}</article>`).join("")}</section>`
+  },
+  {
+    id: "drug-market",
+    label: "Drug Market",
+    html: `
+      ${sectionHeader("Reference status", "Drug Market", "Medication reference placeholder with no commerce workflow.")}
+      <section class="notice danger"><div><strong>Reference only.</strong><p>This section is for visual review of medication reference status only.</p></div>${badge("Reference only", "danger")}</section>
+      <section class="metric-grid">
+        <article class="metric"><span>Official rows</span><strong>0</strong><p>No medication data in export.</p></article>
+        <article class="metric"><span>Verified rows</span><strong>0</strong><p>Blocked until official data exists.</p></article>
+      </section>`
+  },
+  {
+    id: "guidelines",
+    label: "Guidelines",
+    html: `
+      ${sectionHeader("Library", "Guidelines", "Citation-required reference library layout.")}
+      <section class="notice warning"><div><strong>Citations required.</strong><p>Guidelines support clinical review; they do not replace the doctor.</p></div>${badge("Review required", "danger")}</section>
+      <section class="card-grid">${["WHO", "NICE", "RCOG", "ACOG"].map((source) => `<article class="card"><h2>${source}</h2><p>Source card placeholder.</p>${badge("Citation required", "warning")}</article>`).join("")}</section>`
+  },
+  {
+    id: "protocol-atlas",
+    label: "Protocol Atlas",
+    html: `
+      ${sectionHeader("Protocols", "Protocol Atlas", "Protocol group cards for visual review.")}
+      <section class="card-grid">${["General GYN", "Fertility", "Antenatal", "High-risk OB", "Menopause", "Pelvic Floor"].map((group) => `<article class="card"><h2>${group}</h2><p>Protocol placeholder. Doctor review required.</p>${badge("Draft support", "warning")}</article>`).join("")}</section>`
+  },
+  {
+    id: "theme-gallery",
+    label: "Theme Gallery",
+    html: `
+      ${sectionHeader("Appearance", "Theme Gallery", "Mobile-safe theme previews and controls.")}
+      <section class="panel"><h2>Theme Switcher</h2><div class="chip-row">${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}</div></section>
+      <section class="card-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="${theme.id}">Apply</button></article>`).join("")}</section>`
+  }
+];
 
 const css = String.raw`
 :root {
   color-scheme: light;
-  --background: #f6f2eb;
-  --background-soft: #fbf8f3;
+  --bg: #eef5f4;
+  --bg-soft: #f8fbfa;
   --surface: #ffffff;
-  --surface-muted: #f5f0e7;
-  --surface-strong: #e9f4ef;
-  --border: #e2d8c8;
-  --border-strong: #cbbba5;
-  --foreground: #17231f;
-  --muted: #66756f;
-  --muted-strong: #2f554d;
-  --navy: #102c28;
-  --navy-soft: #183c36;
-  --accent: #2f7a68;
-  --accent-dark: #235b50;
-  --accent-soft: #e3f3ee;
-  --warning: #aa6d17;
-  --warning-soft: #fff4dd;
-  --danger: #a83f44;
-  --danger-soft: #fde8e7;
-  --success: #18745b;
-  --success-soft: #e1f5ee;
-  --shadow-sm: 0 1px 2px rgb(16 44 40 / 6%), 0 8px 24px rgb(16 44 40 / 5%);
-  --shadow-md: 0 18px 48px rgb(16 44 40 / 12%);
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --space: 1rem;
-  --sidebar-width: 18rem;
+  --surface-alt: #f3f8f7;
+  --border: #d7e4e1;
+  --text: #122522;
+  --muted: #5d706d;
+  --strong: #23413c;
+  --brand: #0f766e;
+  --brand-strong: #0b5e59;
+  --brand-soft: #dbf5f1;
+  --nav-bg: #0e2a28;
+  --nav-text: #effaf8;
+  --warning: #8a5a13;
+  --warning-soft: #fff4d8;
+  --danger: #9f3338;
+  --danger-soft: #fde8e8;
+  --success: #176b53;
+  --success-soft: #e0f5ed;
+  --shadow: 0 12px 30px rgb(18 37 34 / 10%);
+  --radius: 8px;
+  --sidebar-width: 280px;
+  --topbar-height: 64px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-body[data-theme="clinic-premium"] {
-  --background: #edf4f7; --background-soft: #f7fbfc; --surface-muted: #f1f7f8; --surface-strong: #e1f6f5;
-  --border: #d5e5e9; --border-strong: #adcbd3; --foreground: #102231; --muted: #5b7180;
-  --muted-strong: #314b5a; --navy: #071a28; --navy-soft: #102d3f; --accent: #0e8e8c;
-  --accent-dark: #0a6d70; --accent-soft: #dcf7f5; --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
+body[data-theme="prij-heritage"] {
+  --bg: #f4efe7; --bg-soft: #fbf8f1; --surface-alt: #f5efe3; --border: #e1d5c4;
+  --text: #17231f; --muted: #68746e; --brand: #2f7a68; --brand-strong: #235b50;
+  --brand-soft: #e4f2ed; --nav-bg: #102c28;
+}
+body[data-theme="medicolize-portal"] {
+  --bg: #eef6fb; --bg-soft: #f8fcff; --surface-alt: #eef7fb; --border: #d4e7f0;
+  --text: #122337; --muted: #587084; --brand: #1683a5; --brand-strong: #0d6682;
+  --brand-soft: #dff4fb; --nav-bg: #0f3345;
+}
+body[data-theme="incision-portal"] {
+  --bg: #f5f7f9; --bg-soft: #ffffff; --surface-alt: #f0f3f6; --border: #dce3ea;
+  --text: #182533; --muted: #5f6d7b; --brand: #3d6f92; --brand-strong: #2b5572;
+  --brand-soft: #e5f0f6; --nav-bg: #1b2b38;
 }
 body[data-theme="minimal-clean"] {
-  --background: #f8fafc; --background-soft: #ffffff; --surface-muted: #f8fafc; --surface-strong: #eef2f7;
-  --border: #e2e8f0; --border-strong: #cbd5e1; --foreground: #172033; --muted: #64748b;
-  --muted-strong: #334155; --navy: #ffffff; --navy-soft: #f8fafc; --accent: #0f766e;
-  --accent-dark: #115e59; --accent-soft: #ccfbf1; --shadow-sm: 0 6px 18px rgb(15 23 42 / 6%);
+  --bg: #f8fafc; --bg-soft: #ffffff; --surface-alt: #f8fafc; --border: #e2e8f0;
+  --text: #111827; --muted: #64748b; --brand: #0f766e; --brand-strong: #115e59;
+  --brand-soft: #ccfbf1; --nav-bg: #ffffff; --nav-text: #111827;
 }
 body[data-theme="compact-operations"] {
-  --background: #eef3f5; --background-soft: #f8fbfc; --surface-muted: #f4f7f8; --surface-strong: #e2f2ef;
-  --border: #d5e0e4; --foreground: #132332; --muted: #536879; --accent: #0b7f7d;
-  --accent-dark: #095f61; --accent-soft: #dff7f6; --radius-sm: 5px; --radius-md: 7px; --radius-lg: 10px;
-  --space: .74rem; --sidebar-width: 16.5rem;
+  --bg: #eef3f5; --bg-soft: #f8fbfc; --surface-alt: #f4f7f8; --border: #d5e0e4;
+  --text: #132332; --muted: #536879; --brand: #0b7f7d; --brand-strong: #095f61;
+  --brand-soft: #dff7f6; --radius: 6px; --sidebar-width: 252px; --topbar-height: 58px;
 }
 body[data-theme="dark-navy"] {
-  color-scheme: dark; --background: #07111d; --background-soft: #0b1724; --surface: #101f2d;
-  --surface-muted: #142738; --surface-strong: #12333e; --border: #22384a; --border-strong: #315166;
-  --foreground: #eef8fb; --muted: #a8bac6; --muted-strong: #d5e3ea; --navy: #050c15;
-  --navy-soft: #0b1724; --accent: #2dd4bf; --accent-dark: #5eead4; --accent-soft: #12333e;
-  --warning-soft: #372911; --danger-soft: #391b22; --success-soft: #0f302a;
-  --shadow-sm: 0 8px 24px rgb(0 0 0 / 22%); --shadow-md: 0 18px 55px rgb(0 0 0 / 32%);
-}
-body[data-theme="mobile-focus"] {
-  --background: #f7fafb; --background-soft: #ffffff; --surface-muted: #f2f7f7; --surface-strong: #e4f7f5;
-  --border: #d7e5e4; --foreground: #102033; --muted: #4e6570; --navy: #102033; --navy-soft: #173546;
-  --accent: #0f8f8c; --accent-dark: #0b6f71; --accent-soft: #e3faf8; --radius-sm: 10px; --radius-md: 12px; --radius-lg: 16px;
+  color-scheme: dark; --bg: #07111d; --bg-soft: #0b1724; --surface: #101f2d; --surface-alt: #142738;
+  --border: #263e51; --text: #eef8fb; --muted: #a8bac6; --strong: #d9eef4;
+  --brand: #2dd4bf; --brand-strong: #6ee7d8; --brand-soft: #12333e; --nav-bg: #050c15; --nav-text: #eef8fb;
+  --warning-soft: #382a10; --danger-soft: #3b1d23; --success-soft: #10352d; --shadow: 0 12px 30px rgb(0 0 0 / 30%);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; max-width: 100%; overflow-x: hidden; }
+html, body { margin: 0; min-height: 100vh; min-height: 100dvh; max-width: 100%; overflow-x: hidden; }
 body {
-  background: linear-gradient(135deg, var(--background-soft), var(--background));
-  color: var(--foreground);
+  background: linear-gradient(135deg, var(--bg-soft), var(--bg));
+  color: var(--text);
   font-size: 16px;
   line-height: 1.5;
 }
+body.drawer-open { overflow: hidden; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-a { color: inherit; text-decoration: none; }
-h1, h2, h3, p, dl { margin: 0; }
-h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.08; letter-spacing: 0; }
-h2 { font-size: 1.08rem; letter-spacing: 0; }
-h3 { font-size: 1rem; letter-spacing: 0; }
-.lab-toolbar {
-  position: sticky; top: 0; z-index: 80; display: flex; flex-wrap: wrap; gap: .65rem; align-items: center;
-  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 93%, transparent);
-  backdrop-filter: blur(12px); padding: .75rem 1rem;
-}
-.control-group { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
-.control-group span { color: var(--muted); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
-.preview-shell { width: 100%; margin: 0 auto; transition: width 160ms ease; }
-.preview-shell.mobile { width: min(390px, 100%); border-inline: 1px solid var(--border); }
-.preview-shell.tablet { width: min(768px, 100%); border-inline: 1px solid var(--border); }
-.app-shell { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: calc(100vh - 3.9rem); }
-.sidebar {
-  position: sticky; top: 3.9rem; height: calc(100vh - 3.9rem); overflow: auto; display: grid; align-content: start; gap: 1rem;
-  background: linear-gradient(180deg, var(--navy), var(--navy-soft)); color: #e6f2f3; padding: 1.1rem;
-}
-.brand { display: grid; gap: .25rem; color: #fff; font-weight: 900; }
-.brand-mark { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border-radius: var(--radius-md); background: linear-gradient(135deg, var(--accent), #0ea5b7); }
-.nav-group { display: grid; gap: .35rem; }
-.nav-title, .eyebrow { color: var(--accent-dark); font-size: .74rem; font-weight: 850; text-transform: uppercase; }
-.sidebar .nav-title { color: #9ab8c1; }
-.nav-item {
-  display: flex; min-height: 2.75rem; align-items: center; justify-content: space-between; border: 1px solid transparent;
-  border-radius: var(--radius-sm); color: inherit; padding: .62rem .72rem; font-weight: 760; text-align: left; background: transparent;
-}
-.nav-item.active, .nav-item:hover { border-color: rgb(255 255 255 / 14%); background: rgb(255 255 255 / 10%); }
-.app-main { min-width: 0; padding: calc(var(--space) * 1.35); }
-.mobile-topbar { display: none; position: sticky; top: 3.9rem; z-index: 30; border-bottom: 1px solid var(--border); background: var(--surface); padding: .75rem; }
-.drawer-backdrop { display: none; position: fixed; inset: 0; z-index: 35; border: 0; background: rgb(7 24 38 / 48%); }
-.drawer-backdrop.open { display: block; }
-.section { display: none; gap: 1rem; animation: fadeIn 120ms ease; }
-.section.active { display: grid; }
-@keyframes fadeIn { from { opacity: .72; transform: translateY(2px); } to { opacity: 1; transform: none; } }
-.topbar, .header-row, .section-heading, .actions, .workflow-band, .patient-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
-.lab-banner {
-  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; border: 1px solid var(--border);
-  border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-dark); padding: .55rem .75rem; font-weight: 820;
-}
-.quick-actions { display: flex; flex-wrap: wrap; gap: .45rem; justify-content: flex-end; }
-.page-header { display: grid; gap: .55rem; }
-.muted { color: var(--muted); }
-.button, .chip-button {
-  display: inline-flex; min-height: 2.8rem; align-items: center; justify-content: center; gap: .45rem; border: 1px solid var(--accent);
-  border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-weight: 820; padding: .65rem .9rem;
-}
-.button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--foreground); }
-.button.warning { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
-.button.danger { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
-.button:disabled { opacity: .65; cursor: not-allowed; }
-.badge {
-  display: inline-flex; width: fit-content; align-items: center; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--surface); color: var(--muted-strong); font-size: .78rem; font-weight: 850; padding: .32rem .6rem;
-}
-.badge.accent { border-color: color-mix(in srgb, var(--accent) 28%, var(--border)); background: var(--accent-soft); color: var(--accent-dark); }
-.badge.warning { border-color: rgb(170 109 23 / 28%); background: var(--warning-soft); color: var(--warning); }
-.badge.danger { border-color: rgb(168 63 68 / 25%); background: var(--danger-soft); color: var(--danger); }
-.badge.success { border-color: rgb(24 116 91 / 25%); background: var(--success-soft); color: var(--success); }
-.alert, .empty-state {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; border: 1px solid var(--border);
-  border-radius: var(--radius-md); background: var(--surface); padding: .9rem 1rem;
-}
-.alert.warning { border-color: rgb(170 109 23 / 28%); background: var(--warning-soft); }
-.alert.danger { border-color: rgb(168 63 68 / 25%); background: var(--danger-soft); }
-.panel, .card, .login-panel {
-  display: grid; gap: 1rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface);
-  box-shadow: var(--shadow-sm); padding: calc(var(--space) * 1.15);
-}
-.login-screen { display: grid; min-height: calc(100vh - 3.9rem); place-items: center; padding: 1rem; }
-.login-shell {
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .72fr); width: min(100%, 72rem); overflow: hidden;
-  border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-md);
-}
-.login-brand { display: grid; align-content: center; gap: 1rem; background: linear-gradient(135deg, var(--navy), var(--accent-dark)); color: #fff; padding: clamp(1.5rem, 5vw, 4rem); }
-.login-brand .eyebrow, .login-brand .muted { color: #e6f2f3; }
-.login-panel { border: 0; border-radius: 0; box-shadow: none; align-content: center; }
-.grid, .dashboard-grid, .content-grid, .summary-grid, .form-grid, .card-grid, .mobile-card-list, .profile-grid, .schedule-grid { display: grid; gap: .9rem; }
-.dashboard-grid { grid-template-columns: minmax(0, 1.25fr) minmax(18rem, .75fr); }
-.content-grid { grid-template-columns: minmax(17rem, .8fr) minmax(0, 1.2fr); }
-.summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.schedule-grid { grid-template-columns: repeat(5, minmax(9rem, 1fr)); overflow-x: auto; padding-bottom: .25rem; }
-.wide { grid-column: 1 / -1; }
-.metric-card, .data-row, .account-row, .protocol-card, .timeline-row {
-  display: grid; gap: .5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); padding: .95rem;
-}
-.metric-card strong { font-size: 1.85rem; line-height: 1; }
-.data-row-header { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; justify-content: space-between; }
-.profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.profile-grid div { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-muted); padding: .75rem; }
-dt { color: var(--muted); font-size: .78rem; font-weight: 850; text-transform: uppercase; }
-dd { margin: .15rem 0 0; font-weight: 800; }
-label { display: grid; gap: .4rem; color: var(--muted-strong); font-size: .9rem; font-weight: 760; }
+h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
+h1 { font-size: clamp(1.75rem, 5vw, 2.7rem); line-height: 1.08; letter-spacing: 0; }
+h2 { font-size: 1.05rem; letter-spacing: 0; }
 input, select, textarea {
-  width: 100%; min-height: 2.85rem; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--surface); color: var(--foreground); padding: .75rem .85rem;
+  width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); padding: 0.75rem 0.85rem; font-size: 16px;
 }
-textarea { min-height: 6rem; resize: vertical; }
+textarea { min-height: 128px; resize: vertical; }
+label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
+.app-shell { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; }
+.sidebar {
+  position: sticky; top: 0; align-self: start; height: 100vh; height: 100dvh; overflow-y: auto;
+  display: grid; align-content: start; gap: 1rem; padding: 1rem; background: var(--nav-bg); color: var(--nav-text);
+}
+.brand { display: flex; gap: 0.75rem; align-items: center; min-width: 0; padding: 0.25rem; }
+.brand-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: var(--radius); background: var(--brand); color: #fff; font-weight: 900; }
+.brand-text { display: grid; min-width: 0; }
+.brand-text span { color: color-mix(in srgb, var(--nav-text) 72%, transparent); font-size: 0.82rem; }
+.nav-group { display: grid; gap: 0.35rem; }
+.nav-title, .eyebrow { color: var(--brand-strong); font-size: 0.76rem; font-weight: 850; letter-spacing: 0; text-transform: uppercase; }
+.sidebar .nav-title { color: color-mix(in srgb, var(--nav-text) 72%, transparent); }
+.nav-item {
+  display: flex; min-height: 44px; width: 100%; align-items: center; justify-content: space-between; gap: 0.5rem;
+  border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: inherit;
+  padding: 0.7rem 0.75rem; text-align: left; font-weight: 780;
+}
+.nav-item.active, .nav-item:hover { border-color: rgb(255 255 255 / 16%); background: rgb(255 255 255 / 10%); }
+.main { min-width: 0; display: grid; align-content: start; gap: 1rem; padding: 1rem; }
+.mobile-topbar {
+  display: none; min-height: var(--topbar-height); align-items: center; justify-content: space-between; gap: 0.75rem;
+  position: sticky; top: 0; z-index: 30; margin: -1rem -1rem 0; padding: calc(0.65rem + env(safe-area-inset-top)) 1rem 0.65rem;
+  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px);
+}
+.drawer-overlay {
+  display: none; position: fixed; inset: 0; z-index: 50; border: 0; background: rgb(7 17 29 / 56%);
+}
+.drawer-overlay.open { display: block; }
+.top-tools, .section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
+.top-tools {
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 0.75rem;
+}
+.section { display: none; gap: 1rem; max-width: 1280px; width: 100%; margin: 0 auto; }
+.section.active { display: grid; }
+.section-header { align-items: flex-end; }
+.muted, .card p, .metric p, .list-card p { color: var(--muted); }
+.button, .chip-button {
+  display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 0.45rem;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
+  padding: 0.68rem 0.9rem; font-weight: 820; text-align: center;
+}
+.button.primary { border-color: var(--brand); background: var(--brand); color: #fff; }
+.button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--text); }
+.badge {
+  display: inline-flex; width: fit-content; max-width: 100%; align-items: center; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--strong); padding: 0.3rem 0.58rem; font-size: 0.78rem; font-weight: 850; overflow-wrap: anywhere;
+}
+.badge.accent { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); background: var(--brand-soft); color: var(--brand-strong); }
+.badge.warning { background: var(--warning-soft); color: var(--warning); }
+.badge.danger { background: var(--danger-soft); color: var(--danger); }
+.badge.success { background: var(--success-soft); color: var(--success); }
+.notice, .panel, .card, .metric, .list-card {
+  display: grid; gap: 0.8rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+  box-shadow: var(--shadow); padding: 1rem; max-width: 100%; min-width: 0;
+}
+.notice { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.notice.warning { background: color-mix(in srgb, var(--warning-soft) 54%, var(--surface)); }
+.notice.danger { background: color-mix(in srgb, var(--danger-soft) 54%, var(--surface)); }
+.metric-grid, .card-grid, .profile-grid, .schedule-grid { display: grid; gap: 0.9rem; min-width: 0; }
+.metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.card-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.schedule-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.metric strong { font-size: 2rem; line-height: 1; }
+.login-preview-panel {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr); overflow: hidden;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
+}
+.login-brand { display: grid; align-content: center; gap: 1rem; min-height: 420px; padding: clamp(1.2rem, 5vw, 3rem); background: linear-gradient(135deg, var(--nav-bg), var(--brand-strong)); color: #fff; }
+.login-brand .eyebrow, .login-brand p { color: #eef8fb; }
+.login-card { display: grid; align-content: center; gap: 1rem; padding: clamp(1rem, 4vw, 2rem); }
 .patient-hero {
-  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center; border: 1px solid var(--border);
-  border-radius: var(--radius-lg); background: linear-gradient(120deg, var(--navy), var(--accent-dark)); color: #edf3f0; padding: 1.2rem;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 1rem; align-items: center;
+  border-radius: var(--radius); background: linear-gradient(135deg, var(--nav-bg), var(--brand-strong)); color: #fff; padding: 1rem;
 }
-.patient-hero h1, .patient-hero .eyebrow, .patient-hero .muted { color: #edf3f0; }
-.avatar { display: grid; width: 3.3rem; height: 3.3rem; place-items: center; border-radius: var(--radius-md); background: rgb(255 255 255 / 12%); font-weight: 900; }
-.tabs { display: flex; gap: .55rem; overflow-x: auto; padding-bottom: .35rem; scroll-snap-type: x proximity; }
-.tab { flex: 0 0 auto; min-height: 3rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--foreground); font-weight: 820; padding: .6rem .85rem; scroll-snap-align: start; }
-.tab.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-dark); }
-.desktop-table { width: 100%; border-collapse: collapse; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); }
-.desktop-table th, .desktop-table td { border-bottom: 1px solid var(--border); padding: .75rem; text-align: left; vertical-align: top; }
-.desktop-table th { background: var(--surface-muted); color: var(--muted-strong); font-size: .78rem; text-transform: uppercase; }
-.mobile-card-list { display: none; }
-.safety-list, .chip-list { display: flex; flex-wrap: wrap; gap: .5rem; }
-.code-block {
-  max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  background: var(--surface-muted); padding: .8rem; font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: .88rem;
-}
-.phone-frame { width: min(390px, 100%); margin: 0 auto; border-inline: 1px solid var(--border); background: var(--background); }
-@media (max-width: 980px) {
-  .app-shell, .login-shell, .dashboard-grid, .content-grid { grid-template-columns: 1fr; }
-  .mobile-topbar { display: flex; justify-content: space-between; align-items: center; }
-  .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: min(20rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); height: 100dvh; top: 0; transform: translateX(-105%); transition: transform 180ms ease; }
+.patient-hero p, .patient-hero .eyebrow { color: #eef8fb; }
+.avatar { display: grid; width: 52px; height: 52px; place-items: center; border-radius: var(--radius); background: rgb(255 255 255 / 14%); font-weight: 900; }
+.tabs { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; max-width: 100%; }
+.tab { flex: 0 0 auto; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0.65rem 0.85rem; font-weight: 800; }
+.tab.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+.profile-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.profile-grid div { display: grid; gap: 0.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-alt); padding: 0.75rem; }
+.profile-grid span { color: var(--muted); font-size: 0.78rem; font-weight: 850; text-transform: uppercase; }
+.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; min-width: 640px; }
+th, td { padding: 0.75rem; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; text-transform: uppercase; }
+.mobile-list { display: none; }
+@media (max-width: 1024px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .mobile-topbar { display: flex; }
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0; z-index: 60; width: min(86vw, 320px); max-width: calc(100vw - 28px);
+    transform: translateX(-104%); transition: transform 180ms ease; box-shadow: 24px 0 60px rgb(0 0 0 / 24%);
+  }
   .sidebar.open { transform: translateX(0); }
-  .topbar { align-items: stretch; flex-direction: column; }
-  .quick-actions { justify-content: flex-start; }
-  .summary-grid, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .metric-grid, .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card-grid, .card-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .schedule-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@media (max-width: 640px) {
-  .lab-toolbar, .app-main { padding: .75rem; }
-  h1 { font-size: 1.9rem; }
-  .summary-grid, .card-grid, .form-grid, .profile-grid { grid-template-columns: 1fr; }
-  .button, .patient-actions .button { width: 100%; }
-  .header-row, .section-heading, .alert, .workflow-band, .actions, .patient-actions { align-items: stretch; flex-direction: column; }
-  .patient-hero { grid-template-columns: 1fr; }
-  .desktop-table { display: none; }
-  .mobile-card-list { display: grid; }
-  .schedule-grid { grid-template-columns: 1fr; overflow: visible; }
+@media (max-width: 767px) {
+  .main { padding: 0.75rem; }
+  .mobile-topbar { margin: -0.75rem -0.75rem 0; }
+  .top-tools, .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
+  .top-tools, .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
+  .metric-grid, .card-grid, .card-grid.two, .profile-grid, .schedule-grid { grid-template-columns: 1fr; }
+  .button, .chip-button { width: 100%; }
+  .login-brand { min-height: 240px; }
+  .table-wrap { display: none; }
+  .mobile-list { display: grid; gap: 0.8rem; }
+}
+@media (max-width: 480px) {
+  h1 { font-size: 1.75rem; }
+  .notice, .panel, .card, .metric, .list-card { padding: 0.85rem; }
+  .brand-text strong { font-size: 0.95rem; }
 }
 `;
-
-function badge(label, tone = "") {
-  return `<span class="badge${tone ? ` ${tone}` : ""}">${label}</span>`;
-}
-
-function shellHeader(kicker, title, description, action = "") {
-  return String.raw`
-<header class="page-header">
-  <div class="header-row">
-    <div><p class="eyebrow">${kicker}</p><h1>${title}</h1><p class="muted">${description}</p></div>
-    ${action}
-  </div>
-</header>`;
-}
-
-const safetyNote = String.raw`
-<section class="alert warning">
-  <div>
-    <strong>Local HTML lab only - no real PHI.</strong>
-    <p class="muted">Offline static UI mockup. No API calls, no database writes, no medication rows, and no clinical automation.</p>
-  </div>
-  ${badge("Doctor approval required", "danger")}
-</section>`;
-
-const sections = [
-  {
-    id: "login",
-    title: "Login",
-    html: String.raw`
-<section class="login-screen" aria-label="Login screen">
-  <div class="login-shell">
-    <div class="login-brand">
-      <p class="eyebrow">Clinic workspace</p>
-      <h1>Prij Clinic</h1>
-      <p>Standalone local design lab for a women&apos;s health clinic management system.</p>
-      <div class="workflow-band">${badge("No API calls")}${badge("No real patient data")}${badge("AI draft-only")}</div>
-    </div>
-    <form class="login-panel">
-      <div><p class="eyebrow">Demo-style login</p><h2>Staff sign in</h2><p class="muted">Static offline form state only.</p></div>
-      <label>Staff ID or email<input value="local-demo@example.invalid" aria-label="Demo staff ID" /></label>
-      <label>Password<input type="password" placeholder="Not stored" aria-label="Demo password" /></label>
-      <button class="button" type="button" data-go="dashboard">Enter UI Lab</button>
-      <p class="empty-state">Static UI Lab — no real login required. This is a visual preview only; real app login/RBAC still applies in the production app.</p>
-    </form>
-  </div>
-</section>`
-  },
-  {
-    id: "dashboard",
-    title: "Dashboard",
-    html: String.raw`
-${shellHeader("Owner overview", "Dashboard", "Daily operating snapshot using neutral placeholder counts.")}
-${safetyNote}
-<section class="summary-grid">
-  <article class="metric-card"><span>Appointments today</span><strong>0</strong><p class="muted">No live schedule loaded</p></article>
-  <article class="metric-card"><span>Queue status</span><strong>0</strong><p class="muted">Waiting room placeholder</p></article>
-  <article class="metric-card"><span>Patients</span><strong>0</strong><p class="muted">No real patient data</p></article>
-  <article class="metric-card"><span>Finance summary</span><strong>0</strong><p class="muted">Static local currency-free mock</p></article>
-</section>
-<section class="card-grid">
-  <article class="card"><h2>Medication blocked</h2><p>Official medication rows: 0</p><p class="muted">Medication selection blocked until official rows exist.</p>${badge("Blocked", "danger")}</article>
-  <article class="card"><h2>Guideline ready</h2><p class="muted">Guideline library ready with citation-required status.</p>${badge("Citation required", "warning")}</article>
-  <article class="card"><h2>Clinic safety</h2><p class="muted">AI clinical output remains draft-only until doctor review and approval.</p>${badge("Draft support only", "danger")}</article>
-</section>`
-  },
-  {
-    id: "patients",
-    title: "Patients",
-    html: String.raw`
-${shellHeader("Registration", "Patients", "Search, empty state, desktop table, and mobile card list.", '<button class="button" type="button" data-go="new-patient">Create patient</button>')}
-<section class="panel">
-  <div class="section-heading"><h2>Patient files</h2>${badge("No real patient data", "warning")}</div>
-  <label>Search bar<input placeholder="Search patient file, MRN pending, or phone placeholder" /></label>
-  <div class="empty-state"><span>No patient records are loaded in this static prototype.</span><button class="button secondary" type="button" data-go="new-patient">Create patient</button></div>
-  <table class="desktop-table" aria-label="Patient desktop list">
-    <thead><tr><th>File</th><th>MRN</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody><tr><td>Patient file</td><td>MRN pending</td><td>${badge("Placeholder")}</td><td><button class="button secondary" type="button" data-go="workspace">Open workspace</button></td></tr></tbody>
-  </table>
-  <div class="mobile-card-list">
-    <article class="data-row"><div class="data-row-header"><strong>Patient file</strong>${badge("MRN pending")}</div><p class="muted">Neutral mobile card list state.</p><button class="button secondary" type="button" data-go="workspace">Open workspace</button></article>
-  </div>
-</section>`
-  },
-  {
-    id: "new-patient",
-    title: "New Patient",
-    html: String.raw`
-${shellHeader("Create file", "New Patient", "Full patient creation layout with placeholders only.")}
-<section class="panel">
-  <div class="section-heading"><h2>Patient creation form</h2>${badge("No real patient data", "warning")}</div>
-  <form class="form-grid">
-    <label>First name<input placeholder="First name placeholder" /></label>
-    <label>Last name<input placeholder="Last name placeholder" /></label>
-    <label>Phone<input placeholder="Phone placeholder" /></label>
-    <label>DOB<input type="date" /></label>
-    <label>Sex<select><option>Female</option><option>Not specified</option></select></label>
-    <label class="wide">Notes<textarea placeholder="Administrative notes placeholder only"></textarea></label>
-    <div class="actions wide"><button class="button" type="button">Create visual state</button><button class="button secondary" type="button" data-go="patients">Back to patients</button></div>
-  </form>
-</section>`
-  },
-  {
-    id: "workspace",
-    title: "Patient Workspace",
-    html: String.raw`
-<section class="patient-hero">
-  <div class="avatar">PF</div>
-  <div><p class="eyebrow">Patient workspace</p><h1>Patient file</h1><p class="muted">MRN pending</p><div class="workflow-band"><span>Neutral placeholders only</span><span>Doctor approval required</span></div></div>
-  <div class="patient-actions"><button class="button" type="button" data-go="doctor-visit">Doctor visit</button><button class="button secondary" type="button" data-go="orders">New order</button></div>
-</section>
-<section class="tabs" aria-label="Scrollable patient workspace tabs">${patientTabs.map((label, index) => `<button class="tab${index === 0 ? " active" : ""}" type="button">${label}</button>`).join("")}</section>
-<section class="content-grid">
-  <article class="panel"><h2>Timeline</h2><div class="timeline-row"><strong>Timeline placeholder</strong><p class="muted">No clinical events loaded.</p></div></article>
-  <article class="panel"><h2>Orders</h2><div class="empty-state"><span>Order draft area</span>${badge("Doctor review required", "warning")}</div></article>
-  <article class="panel"><h2>Notes</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-  <article class="panel"><h2>Billing</h2><p class="muted">Balance and invoice cards use neutral values only.</p>${badge("No payment data")}</article>
-  <article class="panel wide"><h2>Safety status</h2><div class="safety-list">${badge("No real PHI", "warning")}${badge("AI drafts require doctor approval", "danger")}${badge("Audit log required for real changes")}</div></article>
-</section>`
-  },
-  {
-    id: "calendar",
-    title: "Calendar",
-    html: String.raw`
-${shellHeader("Doctor calendar", "Calendar", "Compact weekly and day schedule mock with mobile stacked cards.")}
-<section class="schedule-grid" aria-label="Weekly schedule mock">
-  ${["Mon", "Tue", "Wed", "Thu", "Fri"].map((day, index) => `<article class="data-row"><strong>${day}</strong><p class="muted">Clinic block ${index + 1}</p>${badge(index % 2 === 0 ? "Confirmed" : "Pending", index % 2 === 0 ? "success" : "warning")}<button class="button secondary" type="button">Open day</button></article>`).join("")}
-</section>
-<section class="mobile-card-list">
-  <article class="data-row"><div class="data-row-header"><strong>Today</strong>${badge("Checked in", "success")}</div><p class="muted">Mobile appointment card placeholder.</p></article>
-</section>`
-  },
-  {
-    id: "queue",
-    title: "Queue",
-    html: String.raw`
-${shellHeader("Reception flow", "Queue", "Waiting queue cards with call, complete, and cancel button styles.")}
-<section class="card-grid">
-  ${["Waiting", "In room", "Completed"].map((state) => `<article class="card"><div class="data-row-header"><strong>Patient file</strong>${badge(state, state === "Waiting" ? "warning" : "success")}</div><p class="muted">Queue placeholder, no patient data.</p><div class="actions"><button class="button" type="button">Call</button><button class="button secondary" type="button">Complete</button><button class="button danger" type="button">Cancel</button></div></article>`).join("")}
-</section>`
-  },
-  {
-    id: "doctor-visit",
-    title: "Doctor Visit",
-    html: String.raw`
-${shellHeader("Encounter draft", "Doctor Visit", "Visit note layout with doctor approval required.")}
-<section class="alert danger"><div><strong>Doctor approval required.</strong><p class="muted">Clinical notes in this prototype are draft placeholders only.</p></div>${badge("Draft-only", "danger")}</section>
-<section class="card-grid">
-  ${["Complaint", "History", "Exam", "Impression", "Plan"].map((label) => `<article class="card"><h2>${label}</h2><textarea placeholder="${label} draft placeholder"></textarea></article>`).join("")}
-</section>`
-  },
-  {
-    id: "orders",
-    title: "Orders / Investigations",
-    html: String.raw`
-${shellHeader("Investigations", "Orders / Investigations", "Catalog search, neutral investigation chips, draft order, and upload placeholder.")}
-<section class="panel">
-  <label>Catalog search field<input placeholder="Search investigation catalog" /></label>
-  <div class="chip-list">${["CBC", "Serum Beta-hCG", "AMH", "Pap Smear", "Pelvic Ultrasound", "Transvaginal Ultrasound", "Anomaly Scan"].map((name) => badge(name)).join("")}</div>
-</section>
-<section class="content-grid">
-  <article class="panel"><h2>Order draft</h2><p class="muted">Selected investigation chips appear here before doctor approval.</p>${badge("Draft", "warning")}</article>
-  <article class="panel"><h2>Result upload placeholder</h2><p class="empty-state">Offline visual state only. No files are uploaded.</p></article>
-</section>`
-  },
-  {
-    id: "prescriptions",
-    title: "Prescriptions",
-    html: String.raw`
-${shellHeader("Medication safety", "Prescriptions", "Prescription draft layout with blocked medication reference state.")}
-<section class="alert danger"><div><strong>Medication reference blocked state</strong><p class="muted">Official medication rows: 0. Medication selection blocked until official rows exist.</p></div>${badge("Blocked", "danger")}</section>
-<section class="content-grid">
-  <article class="panel"><h2>Prescription draft</h2><p class="empty-state">No medication rows and no dose examples are included.</p></article>
-  <article class="panel"><h2>Manual directions note</h2><p class="muted">Doctor writes patient directions manually.</p>${badge("Doctor controlled", "warning")}</article>
-</section>`
-  },
-  {
-    id: "billing",
-    title: "Billing",
-    html: String.raw`
-${shellHeader("Finance", "Billing", "Invoice, payment, permissions, and daily closing summary mock.")}
-<section class="card-grid">
-  <article class="card"><h2>Invoice card</h2><p class="muted">Neutral invoice placeholder.</p>${badge("Draft")}</article>
-  <article class="card"><h2>Payment card</h2><p class="muted">No payment data stored.</p>${badge("Offline")}</article>
-  <article class="card"><h2>Daily closing summary</h2><p class="muted">Owner review placeholder.</p>${badge("Owner review", "warning")}</article>
-</section>
-<section class="panel"><h2>Permission badges</h2><div class="safety-list">${badge("Discount permission required", "warning")}${badge("Refund permission required", "warning")}${badge("Audit log required")}</div></section>`
-  },
-  {
-    id: "guidelines",
-    title: "Guidelines",
-    html: String.raw`
-${shellHeader("Reference library", "Guidelines", "Guideline library card with source cards and citation-required banner.")}
-<section class="alert warning"><div><strong>Citation required.</strong><p class="muted">Clinical references require source citation and doctor review before use.</p></div>${badge("Review required", "danger")}</section>
-<section class="panel"><label>Search field<input placeholder="Search guideline library" /></label></section>
-<section class="card-grid">${["WHO", "NICE", "RCOG", "ACOG", "ESHRE"].map((source) => `<article class="card"><h2>${source}</h2><p class="muted">Source card placeholder.</p>${badge("Citation required", "warning")}</article>`).join("")}</section>`
-  },
-  {
-    id: "protocol-atlas",
-    title: "Protocol Atlas",
-    html: String.raw`
-${shellHeader("Clinical protocols", "Protocol Atlas", "Protocol groups with verified/catalog-only status badges.")}
-<section class="alert warning"><div><strong>Doctor review required.</strong><p class="muted">Protocols are reference support only, never autonomous medical decisions.</p></div>${badge("Doctor review required", "danger")}</section>
-<section class="card-grid">${["General gynecology", "Fertility", "Antenatal care", "High-risk obstetrics", "Fetal medicine", "Menopause", "Pelvic floor"].map((group) => `<article class="protocol-card"><h2>${group}</h2><p class="muted">Protocol group placeholder.</p><div class="safety-list">${badge("Verified", "success")}${badge("Catalog-only")}</div></article>`).join("")}</section>`
-  },
-  {
-    id: "admin-accounts",
-    title: "Admin Accounts",
-    html: String.raw`
-${shellHeader("RBAC", "Admin Accounts", "Staff roles, create account mock, role summary, and denied-state banner.")}
-<section class="alert danger"><div><strong>Receptionist denied admin tools.</strong><p class="muted">Protected owner/admin workflow placeholder.</p></div>${badge("Access denied", "danger")}</section>
-<section class="card-grid">${["Doctor", "Receptionist", "Nurse", "Accountant"].map((role) => `<article class="account-row"><h2>${role}</h2><p class="muted">Role card placeholder.</p>${badge("Permission scoped")}</article>`).join("")}</section>
-<section class="content-grid">
-  <article class="panel"><h2>Create account form mock</h2><form class="form-grid"><label>Name<input placeholder="Staff placeholder" /></label><label>Role<select><option>Doctor</option><option>Receptionist</option><option>Nurse</option><option>Accountant</option></select></label><label class="wide">Email<input placeholder="staff@example.invalid" /></label><button class="button wide" type="button">Create visual state</button></form></article>
-  <article class="panel"><h2>Role permission summary</h2><div class="safety-list">${badge("Patients")}${badge("Calendar")}${badge("Billing")}${badge("Admin protected", "warning")}</div></article>
-</section>`
-  },
-  {
-    id: "medication-import",
-    title: "Official Medication Import",
-    html: String.raw`
-${shellHeader("Official medication source control", "Official Medication Import", "Blocked import status with operator command cards and no fake rows.")}
-<section class="summary-grid">
-  <article class="metric-card"><span>official rows</span><strong>0</strong></article>
-  <article class="metric-card"><span>verified rows</span><strong>0</strong></article>
-  <article class="metric-card"><span>needs_review rows</span><strong>0</strong></article>
-  <article class="metric-card"><span>Status</span><strong>Blocked</strong></article>
-</section>
-<section class="alert danger"><div><strong>Warning: no fake rows.</strong><p class="muted">Medication selection remains blocked until official rows exist.</p></div>${badge("Blocked", "danger")}</section>
-<section class="content-grid">
-  <article class="panel"><h2>Inbox path</h2><pre class="code-block">storage/official-medication-sources/</pre><p class="muted">Accepted file types: CSV, XLSX, JSON, PDF source documents.</p></article>
-  <article class="panel"><h2>Operator command cards</h2><pre class="code-block">npm run medication:v101:import-status
-npm run medication:import:official</pre></article>
-</section>`
-  },
-  {
-    id: "settings-themes",
-    title: "Settings / Themes",
-    html: String.raw`
-${shellHeader("Appearance", "Settings / Themes", "Theme selector, preview cards, density toggle mock, and mobile mode preview.")}
-<section class="panel">
-  <h2>Theme selector</h2>
-  <div class="chip-list">${themes.map(([value, label]) => `<button class="chip-button" type="button" data-theme="${value}">${label}</button>`).join("")}</div>
-</section>
-<section class="card-grid">${themes.map(([, label]) => `<article class="card"><h2>${label}</h2><p class="muted">Theme preview card.</p><div class="safety-list">${badge("Cards")}${badge("Forms")}${badge("Badges")}</div></article>`).join("")}</section>
-<section class="content-grid">
-  <article class="panel"><h2>Density toggle mock</h2><div class="actions"><button class="button secondary" type="button">Comfortable</button><button class="button secondary" type="button">Compact</button></div></article>
-  <article class="panel"><h2>Mobile mode preview</h2><p class="muted">Use Mobile 390px in the toolbar to constrain the wrapper.</p><button class="button" type="button" data-viewport="mobile">Mobile 390px</button></article>
-</section>`
-  }
-];
-
-function labToolbar(title) {
-  return String.raw`
-<div class="lab-toolbar">
-  <strong>${title}</strong>
-  <div class="control-group" aria-label="Theme switcher">
-    <span>Theme</span>
-    ${themes.map(([value, label]) => `<button class="chip-button" data-theme="${value}" type="button">${label}</button>`).join("")}
-  </div>
-  <div class="control-group" aria-label="Viewport preview">
-    <span>Preview</span>
-    <button class="chip-button" data-viewport="mobile" type="button">Mobile 390px</button>
-    <button class="chip-button" data-viewport="tablet" type="button">Tablet 768px</button>
-    <button class="chip-button" data-viewport="desktop" type="button">Desktop full</button>
-  </div>
-</div>`;
-}
-
-function navMarkup() {
-  const groups = [
-    ["Access", navItems.slice(0, 2)],
-    ["Clinic", navItems.slice(2, 11)],
-    ["Knowledge", navItems.slice(11, 13)],
-    ["Admin", navItems.slice(13)]
-  ];
-  return String.raw`
-<aside class="sidebar" id="drawer">
-  <div class="brand"><span class="brand-mark">P</span><strong>Prij Clinic OS</strong><span class="muted">Women&apos;s health</span></div>
-  ${groups.map(([label, items]) => `<nav class="nav-group" aria-label="${label}"><span class="nav-title">${label}</span>${items.map(([id, title]) => `<button class="nav-item${id === defaultSectionId ? " active" : ""}" type="button" data-go="${id}">${title}<span aria-hidden="true">></span></button>`).join("")}</nav>`).join("")}
-</aside>`;
-}
-
-function appShell() {
-  return String.raw`
-<button class="drawer-backdrop" id="drawerBackdrop" type="button" aria-label="Close navigation"></button>
-<main class="app-shell">
-  ${navMarkup()}
-  <div class="app-main">
-    <header class="mobile-topbar"><strong>Prij Clinic</strong><button class="button secondary" id="menuButton" type="button">Menu</button></header>
-    <div class="lab-banner"><span>Static UI Lab — no real login required</span><span>This is a static design prototype. Real app login/RBAC still applies in the production app.</span></div>
-    <header class="topbar">
-      <div><p class="eyebrow">Static clickable app mockup</p><p class="muted">Full local HTML shell with no API calls, no external CDNs, and no real patient data.</p></div>
-      <div class="quick-actions" aria-label="Quick actions">
-        <button class="button secondary" type="button" data-go="dashboard">Dashboard</button>
-        <button class="button secondary" type="button" data-go="workspace">Patient Workspace</button>
-        <button class="button secondary" type="button" data-viewport="mobile">Mobile Preview</button>
-        <button class="button secondary" type="button" data-go="settings-themes">Themes</button>
-      </div>
-    </header>
-    ${sections.map((section) => `<section class="section${section.id === defaultSectionId ? " active" : ""}" id="${section.id}" aria-label="${section.title}">${section.html}</section>`).join("")}
-  </div>
-</main>`;
-}
 
 const js = String.raw`
-const preview = document.querySelector(".preview-shell");
-const drawer = document.getElementById("drawer");
-const backdrop = document.getElementById("drawerBackdrop");
-const menuButton = document.getElementById("menuButton");
-const sections = [...document.querySelectorAll(".section")];
-const navButtons = [...document.querySelectorAll("[data-go]")];
+(() => {
+  const defaultSection = "dashboard";
+  const drawer = document.querySelector("[data-drawer]");
+  const overlay = document.querySelector("[data-drawer-overlay]");
+  const menuButton = document.querySelector("[data-menu-button]");
+  const sections = [...document.querySelectorAll("[data-section]")];
+  const navButtons = [...document.querySelectorAll("[data-section-target]")];
+  const themeButtons = [...document.querySelectorAll("[data-theme-target]")];
+  const tabButtons = [...document.querySelectorAll("[data-tab]")];
 
-function setTheme(theme) {
-  document.body.dataset.theme = theme;
-  localStorage.setItem("prij-theme-lab-theme", theme);
-}
+  function closeDrawer() {
+    drawer?.classList.remove("open");
+    overlay?.classList.remove("open");
+    document.body.classList.remove("drawer-open");
+    menuButton?.setAttribute("aria-expanded", "false");
+  }
 
-function setViewport(viewport) {
-  preview.classList.remove("mobile", "tablet");
-  if (viewport !== "desktop") preview.classList.add(viewport);
-}
+  function openDrawer() {
+    drawer?.classList.add("open");
+    overlay?.classList.add("open");
+    document.body.classList.add("drawer-open");
+    menuButton?.setAttribute("aria-expanded", "true");
+  }
 
-function closeDrawer() {
-  drawer?.classList.remove("open");
-  backdrop?.classList.remove("open");
-}
+  function showSection(id, updateHash = true) {
+    const target = document.querySelector('[data-section="' + id + '"]') ? id : defaultSection;
+    sections.forEach((section) => section.classList.toggle("active", section.dataset.section === target));
+    navButtons.forEach((button) => button.classList.toggle("active", button.dataset.sectionTarget === target && button.classList.contains("nav-item")));
+    closeDrawer();
+    if (updateHash) history.replaceState(null, "", "#" + target);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
 
-function showSection(id) {
-  sections.forEach((section) => section.classList.toggle("active", section.id === id));
-  navButtons.forEach((button) => button.classList.toggle("active", button.dataset.go === id && button.classList.contains("nav-item")));
-  closeDrawer();
-  window.location.hash = id;
-  document.querySelector(".app-main")?.scrollTo({ top: 0, behavior: "smooth" });
-}
+  function setTheme(theme) {
+    document.body.dataset.theme = theme;
+    localStorage.setItem("prij-v104-static-theme", theme);
+  }
 
-document.querySelectorAll("[data-theme]").forEach((button) => {
-  button.addEventListener("click", () => setTheme(button.dataset.theme));
-});
+  menuButton?.addEventListener("click", openDrawer);
+  overlay?.addEventListener("click", closeDrawer);
+  navButtons.forEach((button) => button.addEventListener("click", () => showSection(button.dataset.sectionTarget)));
+  themeButtons.forEach((button) => button.addEventListener("click", () => setTheme(button.dataset.themeTarget)));
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      tabButtons.forEach((candidate) => candidate.classList.toggle("active", candidate === button));
+      const panel = document.querySelector("[data-tab-panel]");
+      if (panel) {
+        panel.dataset.tabPanel = button.dataset.tab;
+        panel.querySelector("h2").textContent = button.textContent.trim();
+      }
+    });
+  });
+  window.addEventListener("hashchange", () => showSection(location.hash.slice(1), false));
 
-document.querySelectorAll("[data-viewport]").forEach((button) => {
-  button.addEventListener("click", () => setViewport(button.dataset.viewport));
-});
-
-navButtons.forEach((button) => {
-  button.addEventListener("click", () => showSection(button.dataset.go));
-});
-
-menuButton?.addEventListener("click", () => {
-  drawer?.classList.add("open");
-  backdrop?.classList.add("open");
-});
-backdrop?.addEventListener("click", closeDrawer);
-
-const savedTheme = localStorage.getItem("prij-theme-lab-theme");
-if (savedTheme) document.body.dataset.theme = savedTheme;
-if (window.location.hash) {
-  const id = window.location.hash.slice(1);
-  if (document.getElementById(id)) showSection(id);
-}
+  const savedTheme = localStorage.getItem("prij-v104-static-theme");
+  setTheme(savedTheme || "clinic-premium");
+  showSection(location.hash.slice(1) || defaultSection, false);
+})();
 `;
 
-function documentHtml({ title, defaultPreview = "", bodyClass = "" }) {
-  return String.raw`<!doctype html>
+function htmlDocument(title) {
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>${title}</title>
-  <style>${css}</style>
+  <link rel="stylesheet" href="./assets/styles.css" />
 </head>
-<body class="${bodyClass}" data-theme="prij-heritage">
-  ${labToolbar(title)}
-  <div class="preview-shell ${defaultPreview}">
-    ${bodyClass === "phone-first" ? `<div class="phone-frame">${appShell()}</div>` : appShell()}
+<body data-theme="clinic-premium">
+  <div class="app-shell">
+    <button class="drawer-overlay" type="button" aria-label="Close navigation" data-drawer-overlay></button>
+    <aside class="sidebar" data-drawer>
+      <div class="brand">
+        <span class="brand-mark">P</span>
+        <span class="brand-text"><strong>Prij Clinic</strong><span>Static HTML Lab</span></span>
+      </div>
+      <nav class="nav-group" aria-label="Main sections">
+        <span class="nav-title">Sections</span>
+        ${navItems.map(([id, label]) => `<button class="nav-item" type="button" data-section-target="${id}">${label}<span aria-hidden="true">&gt;</span></button>`).join("")}
+      </nav>
+    </aside>
+    <main class="main">
+      <header class="mobile-topbar">
+        <div class="brand">
+          <span class="brand-mark">P</span>
+          <span class="brand-text"><strong>Prij Clinic</strong><span>UI Lab</span></span>
+        </div>
+        <button class="button secondary" type="button" aria-expanded="false" data-menu-button>Menu</button>
+      </header>
+      <section class="top-tools" aria-label="Lab controls">
+        <div>
+          <p class="eyebrow">v0.10.4 Mobile-Stable Static HTML Lab</p>
+          <p class="muted">One static shell. No API calls, Docker, login, uploads, secrets, or real patient data.</p>
+        </div>
+        <div class="chip-row" aria-label="Theme switcher">
+          ${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}
+        </div>
+      </section>
+      ${sections.map((section) => `<section class="section" id="${section.id}" data-section="${section.id}" aria-label="${section.label}">${section.html}</section>`).join("")}
+    </main>
   </div>
-  <script>${js}</script>
+  <script src="./assets/app.js"></script>
 </body>
 </html>
 `;
 }
 
-writeFileSync(desktopPath, documentHtml({ title: "Prij UI Theme Lab" }), "utf8");
-writeFileSync(mobilePath, documentHtml({ title: "Prij Mobile UI Lab", defaultPreview: "mobile", bodyClass: "phone-first" }), "utf8");
+function writeDocs() {
+  const handoff = `# Prij Clinic Static HTML Theme Lab v0.10.4
 
-console.log("Generated standalone Prij Clinic HTML design labs:");
-console.log(`- ${desktopPath}`);
-console.log(`- ${mobilePath}`);
+This folder is a static design handoff only. Open \`index.html\` directly for a quick desktop check, or use \`npm run design:serve-html\` from the repo root for phone testing.
+
+Safety constraints:
+- No real patient data, passwords, secrets, API calls, backend storage access, uploads, or external AI.
+- Clinical content is draft-only and must be reviewed by a doctor.
+- Medication rows are not included, and the lab does not contain dosing automation.
+
+Default section: Dashboard.
+`;
+
+  const mobileGuide = `# Mobile Testing Guide
+
+Preferred command:
+
+\`\`\`powershell
+npm run design:serve-html
+\`\`\`
+
+Open the printed localhost URL on the computer. For a phone, connect to the same Wi-Fi and open the printed LAN URL.
+
+Why use the server instead of file://:
+- Phone browsers cannot open the developer machine file path directly.
+- LocalStorage, relative assets, and browser security behavior are closer to a normal deployed static site.
+- The server exposes only the \`ui-export\` folder.
+
+Manual checks:
+- Dashboard opens first.
+- Menu opens the drawer at phone widths.
+- Nav item taps switch sections and close the drawer.
+- Overlay closes the drawer.
+- Theme changes apply immediately and persist after refresh.
+- No horizontal scrolling at 360, 375, 390, 414, 430, and 768 pixel widths.
+`;
+
+  const tokens = `# Theme Tokens
+
+Themes included:
+- Clinic Premium
+- Prij Heritage
+- Medicolize Portal
+- Incision Portal
+- Minimal Clean
+- Compact Operations
+- Dark Navy
+
+Core CSS variables:
+- \`--bg\`, \`--bg-soft\`, \`--surface\`, \`--surface-alt\`
+- \`--border\`, \`--text\`, \`--muted\`, \`--strong\`
+- \`--brand\`, \`--brand-strong\`, \`--brand-soft\`
+- \`--nav-bg\`, \`--nav-text\`
+- \`--warning\`, \`--danger\`, \`--success\`
+`;
+
+  const checklist = `# UI Review Checklist
+
+- Dashboard is the default view.
+- Login Preview is visual-only and Enter UI Lab returns to Dashboard.
+- Every nav section is reachable without reload.
+- Mobile drawer opens, closes, and closes after nav tap.
+- No horizontal scroll on phone widths.
+- Buttons and inputs are at least 44px tall.
+- Tables collapse to mobile cards.
+- Patient File tabs are touch-friendly.
+- Prescriptions avoid dosing automation language.
+- Drug Market avoids commerce workflow language.
+- Normal UI avoids raw developer wording and endpoint/code text.
+`;
+
+  writeFileSync(resolve(exportDir, "DESIGN_HANDOFF.md"), handoff, "utf8");
+  writeFileSync(resolve(exportDir, "MOBILE_TESTING_GUIDE.md"), mobileGuide, "utf8");
+  writeFileSync(resolve(exportDir, "THEME_TOKENS.md"), tokens, "utf8");
+  writeFileSync(resolve(exportDir, "UI_REVIEW_CHECKLIST.md"), checklist, "utf8");
+}
+
+function lanUrls(port = 4174) {
+  const urls = [];
+  for (const entries of Object.values(networkInterfaces())) {
+    for (const entry of entries || []) {
+      if (entry.family === "IPv4" && !entry.internal) urls.push(`http://${entry.address}:${port}`);
+    }
+  }
+  return urls;
+}
+
+function cleanText(text) {
+  return text.replace(/[ \t]+$/gm, "");
+}
+
+function packageExport() {
+  mkdirSync(storageExportDir, { recursive: true });
+  rmSync(zipPath, { force: true });
+  const stagingDir = resolve(storageExportDir, "prij-clinic-html-theme-lab-v0.10.4-mobile-stable");
+  rmSync(stagingDir, { recursive: true, force: true });
+  cpSync(exportDir, stagingDir, { recursive: true });
+  const result = spawnSync("powershell", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    `Compress-Archive -Path '${stagingDir.replaceAll("'", "''")}\\*' -DestinationPath '${zipPath.replaceAll("'", "''")}' -Force`
+  ], { stdio: "inherit" });
+  rmSync(stagingDir, { recursive: true, force: true });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+  console.log(`Package generated: ${zipPath}`);
+}
+
+rmSync(exportDir, { recursive: true, force: true });
+mkdirSync(resolve(exportDir, "assets"), { recursive: true });
+mkdirSync(designDir, { recursive: true });
+mkdirSync(dirname(zipPath), { recursive: true });
+
+writeFileSync(resolve(exportDir, "index.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
+writeFileSync(resolve(exportDir, "assets", "styles.css"), cleanText(css), "utf8");
+writeFileSync(resolve(exportDir, "assets", "app.js"), cleanText(js), "utf8");
+writeDocs();
+
+writeFileSync(resolve(designDir, "prij-ui-theme-lab.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
+writeFileSync(resolve(designDir, "prij-mobile-ui-lab.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
+
+console.log("Generated static HTML theme lab:");
+console.log(`- ${resolve(exportDir, "index.html")}`);
+console.log(`- ${resolve(designDir, "prij-ui-theme-lab.html")}`);
+console.log(`- ${resolve(designDir, "prij-mobile-ui-lab.html")}`);
+console.log("Serve for phone testing with: npm run design:serve-html");
+for (const url of lanUrls()) console.log(`LAN candidate: ${url}`);
+
+if (shouldPackage) packageExport();

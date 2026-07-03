@@ -1,5 +1,13 @@
 # Known Limitations
 
+- v0.10.4 is a static HTML design lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, or backend behavior.
+- `ui-export/index.html` can be opened directly, but phone testing should use `npm run design:serve-html` because `file://` paths and phone browsers differ from a served static site.
+- LAN phone testing depends on same-Wi-Fi routing and local firewall rules.
+- The lab includes placeholder UI only: no real patient data, medication rows, passwords, secrets, uploads, API calls, database access, or external AI.
+- The Drug Market section is non-commerce reference UI only.
+- The Prescriptions section intentionally omits preset patient medication directions.
+- Generated package zips live under ignored `storage/ui-export/` and must not be committed.
+
 - v0.10.2 improves mobile browser usability but does not certify production mobile support, medical-device behavior, privacy compliance, or clinical governance.
 - LAN phone browsing depends on same-Wi-Fi routing, local firewall rules, and local dev servers on ports 3000 and 3001.
 - Mobile Playwright checks require the local web app, API, PostgreSQL, migrations, and demo credentials to be reachable.

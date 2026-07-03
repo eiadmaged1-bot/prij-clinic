@@ -1,5 +1,34 @@
 # Next Steps
 
+v0.10.4 mobile-stable static HTML lab next steps:
+
+1. Regenerate the static handoff:
+
+```powershell
+npm run design:export-html
+```
+
+2. Start the local static server:
+
+```powershell
+npm run design:serve-html
+```
+
+3. Open `http://localhost:4174` on desktop, or open the printed LAN URL on a phone connected to the same Wi-Fi.
+4. Run automated mobile static checks:
+
+```powershell
+npm run design:test-mobile-html
+```
+
+5. Package the designer handoff only after review:
+
+```powershell
+npm run design:package-html
+```
+
+6. Do not commit the generated zip under `storage/ui-export/`. Do not add real patient data, medication data, uploads, API calls, secrets, external AI, or release tags.
+
 v0.10.2 mobile browser usability next steps:
 
 1. Start local dev:

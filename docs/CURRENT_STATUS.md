@@ -1,5 +1,16 @@
 # Current Status
 
+v0.10.4 Mobile-Stable Static HTML Lab is in progress on branch `ui/v0.10.4-mobile-stable-html-lab`.
+
+v0.10.4 status:
+- Static HTML lab now targets `ui-export/index.html` as the handoff entry point.
+- The lab opens to Dashboard and uses section/hash navigation without API calls or page reloads.
+- Mobile widths use a touch drawer with overlay close and nav-tap close behavior.
+- Theme switching is local-only, immediate, persisted in localStorage, and available on phone.
+- Static server command `npm run design:serve-html` serves only `ui-export` and prints localhost/LAN URLs for phone testing.
+- Mobile Playwright coverage is added under `tests/v104/static-html-mobile.spec.ts`.
+- No backend, database, real auth, real patient data, medication data, uploads, external AI, release tag, or production-ready claim is added.
+
 v0.10.2 Mobile Browser Usability + LAN Phone QA is in progress on branch `ui/v0.10.2-mobile-browser-usability`.
 
 v0.10.2 status:
