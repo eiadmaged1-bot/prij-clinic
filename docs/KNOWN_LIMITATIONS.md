@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.10.11 is a static AI/graphic designer handoff only. It does not validate production UX, clinical safety, authentication, RBAC, CORS, storage, database behavior, or deployment readiness.
+- v0.10.11 does not change backend clinical logic, database schema, LAN CORS hardening, image metadata stripping, `metadata_only`/`local_demo_file` policy, `queueDate`, encounter voiding, or queue duplicate remediation.
+- The handoff contains placeholder UI only and must not be treated as real patient data, medication data, diagnostic guidance, prescribing guidance, or production-ready medical software.
+- Generated v0.10.11 zip files live under ignored `storage/ui-export/` and must not be committed.
+
 - v0.10.10 is an integration branch, not a release. It does not create a release tag or production readiness claim.
 - v0.10.10 verified local migration deployment, seed, security checks, RBAC checks, typecheck, build, and UI text sweep, but manual browser QA remains required.
 - `npm run dev:start` is not currently defined; use `npm run dev` for local service startup unless a future sprint adds the alias intentionally.

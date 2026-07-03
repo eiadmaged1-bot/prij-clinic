@@ -135,6 +135,7 @@
     "design:open-mobile-html": "powershell -ExecutionPolicy Bypass -Command \"Start-Process 'http://localhost:4174'\"",
     "design:test-mobile-html": "playwright test tests/v104/static-html-mobile.spec.ts --config=playwright.config.ts",
     "design:package-html": "node scripts/export-ui-theme-html.mjs --package",
+    "design:ai-handoff": "powershell -ExecutionPolicy Bypass -File scripts/v111-create-ai-graphic-handoff.ps1",
     "accounts:v097:role-ready-check": "node scripts/v097-account-role-ready-check.mjs",
     "db:v097:prepare-reference": "powershell -ExecutionPolicy Bypass -File scripts/v097-prepare-reference-db.ps1",
     "test:official-medication-preservation": "node scripts/official-medication-preservation-test.mjs",

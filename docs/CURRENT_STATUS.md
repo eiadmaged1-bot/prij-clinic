@@ -1,5 +1,16 @@
 # Current Status
 
+v0.10.11 AI Graphic Handoff is in progress on branch `ui/v0.10.11-ai-graphic-handoff`.
+
+v0.10.11 status:
+- Static AI/graphic designer handoff folder added under `ai-graphic-handoff/`.
+- The v0.10.4 static HTML lab was already present; no merge or cherry-pick was required.
+- Added `npm run design:ai-handoff` to build the ignored zip at `storage/ui-export/prij-clinic-ai-graphic-handoff-v0.10.11.zip`.
+- The sprint is design/export only and does not change backend clinical logic, database schema, CORS hardening, image sanitizer behavior, `queueDate`, encounter voiding, or queue duplicate remediation.
+- No release tag has been created.
+
+See `docs/V0_10_11_AI_GRAPHIC_HANDOFF.md`.
+
 v0.10.10 Runtime Security + Schema Integrity Integration is verified on branch `integration/v0.10.10-runtime-security-schema-hardening`.
 
 v0.10.10 status:

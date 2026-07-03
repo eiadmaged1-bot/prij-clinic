@@ -1,5 +1,18 @@
 # Next Steps
 
+v0.10.11 AI graphic handoff next steps:
+
+1. Generate the handoff zip:
+
+```powershell
+npm run design:ai-handoff
+```
+
+2. Share only the generated ignored zip from `storage/ui-export/` when a designer needs a portable package.
+3. Review visual updates against `ai-graphic-handoff/DO_NOT_CHANGE.md` before importing any redesign back into the app.
+4. Keep this sprint untagged and do not commit generated zips, uploads, screenshots, DB files, logs, backups, `.env` files, PDFs, spreadsheets, or real patient data.
+5. Preserve v0.10.10 security/schema checks after any visual-only revision.
+
 v0.10.10 runtime security/schema integration next steps:
 
 1. Push the integration branch after confirming the staged set excludes local secrets, storage, uploads, reports, screenshots, and generated artifacts.
