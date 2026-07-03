@@ -28,19 +28,18 @@ export class QueueService {
       }
     }
 
-    const queueNumber = await this.nextQueueNumber(branchId);
+    const checkedInAt = new Date();
+    const queueDate = toUtcDateOnly(checkedInAt);
     let ticket;
 
     try {
-      ticket = await this.prisma.queueTicket.create({
-        data: {
-          branchId,
-          patientId: dto.patientId,
-          appointmentId: dto.appointmentId ?? null,
-          queueNumber,
-          priority: dto.priority ?? "routine"
-        },
-        include: { patient: true, appointment: true }
+      ticket = await this.createTicketWithRetry({
+        branchId,
+        patientId: dto.patientId,
+        appointmentId: dto.appointmentId ?? null,
+        priority: dto.priority ?? "routine",
+        checkedInAt,
+        queueDate
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
@@ -57,17 +56,17 @@ export class QueueService {
       resourceId: ticket.id,
       branchId,
       severity: "medium",
-      metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber }
+      metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10) }
     });
 
     return ticket;
   }
 
   today(user: AuthUser) {
-    const { start, end } = todayBounds();
+    const queueDate = toUtcDateOnly();
 
     return this.prisma.queueTicket.findMany({
-      where: { checkedInAt: { gte: start, lt: end }, ...branchScope(user) },
+      where: { queueDate, ...branchScope(user) },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
@@ -125,10 +124,47 @@ export class QueueService {
     return ticket;
   }
 
-  private async nextQueueNumber(branchId: string) {
-    const { start, end } = todayBounds();
-    const latest = await this.prisma.queueTicket.findFirst({
-      where: { branchId, checkedInAt: { gte: start, lt: end } },
+  private async createTicketWithRetry(input: {
+    branchId: string;
+    patientId: string;
+    appointmentId: string | null;
+    priority: "routine" | "priority";
+    checkedInAt: Date;
+    queueDate: Date;
+  }) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const queueNumber = await this.nextQueueNumber(tx, input.branchId, input.queueDate);
+
+          return tx.queueTicket.create({
+            data: {
+              branchId: input.branchId,
+              patientId: input.patientId,
+              appointmentId: input.appointmentId,
+              queueNumber,
+              queueDate: input.queueDate,
+              checkedInAt: input.checkedInAt,
+              priority: input.priority
+            },
+            include: { patient: true, appointment: true }
+          });
+        });
+      } catch (error) {
+        if (isUniqueViolation(error) && attempt < 2) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new BadRequestException("Could not allocate a queue number. Please try again.");
+  }
+
+  private async nextQueueNumber(tx: Prisma.TransactionClient, branchId: string, queueDate: Date) {
+    const latest = await tx.queueTicket.findFirst({
+      where: { branchId, queueDate },
       orderBy: { queueNumber: "desc" }
     });
 
@@ -150,10 +186,10 @@ export class QueueService {
   }
 }
 
-function todayBounds() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+function toUtcDateOnly(input = new Date()): Date {
+  return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+}
 
-  return { start, end };
+function isUniqueViolation(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }

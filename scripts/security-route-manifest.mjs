@@ -41,6 +41,7 @@ const routeDefinitions = [
   { method: "GET", path: "/encounters/:encounterId", category: "encounters", requiredPermission: "encounter.read", allowedAs: "owner", denyAs: "reception" },
   { method: "PATCH", path: "/encounters/:encounterId", category: "encounters", requiredPermission: "encounter.update_own", allowedAs: "owner", denyAs: "reception", fixtureBody: "encounterPatch" },
   { method: "PATCH", path: "/encounters/:encounterId/sign", category: "encounters", requiredPermission: "encounter.sign", allowedAs: "owner", denyAs: "reception", notes: "Uses safe demo encounter only." },
+  { method: "PATCH", path: "/encounters/:voidEncounterId/void", category: "encounters", requiredPermission: "encounter.void", allowedAs: "doctor", denyAs: "reception", fixtureBody: "encounterVoid", notes: "Voids only draft demo encounter and keeps audit trail." },
   { method: "POST", path: "/prescriptions", category: "prescriptions", requiredPermission: "prescription.create", allowedAs: "owner", denyAs: "reception", fixtureBody: "prescription", notes: "Uses demo medication placeholder only." },
   { method: "GET", path: "/prescriptions", category: "prescriptions", requiredPermission: "prescription.read", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/prescriptions/:prescriptionId", category: "prescriptions", requiredPermission: "prescription.read", allowedAs: "owner", denyAs: "reception" },
@@ -216,6 +217,7 @@ export function substitutePath(path, ids) {
     .replace(":patientId", ids.patientId)
     .replace(":appointmentId", ids.appointmentId)
     .replace(":queueTicketId", ids.queueTicketId)
+    .replace(":voidEncounterId", ids.voidEncounterId)
     .replace(":encounterId", ids.encounterId)
     .replace(":prescriptionId", ids.prescriptionId)
     .replace(":investigationOrderId", ids.investigationOrderId)
@@ -271,6 +273,7 @@ export function bodyFor(kind, ids) {
       chiefComplaint: "Demo workflow note only."
     },
     encounterPatch: { planText: "Demo plan text only. Doctor review required." },
+    encounterVoid: { reason: "Demo encounter void authorization check only." },
     prescription: {
       patientId: ids.patientId,
       encounterId: ids.encounterId,
@@ -379,6 +382,8 @@ export async function createRouteFixtures(ownerToken) {
   ids.queueTicketId = queueTicket.id;
   const encounter = await apiJson("POST", "/encounters", ownerToken, bodyFor("encounter", ids));
   ids.encounterId = encounter.id;
+  const voidEncounter = await apiJson("POST", "/encounters", ownerToken, bodyFor("encounter", ids));
+  ids.voidEncounterId = voidEncounter.id;
   const prescription = await apiJson("POST", "/prescriptions", ownerToken, bodyFor("prescription", ids));
   ids.prescriptionId = prescription.id;
   const investigation = await apiJson("POST", "/investigations/orders", ownerToken, bodyFor("investigation", ids));

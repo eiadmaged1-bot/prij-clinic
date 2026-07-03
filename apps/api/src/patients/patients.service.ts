@@ -261,20 +261,26 @@ export class PatientsService {
       const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId: id });
       if (appointment && appointment.branchId !== branchId) throw new BadRequestException("Appointment does not match this patient file.");
     }
-    const queueNumber = await this.nextQueueNumber(branchId);
-    const ticket = await this.prisma.queueTicket.create({
-      data: { branchId, patientId: id, appointmentId: dto.appointmentId ?? null, queueNumber },
-      include: { patient: true, appointment: true }
+    const checkedInAt = new Date();
+    const queueDate = toUtcDateOnly(checkedInAt);
+    const ticket = await this.createQueueTicketWithRetry({
+      branchId,
+      patientId: id,
+      appointmentId: dto.appointmentId ?? null,
+      checkedInAt,
+      queueDate
     });
-    await this.audit.record({ actorUserId: user.id, action: "queue.checked_in", resourceType: "queue_ticket", resourceId: ticket.id, branchId, severity: "medium", metadataJson: { patientId: id, queueNumber, source: "patient_file" } });
+    await this.audit.record({ actorUserId: user.id, action: "queue.checked_in", resourceType: "queue_ticket", resourceId: ticket.id, branchId, severity: "medium", metadataJson: { patientId: id, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10), source: "patient_file" } });
     return ticket;
   }
 
   async createEncounter(id: string, dto: PatientContextEncounterDto, user: AuthUser) {
-    await this.get(id, user);
+    const patient = await this.get(id, user);
+    const branchId = patient.branchId ?? (await this.resolveBranchId(user));
     await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId: id, requireDoctorScope: true });
     const encounter = await this.prisma.encounter.create({
       data: {
+        branchId,
         patientId: id,
         appointmentId: dto.appointmentId ?? null,
         doctorId: user.id,
@@ -285,7 +291,7 @@ export class PatientsService {
         planText: clean(dto.planText)
       }
     });
-    await this.audit.record({ actorUserId: user.id, action: "encounter.created", resourceType: "encounter", resourceId: encounter.id, severity: "high", metadataJson: { patientId: id, source: "patient_file" } });
+    await this.audit.record({ actorUserId: user.id, action: "encounter.created", resourceType: "encounter", resourceId: encounter.id, branchId, severity: "high", metadataJson: { patientId: id, source: "patient_file" } });
     return encounter;
   }
 
@@ -465,12 +471,45 @@ export class PatientsService {
     return branch.id;
   }
 
-  private async nextQueueNumber(branchId: string) {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-    const latest = await this.prisma.queueTicket.findFirst({
-      where: { branchId, checkedInAt: { gte: start, lt: end } },
+  private async createQueueTicketWithRetry(input: {
+    branchId: string;
+    patientId: string;
+    appointmentId: string | null;
+    checkedInAt: Date;
+    queueDate: Date;
+  }) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const queueNumber = await this.nextQueueNumber(tx, input.branchId, input.queueDate);
+
+          return tx.queueTicket.create({
+            data: {
+              branchId: input.branchId,
+              patientId: input.patientId,
+              appointmentId: input.appointmentId,
+              queueNumber,
+              queueDate: input.queueDate,
+              checkedInAt: input.checkedInAt
+            },
+            include: { patient: true, appointment: true }
+          });
+        });
+      } catch (error) {
+        if (isUniqueViolation(error) && attempt < 2) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+
+    throw new BadRequestException("Could not allocate a queue number. Please try again.");
+  }
+
+  private async nextQueueNumber(tx: Prisma.TransactionClient, branchId: string, queueDate: Date) {
+    const latest = await tx.queueTicket.findFirst({
+      where: { branchId, queueDate },
       orderBy: { queueNumber: "desc" }
     });
     return (latest?.queueNumber ?? 0) + 1;
@@ -655,4 +694,12 @@ function toDateTime(value?: string) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toUtcDateOnly(input = new Date()): Date {
+  return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+}
+
+function isUniqueViolation(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }

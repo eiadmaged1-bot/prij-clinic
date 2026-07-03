@@ -65,3 +65,9 @@ export class UpdateEncounterDto {
   @IsEnum(EncounterStatus)
   status?: EncounterStatus;
 }
+
+export class VoidEncounterDto {
+  @IsString()
+  @MaxLength(1000)
+  reason!: string;
+}

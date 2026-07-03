@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -15,15 +15,25 @@ export class EncountersService {
   ) {}
 
   async create(dto: CreateEncounterDto, user: AuthUser) {
-    await assertCanReferencePatient(this.prisma, dto.patientId, user);
-    await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, {
+    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, {
       patientId: dto.patientId,
       requireDoctorScope: true
     });
+    const branchId = patient.branchId;
+
+    if (!branchId) {
+      throw new BadRequestException("Patient branch is required to create an encounter.");
+    }
+
+    if (appointment && appointment.branchId !== branchId) {
+      throw new BadRequestException("Appointment does not match the selected patient and branch.");
+    }
 
     try {
       const encounter = await this.prisma.encounter.create({
         data: {
+          branchId,
           patientId: dto.patientId,
           appointmentId: dto.appointmentId ?? null,
           doctorId: user.id,
@@ -40,6 +50,7 @@ export class EncountersService {
         action: "encounter.created",
         resourceType: "encounter",
         resourceId: encounter.id,
+        branchId,
         severity: "high",
         metadataJson: { patientId: encounter.patientId, appointmentId: encounter.appointmentId }
       });
@@ -95,8 +106,12 @@ export class EncountersService {
   async update(id: string, dto: UpdateEncounterDto, user: AuthUser) {
     const existing = await this.get(id, user);
 
-    if (existing.status === "signed") {
-      throw new BadRequestException("Signed encounters cannot be edited. TODO: add correction/version workflow.");
+    if (existing.status === "signed" || existing.status === "voided") {
+      throw new BadRequestException("Signed or voided encounters cannot be edited. TODO: add correction/version workflow.");
+    }
+
+    if (dto.status !== undefined && dto.status !== existing.status) {
+      throw new BadRequestException("Use a dedicated encounter state action to change encounter status.");
     }
 
     const data: Prisma.EncounterUpdateInput = {};
@@ -105,7 +120,6 @@ export class EncountersService {
     if (dto.examText !== undefined) data.examText = clean(dto.examText);
     if (dto.assessmentText !== undefined) data.assessmentText = clean(dto.assessmentText);
     if (dto.planText !== undefined) data.planText = clean(dto.planText);
-    if (dto.status !== undefined) data.status = dto.status;
 
     const encounter = await this.prisma.encounter.update({ where: { id }, data });
 
@@ -114,6 +128,7 @@ export class EncountersService {
       action: "encounter.updated",
       resourceType: "encounter",
       resourceId: encounter.id,
+      branchId: encounter.branchId,
       severity: "high",
       metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: encounter.status }
     });
@@ -124,8 +139,8 @@ export class EncountersService {
   async sign(id: string, user: AuthUser) {
     const existing = await this.get(id, user);
 
-    if (existing.status === "signed") {
-      throw new BadRequestException("Encounter is already signed.");
+    if (existing.status !== "draft") {
+      throw new BadRequestException("Only draft encounters can be signed.");
     }
 
     const encounter = await this.prisma.encounter.update({
@@ -138,11 +153,74 @@ export class EncountersService {
       action: "encounter.signed",
       resourceType: "encounter",
       resourceId: encounter.id,
+      branchId: encounter.branchId,
       severity: "high",
       metadataJson: { patientId: encounter.patientId }
     });
 
     return encounter;
+  }
+
+  async voidEncounter(encounterId: string, userId: string, reason: string, user?: AuthUser) {
+    const trimmedReason = reason?.trim();
+
+    if (!trimmedReason) {
+      throw new BadRequestException("Void reason is required.");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const encounter = await tx.encounter.findFirst({
+        where: {
+          id: encounterId,
+          ...(user ? patientBranchScope(user) : {}),
+          ...(user ? doctorScope(user) : {})
+        },
+        select: {
+          id: true,
+          branchId: true,
+          patientId: true,
+          status: true
+        }
+      });
+
+      if (!encounter) {
+        throw new NotFoundException("Encounter not found.");
+      }
+
+      if (encounter.status !== "draft") {
+        throw new ConflictException("Only draft encounters can be voided.");
+      }
+
+      const voidedAt = new Date();
+      const updated = await tx.encounter.update({
+        where: { id: encounterId },
+        data: {
+          status: "voided",
+          voidedAt,
+          voidedByUserId: userId,
+          voidReason: trimmedReason
+        }
+      });
+
+      await tx.auditLog.create({
+        data: {
+          actorUserId: userId,
+          action: "encounter.voided",
+          resourceType: "encounter",
+          resourceId: encounter.id,
+          branchId: encounter.branchId,
+          severity: "high",
+          reason: trimmedReason,
+          metadataJson: {
+            patientId: encounter.patientId,
+            fromStatus: encounter.status,
+            toStatus: updated.status
+          }
+        } as unknown as never
+      });
+
+      return updated;
+    });
   }
 
   private handlePrismaReferenceError(error: unknown): never {

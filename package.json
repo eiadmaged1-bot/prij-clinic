@@ -156,6 +156,8 @@
     "test:web:api-base": "node scripts/test-api-base-url.mjs",
     "test:security:image-metadata": "node scripts/test-image-metadata-sanitizer.mjs",
     "test:security:document-upload": "node scripts/test-patient-document-upload-metadata.mjs",
+    "test:db:queue-date": "node scripts/test-queue-date-uniqueness.mjs",
+    "test:db:encounter-void": "node scripts/test-encounter-voiding.mjs",
     "test:protocol-atlas": "node scripts/protocol-atlas-test.mjs",
     "test:ai-management": "node scripts/ai-management-test.mjs",
     "test:workflow:spine": "node scripts/clinic-workflow-spine-test.mjs",

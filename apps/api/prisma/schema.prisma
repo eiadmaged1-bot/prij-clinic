@@ -23,6 +23,7 @@ model Branch {
   patients         Patient[]
   appointments     Appointment[]
   queueTickets     QueueTicket[]
+  encounters       Encounter[]
   reports          Report[]
   investigationResults InvestigationResult[]
   patientDocuments PatientDocument[]
@@ -72,6 +73,7 @@ model User {
   createdAppointments                Appointment[]               @relation("AppointmentsCreatedBy")
   doctorEncounters                   Encounter[]                 @relation("EncountersDoctor")
   signedEncounters                   Encounter[]                 @relation("EncountersSignedBy")
+  voidedEncounters                   Encounter[]                 @relation("EncountersVoidedBy")
   doctorPrescriptions                Prescription[]              @relation("PrescriptionsDoctor")
   doctorInvestigationOrders          InvestigationOrder[]        @relation("InvestigationOrdersDoctor")
   uploadedReports                    Report[]                    @relation("ReportsUploadedBy")
@@ -287,6 +289,7 @@ model QueueTicket {
   patientId     String            @db.Uuid
   appointmentId String?           @db.Uuid
   queueNumber   Int
+  queueDate     DateTime          @db.Date
   status        QueueTicketStatus @default(waiting)
   priority      QueuePriority     @default(routine)
   checkedInAt   DateTime          @default(now()) @db.Timestamptz(3)
@@ -300,8 +303,9 @@ model QueueTicket {
   patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
-  @@unique([branchId, queueNumber, checkedInAt])
+  @@unique([branchId, queueDate, queueNumber])
   @@index([branchId, checkedInAt])
+  @@index([branchId, queueDate, status])
   @@index([patientId])
   @@index([appointmentId])
   @@index([status])
@@ -377,6 +381,7 @@ enum InvestigationResultReviewStatus {
 
 model Encounter {
   id             String          @id @default(uuid()) @db.Uuid
+  branchId       String          @db.Uuid
   patientId      String          @db.Uuid
   appointmentId  String?         @db.Uuid
   doctorId       String          @db.Uuid
@@ -388,13 +393,18 @@ model Encounter {
   planText       String?
   signedAt       DateTime?       @db.Timestamptz(3)
   signedByUserId String?         @db.Uuid
+  voidedAt       DateTime?       @db.Timestamptz(3)
+  voidedByUserId String?         @db.Uuid
+  voidReason     String?
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime        @updatedAt @db.Timestamptz(3)
 
+  branch                Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
   patient               Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointment           Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   doctor                User                   @relation("EncountersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
   signedByUser          User?                  @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
+  voidedByUser          User?                  @relation("EncountersVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
   prescriptions         Prescription[]
   investigationOrders   InvestigationOrder[]
   reports               Report[]
@@ -403,6 +413,7 @@ model Encounter {
   aiDrafts              AiDraft[]
   aiManagementSnapshots AIManagementSnapshot[]
 
+  @@index([branchId])
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
   @@index([appointmentId])
