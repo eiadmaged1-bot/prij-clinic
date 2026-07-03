@@ -1,11 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { ArchivePatientDocumentDto, CreatePatientDocumentDto, ReviewPatientDocumentDto, UpdatePatientDocumentDto, VoidPatientDocumentDto } from "./dto";
+import { ArchivePatientDocumentDto, CreatePatientDocumentDto, ReviewPatientDocumentDto, UpdatePatientDocumentDto, UploadPatientDocumentDto, VoidPatientDocumentDto } from "./dto";
 import { PatientDocumentsService } from "./patient-documents.service";
+
+type UploadedPatientDocumentFile = {
+  buffer: Buffer;
+  mimetype: string;
+  originalname: string;
+  size: number;
+};
 
 @Controller("patients/:patientId/documents")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -22,6 +30,18 @@ export class PatientDocumentsController {
   @Permissions("patient_document.create")
   create(@Param("patientId") patientId: string, @Body() dto: CreatePatientDocumentDto, @CurrentUser() user: AuthUser) {
     return this.documents.create(patientId, dto, user);
+  }
+
+  @Post("upload")
+  @Permissions("patient_document.create")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 20 * 1024 * 1024 } }))
+  upload(
+    @Param("patientId") patientId: string,
+    @UploadedFile() file: UploadedPatientDocumentFile,
+    @Body() dto: UploadPatientDocumentDto,
+    @CurrentUser() user: AuthUser
+  ) {
+    return this.documents.createFromUpload(patientId, file, dto, user);
   }
 
   @Get(":documentId")

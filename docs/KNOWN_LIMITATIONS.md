@@ -90,3 +90,9 @@
 - Prij Heritage uses CSS font stacks only; no font files are bundled.
 - Theme selection still uses the existing lightweight appearance/frontend theme system. No new backend theme engine was added.
 - Medication source metadata remains available to backend/admin workflows, but normal UI intentionally avoids technical source and price fields.
+# Image/File Storage Limitations
+
+- HEIC/HEIF uploads are rejected until runtime support and governance are approved.
+- Patient document upload integration tests require a running local API and database.
+- PDFs and non-image files are not production-ready PHI storage.
+- No malware scanning or external production object storage provider is configured yet.

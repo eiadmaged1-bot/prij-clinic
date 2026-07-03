@@ -170,3 +170,9 @@ Safety:
 Visible experience safety:
 - The browser still states Local Demo / not production-ready.
 - No real patient data, no real payment gateway, no external AI calls, and no diagnostic automation are introduced.
+# V0.10.6 Image Metadata Sanitization
+
+- Added API-boundary image sanitization for patient document uploads.
+- Patient document storage remains `metadata_only` by default.
+- Local demo file storage is restricted to sanitized output in local/dev/test.
+- Production local patient file storage fails closed.

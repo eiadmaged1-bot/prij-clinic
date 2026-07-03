@@ -81,6 +81,8 @@ export class CreatePatientDocumentDto {
   confidentialityLevel?: PatientDocumentConfidentialityLevel;
 }
 
+export class UploadPatientDocumentDto extends CreatePatientDocumentDto {}
+
 export class UpdatePatientDocumentDto {
   @IsOptional()
   @IsString()
