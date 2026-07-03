@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.10.10 is an integration branch, not a release. It does not create a release tag or production readiness claim.
+- v0.10.10 verified local migration deployment, seed, security checks, RBAC checks, typecheck, build, and UI text sweep, but manual browser QA remains required.
+- `npm run dev:start` is not currently defined; use `npm run dev` for local service startup unless a future sprint adds the alias intentionally.
+- v0.10.10 does not add production patient file storage. Malware scanning, approved object storage, expiring download/preview access, consent checks, patient scope checks, and audit review are still required before real PHI file handling.
+- v0.10.10 does not change the rule that AI clinical output is draft-only until reviewed and approved by a doctor.
+- v0.10.10 does not add patient-to-doctor assignment modeling; doctor patient reads remain branch-scoped where noted by the security test warnings.
+
 - v0.10.9 remediation is limited to local/dev/test legacy queue duplicates and must not be used as an automatic staging or production data operation.
 - v0.10.9 does not delete queue tickets, reset data, or renumber all historical rows; it only changes later duplicate tickets in guarded duplicate groups.
 - v0.10.9 relies on the existing `checkedInAt` UTC date derivation used by the migration guard. It does not infer clinic-local queue dates for legacy data.

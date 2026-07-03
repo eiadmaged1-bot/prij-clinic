@@ -1,5 +1,18 @@
 # Current Status
 
+v0.10.10 Runtime Security + Schema Integrity Integration is verified on branch `integration/v0.10.10-runtime-security-schema-hardening`.
+
+v0.10.10 status:
+- Integrated source branches are `security/v0.10.5-lan-cors-hardening`, `security/v0.10.6-metadata-only-image-ingest`, `security/v0.10.8-schema-integrity-hardening`, and `data/v0.10.9-legacy-queue-duplicate-remediation`.
+- All four requested merge commands reported `Already up to date`; no conflicts were produced.
+- LAN/CORS hardening, image metadata stripping, guarded schema integrity migration, queue duplicate remediation tooling, and encounter voiding protections are preserved.
+- Queue migration readiness passed with duplicate groups `0`; migration deploy found no pending migrations.
+- Prisma validate, repair, generate, seed, typecheck, build, and the integrated security/database/UI checks passed.
+- `npm run dev:start` does not exist in this repository; local services were started with the existing `npm run dev` script.
+- No release tag has been created.
+
+See `docs/V0_10_10_RUNTIME_SECURITY_SCHEMA_INTEGRATION.md`.
+
 v0.10.9 Legacy Queue Duplicate Remediation is in progress on branch `data/v0.10.9-legacy-queue-duplicate-remediation`.
 
 v0.10.9 status:

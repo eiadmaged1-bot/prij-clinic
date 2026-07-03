@@ -1,5 +1,28 @@
 # Next Steps
 
+v0.10.10 runtime security/schema integration next steps:
+
+1. Push the integration branch after confirming the staged set excludes local secrets, storage, uploads, reports, screenshots, and generated artifacts.
+2. Let CI run on `integration/v0.10.10-runtime-security-schema-hardening`.
+3. Perform manual browser QA for login, patients, queue, calendar, encounters, document upload, billing, admin accounts, and role visibility.
+4. Keep `npm run dev` as the current local service startup command unless a future sprint intentionally adds `dev:start`.
+5. Do not create a release tag from this integration sprint.
+
+Suggested verification before any release decision:
+
+```powershell
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:security:image-metadata
+npm run test:security:document-upload
+npm run test:db:queue-date
+npm run test:db:encounter-void
+npm run test:security:expanded
+npm run test:accounts:rbac
+npm run typecheck
+npm run build
+```
+
 v0.10.9 legacy queue duplicate remediation next steps:
 
 1. Review the dry-run output:
