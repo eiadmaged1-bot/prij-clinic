@@ -54,6 +54,11 @@ export type MedicationSafetyProfileResult = {
     sourceType: string;
     reviewStatus: string;
     confidenceLevel: string;
+    lastCheckedAt?: string | null;
+    sourceLastUpdatedAt?: string | null;
+    sourceVersionLabel?: string | null;
+    sourceRefreshStatus?: string | null;
+    sourceRefreshNote?: string | null;
     pregnancyRiskSummary?: string | null;
     pregnancyClinicalConsiderations?: string | null;
     pregnancyDataSummary?: string | null;

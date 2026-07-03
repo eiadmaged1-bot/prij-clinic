@@ -37,6 +37,8 @@ export function PregnancyLactationSafetyProfile({ medicationGenericId }: { medic
         <div><dt>Source</dt><dd>{safety?.sourceName ?? "Not reviewed"}</dd></div>
         <div><dt>Review status</dt><dd>{safety?.reviewStatus ?? "needs_review"}</dd></div>
         <div><dt>Confidence</dt><dd>{safety?.confidenceLevel ?? "unknown"}</dd></div>
+        <div><dt>Last checked</dt><dd>{safety?.lastCheckedAt ? safety.lastCheckedAt.slice(0, 10) : "unknown"}</dd></div>
+        <div><dt>Last updated</dt><dd>{safety?.sourceLastUpdatedAt ? safety.sourceLastUpdatedAt.slice(0, 10) : "unknown"}</dd></div>
       </dl>
       {critical(safety) ? <p className="warning-text">Critical review flag. Manual doctor review and reason are required before overriding.</p> : <p className="muted">{status}</p>}
       {safety?.pregnancyRiskSummary ? <p className="muted">{safety.pregnancyRiskSummary}</p> : null}
