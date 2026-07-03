@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
+import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
@@ -98,6 +99,7 @@ const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "medical", label: "Medical", icon: "doctor", empty: "Medical history and clinical context appear here.", permissions: ["encounter.read", "prescription.read", "pregnancy.read", "patient_medications.read"] },
   { key: "history-sheet", label: "History Sheet", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
+  { key: "care-assist", label: "Care Assist", icon: "ai", empty: "Completeness and safety review prompts appear here.", permissions: ["care_assist.read", "care_assist.evaluate"] },
   { key: "clinical", label: "Clinical", icon: "encounter", empty: "Clinical workflow shortcuts appear here.", permissions: ["encounter.read", "encounter.create"] },
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
@@ -309,7 +311,13 @@ export default function PatientFilePage() {
 
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
           {active.key === "medical" ? <MedicalPanel patient={patient} related={related} /> : null}
-          {active.key === "history-sheet" ? <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} /> : null}
+          {active.key === "history-sheet" ? (
+            <>
+              <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} />
+              <CareAssistPanel patientId={patient.id} historySheetId={String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined} />
+            </>
+          ) : null}
+          {active.key === "care-assist" ? <CareAssistPanel patientId={patient.id} historySheetId={String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined} prescriptionId={String((related.prescriptions ?? [])[0]?.id ?? "") || undefined} encounterId={String((related.visits ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((related.orders ?? [])[0]?.id ?? "") || undefined} /> : null}
           {active.key === "clinical" ? <ClinicalPanel patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
           {active.key === "print-packet" ? <PrintPacketPanel patient={patient} related={related} timelineItems={timelineItems} /> : null}
@@ -333,7 +341,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
+          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>

@@ -25,6 +25,9 @@ export type MedicationResult = {
   brandName?: string | null;
   tradeName?: string | null;
   family?: string | null;
+  familyName?: string | null;
+  className?: string | null;
+  pharmacologicClass?: string | null;
   route?: string | null;
   dosageForm?: string | null;
   strengthText?: string | null;

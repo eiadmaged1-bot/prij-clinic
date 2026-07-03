@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { searchMedications, listDrugFamilies, runMedicationSafetyCheck, type MedicationResult } from "../../lib/medications";
+import { PregnancyLactationSafetyProfile } from "./PregnancyLactationSafetyProfile";
 import {
   searchDrugMarket,
   listDrugMarketCountries,
@@ -64,15 +65,16 @@ export function MedicationResultCard({ result }: { result: MedicationResult }) {
   return (
     <article className="data-row">
       <div className="data-row-header">
-        <strong>{result.genericName || result.tradeName || result.family || "Medication reference"}</strong>
+        <strong>{result.genericName || result.tradeName || result.family || result.familyName || "Medication reference"}</strong>
         <span className="badge">{result.verificationStatus ?? "needs review"}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{result.genericName || "Not listed"}</dd></div>
         <div><dt>Brand or trade</dt><dd>{result.tradeName || result.brandName || "Not listed"}</dd></div>
-        <div><dt>Drug family</dt><dd>{result.family || "Not listed"}</dd></div>
+        <div><dt>Drug family</dt><dd>{result.family || result.familyName || "Not listed"}</dd></div>
         <div><dt>Strength and form</dt><dd>{[result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Market variant only when listed"}</dd></div>
       </dl>
+      {result.type === "generic_medication" ? <PregnancyLactationSafetyProfile medicationGenericId={result.id} /> : null}
     </article>
   );
 }
@@ -128,6 +130,7 @@ export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
     <section className="panel">
       <div className="section-heading"><h2>Prescription Safety</h2><SafetyAlertBadge severity="major" /></div>
       <p className="muted">Prescription checks are draft safety support for the doctor. They do not prescribe, sign, or change final prescriptions.</p>
+      <p className="warning-text">Pregnancy and lactation profile flags are reference metadata only. They never auto-fill dose, frequency, duration, or instructions.</p>
       <button className="button" onClick={runCheck} type="button">Run Prescription Check</button>
       <p className="muted">{status}</p>
     </section>
