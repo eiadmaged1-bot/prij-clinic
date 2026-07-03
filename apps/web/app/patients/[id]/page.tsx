@@ -614,7 +614,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <label>HPI<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
         <label>Examination notes<textarea name="examText" defaultValue={String(visit?.encounter?.examText ?? "")} /></label>
         <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
-        <label>Doctor plan<textarea name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
+        <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
         <button className="button" type="submit" disabled={!encounterId}>Save draft</button>
       </form>
 
@@ -656,7 +656,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
             <button className="button secondary" type="button" onClick={() => setHint("")}>Dismiss note</button>
           </div>
           {hint ? <p className="notice">{hint}</p> : <p className="muted">No note selected.</p>}
-          <button className="button" type="button" disabled={!hint} onClick={() => setStatus("Selected note remains side-panel only until a draft insertion target is chosen.")}>Insert selected note into draft</button>
+          <button className="button" type="button" disabled={!hint} onClick={() => insertHintIntoPlan(hint, setStatus)}>Insert selected note into draft</button>
         </section>
       </div>
 
@@ -697,6 +697,18 @@ function VisitPacketPreview({ visit, patient }: { visit: DoctorVisitState | null
       <section><h3>Follow-up</h3>{followUps.length ? followUps.map((task, index) => <p key={String(task.id ?? index)}>{String(task.title ?? "Follow-up")} {String(task.dueAt ?? "").slice(0, 10)}</p>) : <p>No follow-up task saved.</p>}</section>
     </div>
   );
+}
+
+function insertHintIntoPlan(hint: string, setStatus: (value: string) => void) {
+  const field = document.getElementById("doctor-visit-planText") as HTMLTextAreaElement | null;
+  if (!field) {
+    setStatus("Open the encounter draft before inserting the selected note.");
+    return;
+  }
+  const insertion = `Doctor review required: ${hint}`;
+  field.value = [field.value.trim(), insertion].filter(Boolean).join("\n");
+  field.dispatchEvent(new Event("input", { bubbles: true }));
+  setStatus("Selected note inserted into the encounter draft. Save draft to persist it.");
 }
 
 function ProtocolAtlasPanel() {
