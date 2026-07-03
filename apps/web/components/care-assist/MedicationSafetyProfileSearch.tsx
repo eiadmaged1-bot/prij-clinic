@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { searchMedicationSafetyProfiles } from "../../lib/care-assist";
 import { MedicationSafetyBadge } from "../medications/MedicationSafetyBadge";
 
@@ -19,7 +19,7 @@ export function MedicationSafetyProfileSearch() {
   const [rows, setRows] = useState<Row[]>([]);
   const [status, setStatus] = useState("Ready");
 
-  async function submit(event?: FormEvent) {
+  const submit = useCallback(async (event?: FormEvent) => {
     event?.preventDefault();
     setStatus("Searching");
     try {
@@ -29,9 +29,9 @@ export function MedicationSafetyProfileSearch() {
     } catch {
       setStatus("Medication safety profiles require authorized clinical access");
     }
-  }
+  }, [query]);
 
-  useEffect(() => { void submit(); }, []);
+  useEffect(() => { void submit(); }, [submit]);
 
   return (
     <section className="panel">
