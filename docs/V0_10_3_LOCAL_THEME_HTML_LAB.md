@@ -8,6 +8,8 @@ Scope: UI/design export only. No backend clinical logic, medication data, databa
 
 The sprint expands the local HTML export from a login-only preview into a standalone clickable clinic UI prototype. The owner can open the app shell directly in a browser and inspect desktop, tablet, and mobile states without running the API or Next.js app.
 
+The standalone lab opens directly to Dashboard, and the mobile HTML export opens directly to the mobile dashboard. Login remains present only as a visual preview section. Its `Enter UI Lab` button switches back to Dashboard and does not authenticate, call an API, create a session, or bypass the real application.
+
 ## Generated Files
 
 ```text
@@ -22,6 +24,8 @@ scripts/export-ui-theme-html.mjs
 ```
 
 The generator writes self-contained HTML with inline CSS and inline JavaScript for navigation, theme switching, mobile drawer behavior, and viewport preview controls.
+
+Each generated file displays the banner `Static UI Lab — no real login required` and the note that this is a static design prototype where real app login/RBAC still applies in the production app.
 
 ## Included Sections
 
@@ -42,7 +46,7 @@ The generator writes self-contained HTML with inline CSS and inline JavaScript f
 - Official Medication Import
 - Settings / Themes
 
-Each sidebar or drawer item switches to a different full section in the same HTML file.
+Each sidebar or drawer item switches to a different full section in the same HTML file without authentication. Top-right quick actions are available for Dashboard, Patient Workspace, Mobile Preview, and Settings / Themes.
 
 ## Themes
 

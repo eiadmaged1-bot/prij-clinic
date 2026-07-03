@@ -10,6 +10,8 @@ The design lab exports static, standalone HTML previews of the Prij Clinic UI di
 
 Both HTML files open by double-clicking, work offline, use inline CSS, use inline JavaScript, and make no external API or CDN calls.
 
+The lab opens directly to Dashboard. Login remains available in the navigation as a visual preview only, with an `Enter UI Lab` button that returns to Dashboard. The banner reads `Static UI Lab — no real login required`. This is a static design prototype. Real app login/RBAC still applies in the production app.
+
 ## Export
 
 ```powershell
@@ -44,7 +46,7 @@ You can also double-click either HTML file in `docs/design`.
 - Official Medication Import
 - Settings / Themes
 
-The sidebar and mobile drawer are clickable. Each item switches the visible section in the same HTML file without an API.
+The sidebar and mobile drawer are clickable without authentication. Each item switches the visible section in the same HTML file without an API. The top-right quick actions jump to Dashboard, Patient Workspace, Mobile Preview, and Settings / Themes.
 
 ## Themes
 

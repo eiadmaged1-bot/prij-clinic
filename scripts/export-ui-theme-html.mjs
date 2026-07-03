@@ -53,6 +53,8 @@ const patientTabs = [
   "Timeline"
 ];
 
+const defaultSectionId = "dashboard";
+
 const css = String.raw`
 :root {
   color-scheme: light;
@@ -165,6 +167,11 @@ h3 { font-size: 1rem; letter-spacing: 0; }
 .section.active { display: grid; }
 @keyframes fadeIn { from { opacity: .72; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 .topbar, .header-row, .section-heading, .actions, .workflow-band, .patient-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
+.lab-banner {
+  display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-dark); padding: .55rem .75rem; font-weight: 820;
+}
+.quick-actions { display: flex; flex-wrap: wrap; gap: .45rem; justify-content: flex-end; }
 .page-header { display: grid; gap: .55rem; }
 .muted { color: var(--muted); }
 .button, .chip-button {
@@ -249,6 +256,7 @@ textarea { min-height: 6rem; resize: vertical; }
   .sidebar { position: fixed; inset: 0 auto 0 0; z-index: 40; width: min(20rem, calc(100vw - 2rem)); max-width: calc(100vw - 2rem); height: 100dvh; top: 0; transform: translateX(-105%); transition: transform 180ms ease; }
   .sidebar.open { transform: translateX(0); }
   .topbar { align-items: stretch; flex-direction: column; }
+  .quick-actions { justify-content: flex-start; }
   .summary-grid, .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 640px) {
@@ -304,8 +312,8 @@ const sections = [
       <div><p class="eyebrow">Demo-style login</p><h2>Staff sign in</h2><p class="muted">Static offline form state only.</p></div>
       <label>Staff ID or email<input value="local-demo@example.invalid" aria-label="Demo staff ID" /></label>
       <label>Password<input type="password" placeholder="Not stored" aria-label="Demo password" /></label>
-      <button class="button" type="button">Sign in</button>
-      <p class="empty-state">Safety note: this mockup contains no secrets, no patient records, and no real clinical content.</p>
+      <button class="button" type="button" data-go="dashboard">Enter UI Lab</button>
+      <p class="empty-state">Static UI Lab — no real login required. This is a visual preview only; real app login/RBAC still applies in the production app.</p>
     </form>
   </div>
 </section>`
@@ -541,7 +549,7 @@ function navMarkup() {
   return String.raw`
 <aside class="sidebar" id="drawer">
   <div class="brand"><span class="brand-mark">P</span><strong>Prij Clinic OS</strong><span class="muted">Women&apos;s health</span></div>
-  ${groups.map(([label, items]) => `<nav class="nav-group" aria-label="${label}"><span class="nav-title">${label}</span>${items.map(([id, title]) => `<button class="nav-item${id === "login" ? " active" : ""}" type="button" data-go="${id}">${title}<span aria-hidden="true">></span></button>`).join("")}</nav>`).join("")}
+  ${groups.map(([label, items]) => `<nav class="nav-group" aria-label="${label}"><span class="nav-title">${label}</span>${items.map(([id, title]) => `<button class="nav-item${id === defaultSectionId ? " active" : ""}" type="button" data-go="${id}">${title}<span aria-hidden="true">></span></button>`).join("")}</nav>`).join("")}
 </aside>`;
 }
 
@@ -552,11 +560,17 @@ function appShell() {
   ${navMarkup()}
   <div class="app-main">
     <header class="mobile-topbar"><strong>Prij Clinic</strong><button class="button secondary" id="menuButton" type="button">Menu</button></header>
+    <div class="lab-banner"><span>Static UI Lab — no real login required</span><span>This is a static design prototype. Real app login/RBAC still applies in the production app.</span></div>
     <header class="topbar">
       <div><p class="eyebrow">Static clickable app mockup</p><p class="muted">Full local HTML shell with no API calls, no external CDNs, and no real patient data.</p></div>
-      <div class="actions"><button class="button secondary" type="button" data-go="patients">Patient search</button>${badge("Local HTML lab", "warning")}</div>
+      <div class="quick-actions" aria-label="Quick actions">
+        <button class="button secondary" type="button" data-go="dashboard">Dashboard</button>
+        <button class="button secondary" type="button" data-go="workspace">Patient Workspace</button>
+        <button class="button secondary" type="button" data-viewport="mobile">Mobile Preview</button>
+        <button class="button secondary" type="button" data-go="settings-themes">Themes</button>
+      </div>
     </header>
-    ${sections.map((section) => `<section class="section${section.id === "login" ? " active" : ""}" id="${section.id}" aria-label="${section.title}">${section.html}</section>`).join("")}
+    ${sections.map((section) => `<section class="section${section.id === defaultSectionId ? " active" : ""}" id="${section.id}" aria-label="${section.title}">${section.html}</section>`).join("")}
   </div>
 </main>`;
 }
