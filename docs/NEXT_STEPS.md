@@ -231,3 +231,9 @@ Engineering next steps:
 - Add service catalog editing as its own owner page if the current Owner Control Center becomes too dense.
 - Expand review queue UI with import-run selector backed by actual import run list.
 - Add richer protected admin drawer for original official fields without exposing raw technical output in normal UI.
+# Image Upload Security Next Steps
+
+- Add malware scanning before any production document storage.
+- Add an approved external object storage provider before accepting real PHI files.
+- Add download/preview endpoints with RBAC, patient scope, consent checks, expiring access, and audit logs.
+- Review PDF/non-image handling before production use.

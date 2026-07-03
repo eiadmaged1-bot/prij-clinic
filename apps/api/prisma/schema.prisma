@@ -1200,6 +1200,7 @@ enum PatientDocumentStatus {
 enum PatientDocumentStorageMode {
   metadata_only
   local_demo_file
+  production_external_storage_placeholder
   external_reference_placeholder
 }
 
@@ -1571,6 +1572,16 @@ model PatientDocument {
   fileSizeBytes         Int?
   fileReference         String?
   fileSha256            String?
+  originalFileName      String?
+  displayFileName       String?
+  imageWidth            Int?
+  imageHeight           Int?
+  sanitizedSha256       String?
+  originalSha256Internal String?
+  exifStripped          Boolean                             @default(false)
+  metadataSanitizedAt   DateTime?                           @db.Timestamptz(3)
+  localDemoFilePath     String?
+  ingestWarnings        Json?
   sourceText            String?
   summaryText           String?
   tagsJson              Json?
@@ -1598,6 +1609,7 @@ model PatientDocument {
   @@index([documentType])
   @@index([status])
   @@index([storageMode])
+  @@index([sanitizedSha256])
   @@index([confidentialityLevel])
 }
 

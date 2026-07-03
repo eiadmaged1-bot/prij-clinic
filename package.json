@@ -152,6 +152,8 @@
     "test:calculator-suite": "node scripts/calculator-suite-test.mjs",
     "test:ob-dating": "node scripts/ob-dating-test.mjs",
     "test:security:expanded": "node scripts/security-test-all.mjs",
+    "test:security:image-metadata": "node scripts/test-image-metadata-sanitizer.mjs",
+    "test:security:document-upload": "node scripts/test-patient-document-upload-metadata.mjs",
     "test:protocol-atlas": "node scripts/protocol-atlas-test.mjs",
     "test:ai-management": "node scripts/ai-management-test.mjs",
     "test:workflow:spine": "node scripts/clinic-workflow-spine-test.mjs",
@@ -190,10 +192,12 @@
   "dependencies": {
     "cheerio": "^1.2.0",
     "pdf-parse": "^2.4.5",
+    "sharp": "^0.35.3",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
-    "@types/multer": "^2.1.0"
+    "@types/multer": "^2.1.0",
+    "exifr": "^7.1.3"
   }
 }
