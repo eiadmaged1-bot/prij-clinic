@@ -149,6 +149,14 @@
 - No malware scanning or external production object storage provider is configured yet.
 # Known Limitations
 
+- v0.12.4 connects the doctor visit workflow, but it is not production medical-device, privacy, or clinical-governance certification.
+- Real reviewed pregnancy/lactation medication safety profile sources are still needed. Current placeholder or missing profiles must show Review required.
+- Legacy pregnancy category badges are display-only. There is no category E, and the UI must not display safe in pregnancy wording.
+- Clinical considerations and medication option notes are side-panel draft aids only. They do not diagnose, prescribe, rank treatment, sign records, or update final documentation automatically.
+- Dose, frequency, and duration remain manual/doctor-authored. No default dosing automation is added.
+- Investigation requests are catalog/request documentation only, not clinical interpretation.
+- The visit packet is documentation output only, not treatment automation.
+
 v0.12.2 limitations:
 - Medication generic seed is intentionally limited and not a complete formulary.
 - Controlled generic medication rows are not seeded by default.

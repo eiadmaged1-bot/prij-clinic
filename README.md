@@ -1,5 +1,20 @@
 # Prij Clinic
 
+## v0.12.4 Doctor Visit Flow + Care Assist E2E
+
+v0.12.4 connects history sheets, Care Assist, encounter drafts, generic-first prescription drafting, pregnancy/lactation safety profile visibility, investigation requests, follow-up tasks, clinical note buttons, and printable visit packets into one patient workspace Doctor Visit flow.
+
+```powershell
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run test:v124:doctor-visit-flow
+npm run test:v124:clinical-safety-wording
+npm run typecheck
+npm run build
+```
+
+Care Assist remains completeness/safety review only. Clinical hints are doctor-facing notes only. There is no autonomous final diagnosis, autonomous prescribing, default dosing automation, category E, safe-in-pregnancy wording, or up-to-date-today claim without persisted source refresh metadata.
+
 Clinic Management System V0.9 visible local/private clinic OS sprint for OB/GYN and women’s health workflows.
 
 V0.9 focuses on browser-visible product experience: premium login, role-aware dashboard, patient creation, central patient workspace, reception-to-doctor-to-finance flow, appointment/calendar/queue polish, Owner Control Center, service/price catalog visibility, finance basics, orders skeleton, consent/legal skeleton, and polished medication reference visibility for existing official data.

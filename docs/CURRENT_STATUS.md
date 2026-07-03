@@ -278,6 +278,19 @@ Visible experience safety:
 - Production local patient file storage fails closed.
 # Current Status
 
+v0.12.4 Doctor Visit Flow + Care Assist E2E Hardening is in progress on branch `feature/v0.12.4-doctor-visit-flow-care-assist-e2e`.
+
+v0.12.4 status:
+- Adds `docs/PRIJ_CODING_RULES.md` as the numbered A/B/C rule control sheet.
+- Adds medication safety profile freshness metadata: last checked, source last updated, source version, refresh status, and refresh note.
+- Adds a doctor visit backend module for starting/opening visits, updating draft encounters, creating follow-up tasks, and generating visit packet summaries with audit events.
+- Adds a Doctor Visit tab in the patient workspace with History, Care Assist, Encounter, Prescription, Investigations, Follow-up, and Print Packet steps.
+- Adds a medication safety side terminal that updates from selected, hovered, or keyboard-focused medication search results.
+- Keeps generic medication names visible and prescription identity generic-first.
+- Adds doctor-facing clinical note buttons with explicit draft insertion only.
+- Adds v0.12.4 workflow and safety wording checks.
+- No fake patients, fake medication safety claims, autonomous diagnosis, autonomous prescribing, default dosing automation, WhatsApp, DICOM/PACS, billing/finance rewrite, or release tag is added.
+
 v0.12.2 adds clinical reference catalogs and the patient history workspace on top of the v0.12.1 clean reference foundation.
 
 Implemented:

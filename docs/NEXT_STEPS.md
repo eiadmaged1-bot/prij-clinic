@@ -523,6 +523,32 @@ Engineering next steps:
 - Review PDF/non-image handling before production use.
 # Next Steps
 
+v0.12.4 doctor visit flow next steps:
+
+1. Run the focused local checks:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run test:v124:doctor-visit-flow
+npm run test:v124:clinical-safety-wording
+npm run typecheck
+npm run build
+```
+
+2. Run browser checks after dev servers are up:
+
+```powershell
+npm run dev:stop
+powershell -ExecutionPolicy Bypass -File scripts/dev-lan-profile.ps1 -HostIp 100.127.4.46
+npm run test:v120:workspace
+```
+
+3. Add reviewed pregnancy/lactation medication safety sources through an approved source-review workflow later.
+4. Keep clinical hints draft-only and doctor-approved.
+5. Do not create a release tag from this sprint.
+
 v0.12.3:
 - Add Care Assist as draft-only clinician support.
 - Add pregnancy/lactation medication safety profiles.
