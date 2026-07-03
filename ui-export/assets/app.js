@@ -35,6 +35,7 @@
   function setTheme(theme) {
     document.body.dataset.theme = theme;
     localStorage.setItem("prij-v104-static-theme", theme);
+    themeButtons.forEach((button) => button.dataset.themeActive = String(button.dataset.themeTarget === theme));
   }
 
   menuButton?.addEventListener("click", openDrawer);

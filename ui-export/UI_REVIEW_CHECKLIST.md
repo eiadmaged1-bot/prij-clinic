@@ -4,6 +4,8 @@
 - Login Preview is visual-only and Enter UI Lab returns to Dashboard.
 - Every nav section is reachable without reload.
 - Mobile drawer opens, closes, and closes after nav tap.
+- Appearance is reachable from navigation and contains the theme selector.
+- Theme buttons are not rendered above Dashboard or clinical sections.
 - No horizontal scroll on phone widths.
 - Buttons and inputs are at least 44px tall.
 - Tables collapse to mobile cards.

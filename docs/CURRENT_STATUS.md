@@ -1,5 +1,17 @@
 # Current Status
 
+v0.11.2 Secure Visual Static Lab Integration is in progress on branch `integration/v0.11.2-secure-visual-static-lab`.
+
+v0.11.2 status:
+- Integrated backend/schema/security hardening from `fix/v0.10.9-schema-integrity-compile-and-migration` with static visual UI work from `ui/v0.11.1-appearance-menu-tab`.
+- LAN API-base and strict CORS hardening remain backend-owned and unchanged by the static UI import.
+- Patient document image ingest remains metadata-only by default with EXIF/GPS stripping and local demo file storage restricted to sanitized output.
+- Schema integrity hardening remains in place: `QueueTicket.queueDate`, required `Encounter.branchId`, encounter voiding, and queue duplicate remediation/test coverage.
+- Static UI lab includes the v0.11.1 Appearance tab, mobile drawer Appearance navigation, Dashboard-first behavior, no login gate, local theme persistence, patient tabs, doctor workspace tabs, and safety-only prescription/drug-market wording.
+- Static UI remains local HTML only and does not add API calls, backend clinical logic changes, real authentication, real patient data, medication dosing, AI diagnosis, AI prescribing, commerce behavior, or a release tag.
+- Phone LAN QA still requires a physical device on the same Wi-Fi and local firewall/network routing.
+- Staging smoke is not part of this integration unless `APP_ENV=staging` and proper staging environment variables are configured.
+
 v0.10.9 Schema Integrity Compile + Migration Remediation is in progress on branch `fix/v0.10.9-schema-integrity-compile-and-migration`.
 
 v0.10.9 status:
@@ -19,6 +31,28 @@ v0.10.5 status:
 - Backend CORS parsing uses exact origins by default and separates dev-only private CIDR matching into `CORS_PRIVATE_CIDRS` plus `CORS_PRIVATE_PORTS`.
 - Staging/production reject wildcard, CIDR, and dynamic LAN behavior; missing exact origins fail closed.
 - No clinical logic, database schema, real patient data, external AI, RBAC, audit, auth, or medication safety behavior is changed.
+
+v0.11.1 Appearance Menu Tab is in progress on branch `ui/v0.11.1-appearance-menu-tab`.
+
+v0.11.1 status:
+- Static theme switching moved into a dedicated `Appearance` section with the `VISUAL SETTINGS` eyebrow.
+- The inline top-of-page theme selector was removed from the main static shell, so Dashboard and clinical sections no longer start below theme buttons on mobile.
+- Appearance is available from the sidebar/mobile drawer near Admin and Theme Gallery areas, while Dashboard remains the default first screen.
+- Theme switching remains local-only, immediate, persisted in localStorage, and visibly marks the active theme.
+- Generated static outputs were regenerated for `ui-export/index.html`, `ui-export/assets/*`, `docs/design/prij-ui-theme-lab.html`, and `docs/design/prij-mobile-ui-lab.html`.
+- Verification passed for `git diff --check` with line-ending warnings only, `npm run design:export-html`, `npm run design:v110:safety-check`, `npm run design:test-mobile-html`, and `npm run test:v093:ui-text`.
+- `npm run typecheck` and `npm run build` still fail in existing API Prisma create inputs requiring `branchId` and `queueDate`; backend code was not changed in this sprint.
+- No backend, database schema, clinical logic, real auth, API calls, CORS/security hardening, image sanitizer, real patient data, medication dosing, AI diagnosis, AI prescribing, commerce workflow, release tag, or production claim is added.
+
+v0.11.0 Visual Upgrade Import is in progress on branch `ui/v0.11.0-visual-upgrade-import`.
+
+v0.11.0 status:
+- Static design reference ZIP inspected: `incoming/visual-upgrade/prij-clinic-visual-upgrade-v0_11.zip`.
+- Visual system imported into `scripts/export-ui-theme-html.mjs`; raw ZIP HTML was not used as an app replacement.
+- Generated static lab keeps Dashboard-first behavior, no login gate, local navigation, mobile drawer, theme switching, patient tabs, and safety-only prescription/drug-market wording.
+- Generated outputs remain `ui-export/index.html`, `ui-export/assets/*`, `docs/design/prij-ui-theme-lab.html`, and `docs/design/prij-mobile-ui-lab.html`.
+- Added `npm run design:v110:safety-check` for generated HTML/CSS/JS safety scanning.
+- No backend, database schema, clinical logic, real auth, API calls, CORS/security hardening, image sanitizer, storage policy, real patient data, medication data, AI diagnosis, AI prescribing, commerce workflow, generated ZIP, screenshot, or release tag is added.
 
 v0.10.4 Mobile-Stable Static HTML Lab is in progress on branch `ui/v0.10.4-mobile-stable-html-lab`.
 

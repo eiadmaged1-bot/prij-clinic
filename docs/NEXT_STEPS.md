@@ -1,5 +1,55 @@
 # Next Steps
 
+v0.11.2 secure visual static lab integration next steps:
+
+1. Keep backend/security/schema ownership unchanged while using the v0.11.1 static UI output as the visual lab surface.
+2. Regenerate and verify the static HTML handoff after the merge:
+
+```powershell
+npm run design:export-html
+npm run design:v110:safety-check
+npm run design:test-mobile-html
+```
+
+3. Run the integrated backend/schema/security validation sequence:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run prisma:seed
+npm run test:db:queue-date
+npm run test:db:encounter-void
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:security:image-metadata
+npm run test:security:document-upload
+npm run typecheck
+npm run build
+npm run test:v093:ui-text
+npm run test:security:ci
+npm run test:security:expanded
+npm run test:accounts:rbac
+```
+
+4. If API-backed checks need local services, start PostgreSQL and the local dev stack, then rerun the affected checks:
+
+```powershell
+docker compose up -d postgres
+npm run dev:stop
+npm run dev:start
+```
+
+5. Run static phone QA only from the generated lab:
+
+```powershell
+npm run design:serve-html
+```
+
+6. On a phone connected to the same Wi-Fi, verify Dashboard-first loading, no theme buttons above clinical content, Menu opens, Appearance is present, Appearance opens the theme selector, theme switching works, the drawer closes after selecting Appearance, no horizontal scroll, prescriptions remain safety-only, and Drug Market has no cart, checkout, or buy behavior.
+7. Do not run staging smoke unless `APP_ENV=staging` and staging environment variables are intentionally configured.
+8. Do not commit ignored/generated/raw artifacts or create a release tag.
+
 v0.10.9 schema integrity remediation next steps:
 
 1. Keep `QueueTicket.queueDate` uniqueness on `[branchId, queueDate, queueNumber]`; do not return to `checkedInAt` uniqueness.
@@ -53,6 +103,60 @@ $env:CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.
 npm run test:web:api-base
 npm run test:security:cors
 ```
+
+v0.11.1 appearance menu tab next steps:
+
+1. Run the sprint verification sequence:
+
+```powershell
+git diff --check
+npm run design:export-html
+npm run design:v110:safety-check
+npm run design:test-mobile-html
+npm run test:v093:ui-text
+npm run typecheck
+npm run build
+```
+
+2. Start the static server:
+
+```powershell
+npm run design:serve-html
+```
+
+3. Open the printed LAN URL on a phone connected to the same Wi-Fi and verify Dashboard-first loading, no inline theme buttons above Dashboard or Prescriptions, compact Menu behavior, Appearance in the Menu drawer, drawer close after selecting Appearance, theme switching persistence, active theme marking, and no horizontal scroll.
+4. Do not commit `.env`, storage, uploads, logs, backups, local DB files, screenshots, generated zips, `test-results`, `playwright-report`, incoming raw files, or `continue-clean-reference-theme-sprint.prompt.txt`.
+5. Do not create a release tag from this sprint.
+
+v0.11.0 visual upgrade import next steps:
+
+1. Regenerate the static handoff:
+
+```powershell
+npm run design:export-html
+```
+
+2. Run the visual-import safety scan:
+
+```powershell
+npm run design:v110:safety-check
+```
+
+3. Run mobile static QA:
+
+```powershell
+npm run design:test-mobile-html
+```
+
+4. Start the local static server:
+
+```powershell
+npm run design:serve-html
+```
+
+5. Open the printed LAN URL on a phone connected to the same Wi-Fi and verify Dashboard-first loading, no login gate, hamburger drawer behavior, sidebar navigation, patient file tabs, doctor workspace SOAP tabs, prescription safety-only wording, Drug Market non-commerce behavior, no horizontal scroll, and theme switching.
+6. Do not commit the source ZIP, `.tmp`, generated ZIPs, screenshots, `.env`, storage, uploads, logs, backups, DB files, `test-results`, or `playwright-report`.
+7. Do not create a release tag from this sprint.
 
 v0.10.4 mobile-stable static HTML lab next steps:
 

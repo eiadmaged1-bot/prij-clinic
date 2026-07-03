@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.11.2 integrates secure backend/schema hardening with the static visual lab only. It is not a production security, privacy, medical-device, clinical-governance, or release signoff.
+- No backend changes are introduced by the UI import; static HTML remains a local visual lab with no API dependency.
+- Phone LAN QA still requires `npm run design:serve-html`, a physical phone on the same Wi-Fi, reachable LAN routing, and local firewall allowance.
+- Staging smoke requires `APP_ENV=staging` plus explicit staging environment variables and should not be run from an unconfigured local/demo environment.
+
 - v0.10.9 confirms local schema integrity remediation for the configured DB only; it is not a production data-retention, privacy, or clinical-governance signoff.
 - The v0.10.9 duplicate remediation script is local/dev/test guarded and should not be run against staging or production.
 - The configured local DB already had the expected legacy duplicate resolved before this run, so the apply script was not rerun in this session.
@@ -11,6 +16,17 @@
 - `.local` profiles require working mDNS/Bonjour resolution on each device.
 - Private CIDR CORS matching is local/dev/test only and must not be used in staging or production.
 - Staging and production require exact HTTPS origins and fail closed when they are missing.
+
+- v0.11.1 moves the static theme selector into Appearance only. It does not add backend preference storage, real authentication, production security certification, clinical governance, or database-backed user settings.
+- Appearance changes the static visual preview only and has no API calls, schema changes, patient data, medication dosing, AI diagnosis, AI prescribing, commerce behavior, or release tag.
+- Manual phone QA still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall rules.
+- Theme Gallery remains a visual preview area; theme application is handled from Appearance.
+
+- v0.11.0 imports a visual design system into the static HTML lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, backend behavior, or security posture.
+- The ZIP `incoming/visual-upgrade/prij-clinic-visual-upgrade-v0_11.zip` is a design reference only and must not be committed.
+- v0.11.0 does not add real patient data, medication data, API calls, real authentication, AI diagnosis, AI prescribing, medication dosing instructions, stock/order/cart/checkout behavior, payment behavior, schema changes, backend code changes, or a release tag.
+- Phone testing still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall rules.
+- Generated package zips, screenshots, Playwright reports, test results, storage, uploads, logs, backups, DB files, and environment files remain local artifacts and must not be committed.
 
 - v0.10.4 is a static HTML design lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, or backend behavior.
 - `ui-export/index.html` can be opened directly, but phone testing should use `npm run design:serve-html` because `file://` paths and phone browsers differ from a served static site.

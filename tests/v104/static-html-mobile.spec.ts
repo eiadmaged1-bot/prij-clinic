@@ -22,6 +22,7 @@ const sections = [
   "Investigations",
   "Billing",
   "Admin",
+  "Appearance",
   "Drug Market",
   "Guidelines",
   "Protocol Atlas",
@@ -88,6 +89,8 @@ for (const viewport of viewports) {
     await page.goto(baseURL, { waitUntil: "networkidle" });
 
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.locator("[data-section='dashboard'] [data-theme-target]")).toHaveCount(0);
+    await expect(page.locator(".main > [aria-label='Lab controls']")).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
     expect(consoleErrors).toEqual([]);
 
@@ -116,10 +119,14 @@ for (const viewport of viewports) {
     await page.getByRole("button", { name: "Enter UI Lab" }).click();
     await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
-    await page.locator("[data-theme-target='dark-navy']").first().click();
+    await openSection(page, "Appearance");
+    await expect(page.locator("[data-section='appearance']")).toContainText("Choose a static UI theme for review. This changes the visual preview only.");
+    await page.locator("[data-section='appearance'] [data-theme-target='dark-navy']").click();
     await expect(page.locator("body")).toHaveAttribute("data-theme", "dark-navy");
+    await expect(page.locator("[data-section='appearance'] [data-theme-target='dark-navy']")).toHaveAttribute("data-theme-active", "true");
     await page.reload({ waitUntil: "networkidle" });
     await expect(page.locator("body")).toHaveAttribute("data-theme", "dark-navy");
+    await expect(page.locator("[data-section='appearance'] [data-theme-target='dark-navy']")).toHaveAttribute("data-theme-active", "true");
     await expectNoHorizontalOverflow(page);
 
     await openSection(page, "Patient File");

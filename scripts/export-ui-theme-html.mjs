@@ -7,7 +7,7 @@ const root = process.cwd();
 const exportDir = resolve(root, "ui-export");
 const designDir = resolve(root, "docs", "design");
 const storageExportDir = resolve(root, "storage", "ui-export");
-const zipPath = resolve(storageExportDir, "prij-clinic-html-theme-lab-v0.10.4-mobile-stable.zip");
+const zipPath = resolve(storageExportDir, "prij-clinic-html-theme-lab-v0.11.0-visual-upgrade.zip");
 const shouldPackage = process.argv.includes("--package");
 
 const themes = [
@@ -32,11 +32,22 @@ const navItems = [
   ["investigations", "Investigations"],
   ["billing", "Billing"],
   ["admin", "Admin"],
+  ["appearance", "Appearance"],
   ["drug-market", "Drug Market"],
   ["guidelines", "Guidelines"],
   ["protocol-atlas", "Protocol Atlas"],
   ["theme-gallery", "Theme Gallery"]
 ];
+
+const navGroups = [
+  { label: "Workspace", ids: ["dashboard", "queue", "calendar"] },
+  { label: "Patients", ids: ["patients", "patient-file", "doctor-workspace", "prescriptions", "investigations"] },
+  { label: "Operations", ids: ["billing", "admin", "appearance", "drug-market"] },
+  { label: "Knowledge", ids: ["guidelines", "protocol-atlas"] },
+  { label: "Preview", ids: ["login-preview", "theme-gallery"] }
+];
+
+const navById = new Map(navItems.map(([id, label]) => [id, label]));
 
 function badge(text, tone = "") {
   return `<span class="badge ${tone}">${text}</span>`;
@@ -147,11 +158,14 @@ const sections = [
     html: `
       ${sectionHeader("Encounter", "Doctor Workspace", "Draft encounter workspace with approval reminders.")}
       <section class="notice danger"><div><strong>Doctor approval required.</strong><p>Clinical output here is visual draft content only.</p></div>${badge("Draft-only", "danger")}</section>
+      <section class="tabs soap-tabs" aria-label="SOAP workspace tabs">
+        ${["Subjective", "Objective", "Assessment", "Plan"].map((tab, index) => `<button class="tab ${index === 0 ? "active" : ""}" type="button">${tab}</button>`).join("")}
+      </section>
       <section class="card-grid two">
-        <article class="card"><h2>Complaint</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Exam</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Assessment</h2><textarea placeholder="Draft note placeholder"></textarea></article>
-        <article class="card"><h2>Plan</h2><textarea placeholder="Doctor-authored plan placeholder"></textarea></article>
+        <article class="card status-draft"><h2>Complaint</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card status-draft"><h2>Exam</h2><textarea placeholder="Draft note placeholder"></textarea></article>
+        <article class="card status-blocked"><h2>Assessment</h2><textarea placeholder="Doctor-authored assessment placeholder"></textarea></article>
+        <article class="card status-review"><h2>Plan</h2><textarea placeholder="Doctor-authored plan placeholder"></textarea></article>
       </section>`
   },
   {
@@ -219,6 +233,13 @@ const sections = [
       </section>`
   },
   {
+    id: "appearance",
+    label: "Appearance",
+    html: `
+      ${sectionHeader("VISUAL SETTINGS", "Appearance", "Choose a static UI theme for review. This changes the visual preview only.")}
+      <section class="card-grid appearance-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="${theme.id}">Apply ${theme.label}</button></article>`).join("")}</section>`
+  },
+  {
     id: "guidelines",
     label: "Guidelines",
     html: `
@@ -238,38 +259,46 @@ const sections = [
     label: "Theme Gallery",
     html: `
       ${sectionHeader("Appearance", "Theme Gallery", "Mobile-safe theme previews and controls.")}
-      <section class="panel"><h2>Theme Switcher</h2><div class="chip-row">${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}</div></section>
-      <section class="card-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="${theme.id}">Apply</button></article>`).join("")}</section>`
+      <section class="card-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article>`).join("")}</section>`
   }
 ];
 
 const css = String.raw`
 :root {
   color-scheme: light;
-  --bg: #eef5f4;
-  --bg-soft: #f8fbfa;
+  /* v0.11 visual tokens: Deep Navy / Forest Teal / Fresh Mint */
+  --bg: #f4f7f6;
+  --bg-soft: #eef4f2;
   --surface: #ffffff;
-  --surface-alt: #f3f8f7;
-  --border: #d7e4e1;
-  --text: #122522;
-  --muted: #5d706d;
-  --strong: #23413c;
-  --brand: #0f766e;
-  --brand-strong: #0b5e59;
-  --brand-soft: #dbf5f1;
-  --nav-bg: #0e2a28;
+  --surface-alt: #eef4f1;
+  --surface-sunken: #e8efec;
+  --border: #dbe6e1;
+  --border-strong: #c2d3cb;
+  --text: #10201c;
+  --muted: #64766f;
+  --strong: #0a2f2c;
+  --brand: #0f6a5c;
+  --brand-strong: #0a2f2c;
+  --brand-mint: #57b8a0;
+  --brand-soft: #e2f1ea;
+  --accent: #4c5fa6;
+  --accent-soft: #eaecf7;
+  --nav-bg: #0a2f2c;
   --nav-text: #effaf8;
-  --warning: #8a5a13;
-  --warning-soft: #fff4d8;
-  --danger: #9f3338;
-  --danger-soft: #fde8e8;
-  --success: #176b53;
-  --success-soft: #e0f5ed;
-  --shadow: 0 12px 30px rgb(18 37 34 / 10%);
-  --radius: 8px;
-  --sidebar-width: 280px;
+  --warning: #8a5a10;
+  --warning-soft: #fbf1de;
+  --danger: #a12f3d;
+  --danger-soft: #fbe9eb;
+  --success: #15734f;
+  --success-soft: #e4f4ec;
+  --shadow-sm: 0 1px 2px rgb(16 32 28 / 6%);
+  --shadow: 0 10px 30px -12px rgb(10 47 44 / 18%), 0 2px 8px rgb(10 47 44 / 6%);
+  --shadow-lg: 0 24px 60px -20px rgb(10 47 44 / 28%);
+  --radius: 12px;
+  --radius-sm: 8px;
+  --sidebar-width: 272px;
   --topbar-height: 64px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 body[data-theme="prij-heritage"] {
   --bg: #f4efe7; --bg-soft: #fbf8f1; --surface-alt: #f5efe3; --border: #e1d5c4;
@@ -305,78 +334,108 @@ body[data-theme="dark-navy"] {
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100vh; min-height: 100dvh; max-width: 100%; overflow-x: hidden; }
 body {
-  background: linear-gradient(135deg, var(--bg-soft), var(--bg));
+  background: var(--bg-soft);
   color: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 body.drawer-open { overflow: hidden; }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 h1, h2, h3, p { margin: 0; overflow-wrap: anywhere; }
-h1 { font-size: clamp(1.75rem, 5vw, 2.7rem); line-height: 1.08; letter-spacing: 0; }
-h2 { font-size: 1.05rem; letter-spacing: 0; }
+h1 { color: var(--brand-strong); font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.8rem, 4vw, 2.45rem); font-weight: 560; line-height: 1.12; letter-spacing: 0; }
+h2 { font-size: 0.95rem; letter-spacing: 0; }
 input, select, textarea {
-  width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius);
-  background: var(--surface); color: var(--text); padding: 0.75rem 0.85rem; font-size: 16px;
+  width: 100%; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text); padding: 0.75rem 0.85rem; font-size: 16px; box-shadow: var(--shadow-sm);
 }
 textarea { min-height: 128px; resize: vertical; }
 label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 .app-shell { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); min-height: 100vh; min-height: 100dvh; }
 .sidebar {
   position: sticky; top: 0; align-self: start; height: 100vh; height: 100dvh; overflow-y: auto;
-  display: grid; align-content: start; gap: 1rem; padding: 1rem; background: var(--nav-bg); color: var(--nav-text);
+  display: grid; align-content: start; gap: 1rem; padding: 1.25rem 1rem;
+  background:
+    radial-gradient(120% 140% at 0% 0%, #123c36 0%, transparent 55%),
+    linear-gradient(190deg, var(--nav-bg), #08211e 88%);
+  color: var(--nav-text);
 }
-.brand { display: flex; gap: 0.75rem; align-items: center; min-width: 0; padding: 0.25rem; }
-.brand-mark { display: grid; width: 44px; height: 44px; flex: 0 0 auto; place-items: center; border-radius: var(--radius); background: var(--brand); color: #fff; font-weight: 900; }
+.brand { display: flex; gap: 0.75rem; align-items: center; min-width: 0; padding: 0.25rem 0.25rem 1rem; border-bottom: 1px solid rgb(255 255 255 / 10%); }
+.brand-mark { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 11px; background: linear-gradient(155deg, var(--brand-mint), var(--brand)); color: #06231f; font-family: Georgia, "Times New Roman", serif; font-weight: 900; box-shadow: 0 6px 16px -4px rgb(0 0 0 / 45%); }
 .brand-text { display: grid; min-width: 0; }
 .brand-text span { color: color-mix(in srgb, var(--nav-text) 72%, transparent); font-size: 0.82rem; }
-.nav-group { display: grid; gap: 0.35rem; }
-.nav-title, .eyebrow { color: var(--brand-strong); font-size: 0.76rem; font-weight: 850; letter-spacing: 0; text-transform: uppercase; }
+.nav-group { display: grid; gap: 0.15rem; }
+.nav-title, .eyebrow { color: var(--brand); font-size: 0.72rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
+.eyebrow { display: flex; align-items: center; gap: 0.5rem; }
+.eyebrow::before { content: ""; width: 14px; height: 2px; border-radius: 2px; background: var(--brand-mint); }
 .sidebar .nav-title { color: color-mix(in srgb, var(--nav-text) 72%, transparent); }
-.nav-item {
-  display: flex; min-height: 44px; width: 100%; align-items: center; justify-content: space-between; gap: 0.5rem;
-  border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: inherit;
-  padding: 0.7rem 0.75rem; text-align: left; font-weight: 780;
+.nav-group-label {
+  color: #7fa79b;
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 0.85rem 0.5rem 0.2rem;
 }
-.nav-item.active, .nav-item:hover { border-color: rgb(255 255 255 / 16%); background: rgb(255 255 255 / 10%); }
+.nav-item {
+  display: flex; min-height: 40px; width: 100%; align-items: center; justify-content: space-between; gap: 0.5rem;
+  border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: #c9e3da;
+  padding: 0.55rem 0.65rem; text-align: left; font-size: 0.9rem; font-weight: 680; position: relative;
+}
+.nav-item.active, .nav-item:hover { border-color: rgb(255 255 255 / 12%); background: rgb(255 255 255 / 10%); color: #fff; }
+.nav-item.active::before { content: ""; position: absolute; left: -0.65rem; top: 0.5rem; bottom: 0.5rem; width: 3px; border-radius: 3px; background: var(--brand-mint); }
 .main { min-width: 0; display: grid; align-content: start; gap: 1rem; padding: 1rem; }
 .mobile-topbar {
   display: none; min-height: var(--topbar-height); align-items: center; justify-content: space-between; gap: 0.75rem;
   position: sticky; top: 0; z-index: 30; margin: -1rem -1rem 0; padding: calc(0.65rem + env(safe-area-inset-top)) 1rem 0.65rem;
-  border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgb(255 255 255 / 10%); background: var(--brand-strong); color: #eef7f4;
 }
+.mobile-topbar .brand { border: 0; padding: 0; }
+.mobile-topbar .brand-mark { width: 32px; height: 32px; border-radius: var(--radius-sm); }
 .drawer-overlay {
   display: none; position: fixed; inset: 0; z-index: 50; border: 0; background: rgb(7 17 29 / 56%);
 }
 .drawer-overlay.open { display: block; }
-.top-tools, .section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
-.top-tools {
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); padding: 0.75rem;
-}
+.section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
 .section { display: none; gap: 1rem; max-width: 1280px; width: 100%; margin: 0 auto; }
 .section.active { display: grid; }
 .section-header { align-items: flex-end; }
 .muted, .card p, .metric p, .list-card p { color: var(--muted); }
 .button, .chip-button {
   display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 0.45rem;
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text);
-  padding: 0.68rem 0.9rem; font-weight: 820; text-align: center;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text);
+  padding: 0.68rem 0.9rem; font-weight: 780; text-align: center;
 }
-.button.primary { border-color: var(--brand); background: var(--brand); color: #fff; }
+.button:hover, .chip-button:hover { box-shadow: var(--shadow-sm); }
+.button.primary { border-color: var(--brand); background: linear-gradient(155deg, var(--brand-mint), var(--brand)); color: #06231f; box-shadow: 0 8px 20px -8px rgb(15 106 92 / 55%); }
 .button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--text); }
+.theme-card { align-content: start; min-height: 160px; }
+.theme-card [data-theme-active="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+.theme-card [data-theme-active="true"]::after { content: "Active"; margin-left: 0.2rem; font-size: 0.74rem; }
 .badge {
   display: inline-flex; width: fit-content; max-width: 100%; align-items: center; border: 1px solid var(--border); border-radius: 999px;
-  background: var(--surface); color: var(--strong); padding: 0.3rem 0.58rem; font-size: 0.78rem; font-weight: 850; overflow-wrap: anywhere;
+  background: var(--surface-alt); color: var(--strong); padding: 0.3rem 0.58rem 0.3rem 0.5rem; gap: 0.38rem; font-size: 0.76rem; font-weight: 850; overflow-wrap: anywhere;
 }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
 .badge.accent { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); background: var(--brand-soft); color: var(--brand-strong); }
 .badge.warning { background: var(--warning-soft); color: var(--warning); }
 .badge.danger { background: var(--danger-soft); color: var(--danger); }
 .badge.success { background: var(--success-soft); color: var(--success); }
 .notice, .panel, .card, .metric, .list-card {
   display: grid; gap: 0.8rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
-  box-shadow: var(--shadow); padding: 1rem; max-width: 100%; min-width: 0;
+  box-shadow: var(--shadow-sm); padding: 1rem; max-width: 100%; min-width: 0;
 }
+.card:hover, .metric:hover, .list-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+.card.status-draft { border-left: 3px solid var(--muted); padding-left: calc(1rem - 2px); }
+.card.status-review { border-left: 3px solid var(--warning); padding-left: calc(1rem - 2px); }
+.card.status-blocked { border-left: 3px solid var(--danger); padding-left: calc(1rem - 2px); }
+.card.status-ok { border-left: 3px solid var(--success); padding-left: calc(1rem - 2px); }
 .notice { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .notice.warning { background: color-mix(in srgb, var(--warning-soft) 54%, var(--surface)); }
 .notice.danger { background: color-mix(in srgb, var(--danger-soft) 54%, var(--surface)); }
@@ -385,7 +444,8 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 .card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .card-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .schedule-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-.metric strong { font-size: 2rem; line-height: 1; }
+.metric span:first-child { color: var(--muted); font-size: 0.72rem; font-weight: 850; letter-spacing: 0.06em; text-transform: uppercase; }
+.metric strong { color: var(--brand-strong); font-family: "JetBrains Mono", "SF Mono", Consolas, monospace; font-size: 2rem; font-weight: 650; line-height: 1; }
 .login-preview-panel {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr); overflow: hidden;
   border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow);
@@ -399,9 +459,10 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 }
 .patient-hero p, .patient-hero .eyebrow { color: #eef8fb; }
 .avatar { display: grid; width: 52px; height: 52px; place-items: center; border-radius: var(--radius); background: rgb(255 255 255 / 14%); font-weight: 900; }
-.tabs { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem; max-width: 100%; }
-.tab { flex: 0 0 auto; min-height: 44px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 0.65rem 0.85rem; font-weight: 800; }
-.tab.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+.tabs { display: flex; gap: 0.25rem; overflow-x: auto; padding-bottom: 0; max-width: 100%; border-bottom: 1px solid var(--border); }
+.tab { flex: 0 0 auto; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--muted); padding: 0.65rem 0.9rem; font-weight: 800; white-space: nowrap; }
+.tab.active { border-bottom-color: var(--brand); color: var(--brand-strong); }
+.soap-tabs { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 0.5rem; box-shadow: var(--shadow-sm); }
 .profile-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .profile-grid div { display: grid; gap: 0.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-alt); padding: 0.75rem; }
 .profile-grid span { color: var(--muted); font-size: 0.78rem; font-weight: 850; text-transform: uppercase; }
@@ -425,8 +486,8 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
 @media (max-width: 767px) {
   .main { padding: 0.75rem; }
   .mobile-topbar { margin: -0.75rem -0.75rem 0; }
-  .top-tools, .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
-  .top-tools, .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
+  .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
+  .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
   .metric-grid, .card-grid, .card-grid.two, .profile-grid, .schedule-grid { grid-template-columns: 1fr; }
   .button, .chip-button { width: 100%; }
   .login-brand { min-height: 240px; }
@@ -477,6 +538,7 @@ const js = String.raw`
   function setTheme(theme) {
     document.body.dataset.theme = theme;
     localStorage.setItem("prij-v104-static-theme", theme);
+    themeButtons.forEach((button) => button.dataset.themeActive = String(button.dataset.themeTarget === theme));
   }
 
   menuButton?.addEventListener("click", openDrawer);
@@ -519,8 +581,10 @@ function htmlDocument(title) {
         <span class="brand-text"><strong>Prij Clinic</strong><span>Static HTML Lab</span></span>
       </div>
       <nav class="nav-group" aria-label="Main sections">
-        <span class="nav-title">Sections</span>
-        ${navItems.map(([id, label]) => `<button class="nav-item" type="button" data-section-target="${id}">${label}<span aria-hidden="true">&gt;</span></button>`).join("")}
+        ${navGroups.map((group) => `
+          <span class="nav-group-label">${group.label}</span>
+          ${group.ids.map((id) => `<button class="nav-item" type="button" data-section-target="${id}">${navById.get(id)}<span aria-hidden="true">&gt;</span></button>`).join("")}
+        `).join("")}
       </nav>
     </aside>
     <main class="main">
@@ -531,15 +595,6 @@ function htmlDocument(title) {
         </div>
         <button class="button secondary" type="button" aria-expanded="false" data-menu-button>Menu</button>
       </header>
-      <section class="top-tools" aria-label="Lab controls">
-        <div>
-          <p class="eyebrow">v0.10.4 Mobile-Stable Static HTML Lab</p>
-          <p class="muted">One static shell. No API calls, Docker, login, uploads, secrets, or real patient data.</p>
-        </div>
-        <div class="chip-row" aria-label="Theme switcher">
-          ${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}
-        </div>
-      </section>
       ${sections.map((section) => `<section class="section" id="${section.id}" data-section="${section.id}" aria-label="${section.label}">${section.html}</section>`).join("")}
     </main>
   </div>
@@ -550,9 +605,11 @@ function htmlDocument(title) {
 }
 
 function writeDocs() {
-  const handoff = `# Prij Clinic Static HTML Theme Lab v0.10.4
+  const handoff = `# Prij Clinic Static HTML Theme Lab v0.11.0
 
 This folder is a static design handoff only. Open \`index.html\` directly for a quick desktop check, or use \`npm run design:serve-html\` from the repo root for phone testing.
+
+v0.11 imports the visual shell style from \`prij-clinic-visual-upgrade-v0_11.zip\`: deep navy, forest teal, mint accents, grouped sidebar labels, premium cards, badges, notices, metric cards, and tab affordances.
 
 Safety constraints:
 - No real patient data, passwords, secrets, API calls, backend storage access, uploads, or external AI.
@@ -579,7 +636,9 @@ Why use the server instead of file://:
 
 Manual checks:
 - Dashboard opens first.
+- Theme buttons do not appear above Dashboard or clinical content.
 - Menu opens the drawer at phone widths.
+- Appearance appears in the drawer and opens the theme selector.
 - Nav item taps switch sections and close the drawer.
 - Overlay closes the drawer.
 - Theme changes apply immediately and persist after refresh.
@@ -598,11 +657,13 @@ Themes included:
 - Dark Navy
 
 Core CSS variables:
-- \`--bg\`, \`--bg-soft\`, \`--surface\`, \`--surface-alt\`
-- \`--border\`, \`--text\`, \`--muted\`, \`--strong\`
-- \`--brand\`, \`--brand-strong\`, \`--brand-soft\`
+- \`--bg\`, \`--bg-soft\`, \`--surface\`, \`--surface-alt\`, \`--surface-sunken\`
+- \`--border\`, \`--border-strong\`, \`--text\`, \`--muted\`, \`--strong\`
+- \`--brand\`, \`--brand-strong\`, \`--brand-mint\`, \`--brand-soft\`
+- \`--accent\`, \`--accent-soft\`
 - \`--nav-bg\`, \`--nav-text\`
 - \`--warning\`, \`--danger\`, \`--success\`
+- \`--shadow-sm\`, \`--shadow\`, \`--shadow-lg\`
 `;
 
   const checklist = `# UI Review Checklist
@@ -611,6 +672,8 @@ Core CSS variables:
 - Login Preview is visual-only and Enter UI Lab returns to Dashboard.
 - Every nav section is reachable without reload.
 - Mobile drawer opens, closes, and closes after nav tap.
+- Appearance is reachable from navigation and contains the theme selector.
+- Theme buttons are not rendered above Dashboard or clinical sections.
 - No horizontal scroll on phone widths.
 - Buttons and inputs are at least 44px tall.
 - Tables collapse to mobile cards.

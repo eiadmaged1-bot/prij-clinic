@@ -10,8 +10,10 @@ Themes included:
 - Dark Navy
 
 Core CSS variables:
-- `--bg`, `--bg-soft`, `--surface`, `--surface-alt`
-- `--border`, `--text`, `--muted`, `--strong`
-- `--brand`, `--brand-strong`, `--brand-soft`
+- `--bg`, `--bg-soft`, `--surface`, `--surface-alt`, `--surface-sunken`
+- `--border`, `--border-strong`, `--text`, `--muted`, `--strong`
+- `--brand`, `--brand-strong`, `--brand-mint`, `--brand-soft`
+- `--accent`, `--accent-soft`
 - `--nav-bg`, `--nav-text`
 - `--warning`, `--danger`, `--success`
+- `--shadow-sm`, `--shadow`, `--shadow-lg`

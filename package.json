@@ -133,6 +133,7 @@
     "test:v102:mobile": "playwright test --config=playwright.config.ts tests/v102",
     "test:v102:mobile:headed": "playwright test --config=playwright.config.ts tests/v102 --headed",
     "design:export-html": "node scripts/export-ui-theme-html.mjs",
+    "design:v110:safety-check": "node scripts/v110-visual-upgrade-safety-check.mjs",
     "design:serve-html": "node scripts/v104-serve-static-html-lab.mjs",
     "design:open-html": "powershell -ExecutionPolicy Bypass -Command \"Start-Process ui-export/index.html\"",
     "design:open-mobile-html": "powershell -ExecutionPolicy Bypass -Command \"Start-Process 'http://localhost:4174'\"",
