@@ -146,7 +146,7 @@ export default function DashboardPage() {
         <section className="doctor-hero">
           <div>
             <p className="eyebrow">Doctor Mode</p>
-            <h1>Good morning, Doctor</h1>
+            <h1 data-testid="page-heading">Good morning, Doctor</h1>
             <p className="muted">A calm daily workspace: open patient, start visit, write note, prescribe, order tests, finish.</p>
           </div>
           <div className="doctor-hero-actions">
@@ -183,7 +183,7 @@ export default function DashboardPage() {
           <div className="header-row">
             <div>
               <p className="eyebrow">{isAccountant ? "Finance workspace" : "Reception workspace"}</p>
-              <h1>{isAccountant ? "Daily finance" : "Front desk home"}</h1>
+              <h1 data-testid="page-heading">{isAccountant ? "Daily finance" : "Front desk home"}</h1>
             </div>
             <span className="badge warning">Local Demo</span>
           </div>
@@ -228,7 +228,7 @@ export default function DashboardPage() {
         <section className="portal-header">
           <div>
             <p className="eyebrow">Prij Clinic</p>
-            <h1>Clinic Apps</h1>
+            <h1 data-testid="page-heading">Clinic Apps</h1>
             <p className="muted">Choose a workflow. Each tile opens one focused clinic area.</p>
           </div>
           <div className="portal-tabs" role="tablist" aria-label="App views">
@@ -272,7 +272,7 @@ export default function DashboardPage() {
         <section className="owner-hero">
           <div>
             <p className="eyebrow">Owner portal</p>
-            <h1>Clinic Command</h1>
+            <h1 data-testid="page-heading">Clinic Command</h1>
             <p className="muted">Search, open patient files, review today&apos;s flow, and manage owner tools from one clean workspace.</p>
           </div>
           <div className="owner-search-card">
@@ -323,7 +323,7 @@ export default function DashboardPage() {
         <div className="header-row">
           <div>
             <p className="eyebrow">Premium clinic OS</p>
-            <h1>Clinic Home</h1>
+            <h1 data-testid="page-heading">Clinic Home</h1>
           </div>
           <div className="topbar-actions">
             <button className="button secondary compact" onClick={logout} type="button">

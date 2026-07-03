@@ -1,5 +1,16 @@
 # Current Status
 
+v0.11.6 Real App Heading Position + Responsive Shell Finalization is in progress on branch `fix/v0.11.6-real-app-heading-position-responsive-shell`.
+
+v0.11.6 status:
+- Fixed the remaining real app responsive failure where `/dashboard` and `/prescriptions` headings were pushed too far down by stacked shell topbar controls.
+- Mobile/tablet shell topbar is compact, and the closed drawer remains fixed/off-canvas without reserving document height.
+- Desktop shell topbar no longer wraps large control groups above the page heading; `/prescriptions` now stays under the existing `<260px` target.
+- Dashboard and prescriptions primary headings now expose `data-testid="page-heading"` and the v0.11.4 responsive test targets that primary visible heading without raising thresholds.
+- `scripts/dev-lan-profile.ps1` was verified under strict mode with `-HostIp 100.127.4.46` and now uses safe array counting.
+- Verification passed: `npm run test:v115:lan-smoke`, `npm run test:v114:responsive-shell`, `npm run design:test-mobile-html`, `npm run test:web:api-base`, `npm run test:security:cors`, `npm run test:web:hydration-root`, `npm run test:security:image-metadata`, `npm run test:security:document-upload`, `npm run test:db:queue-date`, `npm run test:db:encounter-void`, `npm run typecheck`, `npm run build`, and `npm run test:v093:ui-text`.
+- No CORS weakening, Tailscale wildcard behavior, database/schema change, clinical logic change, upload policy change, medication dosing, AI diagnosis/prescribing, real patient data, fake backend data, commerce wording, or release tag was added.
+
 v0.11.5 Real App Responsive Shell + Tailscale LAN Login Stability is in progress on branch `integration/v0.11.5-real-app-tailscale-responsive-login`.
 
 v0.11.5 status:

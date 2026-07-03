@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.11.6 fixes the automated real app heading y-position regression for `/dashboard` and `/prescriptions`, but it is not production mobile, privacy, security, medical-device, or clinical-governance certification.
+- Physical phone QA is still required for real Tailscale browser behavior, local firewall routing, and touch drawer ergonomics.
+- The shell topbar is intentionally compact below `1200px`; secondary utility controls should be exposed through future deliberate navigation/settings work instead of being stacked above clinical page headings.
+- Tailscale LAN access remains exact-origin local development behavior only. Wildcards, broad `100.64.0.0/10` CORS, public CIDRs, and HTTP LAN origins in staging/production remain unsupported.
+
 - v0.11.5 stabilizes the real app shell and exact Tailscale local profile, but it is not a production mobile, privacy, security, medical-device, or clinical-governance certification.
 - Tailscale phone login still depends on the dev servers running, exact `100.127.4.46` profile variables, Tailscale routing, and local firewall allowance.
 - Broad `100.64.0.0/10` CORS, wildcard origins, public CIDRs, and HTTP LAN origins in staging/production remain intentionally unsupported.

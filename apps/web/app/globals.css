@@ -449,6 +449,10 @@ select:focus {
   overflow-x: hidden;
 }
 
+body {
+  overflow-x: hidden;
+}
+
 :root[data-theme="prij-heritage"] {
   --background: var(--pc-paper);
   --background-soft: #fbf8f3;
@@ -2451,7 +2455,10 @@ button.obgyn-template-card {
 }
 
 @media (max-width: 1199px) {
-  .app-shell,
+  .app-shell {
+    display: block;
+  }
+
   .hero-shell,
   .login-shell,
   .dashboard-grid,
@@ -2497,7 +2504,7 @@ button.obgyn-template-card {
   }
 
   .app-main {
-    padding: 1rem;
+    padding: 0.85rem 1rem 1rem;
   }
 
   .theme-medicolize-portal.app-shell {
@@ -2507,21 +2514,27 @@ button.obgyn-template-card {
   .theme-medicolize-portal .topbar,
   .topbar {
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-height: 4rem;
+    margin-bottom: 0.7rem;
+    overflow: hidden;
   }
 
   .topbar-title {
-    flex: 1 1 18rem;
+    flex: 1 1 auto;
   }
 
-  .portal-search {
-    flex: 1 1 20rem;
-    width: auto;
+  .topbar .topbar-title > div,
+  .topbar .portal-search,
+  .topbar > .topbar-actions {
+    display: none;
   }
 
-  .topbar-actions {
-    flex: 1 1 100%;
-    justify-content: flex-start;
+  .mobile-topbar-brand {
+    display: block;
+    color: var(--foreground);
+    font-size: 1rem;
+    text-align: center;
   }
 
   .nav-group {
@@ -2592,11 +2605,9 @@ button.obgyn-template-card {
     min-height: auto;
   }
 
-  .topbar,
   .header-row,
   .alert,
   .actions,
-  .topbar-actions,
   .nav-links,
   .data-row-header {
     align-items: stretch;
@@ -2625,14 +2636,6 @@ button.obgyn-template-card {
     color: var(--foreground);
     font-size: 1rem;
     text-align: center;
-  }
-
-  .portal-search {
-    grid-column: 1 / -1;
-  }
-
-  .topbar-actions {
-    grid-column: 1 / -1;
   }
 
   .summary-grid,
@@ -2680,21 +2683,6 @@ button.obgyn-template-card {
   .user-menu-copy {
     width: 100%;
     max-width: none;
-  }
-
-  .portal-search,
-  .theme-prij-heritage .portal-search {
-    display: grid;
-    flex: none;
-    gap: 0.25rem;
-    border-radius: var(--radius-md);
-    padding: 0.7rem 0.85rem;
-  }
-
-  .portal-search input,
-  .theme-prij-heritage .portal-search input {
-    min-height: 2.75rem;
-    padding: 0.7rem 0;
   }
 
   .comfort-switch {
@@ -3134,5 +3122,71 @@ body {
   .theme-prij-heritage .portal-search input {
     min-height: 2.75rem;
     padding: var(--space-2) 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .topbar,
+  .theme-prij-heritage .topbar,
+  .theme-medicolize-portal .topbar {
+    flex-wrap: nowrap;
+    margin-bottom: 0.75rem;
+    min-height: 3.75rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .topbar .topbar-title > div {
+    display: none;
+  }
+
+  .topbar .portal-search,
+  .theme-prij-heritage .topbar .portal-search {
+    flex: 0 1 20rem;
+    width: min(20rem, 24vw);
+  }
+
+  .topbar > .topbar-actions {
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+  }
+
+  .topbar .comfort-switch {
+    display: none;
+  }
+
+  .topbar .user-menu {
+    min-width: 0;
+    width: auto;
+  }
+}
+
+@media (max-width: 1199px) {
+  .app-shell,
+  .theme-medicolize-portal.app-shell,
+  .theme-prij-heritage.app-shell {
+    display: block;
+  }
+
+  .topbar,
+  .theme-prij-heritage .topbar,
+  .theme-medicolize-portal .topbar {
+    align-items: center;
+    flex-wrap: nowrap;
+    min-height: 4rem;
+    max-height: 4.75rem;
+    margin-bottom: 0.7rem;
+    overflow: hidden;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .topbar .topbar-title > div,
+  .topbar .portal-search,
+  .theme-prij-heritage .topbar .portal-search,
+  .topbar > .topbar-actions {
+    display: none;
+  }
+
+  .theme-prij-heritage .app-main {
+    padding: 1rem;
   }
 }
