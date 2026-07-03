@@ -11,6 +11,7 @@ import { ConsentsModule } from "./consents/consents.module";
 import { ConsentTemplatesModule } from "./consent-templates/consent-templates.module";
 import { ClinicDirectoryModule } from "./clinic-directory/clinic-directory.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { DoctorVisitModule } from "./doctor-visit/doctor-visit.module";
 import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { GynecologyModule } from "./gynecology/gynecology.module";
@@ -64,6 +65,7 @@ import { UsersModule } from "./users/users.module";
     BillingModule,
     CalculatorsModule,
     CareAssistModule,
+    DoctorVisitModule,
     DashboardModule,
     MedicationsModule,
     DrugMarketModule,
