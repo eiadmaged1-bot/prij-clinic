@@ -2973,6 +2973,11 @@ model MedicationSafetyProfile {
   sourceType                      MedicationSafetyProfileSourceType
   reviewStatus                    MedicationSafetyProfileReviewStatus
   confidenceLevel                 MedicationSafetyProfileConfidenceLevel
+  lastCheckedAt                   DateTime?                              @db.Timestamptz(3)
+  sourceLastUpdatedAt             DateTime?                              @db.Timestamptz(3)
+  sourceVersionLabel              String?
+  sourceRefreshStatus             String?                                @default("UNKNOWN")
+  sourceRefreshNote               String?
   reviewedByUserId                String?                                @db.Uuid
   reviewedAt                      DateTime?                              @db.Timestamptz(3)
   createdAt                       DateTime                               @default(now()) @db.Timestamptz(3)

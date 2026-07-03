@@ -75,6 +75,9 @@ export class MedicationPregnancyLactationSafetyService {
     const sourceName = clean(dto.sourceName) || "Not reviewed";
     const sourceType = clean(dto.sourceType) || "not_reviewed";
     const reviewStatus = sourceType === "not_reviewed" || sourceName === "Not reviewed" ? "needs_review" : clean(dto.reviewStatus) || "needs_review";
+    const lastCheckedAt = parseDate(dto.lastCheckedAt);
+    const sourceLastUpdatedAt = parseDate(dto.sourceLastUpdatedAt);
+    const sourceRefreshStatus = normalizeRefreshStatus(dto.sourceRefreshStatus, lastCheckedAt);
 
     const profile = await this.prisma.medicationSafetyProfile.upsert({
       where: { medicationGenericId },
@@ -96,6 +99,11 @@ export class MedicationPregnancyLactationSafetyService {
         sourceType: sourceType as never,
         reviewStatus: reviewStatus as never,
         confidenceLevel: (clean(dto.confidenceLevel) || "unknown") as never,
+        lastCheckedAt,
+        sourceLastUpdatedAt,
+        sourceVersionLabel: clean(dto.sourceVersionLabel),
+        sourceRefreshStatus,
+        sourceRefreshNote: clean(dto.sourceRefreshNote),
         reviewedByUserId: reviewStatus === "reviewed" ? user.id : null,
         reviewedAt: reviewStatus === "reviewed" ? new Date() : null
       },
@@ -107,6 +115,11 @@ export class MedicationPregnancyLactationSafetyService {
         sourceType: sourceType as never,
         reviewStatus: reviewStatus as never,
         confidenceLevel: (clean(dto.confidenceLevel) || "unknown") as never,
+        lastCheckedAt,
+        sourceLastUpdatedAt,
+        sourceVersionLabel: clean(dto.sourceVersionLabel),
+        sourceRefreshStatus,
+        sourceRefreshNote: clean(dto.sourceRefreshNote),
         pregnancyRiskSummary: clean(dto.pregnancyRiskSummary),
         pregnancyClinicalConsiderations: clean(dto.pregnancyClinicalConsiderations),
         pregnancyDataSummary: clean(dto.pregnancyDataSummary),
@@ -139,4 +152,24 @@ export class MedicationPregnancyLactationSafetyService {
 function clean(value: unknown) {
   const text = String(value ?? "").trim();
   return text || null;
+}
+
+function parseDate(value: unknown) {
+  const text = clean(value);
+  if (!text) return null;
+  const date = new Date(text);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function normalizeRefreshStatus(value: unknown, lastCheckedAt: Date | null) {
+  const status = String(value ?? "UNKNOWN").trim().toUpperCase();
+  const allowed = new Set(["UNKNOWN", "CURRENT_TODAY", "STALE", "FAILED", "REVIEW_REQUIRED"]);
+  if (status === "CURRENT_TODAY" && !isToday(lastCheckedAt)) return "REVIEW_REQUIRED";
+  return allowed.has(status) ? status : "UNKNOWN";
+}
+
+function isToday(value: Date | null) {
+  if (!value) return false;
+  const now = new Date();
+  return value.getUTCFullYear() === now.getUTCFullYear() && value.getUTCMonth() === now.getUTCMonth() && value.getUTCDate() === now.getUTCDate();
 }
