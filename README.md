@@ -6,6 +6,20 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.12.3 Care Assist + Pregnancy/Lactation Safety
+
+v0.12.3 adds Care Assist for missing-field reminders, follow-up review, and pregnancy/lactation medication safety profile visibility.
+
+```powershell
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run db:v123:seed:care-assist
+npm run db:v123:med-safety:ready
+npm run test:v123:care-assist-safety
+```
+
+Care Assist does not diagnose, prescribe, choose drugs, generate dose/frequency/duration, rank treatments, or create a final clinical plan. Pregnancy A/B/C/D/X are legacy reference categories only. There is no category E; imported E maps to `REVIEW_REQUIRED`. Lactation uses narrative/profile fields, not a single universal letter category. Unknown or missing source data is shown as review required, and doctor review is mandatory.
+
 ## v0.12.2 Clinical Reference + History Workspace
 
 v0.12.2 adds generic medication reference lookup, investigation and operation catalog search, structured OB/GYN history sheets, and generic-name prescription selection.
