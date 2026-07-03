@@ -1,5 +1,25 @@
 # Next Steps
 
+v0.10.5 LAN CORS hardening next steps:
+
+1. Prefer explicit local LAN profiles for phone testing:
+
+```powershell
+$env:NEXT_PUBLIC_LAN_API_ORIGIN="http://192.168.1.50:3001"
+$env:NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK="false"
+$env:CORS_ORIGINS="http://localhost:3000,http://127.0.0.1:3000,http://192.168.1.50:3000"
+```
+
+2. Use `.local` only after mDNS/Bonjour is working from the target device.
+3. Use `CORS_PRIVATE_CIDRS` only in local/dev/test, and prefer exact origins for clinic demos.
+4. Before staging or production deployment, set exact HTTPS `CORS_ORIGINS` and do not set `CORS_PRIVATE_CIDRS` or wildcard origins.
+5. Run:
+
+```powershell
+npm run test:web:api-base
+npm run test:security:cors
+```
+
 v0.10.4 mobile-stable static HTML lab next steps:
 
 1. Regenerate the static handoff:

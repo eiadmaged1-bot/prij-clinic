@@ -1,5 +1,11 @@
 # Known Limitations
 
+- v0.10.5 hardens LAN development profiles but does not certify production hosting, privacy compliance, medical-device behavior, or clinical governance.
+- LAN testing still depends on same-Wi-Fi routing, local firewall rules, and correctly configured explicit origins.
+- `.local` profiles require working mDNS/Bonjour resolution on each device.
+- Private CIDR CORS matching is local/dev/test only and must not be used in staging or production.
+- Staging and production require exact HTTPS origins and fail closed when they are missing.
+
 - v0.10.4 is a static HTML design lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, or backend behavior.
 - `ui-export/index.html` can be opened directly, but phone testing should use `npm run design:serve-html` because `file://` paths and phone browsers differ from a served static site.
 - LAN phone testing depends on same-Wi-Fi routing and local firewall rules.

@@ -41,6 +41,10 @@ const adminSecurityPaths = [
   "apps/web/app/navigation-registry.ts"
 ];
 
+const internalResolverPaths = [
+  "apps/web/lib/api-base-url.ts"
+];
+
 const internalLinePatterns = [
   /NEXT_PUBLIC_API_URL/,
   /localApiBaseUrl/,
@@ -80,6 +84,7 @@ function normalizePath(path) {
 
 function isAllowed(path, line, label) {
   if (allowedText.some((pattern) => pattern.test(line))) return true;
+  if (internalResolverPaths.includes(path)) return true;
   if ((label === "Role" || label === "Permission") && adminSecurityPaths.some((prefix) => path.startsWith(prefix))) return true;
   if (label === "RBAC" && path.startsWith("apps/web/app/admin")) return true;
   if (["/api/ visible path", "localhost"].includes(label) && internalLinePatterns.some((pattern) => pattern.test(line))) return true;

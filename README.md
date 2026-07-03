@@ -6,6 +6,23 @@ V0.9 focuses on browser-visible product experience: premium login, role-aware da
 
 It remains local/demo only and must not be used with real patient data, real payment details, production credentials, autonomous AI decisions, or patient medication instructions.
 
+## v0.10.5 LAN CORS Hardening
+
+Branch: `security/v0.10.5-lan-cors-hardening`.
+
+LAN development now uses explicit API/CORS profiles. Prefer a configured LAN API origin such as `NEXT_PUBLIC_LAN_API_ORIGIN=http://192.168.1.50:3001` or `http://prij-clinic.local:3001`, paired with exact backend `CORS_ORIGINS`.
+
+Development-only private subnet matching is configured with `CORS_PRIVATE_CIDRS` and `CORS_PRIVATE_PORTS`. Do not use CIDR, wildcard origins, or dynamic LAN fallback in staging or production. Staging and production must use exact HTTPS origins.
+
+Regression checks:
+
+```powershell
+npm run test:web:api-base
+npm run test:security:cors
+```
+
+See `docs/LAN_DEV_CORS_HARDENING.md`.
+
 ## v0.10.4 Mobile-Stable Static HTML Lab
 
 Branch: `ui/v0.10.4-mobile-stable-html-lab`.

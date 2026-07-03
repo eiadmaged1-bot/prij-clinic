@@ -30,13 +30,20 @@ Connect the phone to the same Wi-Fi network, then open:
 http://PC_IP:3000
 ```
 
-The browser API helper maps a LAN web URL such as `http://192.168.x.x:3000` to:
+Preferred setup is explicit. Set the web app API origin to the same PC API host:
 
 ```text
-http://192.168.x.x:3001
+NEXT_PUBLIC_LAN_API_ORIGIN=http://PC_IP:3001
+NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK=false
 ```
 
-Local desktop browsing on `http://localhost:3000` continues to use the local API fallback.
+The backend must also explicitly allow the phone-facing web origin:
+
+```text
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://PC_IP:3000
+```
+
+Local desktop browsing on `http://localhost:3000` continues to use `http://localhost:3001` when no explicit API URL is set. Dynamic LAN same-host fallback is local-development only and requires `NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK=true`.
 
 ## API Health
 
@@ -52,4 +59,5 @@ If the page does not open, confirm the API is running and allow local firewall a
 
 - Use fake demo data only.
 - Do not upload patient files, PDFs, raw imports, or screenshots containing sensitive data.
-- Production CORS remains strict; LAN-origin allowance is development/local only.
+- Prefer explicit LAN IP or `.local` hostnames over subnet allowances.
+- Production and staging CORS must use exact HTTPS origins. Do not use `*` or private CIDRs in any healthcare staging/production environment.

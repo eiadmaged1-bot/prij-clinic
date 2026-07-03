@@ -1,5 +1,14 @@
 # Current Status
 
+v0.10.5 LAN CORS Hardening is in progress on branch `security/v0.10.5-lan-cors-hardening`.
+
+v0.10.5 status:
+- Frontend API base URL resolution is explicit-env first and supports localhost, configured private LAN IP, and configured `.local` development profiles.
+- Browser LAN same-host fallback is local-development only and requires `NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK=true`.
+- Backend CORS parsing uses exact origins by default and separates dev-only private CIDR matching into `CORS_PRIVATE_CIDRS` plus `CORS_PRIVATE_PORTS`.
+- Staging/production reject wildcard, CIDR, and dynamic LAN behavior; missing exact origins fail closed.
+- No clinical logic, database schema, real patient data, external AI, RBAC, audit, auth, or medication safety behavior is changed.
+
 v0.10.4 Mobile-Stable Static HTML Lab is in progress on branch `ui/v0.10.4-mobile-stable-html-lab`.
 
 v0.10.4 status:
