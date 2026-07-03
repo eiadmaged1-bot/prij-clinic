@@ -1,5 +1,37 @@
 # Next Steps
 
+v0.10.9 legacy queue duplicate remediation next steps:
+
+1. Review the dry-run output:
+
+```powershell
+npm run db:v109:queue-duplicates:dry-run
+```
+
+2. Apply only in local/dev/test after the planned changes match the known duplicate group:
+
+```powershell
+$env:APP_ENV="local"
+npm run db:v109:queue-duplicates:apply
+```
+
+3. Verify the migration guard will pass:
+
+```powershell
+npm run db:v109:queue-migration-ready
+```
+
+4. Apply the schema migration and follow-up checks:
+
+```powershell
+npm run prisma:migrate:deploy
+npm run prisma:generate
+npm run prisma:seed
+npm run test:db:queue-date
+```
+
+5. Do not use the remediation script on staging or production. Those environments require manual review and an approved operational remediation plan.
+
 v0.10.5 LAN CORS hardening next steps:
 
 1. Prefer explicit local LAN profiles for phone testing:

@@ -1,5 +1,16 @@
 # Current Status
 
+v0.10.9 Legacy Queue Duplicate Remediation is in progress on branch `data/v0.10.9-legacy-queue-duplicate-remediation`.
+
+v0.10.9 status:
+- The guarded schema migration `20260703143000_schema_integrity_hardening` is blocked locally by one legacy duplicate queue group before the new `queueDate` uniqueness constraint can be applied.
+- Duplicate group: branch `ada31369-d91e-4071-9de3-865268722c74`, UTC date `2026-07-03`, queue number `1`.
+- Tickets in duplicate group: `9fb69f14-399a-41d9-b944-d88991e16bee` and `61cbcf2e-136f-4d2f-8a3b-014dac6ece3b`.
+- Added local/dev/test-only raw SQL remediation tooling that preserves the earliest ticket unchanged and reassigns only later duplicate tickets to the next free daily queue number.
+- Added a raw SQL readiness verifier that uses the same UTC date grouping as the migration guard.
+- No queue tickets are deleted, no database reset/drop/truncate is performed, and no migration guard is weakened.
+- No release tag has been created.
+
 v0.10.5 LAN CORS Hardening is in progress on branch `security/v0.10.5-lan-cors-hardening`.
 
 v0.10.5 status:

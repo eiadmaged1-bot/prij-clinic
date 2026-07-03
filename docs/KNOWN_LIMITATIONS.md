@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.10.9 remediation is limited to local/dev/test legacy queue duplicates and must not be used as an automatic staging or production data operation.
+- v0.10.9 does not delete queue tickets, reset data, or renumber all historical rows; it only changes later duplicate tickets in guarded duplicate groups.
+- v0.10.9 relies on the existing `checkedInAt` UTC date derivation used by the migration guard. It does not infer clinic-local queue dates for legacy data.
+- Production/staging duplicate queue remediation remains a manual review process with audit, backup, and approval requirements.
+
 - v0.10.5 hardens LAN development profiles but does not certify production hosting, privacy compliance, medical-device behavior, or clinical governance.
 - LAN testing still depends on same-Wi-Fi routing, local firewall rules, and correctly configured explicit origins.
 - `.local` profiles require working mDNS/Bonjour resolution on each device.
