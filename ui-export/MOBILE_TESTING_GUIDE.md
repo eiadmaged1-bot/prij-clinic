@@ -15,7 +15,9 @@ Why use the server instead of file://:
 
 Manual checks:
 - Dashboard opens first.
+- Theme buttons do not appear above Dashboard or clinical content.
 - Menu opens the drawer at phone widths.
+- Appearance appears in the drawer and opens the theme selector.
 - Nav item taps switch sections and close the drawer.
 - Overlay closes the drawer.
 - Theme changes apply immediately and persist after refresh.

@@ -132,10 +132,7 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
   display: none; position: fixed; inset: 0; z-index: 50; border: 0; background: rgb(7 17 29 / 56%);
 }
 .drawer-overlay.open { display: block; }
-.top-tools, .section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
-.top-tools {
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); padding: 0.85rem;
-}
+.section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
 .section { display: none; gap: 1rem; max-width: 1280px; width: 100%; margin: 0 auto; }
 .section.active { display: grid; }
 .section-header { align-items: flex-end; }
@@ -148,6 +145,14 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 .button:hover, .chip-button:hover { box-shadow: var(--shadow-sm); }
 .button.primary { border-color: var(--brand); background: linear-gradient(155deg, var(--brand-mint), var(--brand)); color: #06231f; box-shadow: 0 8px 20px -8px rgb(15 106 92 / 55%); }
 .button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--text); }
+.theme-card { align-content: start; min-height: 160px; }
+.theme-card [data-theme-active="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+.theme-card [data-theme-active="true"]::after { content: "Active"; margin-left: 0.2rem; font-size: 0.74rem; }
 .badge {
   display: inline-flex; width: fit-content; max-width: 100%; align-items: center; border: 1px solid var(--border); border-radius: 999px;
   background: var(--surface-alt); color: var(--strong); padding: 0.3rem 0.58rem 0.3rem 0.5rem; gap: 0.38rem; font-size: 0.76rem; font-weight: 850; overflow-wrap: anywhere;
@@ -216,8 +221,8 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
 @media (max-width: 767px) {
   .main { padding: 0.75rem; }
   .mobile-topbar { margin: -0.75rem -0.75rem 0; }
-  .top-tools, .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
-  .top-tools, .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
+  .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
+  .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
   .metric-grid, .card-grid, .card-grid.two, .profile-grid, .schedule-grid { grid-template-columns: 1fr; }
   .button, .chip-button { width: 100%; }
   .login-brand { min-height: 240px; }

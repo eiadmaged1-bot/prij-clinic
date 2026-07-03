@@ -32,6 +32,7 @@ const navItems = [
   ["investigations", "Investigations"],
   ["billing", "Billing"],
   ["admin", "Admin"],
+  ["appearance", "Appearance"],
   ["drug-market", "Drug Market"],
   ["guidelines", "Guidelines"],
   ["protocol-atlas", "Protocol Atlas"],
@@ -41,7 +42,7 @@ const navItems = [
 const navGroups = [
   { label: "Workspace", ids: ["dashboard", "queue", "calendar"] },
   { label: "Patients", ids: ["patients", "patient-file", "doctor-workspace", "prescriptions", "investigations"] },
-  { label: "Operations", ids: ["billing", "admin", "drug-market"] },
+  { label: "Operations", ids: ["billing", "admin", "appearance", "drug-market"] },
   { label: "Knowledge", ids: ["guidelines", "protocol-atlas"] },
   { label: "Preview", ids: ["login-preview", "theme-gallery"] }
 ];
@@ -232,6 +233,13 @@ const sections = [
       </section>`
   },
   {
+    id: "appearance",
+    label: "Appearance",
+    html: `
+      ${sectionHeader("VISUAL SETTINGS", "Appearance", "Choose a static UI theme for review. This changes the visual preview only.")}
+      <section class="card-grid appearance-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="${theme.id}">Apply ${theme.label}</button></article>`).join("")}</section>`
+  },
+  {
     id: "guidelines",
     label: "Guidelines",
     html: `
@@ -251,8 +259,7 @@ const sections = [
     label: "Theme Gallery",
     html: `
       ${sectionHeader("Appearance", "Theme Gallery", "Mobile-safe theme previews and controls.")}
-      <section class="panel"><h2>Theme Switcher</h2><div class="chip-row">${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}</div></section>
-      <section class="card-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="${theme.id}">Apply</button></article>`).join("")}</section>`
+      <section class="card-grid">${themes.map((theme) => `<article class="card theme-card"><h2>${theme.label}</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article>`).join("")}</section>`
   }
 ];
 
@@ -390,10 +397,7 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
   display: none; position: fixed; inset: 0; z-index: 50; border: 0; background: rgb(7 17 29 / 56%);
 }
 .drawer-overlay.open { display: block; }
-.top-tools, .section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
-.top-tools {
-  border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-sm); padding: 0.85rem;
-}
+.section-header, .row, .button-row, .chip-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center; justify-content: space-between; min-width: 0; }
 .section { display: none; gap: 1rem; max-width: 1280px; width: 100%; margin: 0 auto; }
 .section.active { display: grid; }
 .section-header { align-items: flex-end; }
@@ -406,6 +410,14 @@ label { display: grid; gap: 0.4rem; font-weight: 760; color: var(--strong); }
 .button:hover, .chip-button:hover { box-shadow: var(--shadow-sm); }
 .button.primary { border-color: var(--brand); background: linear-gradient(155deg, var(--brand-mint), var(--brand)); color: #06231f; box-shadow: 0 8px 20px -8px rgb(15 106 92 / 55%); }
 .button.secondary, .chip-button { border-color: var(--border); background: var(--surface); color: var(--text); }
+.theme-card { align-content: start; min-height: 160px; }
+.theme-card [data-theme-active="true"] {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 18%, transparent);
+}
+.theme-card [data-theme-active="true"]::after { content: "Active"; margin-left: 0.2rem; font-size: 0.74rem; }
 .badge {
   display: inline-flex; width: fit-content; max-width: 100%; align-items: center; border: 1px solid var(--border); border-radius: 999px;
   background: var(--surface-alt); color: var(--strong); padding: 0.3rem 0.58rem 0.3rem 0.5rem; gap: 0.38rem; font-size: 0.76rem; font-weight: 850; overflow-wrap: anywhere;
@@ -474,8 +486,8 @@ th { background: var(--surface-alt); color: var(--strong); font-size: 0.78rem; t
 @media (max-width: 767px) {
   .main { padding: 0.75rem; }
   .mobile-topbar { margin: -0.75rem -0.75rem 0; }
-  .top-tools, .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
-  .top-tools, .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
+  .section-header, .notice, .patient-hero, .login-preview-panel { grid-template-columns: 1fr; }
+  .section-header, .row, .button-row, .chip-row { align-items: stretch; flex-direction: column; }
   .metric-grid, .card-grid, .card-grid.two, .profile-grid, .schedule-grid { grid-template-columns: 1fr; }
   .button, .chip-button { width: 100%; }
   .login-brand { min-height: 240px; }
@@ -526,6 +538,7 @@ const js = String.raw`
   function setTheme(theme) {
     document.body.dataset.theme = theme;
     localStorage.setItem("prij-v104-static-theme", theme);
+    themeButtons.forEach((button) => button.dataset.themeActive = String(button.dataset.themeTarget === theme));
   }
 
   menuButton?.addEventListener("click", openDrawer);
@@ -582,15 +595,6 @@ function htmlDocument(title) {
         </div>
         <button class="button secondary" type="button" aria-expanded="false" data-menu-button>Menu</button>
       </header>
-      <section class="top-tools" aria-label="Lab controls">
-        <div>
-          <p class="eyebrow">v0.11.0 Visual Upgrade Static HTML Lab</p>
-          <p class="muted">One static shell. No API calls, Docker, login, uploads, secrets, or real patient data.</p>
-        </div>
-        <div class="chip-row" aria-label="Theme switcher">
-          ${themes.map((theme) => `<button class="chip-button" type="button" data-theme-target="${theme.id}">${theme.label}</button>`).join("")}
-        </div>
-      </section>
       ${sections.map((section) => `<section class="section" id="${section.id}" data-section="${section.id}" aria-label="${section.label}">${section.html}</section>`).join("")}
     </main>
   </div>
@@ -632,7 +636,9 @@ Why use the server instead of file://:
 
 Manual checks:
 - Dashboard opens first.
+- Theme buttons do not appear above Dashboard or clinical content.
 - Menu opens the drawer at phone widths.
+- Appearance appears in the drawer and opens the theme selector.
 - Nav item taps switch sections and close the drawer.
 - Overlay closes the drawer.
 - Theme changes apply immediately and persist after refresh.
@@ -666,6 +672,8 @@ Core CSS variables:
 - Login Preview is visual-only and Enter UI Lab returns to Dashboard.
 - Every nav section is reachable without reload.
 - Mobile drawer opens, closes, and closes after nav tap.
+- Appearance is reachable from navigation and contains the theme selector.
+- Theme buttons are not rendered above Dashboard or clinical sections.
 - No horizontal scroll on phone widths.
 - Buttons and inputs are at least 44px tall.
 - Tables collapse to mobile cards.

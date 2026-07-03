@@ -1,5 +1,29 @@
 # Next Steps
 
+v0.11.1 appearance menu tab next steps:
+
+1. Run the sprint verification sequence:
+
+```powershell
+git diff --check
+npm run design:export-html
+npm run design:v110:safety-check
+npm run design:test-mobile-html
+npm run test:v093:ui-text
+npm run typecheck
+npm run build
+```
+
+2. Start the static server:
+
+```powershell
+npm run design:serve-html
+```
+
+3. Open the printed LAN URL on a phone connected to the same Wi-Fi and verify Dashboard-first loading, no inline theme buttons above Dashboard or Prescriptions, compact Menu behavior, Appearance in the Menu drawer, drawer close after selecting Appearance, theme switching persistence, active theme marking, and no horizontal scroll.
+4. Do not commit `.env`, storage, uploads, logs, backups, local DB files, screenshots, generated zips, `test-results`, `playwright-report`, incoming raw files, or `continue-clean-reference-theme-sprint.prompt.txt`.
+5. Do not create a release tag from this sprint.
+
 v0.11.0 visual upgrade import next steps:
 
 1. Regenerate the static handoff:

@@ -1,5 +1,17 @@
 # Current Status
 
+v0.11.1 Appearance Menu Tab is in progress on branch `ui/v0.11.1-appearance-menu-tab`.
+
+v0.11.1 status:
+- Static theme switching moved into a dedicated `Appearance` section with the `VISUAL SETTINGS` eyebrow.
+- The inline top-of-page theme selector was removed from the main static shell, so Dashboard and clinical sections no longer start below theme buttons on mobile.
+- Appearance is available from the sidebar/mobile drawer near Admin and Theme Gallery areas, while Dashboard remains the default first screen.
+- Theme switching remains local-only, immediate, persisted in localStorage, and visibly marks the active theme.
+- Generated static outputs were regenerated for `ui-export/index.html`, `ui-export/assets/*`, `docs/design/prij-ui-theme-lab.html`, and `docs/design/prij-mobile-ui-lab.html`.
+- Verification passed for `git diff --check` with line-ending warnings only, `npm run design:export-html`, `npm run design:v110:safety-check`, `npm run design:test-mobile-html`, and `npm run test:v093:ui-text`.
+- `npm run typecheck` and `npm run build` still fail in existing API Prisma create inputs requiring `branchId` and `queueDate`; backend code was not changed in this sprint.
+- No backend, database schema, clinical logic, real auth, API calls, CORS/security hardening, image sanitizer, real patient data, medication dosing, AI diagnosis, AI prescribing, commerce workflow, release tag, or production claim is added.
+
 v0.11.0 Visual Upgrade Import is in progress on branch `ui/v0.11.0-visual-upgrade-import`.
 
 v0.11.0 status:

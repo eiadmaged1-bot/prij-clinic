@@ -23,7 +23,7 @@
           <button class="nav-item" type="button" data-section-target="patients">Patients<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="patient-file">Patient File<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="doctor-workspace">Doctor Workspace<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="prescriptions">Prescriptions<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="investigations">Investigations<span aria-hidden="true">&gt;</span></button>
 
           <span class="nav-group-label">Operations</span>
-          <button class="nav-item" type="button" data-section-target="billing">Billing<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="admin">Admin<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="drug-market">Drug Market<span aria-hidden="true">&gt;</span></button>
+          <button class="nav-item" type="button" data-section-target="billing">Billing<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="admin">Admin<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="appearance">Appearance<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="drug-market">Drug Market<span aria-hidden="true">&gt;</span></button>
 
           <span class="nav-group-label">Knowledge</span>
           <button class="nav-item" type="button" data-section-target="guidelines">Guidelines<span aria-hidden="true">&gt;</span></button><button class="nav-item" type="button" data-section-target="protocol-atlas">Protocol Atlas<span aria-hidden="true">&gt;</span></button>
@@ -41,15 +41,6 @@
         </div>
         <button class="button secondary" type="button" aria-expanded="false" data-menu-button>Menu</button>
       </header>
-      <section class="top-tools" aria-label="Lab controls">
-        <div>
-          <p class="eyebrow">v0.11.0 Visual Upgrade Static HTML Lab</p>
-          <p class="muted">One static shell. No API calls, Docker, login, uploads, secrets, or real patient data.</p>
-        </div>
-        <div class="chip-row" aria-label="Theme switcher">
-          <button class="chip-button" type="button" data-theme-target="clinic-premium">Clinic Premium</button><button class="chip-button" type="button" data-theme-target="prij-heritage">Prij Heritage</button><button class="chip-button" type="button" data-theme-target="medicolize-portal">Medicolize Portal</button><button class="chip-button" type="button" data-theme-target="incision-portal">Incision Portal</button><button class="chip-button" type="button" data-theme-target="minimal-clean">Minimal Clean</button><button class="chip-button" type="button" data-theme-target="compact-operations">Compact Operations</button><button class="chip-button" type="button" data-theme-target="dark-navy">Dark Navy</button>
-        </div>
-      </section>
       <section class="section" id="dashboard" data-section="dashboard" aria-label="Dashboard">
 
     <header class="section-header">
@@ -234,7 +225,17 @@
       <section class="metric-grid">
         <article class="metric"><span>Official rows</span><strong>0</strong><p>No medication data in export.</p></article>
         <article class="metric"><span>Verified rows</span><strong>0</strong><p>Blocked until official data exists.</p></article>
-      </section></section><section class="section" id="guidelines" data-section="guidelines" aria-label="Guidelines">
+      </section></section><section class="section" id="appearance" data-section="appearance" aria-label="Appearance">
+
+    <header class="section-header">
+      <div>
+        <p class="eyebrow">VISUAL SETTINGS</p>
+        <h1>Appearance</h1>
+        <p class="muted">Choose a static UI theme for review. This changes the visual preview only.</p>
+      </div>
+
+    </header>
+      <section class="card-grid appearance-grid"><article class="card theme-card"><h2>Clinic Premium</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="clinic-premium">Apply Clinic Premium</button></article><article class="card theme-card"><h2>Prij Heritage</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="prij-heritage">Apply Prij Heritage</button></article><article class="card theme-card"><h2>Medicolize Portal</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="medicolize-portal">Apply Medicolize Portal</button></article><article class="card theme-card"><h2>Incision Portal</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="incision-portal">Apply Incision Portal</button></article><article class="card theme-card"><h2>Minimal Clean</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="minimal-clean">Apply Minimal Clean</button></article><article class="card theme-card"><h2>Compact Operations</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="compact-operations">Apply Compact Operations</button></article><article class="card theme-card"><h2>Dark Navy</h2><p>Review this static visual theme without changing clinical data or backend behavior.</p><button class="button secondary" type="button" data-theme-target="dark-navy">Apply Dark Navy</button></article></section></section><section class="section" id="guidelines" data-section="guidelines" aria-label="Guidelines">
 
     <header class="section-header">
       <div>
@@ -265,8 +266,7 @@
       </div>
 
     </header>
-      <section class="panel"><h2>Theme Switcher</h2><div class="chip-row"><button class="chip-button" type="button" data-theme-target="clinic-premium">Clinic Premium</button><button class="chip-button" type="button" data-theme-target="prij-heritage">Prij Heritage</button><button class="chip-button" type="button" data-theme-target="medicolize-portal">Medicolize Portal</button><button class="chip-button" type="button" data-theme-target="incision-portal">Incision Portal</button><button class="chip-button" type="button" data-theme-target="minimal-clean">Minimal Clean</button><button class="chip-button" type="button" data-theme-target="compact-operations">Compact Operations</button><button class="chip-button" type="button" data-theme-target="dark-navy">Dark Navy</button></div></section>
-      <section class="card-grid"><article class="card theme-card"><h2>Clinic Premium</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="clinic-premium">Apply</button></article><article class="card theme-card"><h2>Prij Heritage</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="prij-heritage">Apply</button></article><article class="card theme-card"><h2>Medicolize Portal</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="medicolize-portal">Apply</button></article><article class="card theme-card"><h2>Incision Portal</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="incision-portal">Apply</button></article><article class="card theme-card"><h2>Minimal Clean</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="minimal-clean">Apply</button></article><article class="card theme-card"><h2>Compact Operations</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="compact-operations">Apply</button></article><article class="card theme-card"><h2>Dark Navy</h2><p>Cards, forms, badges, drawer, and topbar remain stable.</p><button class="button secondary" type="button" data-theme-target="dark-navy">Apply</button></article></section></section>
+      <section class="card-grid"><article class="card theme-card"><h2>Clinic Premium</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Prij Heritage</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Medicolize Portal</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Incision Portal</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Minimal Clean</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Compact Operations</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article><article class="card theme-card"><h2>Dark Navy</h2><p>Cards, forms, badges, drawer, and topbar remain stable. Use Appearance to apply this theme.</p></article></section></section>
     </main>
   </div>
   <script src="./assets/app.js"></script>

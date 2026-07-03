@@ -1,5 +1,10 @@
 # Known Limitations
 
+- v0.11.1 moves the static theme selector into Appearance only. It does not add backend preference storage, real authentication, production security certification, clinical governance, or database-backed user settings.
+- Appearance changes the static visual preview only and has no API calls, schema changes, patient data, medication dosing, AI diagnosis, AI prescribing, commerce behavior, or release tag.
+- Manual phone QA still depends on `npm run design:serve-html`, same-Wi-Fi routing, and local firewall rules.
+- Theme Gallery remains a visual preview area; theme application is handled from Appearance.
+
 - v0.11.0 imports a visual design system into the static HTML lab only. It does not certify production mobile support, privacy compliance, clinical governance, authentication, backend behavior, or security posture.
 - The ZIP `incoming/visual-upgrade/prij-clinic-visual-upgrade-v0_11.zip` is a design reference only and must not be committed.
 - v0.11.0 does not add real patient data, medication data, API calls, real authentication, AI diagnosis, AI prescribing, medication dosing instructions, stock/order/cart/checkout behavior, payment behavior, schema changes, backend code changes, or a release tag.
