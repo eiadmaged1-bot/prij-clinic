@@ -37,16 +37,25 @@ type PregnancyRecord = {
   living?: number | string | null;
   abortions?: number | string | null;
   lmp?: string | null;
+  lmpDate?: string | null;
   edd?: string | null;
+  estimatedDueDate?: string | null;
   datingMethod?: string | null;
+  datingScanDate?: string | null;
   status?: string | null;
   notes?: string | null;
+  fetuses?: FetusRecord[];
+  antenatalVisits?: Record<string, unknown>[];
+  obUltrasounds?: Record<string, unknown>[];
 };
 
 type FetusRecord = {
   id?: string;
   label?: string | null;
+  chorionicity?: string | null;
+  amnionicity?: string | null;
   status?: string | null;
+  notes?: string | null;
 };
 
 type GynecologyVisit = {
@@ -105,6 +114,8 @@ const tabs: TabConfig[] = [
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
   { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No investigation order yet.", permissions: ["investigation.read"] },
   { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
+  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." }
@@ -1070,7 +1081,8 @@ function ObgynWorkspace({
   reports: Record<string, unknown>[];
   orders: Record<string, unknown>[];
 }) {
-  const activePregnancy = pregnancies[0];
+  const activePregnancy = pregnancies.find((item) => item.status === "active") ?? pregnancies[0];
+  const fetuses = activePregnancy?.fetuses ?? [];
 
   return (
     <section className="obgyn-workspace">
@@ -1105,18 +1117,18 @@ function ObgynWorkspace({
         {!activePregnancy ? (
           <p className="empty-state">
             <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
-            <span>Create the pregnancy episode from the Pregnancy module first, then return here for antenatal visits and ultrasound recording.</span>
+            <span>Create a pregnancy episode below, then continue with antenatal visits and ultrasound recording.</span>
           </p>
         ) : null}
         <div className="obgyn-metric-grid">
-          <Metric label="LMP" value={formatDate(activePregnancy?.lmp)} />
-          <Metric label="EDD" value={formatDate(activePregnancy?.edd)} />
+          <Metric label="LMP" value={formatDate(activePregnancy?.lmpDate ?? activePregnancy?.lmp)} />
+          <Metric label="EDD" value={formatDate(activePregnancy?.estimatedDueDate ?? activePregnancy?.edd)} />
           <Metric label="Dating method" value={String(activePregnancy?.datingMethod ?? "Not recorded")} />
           <Metric label="Gravida / Para" value={`${activePregnancy?.gravida ?? "-"} / ${activePregnancy?.para ?? "-"}`} />
           <Metric label="Current status" value={String(activePregnancy?.status ?? "Not recorded")} />
-          <Metric label="Next visit" value="Schedule follow-up" />
-          <Metric label="Last visit" value="Review visits below" />
-          <Metric label="Ultrasound summary" value={reports.length ? `${reports.length} report record(s)` : "No ultrasound report yet"} />
+          <Metric label="Fetus records" value={fetuses.length ? `${fetuses.length}` : "Not recorded"} />
+          <Metric label="Antenatal visits" value={activePregnancy?.antenatalVisits?.length ? `${activePregnancy.antenatalVisits.length}` : "No visit yet"} />
+          <Metric label="Ultrasound summary" value={activePregnancy?.obUltrasounds?.length ? `${activePregnancy.obUltrasounds.length} scan record(s)` : "No ultrasound report yet"} />
         </div>
         <div className="notice">
           <strong>Important notes</strong>
@@ -1150,11 +1162,16 @@ function ObgynWorkspace({
           </p>
         </article>
 
+        <CreatePregnancyEpisodeCard patient={patient} />
+      </section>
+
+      <section className="obgyn-section-grid">
+        <FetusStarterCard pregnancy={activePregnancy} fetuses={fetuses} />
         <AntenatalVisitCard patient={patient} pregnancy={activePregnancy} />
       </section>
 
       <section className="obgyn-section-grid">
-        <UltrasoundReportBuilder patient={patient} pregnancy={activePregnancy} fetuses={[]} />
+        <UltrasoundReportBuilder patient={patient} pregnancy={activePregnancy} fetuses={fetuses} />
         <DoctorTemplateCards />
       </section>
 
@@ -1239,6 +1256,145 @@ function Metric({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function CreatePregnancyEpisodeCard({ patient }: { patient: Patient }) {
+  const [status, setStatus] = useState("");
+
+  async function savePregnancy(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem("prijClinicToken");
+    const payload = {
+      patientId: patient.id,
+      status: "active",
+      ...formPayload(event.currentTarget, {
+        gravida: "number",
+        para: "number",
+        living: "number",
+        abortions: "number"
+      })
+    };
+    const response = await fetch(`${getApiBaseUrl()}/pregnancies`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save the pregnancy episode. Check your role and try again.");
+      return;
+    }
+
+    setStatus("Pregnancy episode saved. Doctor interpretation remains required.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Pregnancy episode</p>
+          <h2>Create pregnancy record</h2>
+          <p className="muted">Records dating inputs and obstetric summary only. The app does not assign risk diagnoses.</p>
+        </div>
+        <ThreeDMedicalIcon name="pregnancy" size="sm" tone="rose" />
+      </div>
+      <form className="obgyn-form-grid grouped" onSubmit={savePregnancy}>
+        <fieldset className="obgyn-fieldset">
+          <legend>Dating</legend>
+          <label>LMP<input name="lmpDate" type="date" /></label>
+          <label>EDD<input name="estimatedDueDate" type="date" /></label>
+          <label>Dating method<input name="datingMethod" placeholder="LMP, scan, IVF, or clinician note" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset">
+          <legend>Obstetric summary</legend>
+          <label>Gravida<input name="gravida" type="number" min="0" max="20" /></label>
+          <label>Para<input name="para" type="number" min="0" max="20" /></label>
+          <label>Living<input name="living" type="number" min="0" max="20" /></label>
+          <label>Abortions<input name="abortions" type="number" min="0" max="20" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Doctor notes</legend>
+          <label>Notes<textarea name="notes" placeholder="Doctor-authored pregnancy context" /></label>
+        </fieldset>
+        {status ? <p className="notice wide">{status}</p> : null}
+        <button className="button" type="submit"><ThreeDMedicalIcon name="pregnancy" size="sm" />Save pregnancy episode</button>
+      </form>
+    </article>
+  );
+}
+
+function FetusStarterCard({ pregnancy, fetuses }: { pregnancy?: PregnancyRecord; fetuses: FetusRecord[] }) {
+  const [status, setStatus] = useState("");
+
+  async function saveFetus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!pregnancy?.id) {
+      setStatus("Create a pregnancy episode before adding fetus records.");
+      return;
+    }
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/pregnancies/${pregnancy.id}/fetuses`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify(formPayload(event.currentTarget))
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+      setStatus("Could not save the fetus record. Check your role and try again.");
+      return;
+    }
+
+    setStatus("Fetus record saved for multiple pregnancy tracking.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Fetus and multiple pregnancy</p>
+          <h2>Fetus starter</h2>
+          <p className="muted">Use labels such as A, B, or C. This records context only and does not diagnose growth or twin risk.</p>
+        </div>
+        <span className="badge">{fetuses.length} fetus record(s)</span>
+      </div>
+      <div className="data-list">
+        {fetuses.map((fetus) => (
+          <article className="data-row" key={fetus.id ?? fetus.label ?? "fetus"}>
+            <div className="data-row-header">
+              <strong>Fetus {fetus.label ?? "record"}</strong>
+              <span className="badge">{fetus.status ?? "active"}</span>
+            </div>
+            <p className="muted">{[fetus.chorionicity, fetus.amnionicity, fetus.notes].filter(Boolean).join(" | ") || "No fetus-specific note yet."}</p>
+          </article>
+        ))}
+      </div>
+      <form className="obgyn-form-grid grouped" onSubmit={saveFetus}>
+        <fieldset className="obgyn-fieldset">
+          <legend>Fetus details</legend>
+          <label>Label<input name="label" required placeholder="A, B, or C" /></label>
+          <label>Chorionicity<input name="chorionicity" placeholder="If known" /></label>
+          <label>Amnionicity<input name="amnionicity" placeholder="If known" /></label>
+          <label>Status<input name="status" placeholder="active, completed, or note" /></label>
+        </fieldset>
+        <fieldset className="obgyn-fieldset wide">
+          <legend>Notes</legend>
+          <label>Fetus-specific notes<textarea name="notes" placeholder="Clinician-entered notes" /></label>
+        </fieldset>
+        {status ? <p className="notice wide">{status}</p> : null}
+        <button className="button secondary" type="submit"><ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />Add fetus record</button>
+      </form>
+    </article>
   );
 }
 
