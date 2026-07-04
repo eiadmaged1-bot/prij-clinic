@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 const repoRoot = process.cwd();
 const isWindows = process.platform === "win32";
 const clientDir = join(repoRoot, "node_modules", ".prisma", "client");
-const packagePrismaDir = join(repoRoot, "node_modules", "@prisma", "client", ".prisma");
+const packagePrismaDir = join(repoRoot, "node_modules", "@prisma", "client", ".prisma", "client");
 const generatedPrismaDir = join(repoRoot, "node_modules", ".prisma");
 const tempImportTest = join(repoRoot, `.prisma-import-test.${process.pid}.cjs`);
 
