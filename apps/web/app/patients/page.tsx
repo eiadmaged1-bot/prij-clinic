@@ -18,6 +18,7 @@ type Patient = {
   email?: string | null;
   status: string;
   branchId?: string | null;
+  createdAt?: string | null;
 };
 
 export default function PatientsPage() {
@@ -25,6 +26,12 @@ export default function PatientsPage() {
   const [status, setStatus] = useState("Loading");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const today = new Date().toISOString().slice(0, 10);
+  const [dateFilter, setDateFilter] = useState("all");
+  const [exactDate, setExactDate] = useState(today);
+  const [rangeStart, setRangeStart] = useState(today);
+  const [rangeEnd, setRangeEnd] = useState(today);
+  const [patientStatus, setPatientStatus] = useState("all");
 
   useEffect(() => {
     void loadPatients();
@@ -32,11 +39,13 @@ export default function PatientsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return patients;
-    return patients.filter((patient) =>
-      `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName}`.toLowerCase().includes(q)
-    );
-  }, [patients, query]);
+    return patients.filter((patient) => {
+      const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
+      const statusMatch = patientStatus === "all" || patient.status === patientStatus;
+      const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
+      return textMatch && statusMatch && dateMatch;
+    });
+  }, [dateFilter, exactDate, patientStatus, patients, query, rangeEnd, rangeStart, today]);
 
   async function loadPatients() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -101,9 +110,31 @@ export default function PatientsPage() {
             Search patient files
             <input
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by file number or name"
+              placeholder="Search by file number, name, or phone"
               value={query}
             />
+          </label>
+          <label>
+            Date
+            <select onChange={(event) => setDateFilter(event.target.value)} value={dateFilter}>
+              <option value="all">Any date</option>
+              <option value="today">Seen / created today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="exact">Exact date</option>
+              <option value="range">Date range</option>
+            </select>
+          </label>
+          {dateFilter === "exact" ? <label>Exact date<input type="date" value={exactDate} onChange={(event) => setExactDate(event.target.value)} /></label> : null}
+          {dateFilter === "range" ? <label>From<input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label> : null}
+          {dateFilter === "range" ? <label>To<input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label> : null}
+          <label>
+            Status
+            <select onChange={(event) => setPatientStatus(event.target.value)} value={patientStatus}>
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="archived">Archived</option>
+            </select>
           </label>
         </div>
 
@@ -167,6 +198,21 @@ function patientDisplayName(patient: Patient) {
 
 function patientFileNumber(patient: Patient) {
   return isSeededTrainingRecord(patient) ? "Local training file" : patient.medicalRecordNumber;
+}
+
+function matchesPatientDate(value: string | null | undefined, mode: string, exactDate: string, rangeStart: string, rangeEnd: string, today: string) {
+  if (mode === "all") return true;
+  if (!value) return false;
+  const date = value.slice(0, 10);
+  if (mode === "today") return date === today;
+  if (mode === "yesterday") {
+    const yesterday = new Date(`${today}T00:00:00`);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return date === yesterday.toISOString().slice(0, 10);
+  }
+  if (mode === "exact") return date === exactDate;
+  if (mode === "range") return date >= rangeStart && date <= rangeEnd;
+  return true;
 }
 
 function isSeededTrainingRecord(patient: Patient) {
