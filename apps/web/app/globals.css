@@ -447,6 +447,11 @@ select:focus {
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  transition: grid-template-columns 180ms ease;
+}
+
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 5.35rem minmax(0, 1fr);
 }
 
 body {
@@ -490,16 +495,48 @@ body {
   gap: 1.25rem;
   height: 100vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   border-right: 1px solid rgb(255 255 255 / 10%);
   background: linear-gradient(180deg, var(--navy) 0%, var(--navy-soft) 100%);
   color: #dcebf0;
-  padding: 1.25rem;
+  padding: 1.25rem 1.25rem max(1.75rem, env(safe-area-inset-bottom));
+  scrollbar-width: thin;
+  transition: width 180ms ease, padding 180ms ease, transform 180ms ease;
 }
 
 .mobile-nav-backdrop,
-.mobile-menu-button,
 .mobile-topbar-brand {
   display: none;
+}
+
+.app-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-color: rgb(13 45 59 / 18%);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #edf5f6 100%);
+  box-shadow:
+    0 0.35rem 0.8rem rgb(18 43 56 / 12%),
+    inset 0 1px 0 rgb(255 255 255 / 90%);
+  transform: translateY(0);
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.app-menu-button:hover {
+  box-shadow:
+    0 0.55rem 1.1rem rgb(18 43 56 / 16%),
+    inset 0 1px 0 rgb(255 255 255 / 96%);
+  transform: translateY(-1px);
+}
+
+.app-menu-button:active,
+.app-menu-button.active {
+  background: linear-gradient(180deg, #e6f2f2 0%, #ffffff 100%);
+  box-shadow:
+    0 0.18rem 0.5rem rgb(18 43 56 / 12%),
+    inset 0 2px 5px rgb(18 43 56 / 10%);
+  transform: translateY(1px);
 }
 
 .brand {
@@ -559,7 +596,8 @@ body {
   transition:
     background 140ms ease,
     border-color 140ms ease,
-    color 140ms ease;
+    color 140ms ease,
+    transform 180ms ease;
 }
 
 .nav-item:hover,
@@ -579,6 +617,38 @@ body {
 
 .nav-item.active .nav-dot {
   opacity: 1;
+}
+
+.sidebar-collapsed .sidebar {
+  align-items: center;
+  gap: 1rem;
+  padding-inline: 0.75rem;
+}
+
+.sidebar-collapsed .brand {
+  justify-items: center;
+  padding-inline: 0;
+}
+
+.sidebar-collapsed .brand strong,
+.sidebar-collapsed .brand span,
+.sidebar-collapsed .nav-group-title,
+.sidebar-collapsed .nav-item span:not(.nav-dot) {
+  display: none;
+}
+
+.sidebar-collapsed .nav-group {
+  width: 100%;
+}
+
+.sidebar-collapsed .nav-item {
+  justify-content: center;
+  padding-inline: 0.55rem;
+}
+
+.sidebar-collapsed .nav-dot {
+  position: absolute;
+  right: 0.35rem;
 }
 
 .app-main {
@@ -899,6 +969,102 @@ body {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 750;
+}
+
+.compact-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.mini-metric-card,
+.metric-card.mini {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.35rem 0.65rem;
+  min-height: 4.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbfc 100%);
+  padding: 0.75rem 0.85rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.mini-metric-card strong,
+.metric-card.mini strong {
+  color: var(--foreground);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.mini-metric-card span,
+.metric-card.mini span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.mini-metric-card p,
+.metric-card.mini p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.compact-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 94%);
+  box-shadow: var(--shadow-sm);
+  padding: 0.85rem;
+}
+
+.dense-card-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.dense-card-list .data-row,
+.data-row.dense {
+  gap: 0.45rem;
+  min-height: auto;
+  padding: 0.75rem 0.85rem;
+}
+
+.smart-empty-state.compact,
+.compact-empty {
+  min-height: 3.25rem;
+  padding: 0.65rem 0.8rem;
+}
+
+.collapsible-help-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  padding: 0.75rem 0.9rem;
+}
+
+.collapsible-help-panel summary {
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.form-fieldset {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.form-fieldset legend {
+  color: var(--foreground);
+  font-weight: 850;
+  padding: 0 0.25rem;
+}
+
+.clinical-privacy-section {
+  background: #fbfdfd;
 }
 
 .quick-card,
@@ -2570,9 +2736,14 @@ button.obgyn-template-card {
     display: block;
   }
 
+  .app-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .hero-shell,
   .login-shell,
   .dashboard-grid,
+  .compact-metric-grid,
   .content-grid {
     grid-template-columns: 1fr;
   }
@@ -2589,6 +2760,27 @@ button.obgyn-template-card {
     transform: translateX(calc(-100% - 2rem));
     transition: transform 180ms ease;
     box-shadow: var(--shadow-md);
+  }
+
+  .sidebar-collapsed .sidebar {
+    align-items: stretch;
+    padding: 1.25rem 1.25rem max(1.75rem, env(safe-area-inset-bottom));
+  }
+
+  .sidebar-collapsed .brand {
+    justify-items: start;
+  }
+
+  .sidebar-collapsed .brand strong,
+  .sidebar-collapsed .brand span,
+  .sidebar-collapsed .nav-group-title,
+  .sidebar-collapsed .nav-item span:not(.nav-dot) {
+    display: initial;
+  }
+
+  .sidebar-collapsed .nav-item {
+    justify-content: space-between;
+    padding: 0.65rem 0.75rem;
   }
 
   .sidebar:not(.open) .nav-item {
@@ -2615,11 +2807,6 @@ button.obgyn-template-card {
 
   .mobile-nav-backdrop.open {
     display: block;
-  }
-
-  .mobile-menu-button {
-    display: inline-flex;
-    flex: 0 0 auto;
   }
 
   .app-main {

@@ -315,6 +315,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [comfort, setComfort] = useState("comfortable");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, setDoctorComfortMode, theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
@@ -332,6 +333,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setComfort(localStorage.getItem("prijDensityMode") ?? localStorage.getItem("prijComfortMode") ?? "comfortable");
+    setSidebarCollapsed(localStorage.getItem("prijSidebarCollapsed") === "true");
   }, []);
 
   useEffect(() => {
@@ -350,13 +352,25 @@ export function AppShell({ children }: { children: ReactNode }) {
     localStorage.setItem("prijComfortMode", next);
   }
 
+  function toggleNavigation() {
+    if (window.matchMedia("(max-width: 1199px)").matches) {
+      setMobileNavOpen((open) => !open);
+      return;
+    }
+    setSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem("prijSidebarCollapsed", String(next));
+      return next;
+    });
+  }
+
   async function signOut() {
     await logout();
     router.push("/login");
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
       <button
         aria-label="Close navigation"
         className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
@@ -389,13 +403,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="topbar-title">
             <button
               aria-controls="clinic-mobile-navigation"
-              aria-expanded={mobileNavOpen}
-              className="button secondary compact mobile-menu-button"
-              onClick={() => setMobileNavOpen(true)}
+              aria-expanded={mobileNavOpen || !sidebarCollapsed}
+              aria-label={sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
+              className={`button secondary compact app-menu-button ${mobileNavOpen ? "active" : ""}`}
+              onClick={toggleNavigation}
               type="button"
             >
               <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-              Menu
+              <span>Menu</span>
             </button>
             <strong className="mobile-topbar-brand">Prij Clinic</strong>
             <div>
