@@ -41,6 +41,7 @@ type DashboardSummary = {
 const workflow = ["Reception", "Appointment", "Queue", "Doctor", "Orders", "Reports", "Finance", "Owner review"];
 
 const quickActions: Array<[string, string, string, IconName]> = [
+  ["/clinic-day/walkthrough", "Clinic walkthrough", "Run the connected local training clinic day.", "timeline"],
   ["/patients/new", "New Patient", "Start a local training registration without real patient data.", "patients"],
   ["/appointments", "New Appointment", "Schedule a safe local visit.", "calendar"],
   ["/queue", "Queue Check-in", "Move a local patient file into today's queue.", "queue"],

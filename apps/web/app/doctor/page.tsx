@@ -64,6 +64,10 @@ export default function DoctorModePage() {
             <ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />
             Start Visit
           </Link>
+          <Link className="button secondary large" href="/clinic-day/walkthrough">
+            <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
+            Clinic walkthrough
+          </Link>
         </div>
       </section>
 

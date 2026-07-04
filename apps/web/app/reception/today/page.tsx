@@ -71,6 +71,7 @@ export default function ReceptionTodayPage() {
           <div className="topbar-actions">
             <Link className="button compact" href="/patients/new"><ThreeDMedicalIcon name="patients" size="sm" />New patient</Link>
             <Link className="button secondary compact" href="/reception/check-in"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" />Check-in</Link>
+            <Link className="button secondary compact" href="/clinic-day/walkthrough"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />Clinic walkthrough</Link>
             <Link className="button secondary compact" href="/queue"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" />Open queue</Link>
             <Link className="button secondary compact" href="/calendar"><ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />Today appointments</Link>
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>

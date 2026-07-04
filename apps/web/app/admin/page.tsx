@@ -303,6 +303,7 @@ export default function AdminPage() {
 
       <section className="module-grid">
         {[
+          { href: "/clinic-day/walkthrough", label: "Clinic walkthrough", description: "Run the connected local training clinic day from owner setup through print packet." },
           { href: "/admin/accounts", label: "Staff and permissions", description: "Create staff, review roles, and keep owner access protected." },
           { href: "/admin/services", label: "Services and prices", description: "Adjust service catalog controls with reason-required audit." },
           { href: "/admin/appearance", label: "Appearance", description: "Set the default clinic look and local browser preference." },
