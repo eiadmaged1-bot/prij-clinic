@@ -124,6 +124,8 @@
     "db:v123:seed:care-assist": "node scripts/v123-seed-care-assist-rules.mjs",
     "db:v123:med-safety:ready": "node scripts/v123-medication-safety-profile-readiness.mjs",
     "db:v123:import:med-safety-profiles": "node scripts/v123-import-medication-safety-profiles.mjs",
+    "db:v126:import-med-safety": "node scripts/v126-import-medication-safety-profiles.mjs",
+    "test:v126:med-safety-review": "node scripts/v126-medication-safety-review-test.mjs",
     "db:v109:queue-duplicates:dry-run": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --dry-run",
     "db:v109:queue-duplicates:apply": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --apply",
     "db:v109:queue-migration-ready": "node scripts/v109-verify-queue-date-migration-ready.mjs",

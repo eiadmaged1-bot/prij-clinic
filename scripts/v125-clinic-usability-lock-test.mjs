@@ -50,10 +50,10 @@ async function checkMedicationSafetyReviewPrep() {
   const service = await read("apps/api/src/care-assist/medication-pregnancy-lactation-safety.service.ts");
   const controller = await read("apps/api/src/care-assist/care-assist.controller.ts");
 
-  for (const label of ["Source name", "Source year", "Source link", "Last checked", "Source last updated", "Review status", "Confidence", "Mark needs review", "Mark reviewed", "Mark retired"]) {
+  for (const label of ["Source name", "Source year", "Source link", "Last checked", "Source last updated", "Review status", "Confidence", "Approve", "Reject", "Retire"]) {
     assertIncludes(component, label, `review page shows ${label}`);
   }
-  assertIncludes(component, "updateMedicationSafetyProfileReview", "review page saves through guarded endpoint");
+  assertIncludes(component, "decideMedicationSafetyProfileReview", "review page saves through guarded endpoint");
   assertIncludes(controller, '@Permissions("medication_safety_profile.manage")', "review endpoint requires profile management permission");
   assertIncludes(service, 'categoryInput === "E" ? "REVIEW_REQUIRED"', "category E maps to review required");
   assertIncludes(service, "Reviewed medication safety profiles require a source name and review reason.", "reviewed status requires source and reason");
