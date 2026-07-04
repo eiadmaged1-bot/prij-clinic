@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
-import { ManagementSnapshotPanel } from "../../../components/ai-management/ManagementSnapshotPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
 import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
 import { MedicationSafetyTerminal } from "../../../components/medications/MedicationSafetyTerminal";
@@ -100,43 +99,35 @@ type ReferenceResult = {
 
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
-  { key: "medical", label: "Medical", icon: "doctor", empty: "Medical history and clinical context appear here.", permissions: ["encounter.read", "prescription.read", "pregnancy.read", "patient_medications.read"] },
-  { key: "history-sheet", label: "History Sheet", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
-  { key: "care-assist", label: "Care Assist", icon: "ai", empty: "Completeness and safety review prompts appear here.", permissions: ["care_assist.read", "care_assist.evaluate"] },
   { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
-  { key: "clinical", label: "Clinical", icon: "encounter", empty: "Clinical workflow shortcuts appear here.", permissions: ["encounter.read", "encounter.create"] },
-  { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
-  { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
+  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "history", label: "History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "orders", label: "Orders", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No lab, radiology, or service order yet.", permissions: ["investigation.read"] },
-  { key: "results", label: "Results", icon: "reports", endpoint: "/patients/:patientId/investigation-results", collectionKey: "investigationResults", empty: "No result metadata yet. Doctor review required.", permissions: ["investigation.result_read"] },
-  { key: "files", label: "Reports", icon: "reports", endpoint: "/reports", collectionKey: "reports", empty: "No report record yet. Add report metadata only after doctor review.", permissions: ["report.read"] },
+  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No investigation order yet.", permissions: ["investigation.read"] },
   { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
-  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"] },
-  { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet. Measurements stay recording-only until clinician review.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
-  { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents?patientId=:patientId", collectionKey: "consentRecords", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage", "consent_template.read"] },
-  { key: "referrals", label: "Referrals", icon: "reports", endpoint: "/patients/:patientId/referrals", collectionKey: "referrals", empty: "No referral tracked yet.", permissions: ["referral.read"] },
-  { key: "tasks", label: "Tasks", icon: "queue", endpoint: "/patients/:patientId/tasks", collectionKey: "patientTasks", empty: "No open patient tasks.", permissions: ["patient_task.read"] },
-  { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] },
-  { key: "ai-snapshot", label: "AI Drafts", icon: "ai", empty: "No management snapshot yet. Doctor review is required.", permissions: ["ai_management.request", "ai_management.read"] },
-  { key: "protocol-atlas", label: "Protocol Atlas", icon: "ai", empty: "Protocol links appear here.", permissions: ["protocol_atlas.read"] },
-  { key: "calculators", label: "Calculators", icon: "investigations", empty: "Calculator history appears here.", permissions: ["calculator.read", "calculator.calculate"] },
-  { key: "medications", label: "Medications", icon: "prescription", endpoint: "", empty: "No active medication list entry yet.", permissions: ["patient_medications.read"] },
-  { key: "allergies", label: "Allergies", icon: "consent", endpoint: "", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
-  { key: "herbals", label: "Herbal/Supplements", icon: "prescription", endpoint: "", empty: "No herbal or supplement entry yet.", permissions: ["medications.search"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
-  { key: "prescription-safety", label: "Prescription Safety", icon: "ai", empty: "Review prescription safety before doctor approval.", permissions: ["medications.safety_check", "prescription.read"] },
-  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
-  { key: "print-packet", label: "Print Packet", icon: "reports", empty: "Print-friendly visit packet." }
+  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." }
 ];
 
 const relatedLoaders: TabConfig[] = [
   ...tabs,
-  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet." }
+  { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
+  { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
+  { key: "results", label: "Results", icon: "reports", endpoint: "/patients/:patientId/investigation-results", collectionKey: "investigationResults", empty: "No result metadata yet. Doctor review required.", permissions: ["investigation.result_read"] },
+  { key: "files", label: "Reports", icon: "reports", endpoint: "/reports", collectionKey: "reports", empty: "No report record yet. Add report metadata only after doctor review.", permissions: ["report.read"] },
+  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"] },
+  { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents?patientId=:patientId", collectionKey: "consentRecords", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage", "consent_template.read"] },
+  { key: "referrals", label: "Referrals", icon: "reports", endpoint: "/patients/:patientId/referrals", collectionKey: "referrals", empty: "No referral tracked yet.", permissions: ["referral.read"] },
+  { key: "tasks", label: "Tasks", icon: "queue", endpoint: "/patients/:patientId/tasks", collectionKey: "patientTasks", empty: "No open patient tasks.", permissions: ["patient_task.read"] },
+  { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] }
 ];
 
 export default function PatientFilePage() {
+  void ClinicalPanel;
+  void ProtocolAtlasPanel;
+  void CalculatorsPanel;
+  void PrintPacketPanel;
   const params = useParams<{ id: string }>();
   const patientId = params.id;
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -314,26 +305,21 @@ export default function PatientFilePage() {
           </section>
 
           {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
-          {active.key === "medical" ? <MedicalPanel patient={patient} related={related} /> : null}
-          {active.key === "history-sheet" ? (
+          {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
+          {active.key === "history" ? (
             <>
+              <MedicalPanel patient={patient} related={related} />
               <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} />
-              <CareAssistPanel patientId={patient.id} historySheetId={String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined} />
+              <CareAssistPanel patientId={patient.id} historySheetId={String((related.history ?? [])[0]?.id ?? "") || undefined} />
             </>
           ) : null}
-          {active.key === "care-assist" ? <CareAssistPanel patientId={patient.id} historySheetId={String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined} prescriptionId={String((related.prescriptions ?? [])[0]?.id ?? "") || undefined} encounterId={String((related.visits ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((related.orders ?? [])[0]?.id ?? "") || undefined} /> : null}
           {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={() => window.location.reload()} /> : null}
-          {active.key === "clinical" ? <ClinicalPanel patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
+          {active.key === "prescriptions" ? <RelatedPanel config={active} rows={related.prescriptions ?? []} /> : null}
+          {active.key === "investigations" ? <InvestigationsPanel related={related} /> : null}
+          {active.key === "documents" ? <DocumentsPanel related={related} /> : null}
+          {active.key === "billing" ? <RelatedPanel config={active} rows={related.billing ?? []} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
-          {active.key === "print-packet" ? <PrintPacketPanel patient={patient} related={related} timelineItems={timelineItems} /> : null}
-          {active.key === "ai-snapshot" ? <ManagementSnapshotPanel patientId={patient.id} /> : null}
-          {active.key === "protocol-atlas" ? <ProtocolAtlasPanel /> : null}
-          {active.key === "calculators" ? <CalculatorsPanel patient={patient} /> : null}
-          {active.key === "medications" ? <PatientMedicationList /> : null}
-          {active.key === "allergies" ? <PatientAllergyList /> : null}
-          {active.key === "herbals" ? <HerbalSearchPanel /> : null}
-          {active.key === "medication-safety" ? <MedicationSafetyPanel patientId={patient.id} /> : null}
-          {active.key === "prescription-safety" ? <PrescriptionSafetyPanel patientId={patient.id} /> : null}
+          {active.key === "medication-safety" ? <MedicationSafetyWorkspace patientId={patient.id} /> : null}
           {active.key === "pregnancy" ? (
             <>
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
@@ -481,6 +467,37 @@ function ClinicalPanel({ patient, visits }: { patient: Patient; visits: Gynecolo
       </section>
       <GynecologyWorkspace patient={patient} visits={visits} />
     </>
+  );
+}
+
+function InvestigationsPanel({ related }: { related: Record<string, Record<string, unknown>[]> }) {
+  return (
+    <section className="dashboard-grid">
+      <RelatedPanel config={{ key: "investigations", label: "Investigation Orders", icon: "investigations", empty: "No investigation order yet." }} rows={related.investigations ?? []} />
+      <RelatedPanel config={{ key: "results", label: "Investigation Results", icon: "reports", empty: "No result metadata yet. Doctor review required." }} rows={related.results ?? []} />
+    </section>
+  );
+}
+
+function DocumentsPanel({ related }: { related: Record<string, Record<string, unknown>[]> }) {
+  return (
+    <section className="dashboard-grid">
+      <RelatedPanel config={{ key: "documents", label: "Documents", icon: "files", empty: "No archived document metadata yet." }} rows={related.documents ?? []} />
+      <RelatedPanel config={{ key: "files", label: "Reports", icon: "reports", empty: "No report record yet. Add report metadata only after doctor review." }} rows={related.files ?? []} />
+      <RelatedPanel config={{ key: "consents", label: "Consents", icon: "consent", empty: "No consent record yet." }} rows={related.consents ?? []} />
+    </section>
+  );
+}
+
+function MedicationSafetyWorkspace({ patientId }: { patientId: string }) {
+  return (
+    <section className="dashboard-grid">
+      <MedicationSafetyPanel patientId={patientId} />
+      <PrescriptionSafetyPanel patientId={patientId} />
+      <PatientMedicationList />
+      <PatientAllergyList />
+      <HerbalSearchPanel />
+    </section>
   );
 }
 
