@@ -126,7 +126,8 @@ const tabs: TabConfig[] = [
   { key: "allergies", label: "Allergies", icon: "consent", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
   { key: "ai-snapshot", label: "AI Drafts / Care Assist", icon: "ai", empty: "No management snapshot yet. Doctor review is required.", permissions: ["ai_management.request", "ai_management.read", "care_assist.read"] },
-  { key: "history", label: "Audit / History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] }
+  { key: "history", label: "Audit / History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
+  { key: "more", label: "More", icon: "settings", empty: "More patient file sections." }
 ];
 
 const relatedLoaders: TabConfig[] = [
@@ -319,8 +320,8 @@ export default function PatientFilePage() {
 
       {patient ? (
         <>
-          <PatientActionPanel patientId={patient.id} onSubmit={submitPatientAction} status={actionStatus} related={related} />
-          <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
+          <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} />
+          <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
             {visibleTabs.map((tab) => (
@@ -331,7 +332,7 @@ export default function PatientFilePage() {
             ))}
           </section>
 
-          {active.key === "overview" ? <Overview patient={patient} related={related} /> : null}
+          {active.key === "overview" ? <Overview patient={patient} related={related} timelineItems={timelineItems} /> : null}
           {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "history" ? (
             <>
@@ -353,6 +354,7 @@ export default function PatientFilePage() {
           {active.key === "allergies" ? <PatientAllergyList /> : null}
           {active.key === "medication-safety" ? <MedicationSafetyWorkspace patientId={patient.id} /> : null}
           {active.key === "ai-snapshot" ? <CareAssistPanel patientId={patient.id} /> : null}
+          {active.key === "more" ? <MorePatientSections setActiveTab={setActiveTab} /> : null}
           {active.key === "pregnancy" ? (
             <>
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
@@ -376,16 +378,18 @@ export default function PatientFilePage() {
   );
 }
 
-function Overview({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
+function Overview({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
   const pendingResults = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
   const criticalResults = (related.results ?? []).filter((row) => row.criticalFlag === true && String(row.reviewStatus ?? "") !== "reviewed").length;
   const missingConsents = (related.consents ?? []).filter((row) => ["unknown", "declined"].includes(String(row.status ?? ""))).length;
   const openTasks = (related.tasks ?? []).filter((row) => ["open", "in_progress"].includes(String(row.status ?? ""))).length;
   const unreviewedDocuments = (related.documents ?? []).filter((row) => ["draft_metadata", "active"].includes(String(row.status ?? ""))).length;
+  const urgentCount = pendingResults + criticalResults + missingConsents + openTasks + unreviewedDocuments;
+  const recentTimeline = timelineItems.slice(0, 5);
 
   return (
-    <section className="doctor-friendly-grid">
-      <article className="panel">
+    <section className="doctor-friendly-grid patient-summary-grid">
+      <article className="panel compact-panel">
         <div className="section-heading">
           <div>
             <h2>At a glance</h2>
@@ -401,7 +405,24 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
           <div className="wide"><dt>Notes</dt><dd>{patient.notes || "No note saved yet."}</dd></div>
         </dl>
       </article>
-      <article className="panel next-step-card">
+      <article className="panel compact-panel">
+        <div className="section-heading"><h2>Clinical badges</h2><span className="badge">Review</span></div>
+        <div className="workflow-band">
+          <span>{patient.patientType ?? "General"}</span>
+          <span>{patient.sexualActivityStatus ? String(patient.sexualActivityStatus).replaceAll("_", " ") : "Privacy not asked"}</span>
+          <span>{(related.pregnancy ?? []).length ? "Pregnancy context" : "No pregnancy record"}</span>
+          <span>Allergy review</span>
+        </div>
+      </article>
+      <article className="panel compact-panel">
+        <div className="section-heading"><h2>Today status</h2><span className="badge">{patient.status}</span></div>
+        <dl className="profile-grid">
+          <div><dt>Open tasks</dt><dd>{openTasks}</dd></div>
+          <div><dt>Pending results</dt><dd>{pendingResults}</dd></div>
+          <div><dt>Documents to review</dt><dd>{unreviewedDocuments}</dd></div>
+        </dl>
+      </article>
+      <article className="panel compact-panel next-step-card">
         <ThreeDMedicalIcon name="doctor" size="lg" />
         <h2>Next best step</h2>
         <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
@@ -410,19 +431,14 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
           New Encounter
         </Link>
       </article>
-      <article className="panel">
+      <article className="panel compact-panel">
         <div className="section-heading">
           <h2>Recent activity</h2>
-          <span className="badge">{Object.values(related).flat().length} items</span>
+          <span className="badge">{recentTimeline.length} items</span>
         </div>
-        <div className="workflow-mini-grid">
-          <MiniCount label="Pending results" value={pendingResults} />
-          <MiniCount label="Critical unreviewed" value={criticalResults} tone={criticalResults ? "warning" : ""} />
-          <MiniCount label="Missing consents" value={missingConsents} />
-          <MiniCount label="Open tasks" value={openTasks} />
-          <MiniCount label="Unreviewed documents" value={unreviewedDocuments} />
-          <MiniCount label="Follow-up" value={(related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up").length} />
-        </div>
+        {urgentCount === 0 && recentTimeline.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /><span>No urgent activity.</span></p> : null}
+        {urgentCount > 0 ? <div className="compact-metric-grid"><MiniCount label="Needs attention" value={urgentCount} tone="warning" /><MiniCount label="Pending results" value={pendingResults} /><MiniCount label="Open tasks" value={openTasks} /><MiniCount label="Documents" value={unreviewedDocuments} /></div> : null}
+        {recentTimeline.length ? <div className="dense-card-list">{recentTimeline.map((item) => <article className="data-row dense" key={`${item.type}-${item.dateTime}-${item.title}`}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{item.status}</span></div><p className="muted">{item.description}</p></article>)}</div> : null}
       </article>
     </section>
   );
@@ -430,7 +446,7 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
 
 function MiniCount({ label, value, tone = "" }: { label: string; value: number; tone?: string }) {
   return (
-    <div className={`metric-card compact ${tone}`}>
+    <div className={`mini-metric-card ${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
@@ -1836,11 +1852,12 @@ function ReferencePicker({ title, endpoint, placeholder, selected, onSelect }: {
 }
 
 function PatientActionPanel({
+  patient,
   onSubmit,
   status,
   related
 }: {
-  patientId: string;
+  patient: Patient;
   onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
   status: string;
   related: Record<string, Record<string, unknown>[]>;
@@ -1876,6 +1893,7 @@ function PatientActionPanel({
         </div>
         {status ? <span className="badge">{status}</span> : null}
       </div>
+      <SelectedPatientSummary patient={patient} />
       <div className="patient-action-strip" aria-label="Patient actions">
         {actions.map(([key, label, icon]) => (
           <button className={`patient-action ${open === key ? "active" : ""}`} data-action-key={key} key={key} onClick={() => setOpen(key)} type="button">
@@ -1888,19 +1906,32 @@ function PatientActionPanel({
       {open === "appointment" ? (
         <ActionForm
           fields={[
-            ["startAt", "Start time", "datetime-local", true],
-            ["endAt", "End time", "datetime-local", true],
+            ["date", "Date", "date", true],
+            ["startTime", "Start time", "time", true],
+            ["endTime", "End time", "time", true],
+            ["doctorId", "Doctor", "text", false],
+            ["room", "Room", "text", false],
             ["appointmentType", "Visit type", "text", false]
           ]}
-          onSubmit={handleSubmit("appointments", (form) => values(form, ["startAt", "endAt", "appointmentType"]))}
+          onSubmit={handleSubmit("appointments", (form) => {
+            const item = values(form, ["date", "startTime", "endTime", "doctorId", "appointmentType", "room"]);
+            return {
+              startAt: `${item.date}T${item.startTime}:00`,
+              endAt: `${item.date}T${item.endTime}:00`,
+              doctorId: item.doctorId || undefined,
+              appointmentType: item.appointmentType || "Clinic visit",
+              notes: item.room ? `Room: ${item.room}` : undefined
+            };
+          })}
           submitLabel="Book appointment"
         />
       ) : null}
 
       {open === "queue" ? (
-        <form className="form-grid" onSubmit={handleSubmit("queue-check-in", () => ({}))}>
-          <p className="muted">Check this patient into today&apos;s waiting queue.</p>
-          <button className="button" type="submit">Check in patient</button>
+        <form className="form-grid compact-panel" onSubmit={handleSubmit("queue-check-in", () => ({}))}>
+          <label>Priority note<input name="priority" placeholder="Routine unless reception flags priority" /></label>
+          <p className="muted">Walk-in / no appointment. This patient is already selected.</p>
+          <button className="button" type="submit">Send to doctor queue</button>
         </form>
       ) : null}
 
@@ -1917,9 +1948,8 @@ function PatientActionPanel({
         })}>
           <ReferencePicker title="Generic medication lookup" endpoint="/reference/medications/search" placeholder="Search generic name, class, or function" selected={selectedGeneric} onSelect={setSelectedGeneric} />
           <label>Manual generic name<input name="medicationName" required={!selectedGeneric} placeholder="Generic name only" /></label>
-          <label>Dose<input name="dose" /></label>
-          <label>Frequency<input name="frequency" /></label>
-          <label>Instructions<input name="instructions" /></label>
+          <p className="badge warning">Draft only - doctor review required</p>
+          <label>Doctor instructions<textarea name="instructions" placeholder="Doctor-written instructions only" /></label>
           <button className="button" type="submit">Add prescription</button>
         </form>
       ) : null}
@@ -1997,13 +2027,31 @@ function PatientActionPanel({
   );
 }
 
+function SelectedPatientSummary({ patient }: { patient: Patient }) {
+  return <div className="selected-patient-card"><strong>{patient.firstName} {patient.lastName}</strong><span>File {patient.medicalRecordNumber} | {patient.phone || patient.email || "No contact saved"} | {patient.status}</span></div>;
+}
+
+function MorePatientSections({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+  const sections: Array<[string, string]> = [
+    ["billing", "Billing"],
+    ["follow-up-hints", "Follow-up"],
+    ["medications", "Medications"],
+    ["allergies", "Allergies"],
+    ["medication-safety", "Medication Safety"],
+    ["ai-snapshot", "AI Drafts"],
+    ["history", "Audit / History"],
+    ["gynecology", "Gynecology"]
+  ];
+  return <section className="panel compact-panel"><div className="section-heading"><h2>More patient sections</h2><span className="badge">Comfort tabs</span></div><div className="dense-card-list">{sections.map(([key, label]) => <button className="picker-row" key={key} type="button" onClick={() => setActiveTab(key)}><strong>{label}</strong><span>Open {label.toLowerCase()}</span></button>)}</div></section>;
+}
+
 function ActionForm({
   fields,
   note,
   onSubmit,
   submitLabel
 }: {
-  fields: Array<[string, string, "text" | "datetime-local" | "number", boolean]>;
+  fields: Array<[string, string, "text" | "date" | "time" | "number", boolean]>;
   note?: string;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   submitLabel: string;
