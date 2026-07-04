@@ -1,6 +1,12 @@
 # Current Status
 
-v0.14.2 premium patient universe and offline autosave sprint is in final verification on the local demo branch.
+v0.14.3 manual visual QA density lock sprint is in final verification on the local demo branch.
+
+Completed in v0.14.3:
+- New Patient hides sex/gender from reception and defaults sex internally to female for the OB/GYN workflow.
+- Sexual activity status is optional under Sensitive clinical details.
+- Sidebar collapse/drawer behavior, density lock classes, compact calendar/reception/check-in, patient action drawers, patient summary, doctor current patient card, collapsed workflow help, Protocol Atlas, AI Drafts, medication live search, official medicine wording, and account creation/demo visibility were repaired.
+- Demo/training records are hidden by default on key patient/reception/calendar/account surfaces.
 
 Completed in this sprint:
 - Premium patient universe, reception today desk, date search, context-aware forms, smart search shortcuts, complaint cards, autosave draft foundation, offline sync queue, autosave sync health, and owner control center upgrade.
