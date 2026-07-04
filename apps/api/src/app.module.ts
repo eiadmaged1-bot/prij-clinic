@@ -21,6 +21,7 @@ import { InvestigationsModule } from "./investigations/investigations.module";
 import { InvestigationResultsModule } from "./investigation-results/investigation-results.module";
 import { PatientsModule } from "./patients/patients.module";
 import { PatientDocumentsModule } from "./patient-documents/patient-documents.module";
+import { PatientIntakeModule } from "./patient-intake/patient-intake.module";
 import { PatientInternalNotesModule } from "./patient-internal-notes/patient-internal-notes.module";
 import { PatientTasksModule } from "./patient-tasks/patient-tasks.module";
 import { MedicationsModule } from "./medications/medications.module";
@@ -33,6 +34,7 @@ import { RbacModule } from "./rbac/rbac.module";
 import { ReportsModule } from "./reports/reports.module";
 import { ReferralsModule } from "./referrals/referrals.module";
 import { ReferenceModule } from "./reference/reference.module";
+import { SearchModule } from "./search/search.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -45,6 +47,7 @@ import { UsersModule } from "./users/users.module";
     RbacModule,
     AuditModule,
     PatientsModule,
+    PatientIntakeModule,
     ConsentsModule,
     ConsentTemplatesModule,
     AppointmentsModule,
@@ -58,6 +61,7 @@ import { UsersModule } from "./users/users.module";
     PatientDocumentsModule,
     ReferralsModule,
     ReferenceModule,
+    SearchModule,
     PatientTasksModule,
     PatientInternalNotesModule,
     ClinicDirectoryModule,

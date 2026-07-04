@@ -41,7 +41,15 @@ export class EncountersService {
           historyText: clean(dto.historyText),
           examText: clean(dto.examText),
           assessmentText: clean(dto.assessmentText),
-          planText: clean(dto.planText)
+          planText: clean(dto.planText),
+          doctorReviewedIntake: dto.doctorReviewedIntake ?? false,
+          doctorReviewStatus: clean(dto.doctorReviewStatus),
+          historyClarification: clean(dto.historyClarification),
+          examinationJson: jsonOrNull(dto.examinationJson),
+          ultrasoundFindingsJson: jsonOrNull(dto.ultrasoundFindingsJson),
+          clinicalImpression: clean(dto.clinicalImpression),
+          riskClassification: clean(dto.riskClassification),
+          followUpJson: jsonOrNull(dto.followUpJson)
         }
       });
 
@@ -120,6 +128,14 @@ export class EncountersService {
     if (dto.examText !== undefined) data.examText = clean(dto.examText);
     if (dto.assessmentText !== undefined) data.assessmentText = clean(dto.assessmentText);
     if (dto.planText !== undefined) data.planText = clean(dto.planText);
+    if (dto.doctorReviewedIntake !== undefined) data.doctorReviewedIntake = dto.doctorReviewedIntake;
+    if (dto.doctorReviewStatus !== undefined) data.doctorReviewStatus = clean(dto.doctorReviewStatus);
+    if (dto.historyClarification !== undefined) data.historyClarification = clean(dto.historyClarification);
+    if (dto.examinationJson !== undefined) data.examinationJson = jsonOrNull(dto.examinationJson);
+    if (dto.ultrasoundFindingsJson !== undefined) data.ultrasoundFindingsJson = jsonOrNull(dto.ultrasoundFindingsJson);
+    if (dto.clinicalImpression !== undefined) data.clinicalImpression = clean(dto.clinicalImpression);
+    if (dto.riskClassification !== undefined) data.riskClassification = clean(dto.riskClassification);
+    if (dto.followUpJson !== undefined) data.followUpJson = jsonOrNull(dto.followUpJson);
 
     const encounter = await this.prisma.encounter.update({ where: { id }, data });
 
@@ -233,4 +249,8 @@ export class EncountersService {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+function jsonOrNull(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
+  return value === undefined || value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
 }

@@ -7,6 +7,7 @@ import { navigationRegistry, type NavItem } from "./navigation-registry";
 import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
+import { UniversalSearchBox } from "../components/clinic/UniversalSearchBox";
 
 type Field = {
   name: string;
@@ -395,10 +396,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
             </div>
           </div>
-          <label className="portal-search" aria-label="Search patient files">
-            <span>Patient search</span>
-            <input placeholder="Name, file number, phone, or appointment" />
-          </label>
+          <UniversalSearchBox />
           <div className="topbar-actions">
             <Link className="button compact" href="/patients/new">
               <ThreeDMedicalIcon name="patients" size="sm" />

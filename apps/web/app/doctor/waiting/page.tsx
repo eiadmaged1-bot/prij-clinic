@@ -6,7 +6,7 @@ export default function DoctorWaitingPage() {
       mode="doctor"
       eyebrow="Doctor"
       title="Doctor Waiting List"
-      description="Patients checked in for the doctor are shown with queue status, visit reason, pending investigation notes, and operational invoice notes."
+      description="Patients checked in for the doctor are shown with queue status, visit reason, intake readiness, and requested investigation follow-up hints."
     />
   );
 }

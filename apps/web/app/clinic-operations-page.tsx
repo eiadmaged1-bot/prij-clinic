@@ -48,7 +48,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
 
   const waiting = queue.filter((ticket) => ["waiting", "called"].includes(ticket.status));
   const completed = queue.filter((ticket) => ticket.status === "completed");
-  const pendingOrders = orders.filter((order) => !["reviewed", "cancelled"].includes(order.status));
+  const pendingRequests = orders.filter((order) => !["reviewed", "cancelled"].includes(order.status));
 
   return (
     <AppShell>
@@ -71,7 +71,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
         <Metric icon="calendar" label="Appointments" value={appointments.length} />
         <Metric icon="queue" label="Waiting" value={waiting.length} />
         <Metric icon="doctor" label="Completed visits" value={completed.length} />
-        <Metric icon="investigations" label="Pending orders" value={pendingOrders.length} />
+        <Metric icon="investigations" label="Follow-up needed" value={pendingRequests.length} />
       </section>
       {mode === "doctor" ? <DoctorHandoff queue={waiting} orders={orders} invoices={invoices} /> : null}
       {mode === "queue" ? <QueueLoop queue={queue} invoices={invoices} /> : null}
@@ -96,11 +96,12 @@ function QueueLoop({ queue, invoices }: { queue: QueueTicket[]; invoices: Invoic
 }
 
 function DoctorHandoff({ queue, orders, invoices }: { queue: QueueTicket[]; orders: InvestigationOrder[]; invoices: Invoice[] }) {
-  return <section className="content-grid"><DailyList title="Waiting for doctor" actionLabel="Start or resume visit" rows={queue.map((ticket) => row(ticket.id, ticket.patientId, patient(ticket.patient), ticket.status, [ticket.appointment?.appointmentType, `Pending orders ${orders.filter((order) => order.patientId === ticket.patientId && order.status !== "reviewed").length}`].join(" | "), invoices))} /><article className="panel"><div className="section-heading"><h2>Doctor handoff notes</h2><span className="badge">Doctor review</span></div><ul className="feature-list"><li>Open the patient workspace to start or resume the doctor visit stepper.</li><li>Visit reason, queue status, pending orders, and unpaid invoice notes are visible for workflow only.</li><li>Billing status is not a clinical blocker unless clinic policy later defines it.</li></ul></article></section>;
+  const current = queue.find((ticket) => ticket.status === "called");
+  return <section className="content-grid"><DailyList title="Current in-room patient" actionLabel="Open patient file" rows={current ? [row(current.id, current.patientId, patient(current.patient), current.status, [current.appointment?.appointmentType, `Follow-up hints ${orders.filter((order) => order.patientId === current.patientId && order.status !== "reviewed").length}`].join(" | "), invoices)] : []} doctorSelect /><DailyList title="Waiting patients" actionLabel="Select patient" rows={queue.filter((ticket) => ticket.id !== current?.id).map((ticket) => row(ticket.id, ticket.patientId, patient(ticket.patient), ticket.status, [ticket.appointment?.appointmentType, `Follow-up hints ${orders.filter((order) => order.patientId === ticket.patientId && order.status !== "reviewed").length}`].join(" | "), invoices))} doctorSelect /><article className="panel"><div className="section-heading"><h2>Doctor handoff notes</h2><span className="badge">Doctor review</span></div><ul className="feature-list"><li>Open the patient workspace to review intake and complete the doctor clinical note.</li><li>Visit reason, queue status, requested investigations, and result follow-up hints are visible for workflow.</li><li>Finance notes are not clinical blockers unless clinic policy later defines that separately.</li></ul></article></section>;
 }
 
 function InvestigationLoop({ orders }: { orders: InvestigationOrder[] }) {
-  return <section className="content-grid"><DailyList title="Investigation handoff" rows={orders.map((order) => ({ id: order.id, patientId: order.patientId, title: `${patient(order.patient)} - ${(order.items ?? []).map((item) => item.testName).filter(Boolean).join(", ") || "Requested order"}`, status: order.status, detail: [order.priority, order.notes, (order.items ?? []).map((item) => `${item.category ?? "order"} ${item.status ?? ""}`).filter(Boolean).join(" | ")].filter(Boolean).join(" | ") }))} /><article className="panel printable-summary"><div className="section-heading"><h2>Print request</h2><button className="button secondary compact" type="button" onClick={() => window.print()}>Print requests</button></div><p className="muted">Request packets include order names and status only. Results require attachment and doctor review.</p></article></section>;
+  return <section className="content-grid"><DailyList title="Clinical request handoff" rows={orders.map((order) => ({ id: order.id, patientId: order.patientId, title: `${patient(order.patient)} - ${(order.items ?? []).map((item) => item.testName).filter(Boolean).join(", ") || "Requested investigation"}`, status: order.status, detail: [order.priority, order.notes, (order.items ?? []).map((item) => `${item.category ?? "request"} ${item.status ?? ""}`).filter(Boolean).join(" | ")].filter(Boolean).join(" | ") }))} /><article className="panel printable-summary"><div className="section-heading"><h2>Print request</h2><button className="button secondary compact" type="button" onClick={() => window.print()}>Print requests</button></div><p className="muted">Request packets include requested investigation names and status only. Results require attachment and doctor review.</p></article></section>;
 }
 
 function DocumentTimelinePlaceholder() {
@@ -116,8 +117,13 @@ function FlowPanel({ queue }: { queue: QueueTicket[] }) {
   return <article className="panel"><div className="section-heading"><h2>Daily operations loop</h2><span className="badge">Focused</span></div><div className="workflow-band"><span>Scheduled</span><span>Checked in</span><span>Waiting</span><span>With doctor</span><span>Completed</span></div><p className="muted">Queue status badges show the handoff. Cancellation and no-show reasons are recorded when those status actions are used.</p><p className="muted">Active queue records: {queue.length}</p></article>;
 }
 
-function DailyList({ title, rows, actionLabel = "Open patient" }: { title: string; actionLabel?: string; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {
-  return <article className="panel"><div className="section-heading"><h2>{title}</h2><span className="badge">{rows.length}</span></div>{rows.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No records to show.</span></p> : null}<div className="data-list">{rows.map((item) => <article className="data-row" key={item.id}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{friendly(item.status)}</span></div><p className="muted">{item.detail || "No operational note."}</p><div className="form-actions"><Link className="button secondary compact" href={`/patients/${item.patientId}`}>{actionLabel}</Link>{item.invoice ? <Link className="button secondary compact" href="/billing">{item.invoice.invoiceNumber ?? "Invoice"}: {friendly(item.invoice.status ?? "open")}</Link> : null}</div></article>)}</div></article>;
+function DailyList({ title, rows, actionLabel = "Open patient", doctorSelect = false }: { title: string; actionLabel?: string; doctorSelect?: boolean; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {
+  async function selectPatient(ticketId: string, patientId: string) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    await fetch(`${getApiBaseUrl()}/queue/${ticketId}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => undefined);
+    window.location.href = `/patients/${patientId}`;
+  }
+  return <article className="panel"><div className="section-heading"><h2>{title}</h2><span className="badge">{rows.length}</span></div>{rows.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No records to show.</span></p> : null}<div className="data-list">{rows.map((item) => <article className="data-row" key={item.id}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{friendly(item.status)}</span></div><p className="muted">{item.detail || "No operational note."}</p><div className="form-actions">{doctorSelect ? <button className="button secondary compact" type="button" onClick={() => void selectPatient(item.id, item.patientId)}>{actionLabel}</button> : <Link className="button secondary compact" href={`/patients/${item.patientId}`}>{actionLabel}</Link>}{item.invoice ? <Link className="button secondary compact" href="/billing">{item.invoice.invoiceNumber ?? "Invoice"}: {friendly(item.invoice.status ?? "open")}</Link> : null}</div></article>)}</div></article>;
 }
 
 function row(id: string, patientId: string, title: string, status: string, detail: string, invoices: Invoice[]) {

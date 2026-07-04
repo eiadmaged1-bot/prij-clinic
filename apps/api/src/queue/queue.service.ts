@@ -80,6 +80,13 @@ export class QueueService {
     });
   }
 
+  async selectForDoctor(id: string, user: AuthUser) {
+    return this.transition(id, user, "doctor_queue.patient_selected", {
+      status: "called",
+      calledAt: new Date()
+    });
+  }
+
   async complete(id: string, user: AuthUser) {
     return this.transition(id, user, "queue.completed", {
       status: "completed",

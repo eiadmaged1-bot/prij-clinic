@@ -108,11 +108,14 @@ type ReferenceResult = {
 
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
+  { key: "secretary-intake", label: "Secretary Intake", icon: "files", endpoint: "/patient-intake?patientId=:patientId", collectionKey: "patientIntakes", empty: "No patient-reported intake yet.", permissions: ["patient_intake.read"] },
+  { key: "doctor-note", label: "Doctor Clinical Note", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No doctor clinical note yet.", permissions: ["encounter.read"] },
   { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
   { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "history", label: "History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/investigations/orders", collectionKey: "investigationOrders", empty: "No investigation order yet.", permissions: ["investigation.read"] },
+  { key: "investigations", label: "Requested Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation or clinical request yet.", permissions: ["clinical_requests.read", "investigation.read"] },
+  { key: "follow-up-hints", label: "Follow-up Hints", icon: "timeline", endpoint: "/patients/:patientId/follow-up-hints", collectionKey: "hints", empty: "No active follow-up hints.", permissions: ["follow_up_hints.read"] },
   { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
@@ -278,9 +281,9 @@ export default function PatientFilePage() {
             <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
             New Appointment
           </Link>
-          <Link className="button secondary large" href="/orders">
+          <Link className="button secondary large" href="/investigations">
             <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
-            New Order
+            New Request
           </Link>
           <Link className="button secondary large" href="/billing">
             <ThreeDMedicalIcon name="billing" size="sm" tone="slate" />
@@ -325,8 +328,11 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={() => window.location.reload()} /> : null}
+          {active.key === "secretary-intake" ? <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} /> : null}
+          {active.key === "doctor-note" ? <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} /> : null}
           {active.key === "prescriptions" ? <RelatedPanel config={active} rows={related.prescriptions ?? []} /> : null}
           {active.key === "investigations" ? <InvestigationsPanel related={related} /> : null}
+          {active.key === "follow-up-hints" ? <RelatedPanel config={active} rows={related["follow-up-hints"] ?? []} /> : null}
           {active.key === "documents" ? <DocumentsPanel related={related} /> : null}
           {active.key === "billing" ? <RelatedPanel config={active} rows={related.billing ?? []} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
@@ -1828,7 +1834,7 @@ function PatientActionPanel({
     ["appointment", "Appointment", "calendar"],
     ["queue", "Check In", "queue"],
     ["prescription", "Prescription", "prescription"],
-    ["order", "Order Tests", "investigations"],
+    ["request", "Clinical Request", "investigations"],
     ["report", "Report", "reports"],
     ["ultrasound", "Ultrasound", "ultrasound"],
     ["invoice", "Invoice", "billing"],
@@ -1900,14 +1906,14 @@ function PatientActionPanel({
         </form>
       ) : null}
 
-      {open === "order" ? (
+      {open === "request" ? (
         <ActionForm
           fields={[
             ["testName", "Requested test or service", "text", true],
             ["instructions", "Clinical reason", "text", false]
           ]}
           onSubmit={handleSubmit("investigations", (form) => ({ priority: "routine", items: [{ category: "laboratory", ...values(form, ["testName", "instructions"]) }] }))}
-          submitLabel="Order test"
+          submitLabel="Request investigation"
         />
       ) : null}
 
@@ -1995,6 +2001,38 @@ function ActionForm({
       ))}
       <button className="button" type="submit">{submitLabel}</button>
     </form>
+  );
+}
+
+function SecretaryIntakePanel({ rows }: { rows: Record<string, unknown>[] }) {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <h2>Secretary Intake</h2>
+          <p className="muted">Patient-reported / entered by reception. Doctor review is required before clinical use.</p>
+        </div>
+        <span className="badge">Patient-reported</span>
+      </div>
+      {rows.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>No intake submitted yet.</span></p> : null}
+      <div className="data-list">{rows.map((row, index) => <article className="data-row" key={String(row.id ?? index)}><div className="data-row-header"><strong>{String(row.intakeType ?? "Intake")}</strong><span className="badge">{String(row.status ?? "draft")}</span></div><p className="muted">Patient-reported / entered by reception until doctor review.</p></article>)}</div>
+    </section>
+  );
+}
+
+function DoctorClinicalNotePanel({ rows }: { rows: Record<string, unknown>[] }) {
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <div>
+          <h2>Doctor Clinical Note</h2>
+          <p className="muted">Doctor-only examination, clinical impression, diagnosis wording, risk classification, and plan.</p>
+        </div>
+        <span className="badge">Doctor review</span>
+      </div>
+      {rows.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="encounter" size="sm" tone="slate" /><span>No doctor clinical note yet.</span></p> : null}
+      <div className="data-list">{rows.map((row, index) => <article className="data-row" key={String(row.id ?? index)}><div className="data-row-header"><strong>{String(row.chiefComplaint ?? "Clinical note")}</strong><span className="badge">{String(row.status ?? "draft")}</span></div><p className="muted">{String(row.clinicalImpression ?? row.assessmentText ?? "Doctor-authored clinical fields only.")}</p></article>)}</div>
+    </section>
   );
 }
 

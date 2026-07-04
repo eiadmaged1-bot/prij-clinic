@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsBoolean, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 import { EncounterStatus } from "@prisma/client";
 
 export class CreateEncounterDto {
@@ -33,6 +33,42 @@ export class CreateEncounterDto {
   @IsString()
   @MaxLength(4000)
   planText?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  doctorReviewedIntake?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  doctorReviewStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  historyClarification?: string;
+
+  @IsOptional()
+  @IsObject()
+  examinationJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  ultrasoundFindingsJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  clinicalImpression?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  riskClassification?: string;
+
+  @IsOptional()
+  @IsObject()
+  followUpJson?: Record<string, unknown>;
 }
 
 export class UpdateEncounterDto {
@@ -60,6 +96,42 @@ export class UpdateEncounterDto {
   @IsString()
   @MaxLength(4000)
   planText?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  doctorReviewedIntake?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  doctorReviewStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  historyClarification?: string;
+
+  @IsOptional()
+  @IsObject()
+  examinationJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  ultrasoundFindingsJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  clinicalImpression?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  riskClassification?: string;
+
+  @IsOptional()
+  @IsObject()
+  followUpJson?: Record<string, unknown>;
 
   @IsOptional()
   @IsEnum(EncounterStatus)

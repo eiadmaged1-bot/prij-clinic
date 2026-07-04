@@ -53,6 +53,12 @@ export class PatientsController {
     return this.patients.timeline(id, user);
   }
 
+  @Get(":id/follow-up-hints")
+  @Permissions("follow_up_hints.read")
+  followUpHints(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.followUpHints(id, user);
+  }
+
   @Get(":id/history-sheets")
   @Permissions("patient.read")
   historySheets(@Param("id") id: string, @CurrentUser() user: AuthUser) {

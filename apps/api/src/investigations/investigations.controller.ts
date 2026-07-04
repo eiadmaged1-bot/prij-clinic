@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CreateInvestigationOrderDto, UpdateInvestigationOrderStatusDto } from "./dto";
+import { CreateClinicalRequestDto, CreateInvestigationOrderDto, UpdateInvestigationOrderStatusDto } from "./dto";
 import { InvestigationsService } from "./investigations.service";
 
 @Controller("investigations")
@@ -20,8 +20,8 @@ export class InvestigationsController {
 
   @Get("catalog")
   @Permissions("investigation.read")
-  async listCatalog() {
-    return { investigationCatalog: await this.investigations.listCatalog() };
+  async listCatalog(@Query("q") q?: string) {
+    return { investigationCatalog: q ? await this.investigations.searchCatalog(q) : await this.investigations.listCatalog() };
   }
 
   @Get("orders")
@@ -44,5 +44,47 @@ export class InvestigationsController {
     @CurrentUser() user: AuthUser
   ) {
     return this.investigations.updateOrderStatus(id, dto.status, user);
+  }
+}
+
+@Controller("clinical-requests")
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+export class ClinicalRequestsController {
+  constructor(private readonly investigations: InvestigationsService) {}
+
+  @Post()
+  @Permissions("clinical_requests.write")
+  create(@Body() dto: CreateClinicalRequestDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.createClinicalRequest(dto, user);
+  }
+
+  @Get()
+  @Permissions("clinical_requests.read")
+  async list(@Query("patientId") patientId: string | undefined, @CurrentUser() user: AuthUser) {
+    return { clinicalRequests: await this.investigations.listClinicalRequests(user, patientId) };
+  }
+
+  @Get(":id")
+  @Permissions("clinical_requests.read")
+  get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.getClinicalRequest(id, user);
+  }
+
+  @Post(":id/mark-result-received")
+  @Permissions("clinical_requests.review")
+  markResultReceived(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.markResultReceived(id, user);
+  }
+
+  @Post(":id/review")
+  @Permissions("clinical_requests.review")
+  review(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.reviewClinicalRequest(id, user);
+  }
+
+  @Post(":id/cancel")
+  @Permissions("clinical_requests.cancel")
+  cancel(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.cancelClinicalRequest(id, user);
   }
 }

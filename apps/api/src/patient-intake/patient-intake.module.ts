@@ -4,12 +4,12 @@ import { AuthModule } from "../auth/auth.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { RbacModule } from "../rbac/rbac.module";
 import { UsersModule } from "../users/users.module";
-import { ClinicalRequestsController, InvestigationsController } from "./investigations.controller";
-import { InvestigationsService } from "./investigations.service";
+import { PatientIntakeController } from "./patient-intake.controller";
+import { PatientIntakeService } from "./patient-intake.service";
 
 @Module({
   imports: [AuditModule, AuthModule, PrismaModule, RbacModule, UsersModule],
-  controllers: [InvestigationsController, ClinicalRequestsController],
-  providers: [InvestigationsService]
+  controllers: [PatientIntakeController],
+  providers: [PatientIntakeService]
 })
-export class InvestigationsModule {}
+export class PatientIntakeModule {}

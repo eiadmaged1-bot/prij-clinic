@@ -30,6 +30,12 @@ export class QueueController {
     return this.queue.call(id, user);
   }
 
+  @Patch(":id/select")
+  @Permissions("doctor_queue.select_patient")
+  selectForDoctor(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.queue.selectForDoctor(id, user);
+  }
+
   @Patch(":id/complete")
   @Permissions("queue.status_update")
   complete(@Param("id") id: string, @CurrentUser() user: AuthUser) {

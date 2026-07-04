@@ -188,6 +188,7 @@ model Patient {
   appointments              Appointment[]
   queueTickets              QueueTicket[]
   encounters                Encounter[]
+  patientIntakes            PatientIntake[]
   prescriptions             Prescription[]
   historySheets             PatientHistorySheet[]
   operationHistoryItems     PatientOperationHistoryItem[]
@@ -392,6 +393,29 @@ enum InvestigationResultReviewStatus {
   voided
 }
 
+enum PatientIntakeStatus {
+  draft_by_secretary
+  waiting_for_doctor_review
+  reviewed_by_doctor
+  signed_locked
+}
+
+enum PatientIntakeType {
+  new_patient
+  follow_up
+  emergency
+  pregnancy
+  gynecology
+  ultrasound
+  fertility
+}
+
+enum PrescriptionSourceType {
+  manual
+  template
+  doctor_shortcut
+}
+
 model Encounter {
   id             String          @id @default(uuid()) @db.Uuid
   branchId       String          @db.Uuid
@@ -404,6 +428,14 @@ model Encounter {
   examText       String?
   assessmentText String?
   planText       String?
+  doctorReviewedIntake Boolean       @default(false)
+  doctorReviewStatus   String?
+  historyClarification String?
+  examinationJson      Json?
+  ultrasoundFindingsJson Json?
+  clinicalImpression   String?
+  riskClassification   String?
+  followUpJson         Json?
   signedAt       DateTime?       @db.Timestamptz(3)
   signedByUserId String?         @db.Uuid
   voidedAt       DateTime?       @db.Timestamptz(3)
@@ -420,6 +452,7 @@ model Encounter {
   voidedByUser          User?                  @relation("EncountersVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
   prescriptions         Prescription[]
   investigationOrders   InvestigationOrder[]
+  patientIntakes        PatientIntake[]
   reports               Report[]
   gynecologyVisits      GynecologyVisit[]
   obUltrasounds         ObUltrasound[]
@@ -436,16 +469,19 @@ model Encounter {
 
 model Prescription {
   id          String             @id @default(uuid()) @db.Uuid
-  patientId   String             @db.Uuid
+  patientId   String?            @db.Uuid
   encounterId String?            @db.Uuid
   doctorId    String             @db.Uuid
   status      PrescriptionStatus @default(draft)
+  sourceType  PrescriptionSourceType @default(manual)
+  printSnapshotJson Json?
+  linkedFollowUpHintsJson Json?
   notes       String?
   signedAt    DateTime?          @db.Timestamptz(3)
   createdAt   DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt   DateTime           @updatedAt @db.Timestamptz(3)
 
-  patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  patient            Patient?            @relation(fields: [patientId], references: [id], onDelete: Restrict)
   encounter          Encounter?          @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   doctor             User                @relation("PrescriptionsDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
   items              PrescriptionItem[]
@@ -455,6 +491,78 @@ model Prescription {
   @@index([encounterId])
   @@index([doctorId, createdAt])
   @@index([status])
+}
+
+model PatientIntake {
+  id                  String              @id @default(uuid()) @db.Uuid
+  patientId           String              @db.Uuid
+  encounterId         String?             @db.Uuid
+  status              PatientIntakeStatus @default(draft_by_secretary)
+  intakeType          PatientIntakeType   @default(new_patient)
+  patientReportedJson Json?
+  administrativeJson  Json?
+  vitalsJson          Json?
+  obsIntakeJson       Json?
+  gynIntakeJson       Json?
+  redFlagsJson        Json?
+  attributionJson     Json?
+  enteredByUserId     String?             @db.Uuid
+  reviewedByDoctorId  String?             @db.Uuid
+  reviewedAt          DateTime?           @db.Timestamptz(3)
+  signedByDoctorId    String?             @db.Uuid
+  signedAt            DateTime?           @db.Timestamptz(3)
+  createdAt           DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime            @updatedAt @db.Timestamptz(3)
+
+  patient   Patient    @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter Encounter? @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([encounterId])
+  @@index([status])
+  @@index([intakeType])
+  @@index([enteredByUserId])
+  @@index([reviewedByDoctorId])
+}
+
+model PrescriptionTemplate {
+  id                   String   @id @default(uuid()) @db.Uuid
+  ownerUserId           String?  @db.Uuid
+  clinicScope           String?
+  title                 String
+  category              String?
+  diagnosisOrUseCase    String?
+  active                Boolean  @default(true)
+  itemsJson             Json
+  notes                 String?
+  createdByUserId       String?  @db.Uuid
+  updatedByUserId       String?  @db.Uuid
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([ownerUserId])
+  @@index([active])
+  @@index([category])
+}
+
+model DoctorMedicationShortcut {
+  id                    String   @id @default(uuid()) @db.Uuid
+  doctorUserId          String   @db.Uuid
+  displayName           String
+  genericName           String
+  optionalBrandOrTradeName String?
+  medicationCatalogId   String?  @db.Uuid
+  defaultInstructions   String?
+  defaultDoseText       String?
+  defaultTimingText     String?
+  defaultDurationText   String?
+  defaultNotes          String?
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([doctorUserId, active])
+  @@index([genericName])
 }
 
 model PrescriptionItem {
@@ -1168,7 +1276,10 @@ model InvestigationCatalogItem {
   id         String   @id @default(uuid()) @db.Uuid
   code       String   @unique
   name       String
+  normalizedName String?
   category   String
+  aliasesJson Json?
+  tagsJson    Json?
   discipline String
   modality   String?
   sampleType String?
@@ -1329,6 +1440,10 @@ model InvestigationOrder {
   requestedAt        DateTime                   @default(now()) @db.Timestamptz(3)
   targetDepartment   String?
   externalProviderId String?                    @db.Uuid
+  resultDocumentId   String?                    @db.Uuid
+  reviewedByUserId   String?                    @db.Uuid
+  reviewedAt         DateTime?                  @db.Timestamptz(3)
+  followUpHintActive Boolean                    @default(true)
   billingStatus      InvestigationBillingStatus @default(not_billable)
   cancellationReason String?
   voidReason         String?

@@ -4,7 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CreatePrescriptionDto, UpdatePrescriptionDto } from "./dto";
+import { CreatePrescriptionDto, DoctorMedicationShortcutDto, PrescriptionTemplateDto, UpdatePrescriptionDto } from "./dto";
 import { PrescriptionsService } from "./prescriptions.service";
 
 @Controller("prescriptions")
@@ -22,6 +22,42 @@ export class PrescriptionsController {
   @Permissions("prescription.read")
   async list(@CurrentUser() user: AuthUser) {
     return { prescriptions: await this.prescriptions.list(user) };
+  }
+
+  @Get("templates")
+  @Permissions("prescription_templates.read")
+  async listTemplates(@CurrentUser() user: AuthUser) {
+    return { prescriptionTemplates: await this.prescriptions.listTemplates(user) };
+  }
+
+  @Post("templates")
+  @Permissions("prescription_templates.manage")
+  createTemplate(@Body() dto: PrescriptionTemplateDto, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.createTemplate(dto, user);
+  }
+
+  @Patch("templates/:id")
+  @Permissions("prescription_templates.manage")
+  updateTemplate(@Param("id") id: string, @Body() dto: PrescriptionTemplateDto, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.updateTemplate(id, dto, user);
+  }
+
+  @Get("shortcuts")
+  @Permissions("doctor_medication_shortcuts.read")
+  async listShortcuts(@CurrentUser() user: AuthUser) {
+    return { doctorMedicationShortcuts: await this.prescriptions.listShortcuts(user) };
+  }
+
+  @Post("shortcuts")
+  @Permissions("doctor_medication_shortcuts.manage")
+  createShortcut(@Body() dto: DoctorMedicationShortcutDto, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.createShortcut(dto, user);
+  }
+
+  @Patch("shortcuts/:id")
+  @Permissions("doctor_medication_shortcuts.manage")
+  updateShortcut(@Param("id") id: string, @Body() dto: DoctorMedicationShortcutDto, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.updateShortcut(id, dto, user);
   }
 
   @Get(":id")

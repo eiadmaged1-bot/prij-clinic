@@ -104,6 +104,29 @@ export default function NewPatientPage() {
       }
 
       const patient = (await response.json()) as { id: string };
+      await fetch(`${getApiBaseUrl()}/patient-intake`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          patientId: patient.id,
+          intakeType: form.patientType === "OB" ? "pregnancy" : form.patientType === "GYN" ? "gynecology" : "new_patient",
+          patientReportedJson: {
+            sourceLabel: "patient_reported",
+            notes: form.notes.trim(),
+            referralSource: form.referralSource.trim()
+          },
+          administrativeJson: {
+            sourceLabel: "secretary_intake",
+            address: form.address.trim(),
+            nationalId: form.nationalId.trim(),
+            ageIfDobUnknown: form.age.trim()
+          }
+        })
+      }).catch(() => undefined);
       setSuccess("Patient file created. Opening the patient workspace.");
       router.push(`/patients/${patient.id}`);
     } catch (submitError) {
@@ -130,7 +153,7 @@ export default function NewPatientPage() {
             Back to patients
           </Link>
         </div>
-        <p className="muted">Create the patient file first. Appointments, queue, clinical notes, orders, consents, and billing stay inside that workspace.</p>
+        <p className="muted">Create the patient file first. Reception intake stays patient-reported until the doctor reviews it.</p>
       </section>
 
       <SafetyAlert />
@@ -138,8 +161,8 @@ export default function NewPatientPage() {
       <section className="panel form-panel">
         <div className="section-heading">
           <div>
-            <h2>Patient file details</h2>
-            <p className="muted">Enter only information intentionally provided for this local clinic workflow. Duplicate warning is planned for a later backend check.</p>
+            <h2>Secretary intake details</h2>
+            <p className="muted">Patient-reported / entered by reception. Do not enter diagnosis, examination, clinical impression, prescription, final risk assessment, or treatment plan.</p>
           </div>
           <span className="badge warning">No real patient data</span>
         </div>

@@ -2601,6 +2601,61 @@ button.obgyn-template-card {
   }
 }
 
+.universal-search {
+  position: relative;
+}
+
+.typeahead-panel {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #d7dde5);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  left: 0;
+  max-height: 24rem;
+  overflow: auto;
+  padding: 0.65rem;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  z-index: 50;
+}
+
+.typeahead-section {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.25rem 0;
+}
+
+.typeahead-section + .typeahead-section {
+  border-top: 1px solid var(--border, #d7dde5);
+  margin-top: 0.4rem;
+  padding-top: 0.55rem;
+}
+
+.typeahead-row {
+  align-items: start;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: inherit;
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+}
+
+.typeahead-row.active,
+.typeahead-row:hover {
+  background: rgba(14, 116, 144, 0.1);
+}
+
+.typeahead-row small {
+  color: var(--muted, #64748b);
+  font-size: 0.78rem;
+}
+
 @media (max-width: 767px) {
   .page,
   .app-main {

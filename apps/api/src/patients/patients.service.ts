@@ -117,6 +117,63 @@ export class PatientsService {
     return patient;
   }
 
+  async followUpHints(id: string, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const [intakes, requests, prescriptions, allergies, currentMedications] = await Promise.all([
+      this.prisma.patientIntake.findMany({
+        where: { patientId: id, status: { in: ["waiting_for_doctor_review", "reviewed_by_doctor"] } },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      }),
+      this.prisma.investigationOrder.findMany({
+        where: { patientId: id, ...doctorScope(user), status: { notIn: ["reviewed", "cancelled", "voided"] } },
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+        take: 25
+      }),
+      this.prisma.prescription.findMany({
+        where: { patientId: id, ...doctorScope(user), status: { in: ["draft", "signed"] } },
+        include: { items: true },
+        orderBy: { createdAt: "desc" },
+        take: 10
+      }),
+      this.prisma.patientAllergy.findMany({ where: { patientId: id, status: "active" }, take: 10 }),
+      this.prisma.patientMedication.findMany({ where: { patientId: id, status: "active" }, take: 10 })
+    ]);
+
+    const hints = [];
+    for (const intake of intakes) {
+      if (hasJsonValue(intake.redFlagsJson) && intake.status !== "signed_locked") {
+        hints.push(hint("intake_red_flag", "high", "Secretary intake has red flag screening that needs doctor review.", intake.id));
+      }
+      if (intake.status === "waiting_for_doctor_review") {
+        hints.push(hint("intake_review", "medium", "Patient-reported intake is waiting for doctor review.", intake.id));
+      }
+    }
+    for (const request of requests) {
+      const names = request.items.map((item) => item.testName).filter(Boolean).join(", ") || "clinical request";
+      const message = request.status === "result_received"
+        ? `Result received for ${names}. Doctor review is still needed.`
+        : `Requested investigation or referral pending follow-up: ${names}.`;
+      hints.push(hint("clinical_request_follow_up", request.status === "result_received" ? "high" : "medium", message, request.id));
+    }
+    if (allergies.length > 0) {
+      hints.push(hint("prescription_allergy_review", "high", "Active allergy history exists. Review before saving or signing prescriptions.", allergies[0]?.id));
+    }
+    if (currentMedications.length === 0) {
+      hints.push(hint("current_medication_history_missing", "medium", "Current medication history is missing or not recorded for this patient.", patient.id));
+    }
+    const previousAnemia = prescriptions.some((prescription) =>
+      prescription.items.some((item) => /iron|ferritin|anemia/i.test([item.medicationName, item.genericName, prescription.notes].filter(Boolean).join(" ")))
+    );
+    if (previousAnemia) {
+      hints.push(hint("previous_prescription_context", "low", "Previous anemia-related prescription exists. Review latest Hb or ferritin before continuing.", patient.id));
+    }
+
+    return { patientId: id, hints };
+  }
+
+
   async timeline(id: string, user: AuthUser) {
     const patient = await this.get(id, user);
     const [
@@ -871,6 +928,25 @@ async function resolvePrescriptionItem(
   }
 
   return base;
+}
+
+function hasJsonValue(value: unknown) {
+  if (!value || value === Prisma.JsonNull) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value).length > 0;
+  return true;
+}
+
+function hint(type: string, severity: "low" | "medium" | "high", message: string, sourceId?: string) {
+  return {
+    id: `${type}:${sourceId ?? "patient"}`,
+    type,
+    severity,
+    message,
+    doctorFacingOnly: true,
+    status: "active",
+    sourceId
+  };
 }
 
 function toDateTime(value?: string) {
