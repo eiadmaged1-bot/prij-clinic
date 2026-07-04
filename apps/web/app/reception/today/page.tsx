@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "../../mvp-page";
@@ -21,14 +21,10 @@ export default function ReceptionTodayPage() {
   const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
-  const headers = token ? { authorization: `Bearer ${token}` } : undefined;
+  const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const filteredPatients = patients.filter((patient) => patientLabel(patient).toLowerCase().includes(query.toLowerCase())).slice(0, 8);
 
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setStatus("Loading today");
     const [appointmentResponse, queueResponse, patientResponse, invoiceResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers }),
@@ -41,7 +37,11 @@ export default function ReceptionTodayPage() {
     setPatients(patientResponse.ok ? ((await patientResponse.json()) as { patients?: Patient[] }).patients ?? [] : []);
     setInvoices(invoiceResponse.ok ? ((await invoiceResponse.json()) as { invoices?: Invoice[] }).invoices ?? [] : []);
     setStatus("Ready");
-  }
+  }, [headers, today]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function checkIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "./mvp-page";
@@ -27,11 +27,9 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const [orders, setOrders] = useState<InvestigationOrder[]>([]);
   const [status, setStatus] = useState("Loading");
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
-  const headers = token ? { authorization: `Bearer ${token}` } : undefined;
+  const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
-  useEffect(() => { void load(); }, []);
-
-  async function load() {
+  const load = useCallback(async () => {
     setStatus("Loading");
     const [appointmentResponse, queueResponse, invoiceResponse, orderResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers }),
@@ -44,7 +42,9 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
     setInvoices(invoiceResponse.ok ? ((await invoiceResponse.json()) as { invoices?: Invoice[] }).invoices ?? [] : []);
     setOrders(orderResponse.ok ? ((await orderResponse.json()) as { investigationOrders?: InvestigationOrder[] }).investigationOrders ?? [] : []);
     setStatus("Ready");
-  }
+  }, [headers, today]);
+
+  useEffect(() => { void load(); }, [load]);
 
   const waiting = queue.filter((ticket) => ["waiting", "called"].includes(ticket.status));
   const completed = queue.filter((ticket) => ticket.status === "completed");
