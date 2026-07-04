@@ -278,6 +278,16 @@ Visible experience safety:
 - Production local patient file storage fails closed.
 # Current Status
 
+v0.12.5 Clinic Usability Lock + Medication Safety Source Review Prep is in progress on branch `feature/v0.12.5-clinic-usability-lock-source-review-prep`.
+
+v0.12.5 status:
+- Browser workflow is tightened for login, patient creation, patient workspace, doctor visit, history, Care Assist, encounter, prescription, medication safety terminal, investigations, follow-up, and packet.
+- Doctor Visit now presents the stepper as History, Care Assist, Encounter, Prescription, Investigations, Follow-up, Packet.
+- Prescription drafting stays generic-first and does not auto-fill dose, frequency, or duration.
+- Medication safety source review prep is available for Owner/Admin review actions without adding real or fake pregnancy/lactation safety claims.
+- Reviewed medication safety status requires source name and review reason; reviewer and reviewed time are saved server-side and audited.
+- No autonomous diagnosis, prescribing, dosing, final plan generation, OpenAI runtime clinical calls, WhatsApp, DICOM/PACS, insurance, real payment gateway, DB reset, migration deletion, or release tag is added.
+
 v0.12.4 Doctor Visit Flow + Care Assist E2E Hardening is in progress on branch `feature/v0.12.4-doctor-visit-flow-care-assist-e2e`.
 
 v0.12.4 status:

@@ -149,6 +149,13 @@
 - No malware scanning or external production object storage provider is configured yet.
 # Known Limitations
 
+- v0.12.5 improves browser usability and prepares medication safety source review, but it is not production medical-device, privacy, or clinical-governance certification.
+- Source review is prepared, not fully populated. Real reviewed pregnancy/lactation source data import is next.
+- No fake pregnancy/lactation safety claims were added.
+- Doctor approval remains required. There is no autonomous diagnosis, prescribing, dosing, or final plan generation.
+- Medication Safety Terminal output remains reference metadata and review status only.
+- Browser QA with a running app is still required for full usability signoff.
+
 - v0.12.4 connects the doctor visit workflow, but it is not production medical-device, privacy, or clinical-governance certification.
 - Real reviewed pregnancy/lactation medication safety profile sources are still needed. Current placeholder or missing profiles must show Review required.
 - Legacy pregnancy category badges are display-only. There is no category E, and the UI must not display safe in pregnancy wording.

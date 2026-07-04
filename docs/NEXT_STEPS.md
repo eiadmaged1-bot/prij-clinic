@@ -523,6 +523,33 @@ Engineering next steps:
 - Review PDF/non-image handling before production use.
 # Next Steps
 
+v0.12.5 clinic usability and source review next steps:
+
+1. Run the final focused checks:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:v123:med-safety:ready
+npm run test:v123:care-assist-safety
+npm run test:v124:clinical-safety-wording
+npm run test:v124:doctor-visit-flow
+npm run test:v125:clinic-usability-lock
+npm run typecheck
+npm run build
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:v120:no-fake-ui
+```
+
+2. Browser QA the full path: login, patient creation, patient workspace, Start Visit, History, Care Assist, Encounter, Prescription, Medication Safety Terminal, Investigations, Follow-up, and Packet.
+3. Import real reviewed pregnancy/lactation safety data only in a later source-review sprint.
+4. Keep doctor approval required, with no autonomous diagnosis, prescribing, dosing, or final plan generation.
+5. Do not create a release tag from this sprint.
+
 v0.12.4 doctor visit flow next steps:
 
 1. Run the focused local checks:

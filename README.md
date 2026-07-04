@@ -1,5 +1,15 @@
 # Prij Clinic
 
+## v0.12.5 Clinic Usability Lock + Source Review Prep
+
+v0.12.5 focuses on browser usability and medication safety source review prep. It tightens the path from login to patient creation, patient workspace, doctor visit, history, Care Assist, encounter, prescription, medication safety terminal, investigations, follow-up, and packet.
+
+No fake pregnancy/lactation safety claims were added. Source review is prepared, not fully populated. Doctor approval is required, with no autonomous diagnosis, prescribing, dosing, or final plan generation. Real reviewed data import is next.
+
+```powershell
+npm run test:v125:clinic-usability-lock
+```
+
 ## v0.12.4 Doctor Visit Flow + Care Assist E2E
 
 v0.12.4 connects history sheets, Care Assist, encounter drafts, generic-first prescription drafting, pregnancy/lactation safety profile visibility, investigation requests, follow-up tasks, clinical note buttons, and printable visit packets into one patient workspace Doctor Visit flow.
