@@ -45,6 +45,7 @@
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
     "test:premium:workflow": "node scripts/premium-workflow-test.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",
+    "test:staging:smoke:local": "node scripts/run-staging-smoke-local.mjs",
     "test:medications": "node scripts/medication-intelligence-test.mjs",
     "test:drug-market": "node scripts/medication-intelligence-test.mjs",
     "test:drug-market:auto-import": "node scripts/medication-intelligence-test.mjs",
