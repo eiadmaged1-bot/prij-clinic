@@ -9,11 +9,11 @@ export default function DrugMarketPage() {
         <h1>Official Medicine Data</h1>
         <p className="muted">Bahrain and Oman source-labeled medication metadata for clinician reference. Market strength, form, and pack are not patient instructions.</p>
       </section>
-      <section className="summary-grid">
-        <article className="metric-card"><span>Total official rows</span><strong>8,269</strong><p className="muted">BHR + OMN available</p></article>
-        <article className="metric-card"><span>Verified rows</span><strong>1,200</strong><p className="muted">600 Bahrain, 600 Oman</p></article>
-        <article className="metric-card"><span>Review queue</span><strong>7,069</strong><p className="muted">Open items remain owner-reviewed</p></article>
-        <article className="metric-card"><span>Source freshness</span><strong>Current</strong><p className="muted">Latest local source checks recorded</p></article>
+      <section className="compact-metric-grid">
+        <article className="mini-metric-card"><span>Official rows</span><strong>8,269</strong><p className="muted">BHR + OMN metadata</p></article>
+        <article className="mini-metric-card"><span>Source verified</span><strong>1,200</strong><p className="muted">Official source checked</p></article>
+        <article className="mini-metric-card"><span>Clinical review required</span><strong>7,069</strong><p className="muted">Not safety-verified</p></article>
+        <article className="mini-metric-card"><span>Source freshness</span><strong>Current</strong><p className="muted">Local source checks</p></article>
       </section>
       <DrugMarketSearchBox />
       <SourceAndCountrySummary />
