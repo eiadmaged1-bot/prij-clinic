@@ -132,6 +132,7 @@
     "test:v13:clinic-day-loop": "node scripts/v13-clinic-day-loop-test.mjs",
     "test:v14:obgyn-deepening": "node scripts/v14-obgyn-deepening-test.mjs",
     "test:v14:no-unsafe-obgyn-automation": "node scripts/v14-no-unsafe-obgyn-automation-test.mjs",
+    "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "db:v109:queue-duplicates:dry-run": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --dry-run",
     "db:v109:queue-duplicates:apply": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --apply",
     "db:v109:queue-migration-ready": "node scripts/v109-verify-queue-date-migration-ready.mjs",

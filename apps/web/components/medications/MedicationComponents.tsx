@@ -130,7 +130,7 @@ export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
     <section className="panel">
       <div className="section-heading"><h2>Prescription Safety</h2><SafetyAlertBadge severity="major" /></div>
       <p className="muted">Prescription checks are draft safety support for the doctor. They do not prescribe, sign, or change final prescriptions.</p>
-      <p className="warning-text">Pregnancy and lactation profile flags are reference metadata only. They never auto-fill dose, frequency, duration, or instructions.</p>
+      <p className="warning-text">Pregnancy and lactation profile flags are reference metadata only. They never populate medication instructions or treatment details.</p>
       <button className="button" onClick={runCheck} type="button">Run Prescription Check</button>
       <p className="muted">{status}</p>
     </section>
