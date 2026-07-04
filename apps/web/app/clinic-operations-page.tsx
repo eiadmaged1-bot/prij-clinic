@@ -11,6 +11,10 @@ type Appointment = { id: string; patientId: string; startAt: string; status: str
 type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string; patient?: Patient; appointment?: Appointment | null; cancellationReason?: string | null };
 type Invoice = { id: string; patientId: string; invoiceNumber?: string; status?: string; balanceAmount?: string | number };
 type InvestigationOrder = { id: string; patientId: string; status: string; priority?: string; notes?: string | null; items?: Array<{ testName?: string; category?: string; status?: string }>; patient?: Patient };
+type DashboardSummary = {
+  billing?: { openInvoices?: number; paymentsToday?: string };
+  workflow?: { pendingResultReview?: number; followUpsDue?: number; openTasks?: number };
+};
 
 type Props = {
   mode: "calendar" | "queue" | "doctor" | "investigations" | "documents" | "reports";
@@ -25,6 +29,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [orders, setOrders] = useState<InvestigationOrder[]>([]);
+  const [dashboard, setDashboard] = useState<DashboardSummary>({});
   const [status, setStatus] = useState("Loading");
   const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -32,16 +37,18 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
 
   const load = useCallback(async () => {
     setStatus("Loading");
-    const [appointmentResponse, queueResponse, invoiceResponse, orderResponse] = await Promise.all([
+    const [appointmentResponse, queueResponse, invoiceResponse, orderResponse, dashboardResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers }),
       fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }),
       fetch(`${getApiBaseUrl()}/billing/invoices`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/investigations/orders`, { credentials: "include", headers })
+      fetch(`${getApiBaseUrl()}/investigations/orders`, { credentials: "include", headers }),
+      fetch(`${getApiBaseUrl()}/dashboard/summary`, { credentials: "include", headers })
     ]);
     setAppointments(appointmentResponse.ok ? ((await appointmentResponse.json()) as { appointments?: Appointment[] }).appointments ?? [] : []);
     setQueue(queueResponse.ok ? ((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? [] : []);
     setInvoices(invoiceResponse.ok ? ((await invoiceResponse.json()) as { invoices?: Invoice[] }).invoices ?? [] : []);
     setOrders(orderResponse.ok ? ((await orderResponse.json()) as { investigationOrders?: InvestigationOrder[] }).investigationOrders ?? [] : []);
+    setDashboard(dashboardResponse.ok ? await dashboardResponse.json() as DashboardSummary : {});
     setStatus("Ready");
   }, [headers, today]);
 
@@ -85,7 +92,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
       {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
-      {mode === "reports" ? <DailyReports appointments={appointments} queue={queue} invoices={invoices} orders={orders} status={status} /> : null}
+      {mode === "reports" ? <DailyReports appointments={appointments} queue={queue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
     </AppShell>
   );
 }
@@ -115,9 +122,10 @@ function DocumentTimelinePlaceholder() {
   return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Documents and results</h2><span className="badge">Metadata protected</span></div><ul className="feature-list"><li>Patient file document tabs show category, status, uploaded user, created date, and linked visit or order when available.</li><li>Local image uploads keep metadata stripping and unsafe file checks.</li><li>Normal UI hides raw storage paths and internal hashes.</li></ul></article><article className="panel"><div className="section-heading"><h2>Timeline entry types</h2><span className="badge">Patient-specific</span></div><p className="muted">Report metadata, document uploads, investigation results, and reviewed entries are consolidated inside each patient timeline.</p></article></section>;
 }
 
-function DailyReports({ appointments, queue, invoices, orders, status }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[]; orders: InvestigationOrder[]; status: string }) {
-  const collected = invoices.filter((invoice) => invoice.status === "paid").length;
-  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Daily clinic summary</h2><span className="badge">{status}</span></div><dl className="profile-grid"><div><dt>Appointments</dt><dd>{appointments.length}</dd></div><div><dt>Queue waiting</dt><dd>{queue.filter((ticket) => ticket.status === "waiting").length}</dd></div><div><dt>Visits completed</dt><dd>{queue.filter((ticket) => ticket.status === "completed").length}</dd></div><div><dt>Invoices paid</dt><dd>{collected}</dd></div><div><dt>Investigations requested</dt><dd>{orders.length}</dd></div><div><dt>Pending results</dt><dd>{orders.filter((order) => order.status !== "reviewed").length}</dd></div></dl></article><article className="panel"><div className="section-heading"><h2>Role cards</h2><span className="badge">Summary only</span></div><ul className="feature-list"><li>Owner sees operational totals and manual billing notes.</li><li>Reception sees appointments, queue, check-in, and payment status notes.</li><li>Doctor sees waiting patients, visit handoff, and pending clinical orders.</li></ul></article></section>;
+function DailyReports({ appointments, queue, invoices, orders, dashboard, status }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[]; orders: InvestigationOrder[]; dashboard: DashboardSummary; status: string }) {
+  const issuedInvoices = invoices.filter((invoice) => ["issued", "partially_paid", "paid"].includes(String(invoice.status))).length;
+  const outstanding = invoices.reduce((sum, invoice) => sum + Number(invoice.balanceAmount ?? 0), 0);
+  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Daily clinic summary</h2><span className="badge">{status}</span></div><dl className="profile-grid"><div><dt>Appointments</dt><dd>{appointments.length}</dd></div><div><dt>Check-ins</dt><dd>{queue.length}</dd></div><div><dt>Queue waiting</dt><dd>{queue.filter((ticket) => ticket.status === "waiting").length}</dd></div><div><dt>Visits completed</dt><dd>{queue.filter((ticket) => ticket.status === "completed").length}</dd></div><div><dt>Invoices issued</dt><dd>{issuedInvoices}</dd></div><div><dt>Payments collected</dt><dd>{dashboard.billing?.paymentsToday ?? "0.00"}</dd></div><div><dt>Outstanding balances</dt><dd>{outstanding.toFixed(2)}</dd></div><div><dt>Investigations requested</dt><dd>{orders.length}</dd></div><div><dt>Pending results</dt><dd>{dashboard.workflow?.pendingResultReview ?? orders.filter((order) => order.status !== "reviewed").length}</dd></div><div><dt>Follow-ups due</dt><dd>{dashboard.workflow?.followUpsDue ?? 0}</dd></div></dl></article><article className="panel"><div className="section-heading"><h2>Owner daily summary</h2><span className="badge">Business</span></div><ul className="feature-list"><li>Manual payments collected today: {dashboard.billing?.paymentsToday ?? "0.00"}.</li><li>Open invoices needing follow-up: {dashboard.billing?.openInvoices ?? invoices.filter((invoice) => invoice.status !== "paid").length}.</li><li>No insurance, ledger, or payment gateway export is generated.</li></ul></article><article className="panel"><div className="section-heading"><h2>Reception daily summary</h2><span className="badge">Operations</span></div><ul className="feature-list"><li>Appointments: {appointments.length}; check-ins: {queue.length}.</li><li>Waiting or called patients: {queue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length}.</li><li>Payment status is visible as an operational note only.</li></ul></article><article className="panel"><div className="section-heading"><h2>Doctor daily summary</h2><span className="badge">Clinical workflow</span></div><ul className="feature-list"><li>Completed visits: {queue.filter((ticket) => ticket.status === "completed").length}.</li><li>Pending investigations or results: {orders.filter((order) => order.status !== "reviewed").length}.</li><li>Billing does not automate diagnosis, prescribing, or dosing.</li></ul></article></section>;
 }
 
 function FlowPanel({ appointments, queue }: { appointments: Appointment[]; queue: QueueTicket[] }) {

@@ -36,6 +36,18 @@ export class CreateInvoiceDto {
   patientId!: string;
 
   @IsOptional()
+  @IsUUID()
+  appointmentId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  queueTicketId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  encounterId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(80)
   invoiceNumber?: string;
@@ -120,6 +132,11 @@ export class CreatePaymentDto {
   @IsString()
   @MaxLength(240)
   referenceNote?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }
 
 export class ReversePaymentDto {

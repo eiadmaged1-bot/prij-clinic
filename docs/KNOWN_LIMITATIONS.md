@@ -14,3 +14,16 @@
 - Follow-up hints are read-only in this sprint.
 - Manual QA is still required for role-by-role browser behavior.
 - No external AI, WhatsApp, DICOM/PACS, payment gateway, pharmacy inventory, or automatic clinical decisioning is included.
+# Known Limitations
+
+v0.15.0 is still an MVP business layer on top of the locked demo walkthrough.
+
+- Billing is clinic operations only, not a full accounting ledger.
+- Payments are manual records only; there is no real payment gateway.
+- Insurance/TPA workflows are not implemented.
+- Patient statements are print-friendly views, not audited PHI exports.
+- Clinic settings polish is mostly UI/documentation-level unless an existing audited setting already supports the change.
+- Branch/room expansion remains intentionally limited.
+- No real patient data should be seeded or imported.
+- Clinical AI remains assistive and draft-only.
+- The system does not automatically diagnose, prescribe, dose, or rank treatments.

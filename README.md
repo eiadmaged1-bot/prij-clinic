@@ -981,3 +981,38 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/DEPLOYMENT_READINESS.md`
 - `docs/ENVIRONMENT_STRATEGY.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
+# Prij Clinic
+
+Clinic Management System for OB/GYN and women’s health.
+
+Current sprint status: v0.15.0 MVP Business Layer on Walkthrough Lock.
+
+v0.15.0 builds on the locked v0.14.4 clinic demo walkthrough. The protected route `/clinic-day/walkthrough` remains the reference flow for reception, check-in, doctor waiting, patient profile, doctor visit, manual prescription draft, investigations, follow-up, and print packet discovery.
+
+Business-layer scope:
+
+- Visit-linked service selection from the Owner Service Catalog.
+- Draft invoices, issue action, and reason-required void action.
+- Manual payments only.
+- Patient statement.
+- Daily reports and role summary cards.
+- Clinic settings polish.
+
+Safety boundaries:
+
+- No real patient data in code or seeds.
+- No real payment gateway.
+- No insurance/TPA.
+- No full accounting ledger.
+- No automatic diagnosis, prescribing, dosing, or treatment ranking.
+- Clinical AI remains assistive and draft-only until reviewed and approved by a doctor.
+
+Primary docs:
+
+- `docs/V0_15_0_MVP_BUSINESS_LAYER_ON_WALKTHROUGH_LOCK.md`
+- `docs/WALKTHROUGH_LOCK_CONTRACT.md`
+- `docs/BILLING_WORKFLOW.md`
+- `docs/MANUAL_PAYMENTS.md`
+- `docs/PATIENT_STATEMENT.md`
+- `docs/DAILY_REPORTS.md`
+- `docs/CLINIC_SETTINGS.md`

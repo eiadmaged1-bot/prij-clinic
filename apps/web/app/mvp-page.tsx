@@ -490,13 +490,13 @@ export function SafetyAlert() {
 
 function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: string }) {
   if (status === "Loading records") {
-    return <div className="skeleton" aria-label="Loading demo records" />;
+    return <div className="skeleton" aria-label="Loading records" />;
   }
 
   if (rows.length === 0) {
     return (
-      <EmptyState actionHref="/patients/new" actionLabel="Create demo patient">
-        No records yet. Start with a safe local demo patient or refresh after creating a record.
+      <EmptyState actionHref="/patients/new" actionLabel="Create patient">
+        No records yet. Start with a patient record or refresh after creating a record.
       </EmptyState>
     );
   }

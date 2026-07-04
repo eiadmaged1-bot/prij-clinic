@@ -107,6 +107,15 @@ type ReferenceResult = {
   specialty?: string;
 };
 
+type ServiceItem = {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  price: string | null;
+  currency: string;
+};
+
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
@@ -156,6 +165,7 @@ export default function PatientFilePage() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
 
@@ -202,6 +212,20 @@ export default function PatientFilePage() {
         setRoles([]);
       });
   }, [patientId]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("prijClinicToken");
+    fetch(`${getApiBaseUrl()}/billing/services`, {
+      credentials: "include",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json() as { services?: ServiceItem[] };
+        setServices(data.services ?? []);
+      })
+      .catch(() => setServices([]));
+  }, []);
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -320,7 +344,7 @@ export default function PatientFilePage() {
 
       {patient ? (
         <>
-          <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} />
+          <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} services={services} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
@@ -1855,12 +1879,14 @@ function PatientActionPanel({
   patient,
   onSubmit,
   status,
-  related
+  related,
+  services
 }: {
   patient: Patient;
   onSubmit: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
   status: string;
   related: Record<string, Record<string, unknown>[]>;
+  services: ServiceItem[];
 }) {
   const [open, setOpen] = useState("appointment");
   const [selectedGeneric, setSelectedGeneric] = useState<ReferenceResult | null>(null);
@@ -1986,33 +2012,70 @@ function PatientActionPanel({
       ) : null}
 
       {open === "invoice" ? (
-        <ActionForm
-          fields={[
-            ["description", "Service", "text", true],
-            ["unitAmount", "Price", "number", true],
-            ["quantity", "Quantity", "number", false]
-          ]}
-          onSubmit={handleSubmit("invoices", (form) => {
-            const item = values(form, ["description", "unitAmount", "quantity"]);
-            return { items: [{ ...item, unitAmount: Number(item.unitAmount), quantity: Number(item.quantity || 1) }] };
-          })}
-          submitLabel="Create invoice"
-        />
+        <form className="form-grid" onSubmit={handleSubmit("invoices", (form) => {
+          const formData = new FormData(form);
+          const serviceItemId = String(formData.get("serviceItemId") ?? "");
+          const quantity = Number(formData.get("quantity") || 1);
+          const manual = values(form, ["description", "unitAmount"]);
+          return {
+            notes: "Draft invoice from patient billing context. Manual payment only.",
+            items: [
+              serviceItemId
+                ? { serviceItemId, quantity }
+                : { description: manual.description, unitAmount: Number(manual.unitAmount || 0), quantity }
+            ]
+          };
+        })}>
+          <label>
+            Owner service catalog
+            <select name="serviceItemId">
+              <option value="">Manual billing service</option>
+              {services.map((service) => (
+                <option disabled={service.price === null} key={service.id} value={service.id}>
+                  {service.name} - {service.price === null ? "price review required" : `${service.price} ${service.currency}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>Manual service<input name="description" placeholder="Only if no catalog service is selected" /></label>
+          <label>Manual price<input name="unitAmount" type="number" min="0" step="0.01" /></label>
+          <label>Quantity<input name="quantity" type="number" min="1" defaultValue="1" /></label>
+          <p className="muted">Service selection is billing-only and does not change clinical catalogs.</p>
+          <button className="button" type="submit">Create draft invoice</button>
+        </form>
       ) : null}
 
       {open === "payment" ? (
-        <form className="form-grid" onSubmit={handleSubmit("payments", (form) => ({ ...values(form, ["invoiceId", "amount", "referenceNote"]), method: "cash", amount: Number(new FormData(form).get("amount") || 0) }))}>
+        <form className="form-grid" onSubmit={handleSubmit("payments", (form) => {
+          const formData = new FormData(form);
+          return {
+            ...values(form, ["invoiceId", "referenceNote", "note"]),
+            method: String(formData.get("method") || "cash"),
+            amount: Number(formData.get("amount") || 0)
+          };
+        })}>
           <label>
             Invoice
             <select name="invoiceId" required>
               <option value="">Select invoice</option>
-              {invoices.map((invoice) => (
+              {invoices.filter((invoice) => !["paid", "voided", "cancelled"].includes(String(invoice.status))).map((invoice) => (
                 <option key={String(invoice.id)} value={String(invoice.id)}>{String(invoice.invoiceNumber ?? "Invoice")}</option>
               ))}
             </select>
           </label>
+          <label>
+            Method
+            <select name="method" defaultValue="cash">
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="transfer">Transfer</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
           <label>Amount<input name="amount" required type="number" min="0" step="0.01" /></label>
-          <label>Reference note<input name="referenceNote" /></label>
+          <label>Reference<input name="referenceNote" placeholder="Optional receipt or transfer reference" /></label>
+          <label className="wide">Note<input name="note" placeholder="Optional internal payment note" /></label>
+          <p className="muted">Manual recording only. Do not enter card numbers, tokens, passwords, or patient secrets.</p>
           <button className="button" type="submit">Record payment</button>
         </form>
       ) : null}
@@ -2178,12 +2241,28 @@ function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string
               <strong>{String(row.title ?? row.invoiceNumber ?? row.appointmentType ?? row.draftType ?? "Patient record")}</strong>
               <span className="badge">{String(row.status ?? row.reviewStatus ?? row.category ?? "Draft")}</span>
             </div>
-            <p className="muted">{String(row.notes ?? row.resultSummary ?? row.inputSourceSummary ?? row.chiefComplaint ?? "Patient-linked record.")}</p>
+            <p className="muted">
+              {isBilling
+                ? billingRowSummary(row)
+                : String(row.notes ?? row.resultSummary ?? row.inputSourceSummary ?? row.chiefComplaint ?? "Patient-linked record.")}
+            </p>
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+function billingRowSummary(row: Record<string, unknown>) {
+  const items = Array.isArray(row.items) ? row.items as Record<string, unknown>[] : [];
+  const services = items.map((item) => {
+    const serviceItem = item.serviceItem as { name?: string } | undefined;
+    return String(item.description ?? serviceItem?.name ?? "");
+  }).filter(Boolean).join(", ");
+  const total = String(row.totalAmount ?? "0.00");
+  const paid = String(row.amountPaid ?? "0.00");
+  const balance = String(row.balanceAmount ?? "0.00");
+  return `${services || "Billing service"} | total ${total} | paid ${paid} | balance ${balance}`;
 }
 
 function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] }) {

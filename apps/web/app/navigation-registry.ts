@@ -29,7 +29,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Clinical", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
   { href: "/encounters", label: "Encounters", icon: "encounter", group: "Clinical", permissions: ["encounter.read"] },
   { href: "/billing", label: "Billing", icon: "billing", group: "Operations", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
-  { href: "/finance", label: "Finance", icon: "billing", group: "Operations", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
+  { href: "/reports", label: "Reports", icon: "reports", group: "Operations", permissions: ["billing.report", "report.read", "dashboard.read"] },
   { href: "/referrals", label: "Referrals", icon: "reports", group: "Operations", permissions: ["referral.read"] },
   { href: "/tasks", label: "Tasks", icon: "queue", group: "Operations", permissions: ["patient_task.read"] },
   { href: "/documents", label: "Documents", icon: "files", group: "Operations", permissions: ["patient_document.read"] },
@@ -39,6 +39,8 @@ export const navigationRegistry: NavItem[] = [
   { href: "/medications", label: "Medications", icon: "prescription", group: "Medication Reference", permissions: ["medications.read", "medications.search"] },
   { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
   { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin", adminOnly: true },
+  { href: "/admin/services", label: "Admin Services", icon: "billing", group: "Admin", adminOnly: true },
+  { href: "/admin/medication-safety-profiles", label: "Medication Safety Review", icon: "ai", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/owner-control", label: "Owner Control", icon: "admin", group: "Admin", adminOnly: true },
   { href: "/admin", label: "Admin Home", icon: "admin", group: "Admin", adminOnly: true }

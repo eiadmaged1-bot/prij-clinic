@@ -43,3 +43,28 @@ Safety status:
 - AI remains disabled or draft-only support. It cannot diagnose, prescribe, sign, or silently update final records.
 - Clinical record changes remain RBAC-protected and audit-log oriented.
 - No WhatsApp, DICOM/PACS, external AI, or real payment gateway integration is enabled.
+# Current Status - v0.15.0 MVP Business Layer
+
+v0.15.0 builds on the locked v0.14.4 clinic demo walkthrough. `/clinic-day/walkthrough` remains protected and discoverable.
+
+Implemented in this sprint:
+
+- Visit-linked billing context for appointments, queue tickets, and encounters.
+- Owner Service Catalog selection for billing-only services.
+- Draft invoice workflow with issue and reason-required void actions.
+- Manual payment recording for cash, card, transfer, and other methods.
+- Patient statement source and billing tab summaries.
+- Daily reports with appointments, check-ins, completed visits, issued invoices, payments collected, outstanding balances, investigations, pending results, and follow-ups due.
+- Owner, reception, and doctor summary cards.
+- Clinic settings polish for profile and billing-default concepts.
+- `test:v150:mvp-business-walkthrough` regression coverage.
+
+Safety status:
+
+- No real patient data is seeded.
+- No real payment gateway is integrated.
+- No insurance/TPA or full accounting ledger is included.
+- No automatic diagnosis, prescribing, dosing, or treatment ranking is added.
+- Clinical AI remains assistive and draft-only.
+
+Next sprint should be Security + Real Patient Data Readiness.

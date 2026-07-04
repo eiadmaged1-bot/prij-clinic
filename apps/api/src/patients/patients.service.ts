@@ -8,6 +8,7 @@ import {
   assertCanReferenceInvestigationOrder,
   assertCanReferenceInvoice,
   assertCanReferencePregnancy,
+  assertCanReferenceQueueTicket,
   assertCanReferenceUserInBranch
 } from "../auth/reference-scope";
 import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
@@ -590,6 +591,12 @@ export class PatientsService {
 
   async createInvoice(id: string, dto: PatientContextInvoiceDto, user: AuthUser) {
     const patient = await this.get(id, user);
+    const context = await resolvePatientBillingContext(this.prisma, user, {
+      patientId: id,
+      appointmentId: dto.appointmentId,
+      queueTicketId: dto.queueTicketId,
+      encounterId: dto.encounterId
+    });
     assertDiscountAllowed(dto.discountAmount ?? 0, dto.discountReason, user);
     const items = await resolvePatientInvoiceItems(this.prisma, dto.items);
     const totals = calculateTotals(items, dto.discountAmount ?? 0, 0);
@@ -597,6 +604,9 @@ export class PatientsService {
       data: {
         patientId: id,
         branchId: patient.branchId,
+        appointmentId: context.appointmentId,
+        queueTicketId: context.queueTicketId,
+        encounterId: context.encounterId,
         invoiceNumber: await this.nextInvoiceNumber(),
         subtotalAmount: totals.subtotal,
         discountAmount: totals.discount,
@@ -622,6 +632,7 @@ export class PatientsService {
         totalAmount: invoice.totalAmount.toString(),
         discountAmount: invoice.discountAmount.toString(),
         source: "patient_file",
+        context,
         serviceItemIds: items.map((item) => item.serviceItemId).filter(Boolean)
       }
     });
@@ -647,13 +658,13 @@ export class PatientsService {
     const paymentAmount = money(dto.amount);
     const payment = await this.prisma.$transaction(async (tx) => {
       const created = await tx.payment.create({
-        data: { invoiceId: invoice.id, patientId: id, branchId: invoice.branchId, method: dto.method, amount: paymentAmount, referenceNote: clean(dto.referenceNote), recordedByUserId: user.id },
+        data: { invoiceId: invoice.id, patientId: id, branchId: invoice.branchId, method: dto.method, amount: paymentAmount, referenceNote: clean(dto.referenceNote), note: clean(dto.note), recordedByUserId: user.id },
         include: { invoice: true, patient: true }
       });
       await tx.invoice.update({ where: { id: invoice.id }, data: paymentRollup(invoice.totalAmount, invoice.amountPaid.add(paymentAmount)) });
       return created;
     });
-    await this.audit.record({ actorUserId: user.id, action: "payment.recorded", resourceType: "payment", resourceId: payment.id, branchId: payment.branchId, severity: "high", metadataJson: { patientId: id, invoiceId: invoice.id, amount: payment.amount.toString(), source: "patient_file" } });
+    await this.audit.record({ actorUserId: user.id, action: "payment.recorded", resourceType: "payment", resourceId: payment.id, branchId: payment.branchId, severity: "high", metadataJson: { patientId: id, invoiceId: invoice.id, amount: payment.amount.toString(), source: "patient_file", manualOnly: true } });
     return payment;
   }
 
@@ -828,6 +839,25 @@ function invoiceItemCreate(item: PatientInvoiceInputItem) {
     quantity: item.quantity,
     unitAmount,
     lineAmount: unitAmount.mul(item.quantity)
+  };
+}
+
+async function resolvePatientBillingContext(
+  prisma: PrismaService,
+  user: AuthUser,
+  input: { patientId: string; appointmentId?: string; queueTicketId?: string; encounterId?: string }
+) {
+  const appointment = await assertCanReferenceAppointment(prisma, input.appointmentId, user, { patientId: input.patientId });
+  const encounter = await assertCanReferenceEncounter(prisma, input.encounterId, user, { patientId: input.patientId });
+  const queueTicket = input.queueTicketId ? await assertCanReferenceQueueTicket(prisma, input.queueTicketId, user) : null;
+  if (queueTicket && queueTicket.patientId !== input.patientId) {
+    throw new BadRequestException("Referenced check-in does not belong to this patient.");
+  }
+
+  return {
+    appointmentId: appointment?.id ?? null,
+    queueTicketId: queueTicket?.id ?? null,
+    encounterId: encounter?.id ?? null
   };
 }
 

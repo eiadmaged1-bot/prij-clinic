@@ -423,6 +423,18 @@ export class PatientContextInvoiceItemDto {
 
 export class PatientContextInvoiceDto {
   @IsOptional()
+  @IsUUID()
+  appointmentId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  queueTicketId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  encounterId?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
@@ -461,6 +473,11 @@ export class PatientContextPaymentDto {
   @IsString()
   @MaxLength(240)
   referenceNote?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
 }
 
 export class PatientContextConsentDto {

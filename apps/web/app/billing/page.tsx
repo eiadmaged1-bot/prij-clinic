@@ -15,6 +15,7 @@ type Invoice = {
   amountPaid: string;
   balanceAmount: string;
   discountAmount?: string;
+  items?: Array<{ description?: string; quantity?: number; lineAmount?: string; serviceItem?: { name?: string } | null }>;
   patient?: { firstName?: string; lastName?: string; medicalRecordNumber?: string };
 };
 
@@ -133,7 +134,8 @@ export default function BillingPage() {
         invoiceId: String(form.get("invoiceId") ?? ""),
         method: String(form.get("method") ?? "cash"),
         amount: Number(form.get("amount") || 0),
-        referenceNote: String(form.get("referenceNote") ?? "").trim() || undefined
+        referenceNote: String(form.get("referenceNote") ?? "").trim() || undefined,
+        note: String(form.get("note") ?? "").trim() || undefined
       },
       "Payment recorded."
     );
@@ -167,6 +169,19 @@ export default function BillingPage() {
     }
     setMessage(success);
     await loadFinance();
+  }
+
+  async function issueInvoice(invoiceId: string) {
+    await post(`/billing/invoices/${invoiceId}/issue`, {}, "Invoice issued.");
+  }
+
+  async function voidInvoice(invoiceId: string) {
+    const reason = window.prompt("Reason required to void this invoice");
+    if (!reason?.trim()) {
+      setError("Void reason is required.");
+      return;
+    }
+    await post(`/billing/invoices/${invoiceId}/void`, { reason: reason.trim() }, "Invoice voided.");
   }
 
   return (
@@ -203,7 +218,7 @@ export default function BillingPage() {
         <FinanceForm title="Create invoice" onSubmit={createInvoice}>
           <label>Patient ID<input name="patientId" required /></label>
           <label>
-            Service catalog
+            Owner service catalog
             <select name="serviceItemId">
               <option value="">Manual line</option>
               {services.map((service) => (
@@ -236,19 +251,19 @@ export default function BillingPage() {
             <select name="method" defaultValue="cash">
               <option value="cash">Cash</option>
               <option value="card">Card manual note</option>
-              <option value="bank_transfer">Bank transfer</option>
-              <option value="mobile_wallet">Mobile wallet</option>
+              <option value="transfer">Transfer</option>
               <option value="other">Other</option>
             </select>
           </label>
           <label>Amount<input name="amount" min="0.01" step="0.01" required type="number" /></label>
           <label className="wide">Reference note<input name="referenceNote" placeholder="No card numbers or secrets" /></label>
+          <label className="wide">Payment note<input name="note" placeholder="Optional internal note" /></label>
           <button className="button wide" type="submit">Record payment</button>
         </FinanceForm>
       </section>
 
       <section className="dashboard-grid">
-        <FinanceList title="Invoices" rows={invoices} empty="No invoices yet. Create invoice from this page or the patient file." />
+        <FinanceList title="Invoices" rows={invoices} empty="No invoices yet. Create invoice from this page or the patient file." onIssue={issueInvoice} onVoid={voidInvoice} />
         <FinanceList title="Payments" rows={payments} empty="No payments recorded yet." />
       </section>
 
@@ -331,7 +346,7 @@ function FinanceForm({ title, children, onSubmit }: { title: string; children: R
   );
 }
 
-function FinanceList({ title, rows, empty }: { title: string; rows: Array<Invoice | Payment>; empty: string }) {
+function FinanceList({ title, rows, empty, onIssue, onVoid }: { title: string; rows: Array<Invoice | Payment>; empty: string; onIssue?: (invoiceId: string) => void; onVoid?: (invoiceId: string) => void }) {
   return (
     <section className="panel">
       <div className="section-heading">
@@ -346,12 +361,27 @@ function FinanceList({ title, rows, empty }: { title: string; rows: Array<Invoic
               <strong>{"invoiceNumber" in row ? row.invoiceNumber : row.invoice?.invoiceNumber ?? row.method}</strong>
               <span className="badge">{row.status}</span>
             </div>
-            <p className="muted">{"balanceAmount" in row ? `Total ${row.totalAmount} - balance ${row.balanceAmount}` : `${row.method} - ${row.amount}`}</p>
+            <p className="muted">{"balanceAmount" in row ? `${invoiceServices(row)} | total ${row.totalAmount} | balance ${row.balanceAmount}` : `${paymentMethodLabel(row.method)} - ${row.amount}`}</p>
+            {"invoiceNumber" in row && (onIssue || onVoid) ? (
+              <div className="form-actions">
+                {row.status === "draft" && onIssue ? <button className="button secondary compact" type="button" onClick={() => onIssue(row.id)}>Issue</button> : null}
+                {!["voided", "paid"].includes(row.status) && onVoid ? <button className="button secondary compact" type="button" onClick={() => onVoid(row.id)}>Void</button> : null}
+              </div>
+            ) : null}
           </article>
         ))}
       </div>
     </section>
   );
+}
+
+function invoiceServices(invoice: Invoice) {
+  const services = (invoice.items ?? []).map((item) => item.description ?? item.serviceItem?.name).filter(Boolean).join(", ");
+  return services || "Draft invoice";
+}
+
+function paymentMethodLabel(method: string) {
+  return method.replaceAll("_", " ");
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

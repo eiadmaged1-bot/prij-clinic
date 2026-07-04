@@ -2,7 +2,14 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { InvoiceStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
-import { assertCanReferenceInvoice, assertCanReferencePatient, assertCanReferencePayment } from "../auth/reference-scope";
+import {
+  assertCanReferenceAppointment,
+  assertCanReferenceEncounter,
+  assertCanReferenceInvoice,
+  assertCanReferencePatient,
+  assertCanReferencePayment,
+  assertCanReferenceQueueTicket
+} from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VoidInvoiceDto } from "./dto";
@@ -20,6 +27,12 @@ export class BillingService {
     }
 
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    const context = await resolveBillingContext(this.prisma, user, {
+      patientId: dto.patientId,
+      appointmentId: dto.appointmentId,
+      queueTicketId: dto.queueTicketId,
+      encounterId: dto.encounterId
+    });
     assertDiscountAllowed(dto.discountAmount ?? 0, dto.discountReason, user);
     const items = await resolveInvoiceItems(this.prisma, dto.items);
     const totals = calculateTotals(items, dto.discountAmount ?? 0, 0);
@@ -29,6 +42,9 @@ export class BillingService {
         data: {
           patientId: dto.patientId,
           branchId: patient.branchId,
+          appointmentId: context.appointmentId,
+          queueTicketId: context.queueTicketId,
+          encounterId: context.encounterId,
           invoiceNumber: dto.invoiceNumber?.trim() || (await this.nextInvoiceNumber()),
           issueDate: toDate(dto.issueDate),
           dueDate: toDate(dto.dueDate),
@@ -57,7 +73,8 @@ export class BillingService {
           status: invoice.status,
           totalAmount: invoice.totalAmount.toString(),
           discountAmount: invoice.discountAmount.toString(),
-          serviceItemIds: items.map((item) => item.serviceItemId).filter(Boolean)
+          serviceItemIds: items.map((item) => item.serviceItemId).filter(Boolean),
+          context
         }
       });
 
@@ -269,6 +286,7 @@ export class BillingService {
           amount: paymentAmount,
           paidAt,
           referenceNote: clean(dto.referenceNote),
+          note: clean(dto.note),
           recordedByUserId: user.id
         },
         include: paymentIncludes
@@ -289,7 +307,7 @@ export class BillingService {
       resourceId: payment.id,
       branchId: payment.branchId,
       severity: "high",
-      metadataJson: { invoiceId: payment.invoiceId, method: payment.method, amount: payment.amount.toString() }
+      metadataJson: { invoiceId: payment.invoiceId, method: payment.method, amount: payment.amount.toString(), manualOnly: true }
     });
 
     return payment;
@@ -463,6 +481,9 @@ export class BillingService {
 
 export const invoiceIncludes = {
   patient: true,
+  appointment: true,
+  queueTicket: true,
+  encounter: true,
   items: { include: { serviceItem: true } },
   payments: true
 } satisfies Prisma.InvoiceInclude;
@@ -545,6 +566,25 @@ function toInvoiceInputItems(items: InvoiceWithIncludes["items"]): InvoiceInputI
     unitAmount: Number(item.unitAmount),
     notes: item.notes
   }));
+}
+
+async function resolveBillingContext(
+  prisma: PrismaService,
+  user: AuthUser,
+  input: { patientId: string; appointmentId?: string; queueTicketId?: string; encounterId?: string }
+) {
+  const appointment = await assertCanReferenceAppointment(prisma, input.appointmentId, user, { patientId: input.patientId });
+  const encounter = await assertCanReferenceEncounter(prisma, input.encounterId, user, { patientId: input.patientId });
+  const queueTicket = input.queueTicketId ? await assertCanReferenceQueueTicket(prisma, input.queueTicketId, user) : null;
+  if (queueTicket && queueTicket.patientId !== input.patientId) {
+    throw new BadRequestException("Referenced check-in does not belong to this patient.");
+  }
+
+  return {
+    appointmentId: appointment?.id ?? null,
+    queueTicketId: queueTicket?.id ?? null,
+    encounterId: encounter?.id ?? null
+  };
 }
 
 function assertDiscountAllowed(discountAmount: number, reason: string | undefined, user: AuthUser) {
