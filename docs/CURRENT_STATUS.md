@@ -1,5 +1,14 @@
 # Current Status
 
+v0.14.1 Mega Sprint QA Lock + Stabilization is in progress on branch `stabilize/v0.14.1-mega-sprint-qa-lock`.
+
+v0.14.1 status:
+- Baseline static checks for Prisma generate/deploy, TypeScript, production build, clinic usability lock, medication safety review, owner control/gyn, clinic day loop, OB/GYN deepening, unsafe OB/GYN automation, no-fake UI, API base URL, CORS, hydration root, and image metadata sanitizer passed locally before documentation updates.
+- Manual demo QA is now tracked in `docs/V0_14_1_MANUAL_QA_CHECKLIST.md`.
+- Scope is stabilization only for local startup, login, patient creation, reception, calendar/appointments, queue, doctor waiting, doctor visit, gynecology, pregnancy/fetus/antenatal/ultrasound, investigations/orders, documents/results timeline, patient timeline, service/invoice visit link, Owner Control Center, medication safety source review/import, no-code UI text, RBAC, audit, and safety regression.
+- No new major feature scope, architecture rewrite, external integrations, real patient data, destructive DB action, automatic diagnosis, automatic prescribing, automatic dosing, automatic FGR diagnosis, fetal image AI, or fake clinical claim is added.
+- The app remains local/demo QA only and is not production-ready.
+
 v0.13.0-v0.14.0 Clinic Operations + Documents + OB/GYN Deepening Mega Sprint is in progress on branch `feature/v0.13-v0.14-clinic-ops-documents-obgyn-mega`.
 
 v0.13-v0.14 status:

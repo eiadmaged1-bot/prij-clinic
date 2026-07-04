@@ -1,5 +1,13 @@
 # Known Limitations
 
+- v0.14.1 is a QA lock and stabilization pass only. It is not production readiness, privacy/legal signoff, medical-device certification, clinical governance approval, or deployment approval.
+- Manual demo QA is still required with synthetic records only, using `docs/V0_14_1_MANUAL_QA_CHECKLIST.md`.
+- Runtime smoke depends on local PostgreSQL, seeded local demo accounts, local API/web startup, and available ports.
+- Medication safety source review/import remains governed. Do not claim reviewed pregnancy/lactation coverage until owner-approved or licensed/official source rows are imported and reviewed.
+- OB/GYN workflows remain recording and documentation support only. They do not diagnose, prescribe, dose, rank treatment, diagnose FGR, interpret anomalies, analyze fetal images, or replace doctor review.
+- Billing/service links are local clinic workflow links only. There is no real payment gateway, insurance/TPA, full ledger, or external billing integration.
+- Documents/results timelines are local workflow surfaces only and are not production PHI storage readiness.
+
 - v0.13.0-v0.14.0 skips the dedicated v0.12.9 QA sprint. Manual browser QA is intentionally left to the user after this mega sprint.
 - The mega sprint is not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
 - No real patient data should be used. Local/demo records must remain synthetic.

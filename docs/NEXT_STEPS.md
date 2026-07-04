@@ -1,5 +1,34 @@
 # Next Steps
 
+v0.14.1 QA lock next steps:
+
+1. Run final checks:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run test:v125:clinic-usability-lock
+npm run test:v126:med-safety-review
+npm run test:v128:owner-control-gyn
+npm run test:v13:clinic-day-loop
+npm run test:v14:obgyn-deepening
+npm run test:v14:no-unsafe-obgyn-automation
+npm run test:v141:mega-manual-qa-smoke
+npm run typecheck
+npm run build
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:v120:no-fake-ui
+```
+
+2. Run manual QA from `docs/V0_14_1_MANUAL_QA_CHECKLIST.md`.
+3. Keep all records synthetic and local/demo only.
+4. Fix only defects found by smoke/static/manual QA, such as broken imports, route rendering, missing navigation, UI wording, permission mismatch, test script mismatch, build/typecheck issue, or Prisma generated client issue.
+5. Do not add WhatsApp, DICOM/PACS, insurance, mobile app, external AI runtime, real payment gateway, full ledger, real patient data, automatic diagnosis, automatic prescribing, automatic dosing, automatic FGR diagnosis, fetal image AI, or fake clinical claims.
+
 v0.13.0-v0.14.0 mega sprint next steps:
 
 1. Run final focused checks:
