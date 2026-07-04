@@ -32,6 +32,7 @@ export default function PatientsPage() {
   const [rangeStart, setRangeStart] = useState(today);
   const [rangeEnd, setRangeEnd] = useState(today);
   const [patientStatus, setPatientStatus] = useState("all");
+  const [showTrainingRecords, setShowTrainingRecords] = useState(false);
 
   useEffect(() => {
     void loadPatients();
@@ -43,9 +44,10 @@ export default function PatientsPage() {
       const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
       const statusMatch = patientStatus === "all" || patient.status === patientStatus;
       const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
-      return textMatch && statusMatch && dateMatch;
+      const trainingMatch = showTrainingRecords || !isSeededTrainingRecord(patient);
+      return textMatch && statusMatch && dateMatch && trainingMatch;
     });
-  }, [dateFilter, exactDate, patientStatus, patients, query, rangeEnd, rangeStart, today]);
+  }, [dateFilter, exactDate, patientStatus, patients, query, rangeEnd, rangeStart, showTrainingRecords, today]);
 
   async function loadPatients() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -136,7 +138,12 @@ export default function PatientsPage() {
               <option value="archived">Archived</option>
             </select>
           </label>
+          <label className="toggle-row">
+            <input checked={showTrainingRecords} onChange={(event) => setShowTrainingRecords(event.target.checked)} type="checkbox" />
+            Show training records
+          </label>
         </div>
+        {!showTrainingRecords && patients.some(isSeededTrainingRecord) ? <p className="badge compact-safety-badge">Training records hidden</p> : null}
 
         {error ? <p className="form-error">{error}</p> : null}
         {status === "Login required" ? (
