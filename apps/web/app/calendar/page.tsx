@@ -1,17 +1,12 @@
-import { MvpPage } from "../mvp-page";
+import { ClinicOperationsPage } from "../clinic-operations-page";
 
 export default function CalendarPage() {
   return (
-    <MvpPage
+    <ClinicOperationsPage
+      mode="calendar"
       eyebrow="Calendar"
       title="Doctor Calendar"
-      items={[
-        "Today schedule for doctors and reception.",
-        "Open appointments can be handed to the waiting queue.",
-        "Calendar visibility stays operational; no clinical decisions are automated."
-      ]}
-      endpoint={`/appointments/calendar?date=${new Date().toISOString().slice(0, 10)}`}
-      collectionKey="appointments"
+      description="Today schedule for doctors and reception, with check-in, cancellation, no-show, queue, and billing notes kept operational."
     />
   );
 }

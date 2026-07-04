@@ -1,17 +1,12 @@
-import { MvpPage } from "../mvp-page";
+import { ClinicOperationsPage } from "../clinic-operations-page";
 
 export default function InvestigationsPage() {
   return (
-    <MvpPage
+    <ClinicOperationsPage
+      mode="investigations"
       eyebrow="Orders"
       title="Investigations"
-      items={[
-        "Investigation order and item foundation",
-        "Lifecycle status tracking with audit events",
-        "Priority is operational only, not emergency triage"
-      ]}
-      endpoint="/investigations/orders"
-      collectionKey="investigationOrders"
+      description="Doctor-requested lab, radiology, ultrasound, and pathology orders appear here for handoff and print-friendly request review."
     />
   );
 }
