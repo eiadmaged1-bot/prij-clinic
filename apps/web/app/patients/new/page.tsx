@@ -13,7 +13,6 @@ type FormState = {
   fullName: string;
   firstName: string;
   lastName: string;
-  sex: string;
   patientType: string;
   sexualActivityStatus: string;
   dateOfBirth: string;
@@ -31,7 +30,6 @@ const initialState: FormState = {
   fullName: "",
   firstName: "",
   lastName: "",
-  sex: "",
   patientType: "GENERAL",
   sexualActivityStatus: "unknown",
   dateOfBirth: "",
@@ -78,7 +76,7 @@ export default function NewPatientPage() {
           medicalRecordNumber: form.medicalRecordNumber,
           firstName,
           lastName,
-          sex: form.sex,
+          sex: "female",
           patientType: form.patientType,
           sexualActivityStatus: form.sexualActivityStatus,
           dateOfBirth: form.dateOfBirth,
@@ -198,15 +196,6 @@ export default function NewPatientPage() {
             <input onChange={(event) => update("lastName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.lastName} />
           </label>
           <label>
-            Sex
-            <select onChange={(event) => update("sex", event.target.value)} value={form.sex}>
-              <option value="">Not set</option>
-              <option value="female">Female</option>
-              <option value="male">Male</option>
-              <option value="other">Other / not specified</option>
-            </select>
-          </label>
-          <label>
             Patient type
             <select onChange={(event) => update("patientType", event.target.value)} value={form.patientType}>
               <option value="GENERAL">General</option>
@@ -215,15 +204,19 @@ export default function NewPatientPage() {
               <option value="WOMEN_HEALTH">Women Health</option>
             </select>
           </label>
-          <label>
-            Sexual activity status
-            <select onChange={(event) => update("sexualActivityStatus", event.target.value)} value={form.sexualActivityStatus}>
-              <option value="unknown">Unknown / not asked</option>
-              <option value="not_sexually_active">Not sexually active</option>
-              <option value="sexually_active">Sexually active</option>
-              <option value="prefer_not_to_say">Prefer not to say</option>
-            </select>
-          </label>
+          <fieldset className="form-fieldset wide compact-panel clinical-privacy-section">
+            <legend>Sensitive clinical details</legend>
+            <p className="muted">Optional and respectful. Reception can leave this as not asked.</p>
+            <label>
+              Sexual activity status
+              <select onChange={(event) => update("sexualActivityStatus", event.target.value)} value={form.sexualActivityStatus}>
+                <option value="unknown">Unknown / not asked</option>
+                <option value="not_sexually_active">Not sexually active / Virgin</option>
+                <option value="sexually_active">Sexually active</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </label>
+          </fieldset>
           <label>
             Date of birth
             <input onChange={(event) => update("dateOfBirth", event.target.value)} type="date" value={form.dateOfBirth} />

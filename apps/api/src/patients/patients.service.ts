@@ -50,7 +50,7 @@ export class PatientsService {
           firstName: dto.firstName.trim(),
           lastName: dto.lastName.trim(),
           dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-          sex: dto.sex?.trim() || null,
+          sex: dto.sex?.trim() || "female",
           patientType: dto.patientType ?? "GENERAL",
           sexualActivityStatus: dto.sexualActivityStatus ?? "unknown",
           phone: dto.phone?.trim() || null,
