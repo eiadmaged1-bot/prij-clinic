@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { spawn, spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 
 async function loadLocalEnv() {
@@ -28,8 +29,11 @@ await loadLocalEnv();
 const prisma = new PrismaClient();
 const runId = `${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 const checks = [];
+let devProcess = null;
 
 async function main() {
+  await ensureLocalAppReady();
+
   await expectReachable(`${WEB_URL}/login`, "login page reachable");
   await expectReachable(`${WEB_URL}/admin/accounts`, "accounts page reachable");
 
@@ -170,7 +174,7 @@ async function login(identifier, password) {
 }
 
 async function expectReachable(url, label) {
-  const response = await fetch(url);
+  const response = await fetchWithContext(url, { headers: { Accept: "text/html,application/json" } }, label);
   assert(response.ok, `${label} returned ${response.status}`);
   checks.push(label);
 }
@@ -188,17 +192,105 @@ async function apiRequest(method, path, token, body) {
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetchWithContext(`${API_URL}${path}`, {
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body)
-  });
+  }, `${method} ${path}`);
 
   return {
     ok: response.ok,
     status: response.status,
     body: await parseBody(response)
   };
+}
+
+async function ensureLocalAppReady() {
+  const timeoutMs = Number(process.env.ACCOUNTS_RBAC_WAIT_TIMEOUT_MS || 120_000);
+  const autoStart = process.env.ACCOUNTS_RBAC_AUTO_START !== "false";
+
+  if (await localAppReady()) {
+    checks.push("local app already reachable");
+    return;
+  }
+
+  if (!autoStart) {
+    throw new Error(
+      `Local web/API are not reachable. Start them with npm run dev, or set APP_URL/API_URL. Checked ${WEB_URL}/login and ${API_URL}/health.`
+    );
+  }
+
+  console.log("ACCOUNTS-RBAC INFO starting local app with npm run dev");
+  devProcess = spawnDev();
+  const deadline = Date.now() + timeoutMs;
+  let lastError = "not checked";
+
+  while (Date.now() < deadline) {
+    try {
+      if (await localAppReady()) {
+        checks.push("local app auto-started");
+        return;
+      }
+      lastError = "web/API not ready yet";
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await sleep(2_000);
+  }
+
+  throw new Error(
+    `Local app did not become ready within ${timeoutMs}ms: ${lastError}. Ensure PostgreSQL is running, then retry npm run test:accounts:rbac.`
+  );
+}
+
+async function localAppReady() {
+  const [web, api, db] = await Promise.allSettled([
+    fetch(`${WEB_URL}/login`, { headers: { Accept: "text/html" } }),
+    fetch(`${API_URL}/health`, { headers: { Accept: "application/json" } }),
+    fetch(`${API_URL}/health/db`, { headers: { Accept: "application/json" } })
+  ]);
+
+  if (web.status !== "fulfilled" || api.status !== "fulfilled" || db.status !== "fulfilled") return false;
+  if (!web.value.ok || !api.value.ok || !db.value.ok) return false;
+
+  const apiText = await api.value.text();
+  const dbText = await db.value.text();
+  return /"ok"|ok/i.test(apiText) && /connected|ok/i.test(dbText);
+}
+
+function spawnDev() {
+  if (process.platform === "win32") {
+    return spawn("cmd.exe", ["/d", "/s", "/c", "npm run dev"], {
+      stdio: "ignore",
+      windowsHide: true
+    });
+  }
+  return spawn("npm", ["run", "dev"], { stdio: "ignore" });
+}
+
+function stopDevProcess() {
+  if (!devProcess || devProcess.killed) return;
+  if (process.platform === "win32" && devProcess.pid) {
+    spawnSync("taskkill", ["/pid", String(devProcess.pid), "/t", "/f"], {
+      stdio: "ignore",
+      windowsHide: true
+    });
+    return;
+  }
+  devProcess.kill("SIGTERM");
+}
+
+async function fetchWithContext(url, options, label) {
+  try {
+    return await fetch(url, options);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`${label} could not reach ${url}: ${detail}. Ensure npm run dev is running and PostgreSQL is reachable.`);
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function parseBody(response) {
@@ -223,5 +315,6 @@ await main()
     process.exitCode = 1;
   })
   .finally(async () => {
+    stopDevProcess();
     await prisma.$disconnect();
   });
