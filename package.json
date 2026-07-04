@@ -136,6 +136,7 @@
     "test:v143:visual-density": "node scripts/v143-visual-density-test.mjs",
     "test:v143:live-search": "node scripts/v143-live-search-test.mjs",
     "test:v143:accounts-cleanup": "node scripts/v143-accounts-cleanup-test.mjs",
+    "test:v1431:post-visual-hotfix": "node scripts/v1431-post-visual-hotfix-test.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",

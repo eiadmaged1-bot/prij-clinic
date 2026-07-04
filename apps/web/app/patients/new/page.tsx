@@ -13,7 +13,6 @@ type FormState = {
   fullName: string;
   firstName: string;
   lastName: string;
-  patientType: string;
   sexualActivityStatus: string;
   dateOfBirth: string;
   age: string;
@@ -30,7 +29,6 @@ const initialState: FormState = {
   fullName: "",
   firstName: "",
   lastName: "",
-  patientType: "GENERAL",
   sexualActivityStatus: "unknown",
   dateOfBirth: "",
   age: "",
@@ -77,7 +75,7 @@ export default function NewPatientPage() {
           firstName,
           lastName,
           sex: "female",
-          patientType: form.patientType,
+          patientType: "WOMEN_HEALTH",
           sexualActivityStatus: form.sexualActivityStatus,
           dateOfBirth: form.dateOfBirth,
           phone: form.phone,
@@ -114,7 +112,7 @@ export default function NewPatientPage() {
         },
         body: JSON.stringify({
           patientId: patient.id,
-          intakeType: form.patientType === "OB" ? "pregnancy" : form.patientType === "GYN" ? "gynecology" : "new_patient",
+          intakeType: "new_patient",
           patientReportedJson: {
             sourceLabel: "patient_reported",
             notes: form.notes.trim(),
@@ -194,15 +192,6 @@ export default function NewPatientPage() {
           <label>
             Last name
             <input onChange={(event) => update("lastName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.lastName} />
-          </label>
-          <label>
-            Patient type
-            <select onChange={(event) => update("patientType", event.target.value)} value={form.patientType}>
-              <option value="GENERAL">General</option>
-              <option value="OB">OB</option>
-              <option value="GYN">GYN</option>
-              <option value="WOMEN_HEALTH">Women Health</option>
-            </select>
           </label>
           <fieldset className="form-fieldset wide compact-panel clinical-privacy-section">
             <legend>Sensitive clinical details</legend>

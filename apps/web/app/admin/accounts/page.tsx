@@ -10,7 +10,7 @@ const reservedPermissions = ["system_owner.manage", "developer_owner.manage"];
 
 type Account = {
   id: string;
-  email: string;
+  email: string | null;
   loginId: string | null;
   displayName: string;
   status: string;
@@ -73,12 +73,13 @@ export default function AccountsPage() {
     }),
     [token]
   );
-  const selected = accounts.find((account) => account.id === selectedId) ?? accounts[0] ?? null;
+  const visibleAccounts = accounts.filter((account) => showDemoAccounts || !isDemoAccount(account));
+  const selected = visibleAccounts.find((account) => account.id === selectedId) ?? visibleAccounts[0] ?? accounts.find((account) => account.protectedAccount) ?? null;
   const selectedPermissions = new Set(
     selected?.permissionPreset === "custom" ? selected.customAllowedPermissions : selected?.roleBoundaryPermissions ?? []
   );
   const filteredAccounts = accounts.filter((account) => {
-    const text = `${account.displayName} ${account.loginId ?? ""} ${account.email} ${account.roles.join(" ")}`.toLowerCase();
+    const text = `${account.displayName} ${account.loginId ?? ""} ${account.email ?? ""} ${account.roles.join(" ")}`.toLowerCase();
     const demoMatch = showDemoAccounts || !isDemoAccount(account);
     return (
       text.includes(query.toLowerCase()) &&
@@ -218,7 +219,7 @@ export default function AccountsPage() {
           <div className="section-heading">
             <div>
               <h2>Staff accounts</h2>
-              <p className="muted">{filteredAccounts.length} visible accounts</p>
+              <p className="muted">{filteredAccounts.length} visible of {accounts.length} total accounts</p>
             </div>
             <button className="button secondary compact" onClick={loadAccounts} type="button">Refresh</button>
           </div>
@@ -253,7 +254,7 @@ export default function AccountsPage() {
               <button className={`account-row ${selected?.id === account.id ? "active" : ""}`} key={account.id} onClick={() => setSelectedId(account.id)} type="button">
                 <span>
                   <strong>{account.displayName}</strong>
-                  <small>{account.loginId ?? account.email} - {account.role}</small>
+                  <small>{account.loginId ?? displayEmail(account.email)} - {account.role}</small>
                 </span>
                 <span className={`badge ${account.protectedAccount ? "danger" : account.status === "active" ? "accent" : "warning"}`}>
                   {account.protectedAccount ? "Protected System Owner" : account.status}
@@ -314,7 +315,7 @@ export default function AccountsPage() {
           <div className="section-heading">
             <div>
               <h2>{selected.displayName}</h2>
-              <p className="muted">{selected.loginId ?? selected.email} - {selected.roles.join(", ")}</p>
+              <p className="muted">{selected.loginId ?? displayEmail(selected.email)} - {selected.roles.join(", ")}</p>
             </div>
             <div className="form-actions">
               {selected.protectedAccount ? <span className="badge danger">Protected System Owner</span> : null}
@@ -408,6 +409,11 @@ async function friendlyError(response: Response) {
   return body?.message ?? "Could not save account changes.";
 }
 
+function displayEmail(email?: string | null) {
+  if (!email || email.endsWith("@accounts.prij.local")) return "No email saved";
+  return email;
+}
+
 function permissionGroups(permissions: Permission[], boundary: string[]) {
   const available = new Set([...boundary, ...reservedPermissions]);
   const groups: Array<[string, string[]]> = [
@@ -444,6 +450,16 @@ function permissionLabel(key: string) {
 
 function isDemoAccount(account: Account) {
   if (account.loginId === "eyad" || account.protectedAccount) return false;
-  const text = `${account.loginId ?? ""} ${account.email ?? ""} ${account.displayName}`.toLowerCase();
-  return text.includes("demo") || text.includes("test") || text.includes("local");
+  const loginId = (account.loginId ?? "").toLowerCase();
+  const email = (account.email ?? "").toLowerCase();
+  const displayName = account.displayName.toLowerCase();
+  return (
+    displayName.startsWith("demo") ||
+    loginId.startsWith("demo") ||
+    email.startsWith("demo.") ||
+    loginId.startsWith("acctdoctor") ||
+    loginId.startsWith("acctreception") ||
+    loginId.startsWith("test") ||
+    (email.includes("@accounts.prij.local") && (loginId.startsWith("acct") || loginId.startsWith("test") || loginId.startsWith("demo")))
+  );
 }

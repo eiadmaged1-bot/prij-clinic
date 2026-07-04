@@ -145,6 +145,13 @@ export class RbacService {
       });
 
       return tx.user.findUniqueOrThrow({ where: { id: user.id }, include: accountInclude });
+    }).catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const target = Array.isArray(error.meta?.target) ? error.meta?.target.join(", ") : String(error.meta?.target ?? "");
+        if (target.includes("loginId")) throw new BadRequestException("Login ID already exists.");
+        if (target.includes("email")) throw new BadRequestException("Account email already exists. Leave it blank or use another email.");
+      }
+      throw error;
     });
 
     await this.audit.record({

@@ -272,6 +272,17 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.topbar .button,
+.topbar .badge,
+.topbar .comfort-switch button,
+.topbar .user-menu,
+.topbar .user-menu-copy strong,
+.topbar .user-menu-copy span,
+.app-menu-button {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
 button,
 a,
 input,
@@ -839,6 +850,106 @@ body {
 .compact-safety-badge {
   min-height: 1.85rem;
   white-space: nowrap;
+}
+
+.patient-picker {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.patient-picker-panel {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.patient-picker-results {
+  max-height: 18rem;
+  overflow: auto;
+}
+
+.selected-request-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.request-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-height: 2.15rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.25rem 0.35rem 0.25rem 0.65rem;
+  white-space: nowrap;
+}
+
+.request-chip strong {
+  max-width: min(22rem, 60vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
+
+.request-chip em {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-style: normal;
+}
+
+.request-chip button {
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.role-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.55rem;
+}
+
+.role-compact-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 0.65rem;
+}
+
+.protocol-status,
+.protocol-row-meta,
+.status-count-row .badge {
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.protocol-card-grid.compact-protocol-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.protocol-card .data-row-header strong,
+.data-row.dense .data-row-header strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reception-inline-patient-results {
+  width: 100%;
 }
 
 .safety-badge-stack {
@@ -3624,6 +3735,40 @@ body {
   font-size: 1.02rem;
 }
 
+.doctor-comfort-mode .topbar {
+  min-height: 3.65rem;
+  max-height: 4.5rem;
+  overflow: hidden;
+}
+
+.doctor-comfort-mode .topbar .button,
+.doctor-comfort-mode .topbar .badge,
+.doctor-comfort-mode .topbar .comfort-switch button,
+.doctor-comfort-mode .topbar .user-menu {
+  min-height: 2.35rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  padding: 0.42rem 0.62rem;
+  white-space: nowrap;
+}
+
+.doctor-comfort-mode .topbar .user-menu {
+  flex-wrap: nowrap;
+  max-width: 20rem;
+  overflow: hidden;
+}
+
+.doctor-comfort-mode .topbar .user-menu-copy {
+  min-width: 0;
+  max-width: 8.5rem;
+}
+
+.doctor-comfort-mode .topbar .user-menu-copy strong,
+.doctor-comfort-mode .topbar .user-menu-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .doctor-comfort-mode .button,
 .doctor-comfort-mode .patient-action,
 .doctor-comfort-mode .patient-tabs.simple .tab-button,
@@ -3727,6 +3872,20 @@ body {
   padding: 0.75rem 0.9rem;
 }
 
+.doctor-comfort-mode .topbar .button,
+.doctor-comfort-mode .topbar .badge,
+.doctor-comfort-mode .topbar .comfort-switch button,
+.doctor-comfort-mode .topbar .user-menu {
+  align-self: center;
+  min-height: 2.35rem;
+  max-height: 2.7rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  line-height: 1.1;
+  padding: 0.42rem 0.62rem;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .theme-prij-heritage .portal-search {
     display: grid;
@@ -3812,8 +3971,8 @@ body {
   .doctor-comfort-mode .topbar,
   .theme-prij-heritage.doctor-comfort-mode .topbar,
   .theme-medicolize-portal.doctor-comfort-mode .topbar {
-    max-height: none;
-    overflow: visible;
+    max-height: 4.75rem;
+    overflow: hidden;
   }
 
   .doctor-comfort-mode .patient-tabs,

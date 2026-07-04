@@ -2,13 +2,14 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { PatientPicker, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
 type CatalogItem = { id: string; name: string; category: string; modality?: string | null };
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
-type Patient = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; phone?: string | null };
+type Patient = PatientPickerPatient;
 
 export default function InvestigationsPage() {
   const [query, setQuery] = useState("");
@@ -17,7 +18,6 @@ export default function InvestigationsPage() {
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState("");
-  const [patientQuery, setPatientQuery] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [status, setStatus] = useState("Ready");
 
@@ -94,12 +94,9 @@ export default function InvestigationsPage() {
         <article className="panel">
           <div className="section-heading"><h2>Request Builder</h2><span className="badge">{status}</span></div>
           <form className="form-grid" onSubmit={submit}>
-            <SelectedPatientCard patient={patients.find((patient) => patient.id === patientId)} />
-            <label>Choose patient<input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Search name, phone, or file number" /></label>
-            <select value={patientId} onChange={(event) => setPatientId(event.target.value)} required>
-              <option value="">Select patient file</option>
-              {patients.filter((patient) => patientSearch(patient).includes(patientQuery.toLowerCase())).slice(0, 20).map((patient) => <option key={patient.id} value={patient.id}>{patientLabel(patient)}</option>)}
-            </select>
+            <div className="wide">
+              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient file before saving this request." />
+            </div>
             <label>Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, ferritin, CA-125, X-ray, 4D ultrasound, vascular report" /></label>
             <div className="data-list">
               {catalog.slice(0, 10).map((item) => (
@@ -108,8 +105,14 @@ export default function InvestigationsPage() {
                 </button>
               ))}
             </div>
-            <div className="workflow-band">
-              {selected.length ? selected.map((item) => <span key={item.id}>{item.name}</span>) : <span>No requests selected</span>}
+            <div className="selected-request-chips wide" data-selected-request-chips>
+              {selected.length ? selected.map((item) => (
+                <span className="request-chip" key={item.id}>
+                  <strong>{item.name}</strong>
+                  <em>{item.modality ?? item.category}</em>
+                  <button type="button" aria-label={`Remove ${item.name}`} onClick={() => setSelected((current) => current.filter((selectedItem) => selectedItem.id !== item.id))}>x</button>
+                </span>
+              )) : <span className="empty-state compact smart-empty-state">No requests selected</span>}
             </div>
             <label>Clinical note per request<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
             <button className="button" type="submit">Attach to patient</button>
@@ -138,19 +141,6 @@ export default function InvestigationsPage() {
 
 function friendly(value: string) {
   return value.replaceAll("_", " ");
-}
-
-function SelectedPatientCard({ patient }: { patient?: Patient }) {
-  return <div className="notice">{patient ? `Selected patient: ${patientLabel(patient)} | ${patient.medicalRecordNumber ?? "No file number"} | ${patient.phone ?? "No phone"}` : "Select a patient file before saving this request."}</div>;
-}
-
-function patientLabel(patient?: Patient | null) {
-  if (!patient) return "Patient";
-  return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
-}
-
-function patientSearch(patient: Patient) {
-  return `${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""} ${patient.phone ?? ""}`.toLowerCase();
 }
 
 async function apiGet(endpoint: string) {

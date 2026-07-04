@@ -3,13 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../../components/clinic/UniversalSearchBox";
+import { PatientPicker, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Shortcut = { id: string; displayName: string; genericName: string; defaultDoseText?: string | null; defaultTimingText?: string | null; defaultDurationText?: string | null; defaultInstructions?: string | null };
 type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; itemsJson?: PrescriptionItem[] };
 type PrescriptionItem = { medicationName: string; dose?: string; frequency?: string; duration?: string; instructions?: string; notes?: string };
-type Patient = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; phone?: string | null };
+type Patient = PatientPickerPatient;
 
 const emptyItem: PrescriptionItem = { medicationName: "", dose: "", frequency: "", duration: "", instructions: "", notes: "" };
 
@@ -21,7 +22,6 @@ export default function PrescriptionsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [items, setItems] = useState<PrescriptionItem[]>([{ ...emptyItem }]);
   const [patientId, setPatientId] = useState("");
-  const [patientQuery, setPatientQuery] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("Ready");
 
@@ -126,12 +126,9 @@ export default function PrescriptionsPage() {
           </div>
           <UniversalSearchBox scope="prescriptions" />
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void savePrescription(); }}>
-            <SelectedPatientCard patient={patients.find((patient) => patient.id === patientId)} />
-            <label>Choose patient<input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Search name, phone, or file number" /></label>
-            <select value={patientId} onChange={(event) => setPatientId(event.target.value)}>
-              <option value="">Standalone print draft</option>
-              {patients.filter((patient) => patientSearch(patient).includes(patientQuery.toLowerCase())).slice(0, 20).map((patient) => <option key={patient.id} value={patient.id}>{patientLabel(patient)}</option>)}
-            </select>
+            <div className="wide">
+              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} allowStandalone standaloneLabel="Standalone print draft" />
+            </div>
             {items.map((item, index) => (
               <div className="panel compact-panel" key={index}>
                 <label>Medication name<input required value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
@@ -194,19 +191,6 @@ function RecordList({ rows }: { rows: Record<string, unknown>[] }) {
 
 function updateItem(index: number, key: keyof PrescriptionItem, value: string, setItems: (updater: (current: PrescriptionItem[]) => PrescriptionItem[]) => void) {
   setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
-}
-
-function SelectedPatientCard({ patient }: { patient?: Patient }) {
-  return <div className="notice">{patient ? `Selected patient: ${patientLabel(patient)} | ${patient.medicalRecordNumber ?? "No file number"} | ${patient.phone ?? "No phone"}` : "No patient selected. This will stay a standalone printable draft."}</div>;
-}
-
-function patientLabel(patient?: Patient | null) {
-  if (!patient) return "Patient";
-  return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
-}
-
-function patientSearch(patient: Patient) {
-  return `${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""} ${patient.phone ?? ""}`.toLowerCase();
 }
 
 async function apiGet(endpoint: string) {

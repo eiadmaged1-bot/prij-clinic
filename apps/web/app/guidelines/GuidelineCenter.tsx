@@ -64,6 +64,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [answer, setAnswer] = useState("");
   const [citations, setCitations] = useState<Array<{ citationLabel: string; title: string }>>([]);
   const [message, setMessage] = useState("Ready");
+  const [showTrainingDocuments, setShowTrainingDocuments] = useState(false);
 
   useEffect(() => {
     if (!token || !canRead) return;
@@ -183,7 +184,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
                 </Link>
               ))}
             </section>
-            <DocumentList documents={documents.slice(0, 6)} title="Recently indexed documents" />
+            <DocumentList documents={filterTrainingDocuments(documents, showTrainingDocuments).slice(0, 6)} title="Recently indexed documents" showTrainingDocuments={showTrainingDocuments} setShowTrainingDocuments={setShowTrainingDocuments} />
           </>
         ) : null}
         {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} /> : null}
@@ -191,7 +192,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
         {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
         {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
         {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
-        {view === "review" ? <DocumentList documents={documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW")} title="Documents needing review" /> : null}
+        {view === "review" ? <DocumentList documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"), showTrainingDocuments)} title="Documents needing review" showTrainingDocuments={showTrainingDocuments} setShowTrainingDocuments={setShowTrainingDocuments} /> : null}
         {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
         {view === "private" ? (
           <PrivateVault
@@ -309,22 +310,43 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
   );
 }
 
-function DocumentList({ documents, title }: { documents: Document[]; title: string }) {
+function DocumentList({ documents, title, showTrainingDocuments, setShowTrainingDocuments }: { documents: Document[]; title: string; showTrainingDocuments?: boolean; setShowTrainingDocuments?: (value: boolean) => void }) {
   return (
     <section className="panel">
-      <div className="section-heading"><h2>{title}</h2><span className="badge">{documents.length}</span></div>
-      <div className="data-list">
+      <div className="section-heading">
+        <h2>{title}</h2>
+        <div className="form-actions">
+          <span className="badge">{documents.length}</span>
+          {setShowTrainingDocuments ? (
+            <label className="toggle-row">
+              <input checked={Boolean(showTrainingDocuments)} onChange={(event) => setShowTrainingDocuments(event.target.checked)} type="checkbox" />
+              Show training documents
+            </label>
+          ) : null}
+        </div>
+      </div>
+      {!showTrainingDocuments && setShowTrainingDocuments ? <p className="badge compact-safety-badge">Training documents hidden</p> : null}
+      <div className="dense-card-list">
         {documents.map((document) => (
-          <article className="data-row" key={document.id}>
+          <article className="data-row dense" key={document.id}>
             <div className="data-row-header"><strong>{document.title}</strong><span className="badge">{document.guidelineStatus}</span></div>
             <p>{document.organization} - {document.specialty} - {document.topic}</p>
             <p className="muted">{document.versionLabel ?? "No version label"} - {document._count?.chunks ?? 0} indexed chunks</p>
           </article>
         ))}
-        {!documents.length ? <Empty text="No guideline documents in this view yet." /> : null}
+        {!documents.length ? <Empty text={title === "Documents needing review" ? "No documents need review" : "No guideline documents in this view yet."} /> : null}
       </div>
     </section>
   );
+}
+
+function filterTrainingDocuments(documents: Document[], showTrainingDocuments: boolean) {
+  return showTrainingDocuments ? documents : documents.filter((document) => !isTrainingDocument(document));
+}
+
+function isTrainingDocument(document: Document) {
+  const text = `${document.title} ${document.organization} ${document.topic}`.toLowerCase();
+  return document.title.toLowerCase().startsWith("demo") || text.includes("route guideline") || text.includes("local demo") || text.includes("training");
 }
 
 function PrivateVault({

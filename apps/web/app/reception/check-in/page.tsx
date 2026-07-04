@@ -3,17 +3,17 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
+import { PatientPicker, SelectedPatientSummary, patientLabel, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
-type Patient = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; phone?: string | null; status?: string | null };
+type Patient = PatientPickerPatient;
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient };
 
 export default function ReceptionCheckInPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [patientQuery, setPatientQuery] = useState("");
   const [appointmentQuery, setAppointmentQuery] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -35,7 +35,6 @@ export default function ReceptionCheckInPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const patientMatches = patients.filter((patient) => searchText(patient).includes(patientQuery.toLowerCase())).slice(0, 8);
   const appointmentMatches = appointments
     .filter((appointment) => !selectedPatient || appointment.patientId === selectedPatient.id)
     .filter((appointment) => `${appointmentLabel(appointment)} ${appointment.status}`.toLowerCase().includes(appointmentQuery.toLowerCase()))
@@ -80,10 +79,7 @@ export default function ReceptionCheckInPage() {
         <div className="wizard-steps">
           <article className="compact-panel">
             <span className="badge">Step 1</span>
-            <label>Select patient<input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Search name, MRN, or phone" /></label>
-            <div className="dense-card-list">
-              {patientMatches.map((patient) => <button className={`picker-row ${selectedPatient?.id === patient.id ? "active" : ""}`} key={patient.id} type="button" onClick={() => { setSelectedPatient(patient); setSelectedAppointment(null); }}><strong>{patientLabel(patient)}</strong><span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"}</span></button>)}
-            </div>
+            <PatientPicker patients={patients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { setSelectedPatient(patients.find((patient) => patient.id === id) ?? null); setSelectedAppointment(null); }} required label="Select patient" />
           </article>
           <article className="compact-panel">
             <span className="badge">Step 2</span>
@@ -98,7 +94,7 @@ export default function ReceptionCheckInPage() {
             <div className="segmented-control" aria-label="Queue priority">
               {["routine", "priority"].map((value) => <button className={priority === value ? "active" : ""} key={value} type="button" onClick={() => setPriority(value)}>{value === "routine" ? "Routine" : "Priority note"}</button>)}
             </div>
-            {selectedPatient ? <SelectedPatientCard patient={selectedPatient} /> : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patient selected.</span></p>}
+            {selectedPatient ? <SelectedPatientSummary patient={selectedPatient} /> : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patient selected.</span></p>}
           </article>
           <article className="compact-panel">
             <span className="badge">Step 4</span>
@@ -109,19 +105,6 @@ export default function ReceptionCheckInPage() {
       </section>
     </AppShell>
   );
-}
-
-function SelectedPatientCard({ patient }: { patient: Patient }) {
-  return <div className="selected-patient-card"><strong>{patientLabel(patient)}</strong><span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | {patient.status ?? "active"}</span></div>;
-}
-
-function patientLabel(patient?: Patient | null) {
-  if (!patient) return "Patient";
-  return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
-}
-
-function searchText(patient: Patient) {
-  return `${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""} ${patient.phone ?? ""}`.toLowerCase();
 }
 
 function appointmentLabel(appointment: Appointment) {

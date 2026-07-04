@@ -29,7 +29,7 @@ export default function ReceptionTodayPage() {
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const selectedDate = useMemo(() => dateForMode(dateMode, customDate, today), [customDate, dateMode, today]);
-  const filteredPatients = patients.filter((patient) => patientSearchText(patient).includes(query.toLowerCase())).slice(0, 8);
+  const filteredPatients = patients.filter((patient) => patientSearchText(patient).includes(query.toLowerCase())).slice(0, 5);
 
   const load = useCallback(async () => {
     setStatus("Loading");
@@ -115,6 +115,10 @@ export default function ReceptionTodayPage() {
         </div>
         {!showTrainingRecords && hiddenTrainingCount > 0 ? <p className="badge compact-safety-badge">Training records hidden: {hiddenTrainingCount}</p> : null}
         {dateMode === "range" ? <p className="muted">Showing selected range: {dateRangeStart} to {dateRangeEnd}. Current APIs use today&apos;s queue and selected appointment date.</p> : null}
+        <div className="dense-card-list reception-inline-patient-results">
+          {query.trim() ? filteredPatients.map((patient) => <Link className="picker-row" key={patient.id} href={`/patients/${patient.id}`}><strong>{patientLabel(patient)}</strong><span>{patient.medicalRecordNumber ?? "No file number"} | {patient.phone ?? "No phone"} | Open file</span></Link>) : null}
+        </div>
+        <Link className="button secondary compact" href="/patients">Open files</Link>
       </section>
       <section className="compact-metric-grid">
         <Metric label="Appointments" value={appointments.length} />
@@ -149,13 +153,6 @@ export default function ReceptionTodayPage() {
         </div>
       </section>
       {message ? <p className="notice">{message}</p> : null}
-      <section className="content-grid">
-        <article className="panel compact-panel">
-          <div className="section-heading"><h2>Patient search</h2><Link className="button secondary compact" href="/patients">Open files</Link></div>
-          <label>Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, file number, or phone" /></label>
-          <div className="data-list">{filteredPatients.map((patient) => <Link className="data-row" key={patient.id} href={`/patients/${patient.id}`}><strong>{patientLabel(patient)}</strong><span className="badge">Open file</span></Link>)}</div>
-        </article>
-      </section>
       <section className="content-grid">
         <DailyList title="Today appointments" rows={appointments.map((appointment) => ({ id: appointment.id, patientId: appointment.patientId, title: `${appointmentTime(appointment.startAt)} - ${patientLabel(appointment.patient)}`, status: appointment.status, detail: [appointment.appointmentType, appointment.source, appointment.notes, appointment.cancellationReason, appointment.noShowReason].filter(Boolean).join(" | "), invoice: invoiceFor(invoices, appointment.patientId) }))} />
         <DailyList title="Waiting queue" rows={queue.map((ticket) => ({ id: ticket.id, patientId: ticket.patientId, title: `Queue ${ticket.queueNumber ?? ""} - ${patientLabel(ticket.patient)}`, status: ticket.status, detail: [ticket.priority, ticket.appointment?.appointmentType, ticket.cancellationReason].filter(Boolean).join(" | "), invoice: invoiceFor(invoices, ticket.patientId) }))} />

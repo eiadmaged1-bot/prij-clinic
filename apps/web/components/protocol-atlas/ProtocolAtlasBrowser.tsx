@@ -12,7 +12,7 @@ export function ProtocolAtlasBrowser() {
   const [statusFilter, setStatusFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [view, setView] = useState<"cards" | "list">("cards");
+  const [view, setView] = useState<"cards" | "list">("list");
   const [protocols, setProtocols] = useState<ProtocolSummary[]>([]);
   const [status, setStatus] = useState("Loading catalog");
 
@@ -98,12 +98,12 @@ export function ProtocolAtlasBrowser() {
               <strong>{protocol.title}</strong>
               <ProtocolStatusBadge status={protocol.implementationStatus} />
             </div>
-            <p className="muted">{protocol.specialtyGroup} | {protocol.riskLevel}</p>
+            <p className="muted protocol-row-meta">{protocol.specialtyGroup} | {protocol.riskLevel}</p>
             <dl className="profile-grid">
               <div><dt>Source</dt><dd>{shortSource(protocol.sourceName)}</dd></div>
               <div><dt>Risk</dt><dd>{protocol.riskLevel}</dd></div>
             </dl>
-            <details className="collapsible-help-panel">
+            <details className="collapsible-help-panel protocol-details">
               <summary>Open details</summary>
               <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
               <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>

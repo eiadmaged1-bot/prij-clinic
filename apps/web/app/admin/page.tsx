@@ -29,7 +29,7 @@ type MedicationReadiness = {
 
 type SafeUser = {
   id: string;
-  email: string;
+  email: string | null;
   displayName: string;
   status: string;
   roles: string[];
@@ -78,6 +78,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [syncHealth, setSyncHealth] = useState<SyncHealthSummary>({ total: 0, pending: 0, failed: 0, synced: 0, lastAttemptAt: null, entityTypes: [] });
   const [userSearch, setUserSearch] = useState("");
+  const [showDemoUsers, setShowDemoUsers] = useState(false);
+  const [showReadAuditEvents, setShowReadAuditEvents] = useState(false);
 
   const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
   const apiBaseUrl = useMemo(() => (typeof window === "undefined" ? "" : getApiBaseUrl()), []);
@@ -91,9 +93,11 @@ export default function AdminPage() {
   );
   const filteredUsers = useMemo(() => {
     const query = userSearch.trim().toLowerCase();
-    if (!query) return users;
-    return users.filter((user) => [user.displayName, user.email, user.roles.join(" ")].some((value) => value.toLowerCase().includes(query)));
-  }, [userSearch, users]);
+    return users
+      .filter((user) => showDemoUsers || !isDemoUser(user))
+      .filter((user) => !query || [user.displayName, user.email ?? "", user.roles.join(" ")].some((value) => value.toLowerCase().includes(query)));
+  }, [showDemoUsers, userSearch, users]);
+  const visibleAuditLogs = useMemo(() => (summary?.auditLogs ?? []).filter((entry) => showReadAuditEvents || !isReadAuditEvent(entry.action)), [showReadAuditEvents, summary]);
 
   useEffect(() => {
     void loadAdmin();
@@ -278,7 +282,7 @@ export default function AdminPage() {
 
       {summary ? (
         <section className="summary-grid">
-          <Metric label="Staff users" value={summary.summary.users ?? "-"} />
+          <Metric label="Visible staff users" value={filteredUsers.length} />
           <Metric label="Roles" value={summary.summary.roles ?? "-"} />
           <Metric label="Services" value={summary.summary.services ?? "-"} />
           <Metric label="Official medication rows" value={medicationReadiness?.officialRows ?? "-"} />
@@ -483,6 +487,11 @@ export default function AdminPage() {
             Search staff
             <input onChange={(event) => setUserSearch(event.target.value)} placeholder="Name, email, or role" value={userSearch} />
           </label>
+          <label className="toggle-row">
+            <input checked={showDemoUsers} onChange={(event) => setShowDemoUsers(event.target.checked)} type="checkbox" />
+            Show demo/test accounts
+          </label>
+          {!showDemoUsers ? <p className="badge compact-safety-badge">Demo/test accounts hidden</p> : null}
           <div className="data-list">
             {filteredUsers.slice(0, 8).map((user) => (
               <article className="data-row" key={user.id}>
@@ -490,7 +499,7 @@ export default function AdminPage() {
                   <strong>{user.displayName}</strong>
                   <span className="badge">{user.status}</span>
                 </div>
-                <p className="muted">{user.email} - {user.roles.join(", ") || "No role"}</p>
+                <p className="muted">{displayEmail(user.email)} - {user.roles.join(", ") || "No role"}</p>
               </article>
             ))}
           </div>
@@ -501,11 +510,11 @@ export default function AdminPage() {
             <h2>Access Overview</h2>
             <span className="badge">{roles.length} roles</span>
           </div>
-          <div className="data-list">
+          <div className="role-compact-grid">
             {roles.map((role) => (
-              <article className="data-row" key={role.id}>
+              <article className="role-compact-card" key={role.id}>
                 <strong>{role.name}</strong>
-                <p className="muted">{role.permissions.length} access rules assigned.</p>
+                <span className="badge">{role.permissions.length} rules</span>
               </article>
             ))}
           </div>
@@ -515,10 +524,14 @@ export default function AdminPage() {
       <section className="panel">
         <div className="section-heading">
           <h2>Audit Log Viewer</h2>
-          <span className="badge accent">Read only</span>
+          <label className="toggle-row">
+            <input checked={showReadAuditEvents} onChange={(event) => setShowReadAuditEvents(event.target.checked)} type="checkbox" />
+            Show read events
+          </label>
         </div>
+        {!showReadAuditEvents ? <p className="badge compact-safety-badge">Read/view events hidden</p> : null}
         <div className="data-list">
-          {(summary?.auditLogs ?? []).map((entry) => (
+          {visibleAuditLogs.map((entry) => (
             <article className="data-row" key={entry.id}>
               <div className="data-row-header">
                 <strong>{auditLabel(entry.action, entry.resourceType)}</strong>
@@ -545,6 +558,9 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 }
 
 function auditLabel(action: string, resourceType: string) {
+  if (action === "admin.users.read") return "User list viewed";
+  if (action === "admin.accounts.read") return "Account list viewed";
+  if (action === "admin.appearance.read") return "Appearance settings viewed";
   const normalized = `${resourceType}.${action}`.toLowerCase();
   if (normalized.includes("admin") && normalized.includes("control")) return "Owner opened Control Center";
   if (normalized.includes("user") && normalized.includes("list")) return "User list viewed";
@@ -554,6 +570,23 @@ function auditLabel(action: string, resourceType: string) {
   if (normalized.includes("investigation")) return "Investigation request updated";
   if (normalized.includes("service")) return "Service catalog updated";
   return action.replaceAll("_", " ").replaceAll(".", " ");
+}
+
+function isReadAuditEvent(action: string) {
+  const value = action.toLowerCase();
+  return value.endsWith(".read") || value.includes(".view");
+}
+
+function isDemoUser(user: SafeUser) {
+  const displayName = user.displayName.toLowerCase();
+  const email = (user.email ?? "").toLowerCase();
+  const loginLike = email.split("@")[0] ?? "";
+  return displayName.startsWith("demo") || email.startsWith("demo.") || email.includes("test") || (email.includes("@accounts.prij.local") && (loginLike.startsWith("acct") || loginLike.startsWith("test") || loginLike.startsWith("demo")));
+}
+
+function displayEmail(email?: string | null) {
+  if (!email || email.endsWith("@accounts.prij.local")) return "No email saved";
+  return email;
 }
 
 function humanResourceType(resourceType: string) {

@@ -1,6 +1,6 @@
 # Current Status
 
-v0.14.3 manual visual QA density lock sprint is in final verification on the local demo branch.
+v0.14.3.1 post-visual hotfix is in verification on the local demo branch.
 
 Completed in v0.14.3:
 - New Patient hides sex/gender from reception and defaults sex internally to female for the OB/GYN workflow.
@@ -15,6 +15,17 @@ Completed in this sprint:
 - Smart empty states with safe local next actions.
 - Human-readable audit and record labels.
 - Compact demo and safety badges that keep AI draft-only and doctor-review boundaries visible.
+
+Completed in v0.14.3.1:
+- Comfort Mode topbar utility buttons stay compact and nowrap.
+- Reception New Patient hides patient type while keeping internal compatibility defaults.
+- Account creation supports blank email with internal non-login compatibility email and friendly errors.
+- Demo/test accounts and guideline training documents are hidden by default with toggles.
+- Audit read/view events are hidden by default in Owner Control.
+- Clinical request selections are compact chips.
+- Prescriptions, investigations, and check-in use a searchable PatientPicker.
+- Protocol Atlas opens in compact list view by default.
+- Reception Today no longer duplicates patient search sections.
 
 Safety status:
 - Local demo/training data only. Do not enter real patient data.
