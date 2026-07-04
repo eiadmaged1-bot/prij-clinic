@@ -7,7 +7,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { autosaveLabel, saveLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
+import { autosaveLabel, enqueueOfflineOperation, saveLocalDraft, useAutosaveDraft, useOfflineSyncQueue } from "@/lib/autosave-draft";
 
 const steps = [
   ["Complaint", "What brought the patient today?", "Chief complaint"],
@@ -96,6 +96,7 @@ function GuidedVisitContent() {
     if (typeof window === "undefined") return null;
     return sessionStorage.getItem("prijClinicToken");
   }, []);
+  const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
   const autosave = useAutosaveDraft({
     key: `doctor-visit:${patientId ?? "unassigned"}`,
     entityType: "doctor_visit_draft",
@@ -104,10 +105,11 @@ function GuidedVisitContent() {
     enabled: Boolean(patientId),
     debounceMs: 400
   });
+  const syncQueue = useOfflineSyncQueue(apiBaseUrl, token);
 
   useEffect(() => {
     if (!patientId) return;
-    fetch(`${getApiBaseUrl()}/patients/${patientId}`, {
+    fetch(`${apiBaseUrl}/patients/${patientId}`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
@@ -117,7 +119,7 @@ function GuidedVisitContent() {
         setPatientName(`${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || "Selected patient");
       })
       .catch(() => undefined);
-  }, [patientId, token]);
+  }, [apiBaseUrl, patientId, token]);
 
   async function saveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,7 +140,7 @@ function GuidedVisitContent() {
         .join("\n")
     };
 
-    const response = await fetch(`${getApiBaseUrl()}${encounterId ? `/encounters/${encounterId}` : `/patients/${patientId}/encounters`}`, {
+    const response = await fetch(`${apiBaseUrl}${encounterId ? `/encounters/${encounterId}` : `/patients/${patientId}/encounters`}`, {
       method: encounterId ? "PATCH" : "POST",
       credentials: "include",
       headers: {
@@ -149,7 +151,14 @@ function GuidedVisitContent() {
     }).catch(() => null);
 
     if (!response || !response.ok) {
-      setError("Could not save the visit draft. Check your role and try again.");
+      await enqueueOfflineOperation({
+        entityType: "doctor_visit_draft",
+        patientId,
+        endpoint: encounterId ? `/encounters/${encounterId}` : `/patients/${patientId}/encounters`,
+        method: encounterId ? "PATCH" : "POST",
+        payload
+      });
+      setError("Server unavailable - draft saved on this device and queued for sync.");
       return;
     }
 
@@ -197,6 +206,17 @@ function GuidedVisitContent() {
         </div>
 
         <SafetyAlert />
+
+        {syncQueue.pendingCount > 0 ? (
+          <div className="notice">
+            <strong>Sync pending:</strong> {syncQueue.pendingCount} local draft operation{syncQueue.pendingCount === 1 ? "" : "s"} saved on this device.
+            <button className="button secondary" disabled={syncQueue.isSyncing} onClick={() => void syncQueue.syncNow()} type="button">
+              {syncQueue.isSyncing ? "Syncing..." : "Sync now"}
+            </button>
+          </div>
+        ) : syncQueue.lastSyncedAt ? (
+          <p className="notice success">Synced just now.</p>
+        ) : null}
 
         <section className="visit-progress" aria-label="Visit steps">
           {steps.map(([label], index) => (
