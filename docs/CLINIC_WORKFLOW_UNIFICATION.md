@@ -1,6 +1,8 @@
 # Clinic Workflow Unification
 
-v0.12.5 unifies patient intake, doctor queue selection, live search, prescription drafting, and clinical requests.
+v0.12.5 unifies patient intake, doctor queue selection, live search, prescription drafting, and clinical requests on branch `feature/v0.12.5-clinic-workflow-unification`.
+
+Baseline implementation commit: `e64c25a`.
 
 Safety boundaries:
 - No real patient data.
@@ -17,3 +19,8 @@ Implemented surfaces:
 - Role-aware `/search/live`.
 - Doctor-facing follow-up hints.
 
+Stabilization scope:
+- Normalize tests for reason-required queue cancellation and admin service updates.
+- Keep RBAC, audit, auth, patient scope, consent, account protection, and AI safety guards intact.
+- Clarify local accounts RBAC and staging smoke runner behavior.
+- Keep Clinical Requests wording in user-facing status docs while preserving compatible internal route names where still required.

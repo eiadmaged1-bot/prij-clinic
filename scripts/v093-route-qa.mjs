@@ -63,7 +63,7 @@ function assertNoCrashText(route, html) {
     [/Next\.js.*error/i, "Next.js error overlay text"],
     [/Error: .+ at .+\(.+:\d+:\d+\)/i, "stack trace"],
     [/^\s*[{[][\s\S]*[}\]]\s*$/i, "raw JSON response"],
-    [/<<<<<<<|=======|>>>>>>>/, "conflict marker"],
+    [new RegExp(`<{7}|={7}|>{7}`), "conflict marker"],
     [/PrismaClientKnownRequestError/i, "Prisma crash text"],
     [/TypeError:|ReferenceError:|SyntaxError:/i, "raw technical exception"]
   ];

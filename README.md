@@ -44,14 +44,24 @@ npm run db:v126:import-med-safety
 npm run test:v126:med-safety-review
 ```
 
-## v0.12.5 Clinic Usability Lock + Source Review Prep
+## v0.12.5 Clinic Workflow Unification + Stabilization
 
-v0.12.5 focuses on browser usability and medication safety source review prep. It tightens the path from login to patient creation, patient workspace, doctor visit, history, Care Assist, encounter, prescription, medication safety terminal, investigations, follow-up, and packet.
+Branch: `feature/v0.12.5-clinic-workflow-unification`.
+
+Baseline workflow commit: `e64c25a`.
+
+v0.12.5 unifies patient intake, doctor queue selection, universal live search, prescription templates, doctor saved medications, printable prescription building, clinical requests, external referral/procedure tracking, expanded investigations, follow-up hints, and workflow RBAC. Stabilization normalizes reason-required workflow tests, accounts RBAC readiness behavior, staging smoke environment usage, conflict-marker checks, and status docs without adding major new features.
 
 No fake pregnancy/lactation safety claims were added. Source review is prepared, not fully populated. Doctor approval is required, with no autonomous diagnosis, prescribing, dosing, or final plan generation. Real reviewed data import is next.
 
 ```powershell
-npm run test:v125:clinic-usability-lock
+npm run test:clinic-workflow
+npm run test:universal-search
+npm run test:prescription-builder
+npm run test:clinical-requests
+npm run test:security:expanded
+npm run test:accounts:rbac
+npm run test:staging:smoke:local
 ```
 
 ## v0.12.4 Doctor Visit Flow + Care Assist E2E

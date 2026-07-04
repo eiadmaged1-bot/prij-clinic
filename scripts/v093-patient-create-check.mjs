@@ -89,7 +89,8 @@ async function main() {
     const workspace = await fetchWorkspace(patient.id);
     const text = visibleText(workspace.text);
     if (!/Patient file|Loading patient details/i.test(text)) throw new Error("workspace did not render patient shell text");
-    if (/Unhandled Runtime Error|PrismaClientKnownRequestError|<<<<<<<|>>>>>>>/i.test(workspace.text)) throw new Error("workspace contains crash text");
+    const conflictMarkerPattern = new RegExp(`Unhandled Runtime Error|PrismaClientKnownRequestError|<{7}|>{7}`, "i");
+    if (conflictMarkerPattern.test(workspace.text)) throw new Error("workspace contains crash text");
     record("PASS", "patient workspace route exists", `/patients/${patient.id} status ${workspace.status}`);
   } catch (error) {
     record("FAIL", "patient workspace route", error instanceof Error ? error.message : String(error));
