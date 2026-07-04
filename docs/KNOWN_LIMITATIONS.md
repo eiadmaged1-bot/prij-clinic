@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.12.8 adds Owner Control Center and General Gynecology Starter workflows, but it is not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
+- Owner Control Center settings are protected and audited where implemented, but broader production configuration management, backup operations, monitoring, and legal readiness remain separate.
+- Service/price catalog entries are clinic billing settings only. There is no insurance/TPA workflow, real payment gateway, full accounting ledger, medication reference price integration, or investigation reference pricing engine.
+- Safe owner override actions are limited to existing soft-status patterns such as cancel, void, deactivate, and archive. There is no silent hard delete of signed clinical records or audit logs.
+- General gynecology and problem-focused templates are recording aids only. They do not diagnose, prescribe, dose, recommend contraception, rank treatment, or replace doctor judgment.
+- Browser QA for the combined sprint remains required before treating it as stable.
+
 - v0.12.7 is a demo candidate stabilization and browser QA lock, not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
 - Automated browser QA proves the local demo path with synthetic data only. Physical device QA, deployment hardening, monitoring, backup drills, legal consent content, and production security review remain separate.
 - Medication safety source import/review pages exist and are protected, but reviewed source population is still separate. Do not claim sourced pregnancy/lactation safety coverage until reviewed source rows are imported and approved.

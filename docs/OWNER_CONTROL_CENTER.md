@@ -1,36 +1,25 @@
 # Owner Control Center
 
-Date: 2026-06-28
+The Owner Control Center is available from `/admin` for Owner/Admin roles only. The backend also enforces Owner/Admin access for protected owner settings, so restricted staff cannot access it by calling APIs directly.
 
-The Owner Control Center is a local V0.1 demo interface for owner/admin operations. It is not production-ready.
+Sections:
+- Clinic profile placeholder
+- Branches and rooms placeholder where current models support branches
+- Service and price catalog
+- Staff/users links through account administration
+- Appearance/theme settings
+- Medication safety source review link
+- Audit log link
+- System status
+- Feature flags placeholder
 
-## Current Capabilities
+Sensitive changes must be audited where the audit pattern supports them. Service price/status changes, appearance default changes, account changes, and safe override actions write audit entries.
 
-- Local admin login: `eyad` / `eyad`.
-- Users and roles overview.
-- Permissions overview.
-- Service and price catalog.
-- Add service, edit price, deactivate/reactivate service.
-- Appearance and theme settings.
-- System safety status.
-- Audit log viewer.
-- Safe override endpoints for void/cancel/archive actions where implemented.
-
-## Safety Rules
-
-- Owner/admin only.
-- Backend permissions protect admin APIs.
-- Admin navigation is hidden from non-admin users, but server-side authorization is the source of truth.
-- Service and appearance setting changes are audited.
-- Override actions require reason and confirmation.
-- Audit logs cannot be deleted from the normal UI.
-- Signed clinical records cannot be silently hard-deleted.
-
-## Planned Additions
-
-- Branches and rooms management.
-- Feature flag detail controls.
-- Demo data reset guarded for local/dev only.
-- Role editor with explicit review.
-- More complete audit filtering and export policy.
-- Production correction/retention policy before real patient use.
+Not included:
+- Full accounting ledger
+- Insurance/TPA workflows
+- Real payment gateway
+- WhatsApp
+- DICOM/PACS
+- External AI runtime calls
+- Audit log deletion

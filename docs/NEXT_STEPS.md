@@ -1,5 +1,32 @@
 # Next Steps
 
+v0.12.8 owner control and gynecology starter next steps:
+
+1. Stabilize and browser-QA this combined sprint with fake/synthetic data only.
+2. Run:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run test:v125:clinic-usability-lock
+npm run test:v126:med-safety-review
+npm run test:v127:no-code-ui
+npm run test:v128:owner-control-gyn
+npm run typecheck
+npm run build
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:v120:no-fake-ui
+```
+
+3. Manually QA Owner/Admin access, receptionist/accountant denial, service create/edit/deactivate/reactivate with audit entries, and patient workspace Gynecology tab/template rendering.
+4. Keep service prices limited to clinic billing settings. Do not mix them into medication reference or investigation reference catalogs.
+5. Keep gynecology templates recording-only. Do not add diagnosis, prescribing, dosing, contraception recommendation, or treatment ranking automation.
+6. Do not create a release tag from this sprint.
+
 v0.12.7 demo candidate next steps:
 
 1. Run final demo QA on the pushed branch/tag:

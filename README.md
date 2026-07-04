@@ -1,5 +1,15 @@
 # Prij Clinic
 
+## v0.12.8 Owner Control Center + General Gynecology Starter
+
+v0.12.8 adds the staged Owner Control Center shell, Owner/Admin service price catalog controls, safe reason-required owner override actions, a focused patient workspace Gynecology tab, and recording-only general gynecology starter templates.
+
+```powershell
+npm run test:v128:owner-control-gyn
+```
+
+Service/price catalog entries are clinic billing settings only. Gynecology starter templates are recording aids only. There is no automatic diagnosis, prescribing, dosing, treatment ranking, contraception recommendation, real payment gateway, insurance/TPA, DICOM/PACS, WhatsApp, external AI runtime call, or real patient data. Real production use still requires security, legal, privacy, consent, backup, deployment, and clinical governance readiness.
+
 ## v0.12.7 Demo Candidate Stabilization
 
 v0.12.7 stabilizes the current accelerated branch into a local demo candidate. It adds browser QA locks for app startup, API health, login, synthetic patient creation, patient workspace, doctor visit flow, generic-first prescription workflow, medication safety terminal, medication safety source review/import page protection, investigations, follow-up, packet visibility, RBAC denials, and normal UI wording.

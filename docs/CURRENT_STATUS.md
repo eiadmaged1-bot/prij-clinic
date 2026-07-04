@@ -1,5 +1,17 @@
 # Current Status
 
+v0.12.8 Owner Control Center + General Gynecology Starter is in progress on branch `feature/v0.12.8-owner-control-gyn-starter`.
+
+v0.12.8 status:
+- Owner Control Center shell is added with settings, services, appearance, medication safety review, audit, system status, and feature flag placeholders.
+- Service/price catalog controls are Owner/Admin protected, reason-required for price/status changes, and audited.
+- Service prices are clinic billing settings only and are kept separate from medication reference and investigation reference catalogs.
+- Safe owner override actions remain void/cancel/archive style only where existing models support them. No audit logs or signed clinical records are hard-deleted.
+- Patient workspace now has a focused Gynecology tab with general gynecology summary, start visit action, recording-only form, timeline-supported saved visits, and print-friendly browser output.
+- AUB, pelvic pain, PCOS, fibroid/ovarian cyst, and contraception starter templates are recording aids only.
+- No automatic diagnosis, prescribing, dosing, treatment ranking, contraception recommendation, external AI runtime calls, real payment gateway, insurance, DICOM/PACS, WhatsApp, or real patient data were added.
+- Real production use still requires security, legal, privacy, consent, backup, deployment, and clinical governance readiness.
+
 v0.12.7 Demo Candidate Stabilization + Browser QA Lock is complete on branch `stabilize/v0.12.7-demo-candidate`.
 
 v0.12.7 status:
