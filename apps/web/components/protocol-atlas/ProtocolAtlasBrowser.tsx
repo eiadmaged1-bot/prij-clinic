@@ -106,7 +106,7 @@ export function ProtocolAtlasBrowser() {
             <details className="collapsible-help-panel">
               <summary>Open details</summary>
               <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
-              <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot summary may be shown for doctor review." : "Catalog-only and draft protocols do not generate management."}</p>
+              <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
             </details>
           </article>
         ))}
