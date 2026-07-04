@@ -108,20 +108,24 @@ type ReferenceResult = {
 
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
+  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
+  { key: "visits", label: "Visits", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "secretary-intake", label: "Secretary Intake", icon: "files", endpoint: "/patient-intake?patientId=:patientId", collectionKey: "patientIntakes", empty: "No patient-reported intake yet.", permissions: ["patient_intake.read"] },
   { key: "doctor-note", label: "Doctor Clinical Note", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No doctor clinical note yet.", permissions: ["encounter.read"] },
   { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
-  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
-  { key: "history", label: "History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "investigations", label: "Requested Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation or clinical request yet.", permissions: ["clinical_requests.read", "investigation.read"] },
-  { key: "follow-up-hints", label: "Follow-up Hints", icon: "timeline", endpoint: "/patients/:patientId/follow-up-hints", collectionKey: "hints", empty: "No active follow-up hints.", permissions: ["follow_up_hints.read"] },
-  { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
-  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation or clinical request yet.", permissions: ["clinical_requests.read", "investigation.read"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "documents", label: "Files / Gallery", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
+  { key: "follow-up-hints", label: "Follow-up", icon: "timeline", endpoint: "/patients/:patientId/follow-up-hints", collectionKey: "hints", empty: "No active follow-up hints.", permissions: ["follow_up_hints.read"] },
+  { key: "medications", label: "Medications", icon: "prescription", empty: "No active medication list entry yet.", permissions: ["patient_medications.read", "medications.search"] },
+  { key: "allergies", label: "Allergies", icon: "consent", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
-  { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." }
+  { key: "ai-snapshot", label: "AI Drafts / Care Assist", icon: "ai", empty: "No management snapshot yet. Doctor review is required.", permissions: ["ai_management.request", "ai_management.read", "care_assist.read"] },
+  { key: "history", label: "Audit / History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] }
 ];
 
 const relatedLoaders: TabConfig[] = [
@@ -163,6 +167,10 @@ export default function PatientFilePage() {
     [permissions, roles]
   );
   const ageLabel = patient?.dateOfBirth ? `${patient.dateOfBirth.slice(0, 10)}` : "Age not set";
+  const activePregnancyCount = (related.pregnancy ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "active").length;
+  const pendingResultCount = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
+  const openFollowUpCount = (related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up" && ["open", "in_progress"].includes(String(row.status ?? ""))).length;
+  const unpaidInvoiceCount = (related.billing ?? related.invoices ?? []).filter((row) => ["draft", "issued", "partially_paid"].includes(String(row.status ?? ""))).length;
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -267,9 +275,12 @@ export default function PatientFilePage() {
           <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
           <div className="workflow-band">
             <span>{patient?.status ?? "Opening"}</span>
-            <span>Workspace ready</span>
-            <span>Allergies available</span>
-            <span>Medication safety available by role</span>
+            {activePregnancyCount ? <span>Pregnant</span> : null}
+            {pendingResultCount ? <span>Pending results</span> : null}
+            {openFollowUpCount ? <span>Follow-up due</span> : null}
+            {unpaidInvoiceCount ? <span>Unpaid / balance</span> : null}
+            <span>Allergy review</span>
+            <span>Current medications</span>
           </div>
         </div>
         <div className="patient-primary-actions">
@@ -336,7 +347,10 @@ export default function PatientFilePage() {
           {active.key === "documents" ? <DocumentsPanel related={related} /> : null}
           {active.key === "billing" ? <RelatedPanel config={active} rows={related.billing ?? []} /> : null}
           {active.key === "timeline" ? <Timeline items={timelineItems} patient={patient} /> : null}
+          {active.key === "medications" ? <PatientMedicationList /> : null}
+          {active.key === "allergies" ? <PatientAllergyList /> : null}
           {active.key === "medication-safety" ? <MedicationSafetyWorkspace patientId={patient.id} /> : null}
+          {active.key === "ai-snapshot" ? <CareAssistPanel patientId={patient.id} /> : null}
           {active.key === "pregnancy" ? (
             <>
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
@@ -2138,8 +2152,13 @@ function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] 
           <article className="timeline-item" key={`${item.title}-${index}`}>
             <ThreeDMedicalIcon name={timelineIcon(item.type)} size="sm" />
             <div>
-              <strong>{item.title}</strong>
-              <p className="muted">{item.description} - {item.status}</p>
+              <div className="data-row-header">
+                <strong>{item.title}</strong>
+                <span className="badge">{item.status}</span>
+              </div>
+              <p className="muted">{formatDateTime(item.dateTime)} | {item.actor || "Clinic team"}</p>
+              <p>{item.description}</p>
+              {item.href ? <Link className="button compact secondary" href={item.href}>Open details</Link> : null}
             </div>
           </article>
         ))}
@@ -2230,4 +2249,11 @@ function templateSummary(value: string) {
 function formatDate(value?: string | null) {
   if (!value) return "Not recorded";
   return value.slice(0, 10);
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "Date not recorded";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
