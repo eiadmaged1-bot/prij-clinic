@@ -27,6 +27,7 @@ type Patient = {
   email?: string | null;
   status: string;
   patientType?: string | null;
+  sexualActivityStatus?: string | null;
   notes?: string | null;
 };
 
@@ -275,6 +276,7 @@ export default function PatientFilePage() {
           <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
           <div className="workflow-band">
             <span>{patient?.status ?? "Opening"}</span>
+            {patient?.sexualActivityStatus === "not_sexually_active" ? <span>Virgin / Not sexually active</span> : null}
             {activePregnancyCount ? <span>Pregnant</span> : null}
             {pendingResultCount ? <span>Pending results</span> : null}
             {openFollowUpCount ? <span>Follow-up due</span> : null}

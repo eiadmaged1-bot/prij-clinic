@@ -15,6 +15,7 @@ type FormState = {
   lastName: string;
   sex: string;
   patientType: string;
+  sexualActivityStatus: string;
   dateOfBirth: string;
   age: string;
   phone: string;
@@ -32,6 +33,7 @@ const initialState: FormState = {
   lastName: "",
   sex: "",
   patientType: "GENERAL",
+  sexualActivityStatus: "unknown",
   dateOfBirth: "",
   age: "",
   phone: "",
@@ -78,6 +80,7 @@ export default function NewPatientPage() {
           lastName,
           sex: form.sex,
           patientType: form.patientType,
+          sexualActivityStatus: form.sexualActivityStatus,
           dateOfBirth: form.dateOfBirth,
           phone: form.phone,
           email: form.email,
@@ -210,6 +213,15 @@ export default function NewPatientPage() {
               <option value="OB">OB</option>
               <option value="GYN">GYN</option>
               <option value="WOMEN_HEALTH">Women Health</option>
+            </select>
+          </label>
+          <label>
+            Sexual activity status
+            <select onChange={(event) => update("sexualActivityStatus", event.target.value)} value={form.sexualActivityStatus}>
+              <option value="unknown">Unknown / not asked</option>
+              <option value="not_sexually_active">Not sexually active</option>
+              <option value="sexually_active">Sexually active</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
             </select>
           </label>
           <label>

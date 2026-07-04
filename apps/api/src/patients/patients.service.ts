@@ -52,6 +52,7 @@ export class PatientsService {
           dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
           sex: dto.sex?.trim() || null,
           patientType: dto.patientType ?? "GENERAL",
+          sexualActivityStatus: dto.sexualActivityStatus ?? "unknown",
           phone: dto.phone?.trim() || null,
           email: dto.email?.trim().toLowerCase() || null,
           notes: dto.notes?.trim() || null,
@@ -410,6 +411,7 @@ export class PatientsService {
     if (dto.dateOfBirth !== undefined) data.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
     if (dto.sex !== undefined) data.sex = dto.sex?.trim() || null;
     if (dto.patientType !== undefined) data.patientType = dto.patientType;
+    if (dto.sexualActivityStatus !== undefined) data.sexualActivityStatus = dto.sexualActivityStatus;
     if (dto.phone !== undefined) data.phone = dto.phone?.trim() || null;
     if (dto.email !== undefined) data.email = dto.email?.trim().toLowerCase() || null;
     if (dto.status !== undefined) data.status = dto.status;
