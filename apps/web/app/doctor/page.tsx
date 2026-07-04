@@ -45,6 +45,7 @@ export default function DoctorModePage() {
       })
       .catch(() => setStatus("Could not load today's work"));
   }, []);
+  const current = queue.find((ticket) => ticket.status === "called");
 
   return (
     <AppShell>
@@ -92,7 +93,24 @@ export default function DoctorModePage() {
         </article>
       </section>
 
-      <section className="panel">
+      <section className="panel compact-panel current-patient-panel">
+        <div className="section-heading"><h2>Current in-room patient</h2><span className="badge">{current ? current.status : "None"}</span></div>
+        {current ? (
+          <article className="data-row dense">
+            <div className="data-row-header"><strong>Queue {current.queueNumber ?? "patient"}</strong><span className="badge">{current.priority ?? "Routine"}</span></div>
+            <p className="muted">Follow-up hints and visit context stay inside the patient file.</p>
+            <div className="form-actions">
+              <Link className="button compact" href={current.patientId ? `/patients/${current.patientId}` : "/queue"}>Open file</Link>
+              <Link className="button secondary compact" href={current.patientId ? `/doctor/visit?patientId=${current.patientId}` : "/doctor/visit"}>Continue visit</Link>
+              <Link className="button secondary compact" href="/doctor/waiting">Complete</Link>
+            </div>
+          </article>
+        ) : (
+          <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No current patient in room.</span><Link className="button secondary compact" href="/doctor/waiting">Open doctor waiting list</Link></p>
+        )}
+      </section>
+
+      <section className="panel compact-panel">
         <div className="section-heading">
           <div>
             <h2>Patients waiting for doctor</h2>
