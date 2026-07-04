@@ -132,7 +132,7 @@ export class CreateAccountDto {
   permissionPreset!: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(1)
   @MaxLength(200)
   temporaryPassword!: string;
 
@@ -171,7 +171,7 @@ export class UpdateAccountDto {
 
 export class ResetAccountPasswordDto {
   @IsString()
-  @MinLength(8)
+  @MinLength(1)
   @MaxLength(200)
   temporaryPassword!: string;
 

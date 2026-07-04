@@ -64,6 +64,7 @@ export default function AccountsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showDemoAccounts, setShowDemoAccounts] = useState(false);
 
   const headers = useMemo(
     () => ({
@@ -78,10 +79,12 @@ export default function AccountsPage() {
   );
   const filteredAccounts = accounts.filter((account) => {
     const text = `${account.displayName} ${account.loginId ?? ""} ${account.email} ${account.roles.join(" ")}`.toLowerCase();
+    const demoMatch = showDemoAccounts || !isDemoAccount(account);
     return (
       text.includes(query.toLowerCase()) &&
       (roleFilter === "all" || account.roles.includes(roleFilter)) &&
-      (statusFilter === "all" || account.status === statusFilter)
+      (statusFilter === "all" || account.status === statusFilter) &&
+      demoMatch
     );
   });
 
@@ -123,7 +126,7 @@ export default function AccountsPage() {
 
   async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await send("POST", "/admin/accounts", createForm, "Account created.");
+    await send("POST", "/admin/accounts", { ...createForm, email: createForm.email.trim() || undefined }, "Account created.");
     setCreateForm(defaultCreateForm);
   }
 
@@ -239,7 +242,12 @@ export default function AccountsPage() {
                 <option value="disabled">Disabled</option>
               </select>
             </label>
+            <label className="toggle-row">
+              <input checked={showDemoAccounts} onChange={(event) => setShowDemoAccounts(event.target.checked)} type="checkbox" />
+              Show demo/test accounts
+            </label>
           </div>
+          {!showDemoAccounts ? <p className="badge compact-safety-badge">Demo/test accounts hidden</p> : null}
           <div className="data-list">
             {filteredAccounts.map((account) => (
               <button className={`account-row ${selected?.id === account.id ? "active" : ""}`} key={account.id} onClick={() => setSelectedId(account.id)} type="button">
@@ -262,14 +270,14 @@ export default function AccountsPage() {
               <p className="muted">Local demo only. Do not use production credentials or real staff passwords.</p>
             </div>
           </div>
-          <form className="form-grid" onSubmit={createAccount}>
+          <form className="form-grid" onSubmit={createAccount} noValidate>
             <label>
               Login ID
               <input onChange={(event) => setCreateForm((current) => ({ ...current, loginId: event.target.value }))} required value={createForm.loginId} />
             </label>
             <label>
               Email optional
-              <input onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} type="email" value={createForm.email} />
+              <input onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))} type="text" inputMode="email" value={createForm.email} />
             </label>
             <label>
               Display name
@@ -291,6 +299,7 @@ export default function AccountsPage() {
               Temporary password
               <input onChange={(event) => setCreateForm((current) => ({ ...current, temporaryPassword: event.target.value }))} required type="password" value={createForm.temporaryPassword} />
             </label>
+            {createForm.temporaryPassword && createForm.temporaryPassword.length < 8 ? <p className="notice wide">Weak local demo password. Use strong password before production.</p> : null}
             <label className="wide">
               Reason
               <input onChange={(event) => setCreateForm((current) => ({ ...current, reason: event.target.value }))} required value={createForm.reason} />
@@ -382,7 +391,7 @@ export default function AccountsPage() {
               New temporary password
               <input disabled={selected.protectedAccount} onChange={(event) => setResetPassword(event.target.value)} type="password" value={resetPassword} />
             </label>
-            <button className="button secondary" disabled={selected.protectedAccount || resetPassword.length < 8} onClick={resetSelectedPassword} type="button">Reset password</button>
+            <button className="button secondary" disabled={selected.protectedAccount || resetPassword.length < 1} onClick={resetSelectedPassword} type="button">Reset password</button>
             <button className="button secondary" disabled={selected.protectedAccount} onClick={() => void changeStatus(selected.status === "active" ? "deactivate" : "activate")} type="button">
               {selected.status === "active" ? "Deactivate" : "Activate"}
             </button>
@@ -431,4 +440,10 @@ function permissionLabel(key: string) {
     .replaceAll("_", " ")
     .replaceAll(".", " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isDemoAccount(account: Account) {
+  if (account.loginId === "eyad" || account.protectedAccount) return false;
+  const text = `${account.loginId ?? ""} ${account.email ?? ""} ${account.displayName}`.toLowerCase();
+  return text.includes("demo") || text.includes("test") || text.includes("local");
 }

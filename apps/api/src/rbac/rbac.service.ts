@@ -695,6 +695,9 @@ function assertNotReservedAccountInput(loginId?: string | null, role?: string, p
 }
 
 function assertProductionPasswordAllowed(password: string) {
+  if (process.env.APP_ENV === "production" && password.length < 8) {
+    throw new BadRequestException("Production passwords must be at least 8 characters.");
+  }
   if (process.env.APP_ENV === "production" && (password === "eyad" || password === "LocalDev123!")) {
     throw new BadRequestException("Demo passwords are not allowed in production.");
   }
@@ -702,8 +705,9 @@ function assertProductionPasswordAllowed(password: string) {
 
 function normalizeLoginId(loginId: string) {
   const normalized = loginId.trim().toLowerCase();
-  if (!/^[a-z0-9._-]{3,80}$/.test(normalized)) {
-    throw new BadRequestException("Login ID must use letters, numbers, dots, dashes, or underscores.");
+  const pattern = process.env.APP_ENV === "production" ? /^[a-z0-9._-]{3,80}$/ : /^[a-z0-9._-]{1,80}$/;
+  if (!pattern.test(normalized)) {
+    throw new BadRequestException(process.env.APP_ENV === "production" ? "Login ID must be 3-80 characters and use letters, numbers, dots, dashes, or underscores." : "Login ID must use letters, numbers, dots, dashes, or underscores.");
   }
   return normalized;
 }
