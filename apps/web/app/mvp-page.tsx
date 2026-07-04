@@ -213,19 +213,7 @@ export function MvpPage({
       <SafetyAlert />
 
       <section className="content-grid">
-        <div className="panel">
-          <div className="section-heading">
-              <h2>{title} workflow</h2>
-            <span className="badge">Clinic OS</span>
-          </div>
-          <ul className="feature-list">
-            {items.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="panel">
+        <div className="panel compact-panel">
           <div className="section-heading">
             <div>
               <h2>Records</h2>
@@ -247,6 +235,15 @@ export function MvpPage({
             </EmptyState>
           )}
         </div>
+
+        <details className="collapsible-help-panel">
+          <summary>How this works</summary>
+          <ul className="feature-list">
+            {items.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </details>
       </section>
 
       {createEndpoint && createFields.length > 0 ? (
