@@ -1,5 +1,8 @@
 # Known Limitations
 
+- v0.14.4 walkthrough regression is static/source-level. Full browser visual QA and role-by-role workflow execution remain manual.
+- `/clinic-day/walkthrough` points to module routes for patient-specific steps; the operator must open the synthetic patient profile after creation.
+- Print packet route requires an existing patient id: `/patients/[id]/print/packet`.
 - Clinical requests reuse existing investigation request tables internally for migration safety.
 - Prescription builder patient attachment now uses the shared searchable PatientPicker; deeper browser E2E coverage is still needed.
 - Appointment drawer patient selection still needs a full workflow pass if long-list selection is added there.

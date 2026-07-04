@@ -1,5 +1,15 @@
 # Prij Clinic
 
+## v0.14.4 Clinic Demo Walkthrough Lock
+
+v0.14.4 adds a compact guided local walkthrough at `/clinic-day/walkthrough` for the connected clinic day path: owner setup, reception, patient creation, check-in, doctor waiting, patient profile, doctor visit draft, prescription draft, investigation request, follow-up, and patient packet printing.
+
+```powershell
+npm run test:v144:clinic-walkthrough
+```
+
+This remains local/demo only. Do not use real patient data. No external AI, WhatsApp, DICOM/PACS, insurance, real payment gateway, autonomous diagnosis, auto-prescribing, auto-dosing, or production-readiness claim is added. AI and Care Assist remain draft-only and doctor-review-only.
+
 ## v0.13.0-v0.14.0 Clinic Operations + Documents + OB/GYN Deepening Mega Sprint
 
 This sprint skips the dedicated v0.12.9 QA sprint and adds a staged clinic operations leap: reception daily workspace, calendar/queue/doctor handoff, service/invoice visit links, investigation handoff, documents/results timeline, patient timeline, pregnancy episode deepening, fetus/multiple pregnancy starter, antenatal visit recording, OB ultrasound structured report starter, daily clinic reports, and a demo clinic day script.

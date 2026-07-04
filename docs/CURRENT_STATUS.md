@@ -1,5 +1,16 @@
 # Current Status
 
+v0.14.4 clinic demo walkthrough lock is implemented on the local demo branch.
+
+Completed in v0.14.4:
+- Added `/clinic-day/walkthrough` as the guided local clinic day path.
+- Added walkthrough launchers from Dashboard, Owner Control Center, Reception Today, and Doctor Workspace.
+- Locked the static regression checks for New Patient to profile, PatientPicker check-in, compact doctor waiting, doctor visit complaint/autosave, prescription draft, investigation chips, follow-up, and print packet source.
+- Doctor Waiting now exposes compact current-patient markup with Open file, Continue visit, and Complete actions.
+
+Verification added:
+- `npm run test:v144:clinic-walkthrough`
+
 v0.14.3.1 post-visual hotfix is in verification on the local demo branch.
 
 Completed in v0.14.3:
