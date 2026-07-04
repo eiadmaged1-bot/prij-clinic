@@ -1,5 +1,12 @@
 # Known Limitations
 
+- v0.12.7 is a demo candidate stabilization and browser QA lock, not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
+- Automated browser QA proves the local demo path with synthetic data only. Physical device QA, deployment hardening, monitoring, backup drills, legal consent content, and production security review remain separate.
+- Medication safety source import/review pages exist and are protected, but reviewed source population is still separate. Do not claim sourced pregnancy/lactation safety coverage until reviewed source rows are imported and approved.
+- No fake clinical claims, fake medication safety claims, autonomous diagnosis, prescribing, dosing, treatment ranking, or external AI runtime clinical calls were added.
+- AI remains doctor-assist and draft-only. A doctor must review and approve clinical output before any record use.
+- Real patient use remains blocked until security, RBAC, audit, consent, backups, privacy, legal, deployment, and operational readiness are completed.
+
 - v0.12.6 adds source import and review workflow, not a completed reviewed medication safety database.
 - Real reviewed pregnancy/lactation source population is a separate workstream requiring owner-approved or licensed/official files.
 - Import preview accepts owner-provided CSV/JSON/text content only; it does not scrape, browse, or acquire sources automatically.

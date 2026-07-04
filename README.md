@@ -1,5 +1,16 @@
 # Prij Clinic
 
+## v0.12.7 Demo Candidate Stabilization
+
+v0.12.7 stabilizes the current accelerated branch into a local demo candidate. It adds browser QA locks for app startup, API health, login, synthetic patient creation, patient workspace, doctor visit flow, generic-first prescription workflow, medication safety terminal, medication safety source review/import page protection, investigations, follow-up, packet visibility, RBAC denials, and normal UI wording.
+
+```powershell
+npm run test:v127:demo-candidate-browser
+npm run test:v127:no-code-ui
+```
+
+No fake clinical claims, fake medication safety claims, autonomous diagnosis, prescribing, dosing, treatment ranking, external AI runtime calls, WhatsApp, DICOM/PACS, insurance, or real payment gateway were added. Medication safety source import exists, but reviewed source population remains a separate governed workstream. AI remains doctor-assist and draft-only. Real patient use still requires production security, legal, privacy, consent, backup, deployment, and clinical governance readiness.
+
 ## v0.12.6 Medication Safety Source Import + Review Workflow
 
 v0.12.6 adds Owner/Admin controlled medication safety source file preview, import commit, review queue, and approve/reject/retire decisions for pregnancy/lactation profile metadata.

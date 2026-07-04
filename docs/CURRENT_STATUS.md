@@ -1,5 +1,16 @@
 # Current Status
 
+v0.12.7 Demo Candidate Stabilization + Browser QA Lock is complete on branch `stabilize/v0.12.7-demo-candidate`.
+
+v0.12.7 status:
+- Stabilizes the current accelerated branch as a demo candidate without adding major new product features.
+- Adds browser QA for local app startup, login, synthetic patient creation, patient workspace, doctor visit flow, generic-first prescription workflow, medication safety terminal, medication safety source review/import page usability, investigations, follow-up, packet visibility, RBAC denials, and normal UI wording.
+- Adds no-code UI wording checks for raw JSON/code-like text, fake medication safety claims, safe-in-pregnancy wording, category E, prescribing/dosing automation wording, and commerce/pharmacy inventory wording in clinical/reference contexts.
+- Medication safety source import exists, but reviewed source population remains a separate governed workstream.
+- No fake clinical claims, fake medication safety claims, autonomous diagnosis, prescribing, dosing, treatment ranking, WhatsApp, DICOM/PACS, insurance, payment gateway, or external AI runtime calls were added.
+- AI remains doctor-assist and draft-only; it must never replace doctor review or approval.
+- Real patient use still requires security, privacy, legal, backup, deployment, monitoring, consent, and clinical governance readiness.
+
 v0.12.6 Medication Safety Source Import + Review Workflow is in progress on branch `feature/v0.12.6-medication-safety-source-import-review`.
 
 v0.12.6 status:

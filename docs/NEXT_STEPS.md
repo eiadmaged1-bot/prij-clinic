@@ -1,5 +1,20 @@
 # Next Steps
 
+v0.12.7 demo candidate next steps:
+
+1. Run final demo QA on the pushed branch/tag:
+
+```powershell
+npm run test:v127:demo-candidate-browser
+npm run test:v127:no-code-ui
+```
+
+2. Review the demo manually with fake/synthetic data only: login, patient creation, patient workspace, Start Visit, prescription safety terminal, medication source review/import, investigations, follow-up, and packet.
+3. Choose the next product sprint only after demo QA findings are reviewed.
+4. Keep medication safety source population separate: import only owner-approved or licensed/official sources, keep rows review-gated, and require Owner/Admin review with a reason.
+5. Do not add autonomous diagnosis, prescribing, dosing, treatment ranking, external AI runtime calls, WhatsApp, DICOM/PACS, insurance, or a real payment gateway as follow-up patches to this stabilization branch.
+6. Do not use real patient data until production security/legal/privacy/backup/consent/governance readiness is complete.
+
 v0.12.6 medication safety source import and review next steps:
 
 1. Run the final focused checks:
