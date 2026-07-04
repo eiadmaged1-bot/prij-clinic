@@ -140,12 +140,19 @@ export default function AdminPage() {
   async function updateService(service: ServiceItem, patch: Partial<ServiceItem>) {
     setMessage("");
     setError("");
+    const needsReason = patch.price !== undefined || patch.active !== undefined;
+    const reason = needsReason ? window.prompt("Reason for this service change")?.trim() : undefined;
+    if (needsReason && !reason) {
+      setError("A reason is required for service price or status changes.");
+      return;
+    }
     const response = await fetch(`${getApiBaseUrl()}/admin/services/${service.id}`, {
       method: "PATCH",
       credentials: "include",
       headers,
       body: JSON.stringify({
         ...patch,
+        reason,
         ...(patch.price !== undefined ? { price: Number(patch.price) } : {}),
         ...(patch.costAmount !== undefined ? { costAmount: patch.costAmount === "" ? undefined : Number(patch.costAmount) } : {}),
         ...(patch.doctorShareAmount !== undefined ? { doctorShareAmount: patch.doctorShareAmount === "" ? undefined : Number(patch.doctorShareAmount) } : {})
@@ -156,6 +163,30 @@ export default function AdminPage() {
       return;
     }
     setMessage("Service updated and audited.");
+    await loadAdmin();
+  }
+
+  async function changeServiceStatus(service: ServiceItem) {
+    const reason = window.prompt(`Reason to ${service.active ? "deactivate" : "reactivate"} this service`)?.trim();
+    if (!reason) {
+      setError("A reason is required for service status changes.");
+      return;
+    }
+    if (!window.confirm("Confirm this service status change")) return;
+    setMessage("");
+    setError("");
+    const action = service.active ? "deactivate" : "reactivate";
+    const response = await fetch(`${getApiBaseUrl()}/admin/services/${service.id}/${action}`, {
+      method: "POST",
+      credentials: "include",
+      headers,
+      body: JSON.stringify({ reason, confirmation: "CONFIRM" })
+    });
+    if (!response.ok) {
+      setError("Could not change service status.");
+      return;
+    }
+    setMessage("Service status changed and audited.");
     await loadAdmin();
   }
 
@@ -303,7 +334,7 @@ export default function AdminPage() {
                       type="number"
                     />
                   </label>
-                  <button className="button secondary compact" onClick={() => void updateService(service, { active: !service.active })} type="button">
+                  <button className="button secondary compact" onClick={() => void changeServiceStatus(service)} type="button">
                     {service.active ? "Deactivate" : "Reactivate"}
                   </button>
                 </div>

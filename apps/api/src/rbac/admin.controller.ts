@@ -107,7 +107,7 @@ export class AdminController {
   async controlCenter(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.control_center.read", "admin_control");
 
-    return this.rbac.controlCenterSummary();
+    return this.rbac.controlCenterSummary(request.user);
   }
 
   @Get("services")
@@ -115,7 +115,7 @@ export class AdminController {
   async servicesList(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.services.read", "service_item");
 
-    return { services: await this.rbac.listServices() };
+    return { services: await this.rbac.listServices(request.user) };
   }
 
   @Get("settings/appearance")
@@ -123,7 +123,7 @@ export class AdminController {
   async appearanceSettings(@Req() request: RequestWithUser) {
     await this.auditAdminRead(request, "admin.appearance.read", "system_setting");
 
-    return this.rbac.getAppearanceSettings();
+    return this.rbac.getAppearanceSettings(request.user);
   }
 
   @Patch("settings/appearance")
@@ -142,6 +142,18 @@ export class AdminController {
   @Permissions("clinic_settings.manage")
   updateService(@Param("id") id: string, @Body() dto: UpdateServiceItemDto, @Req() request: RequestWithUser) {
     return this.rbac.updateService(id, dto, request.user);
+  }
+
+  @Post("services/:id/deactivate")
+  @Permissions("clinic_settings.manage")
+  deactivateService(@Param("id") id: string, @Body() dto: AdminOverrideDto, @Req() request: RequestWithUser) {
+    return this.rbac.deactivateService(id, dto, request.user);
+  }
+
+  @Post("services/:id/reactivate")
+  @Permissions("clinic_settings.manage")
+  reactivateService(@Param("id") id: string, @Body() dto: AdminOverrideDto, @Req() request: RequestWithUser) {
+    return this.rbac.reactivateService(id, dto, request.user);
   }
 
   @Post("overrides/invoices/:id/void")

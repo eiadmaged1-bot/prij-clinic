@@ -79,6 +79,11 @@ export class UpdateServiceItemDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   doctorShareAmount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }
 
 export class AdminOverrideDto {

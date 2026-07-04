@@ -328,7 +328,8 @@ export class RbacService {
     return { account: toAccountSummary(updated) };
   }
 
-  async controlCenterSummary() {
+  async controlCenterSummary(user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     const [users, roles, permissions, services, auditLogs] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.role.count(),
@@ -369,11 +370,13 @@ export class RbacService {
     };
   }
 
-  listServices() {
+  listServices(user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     return this.prisma.serviceItem.findMany({ orderBy: [{ active: "desc" }, { category: "asc" }, { name: "asc" }] });
   }
 
-  async getAppearanceSettings() {
+  async getAppearanceSettings(user?: AuthUser) {
+    if (user) assertOwnerOrAdmin(user);
     const setting = await this.prisma.systemSetting.findUnique({ where: { key: "appearance" } });
     const value = setting?.valueJson;
     if (isAppearanceSettings(value)) return value;
@@ -381,6 +384,7 @@ export class RbacService {
   }
 
   async updateAppearanceSettings(dto: AppearanceSettingsDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     const next = {
       defaultTheme: dto.defaultTheme,
       allowUserThemeOverride: dto.allowUserThemeOverride
@@ -416,6 +420,7 @@ export class RbacService {
   }
 
   async createService(dto: CreateServiceItemDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     const service = await this.prisma.serviceItem.create({
       data: {
         code: dto.code.trim().toUpperCase(),
@@ -450,8 +455,15 @@ export class RbacService {
   }
 
   async updateService(id: string, dto: UpdateServiceItemDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     const existing = await this.prisma.serviceItem.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException("Service item not found.");
+    const changedFields = Object.keys(dto).filter((key) => key !== "reason");
+    const priceChanged = dto.price !== undefined && existing.price?.toString() !== money(dto.price).toString();
+    const activeChanged = dto.active !== undefined && existing.active !== dto.active;
+    if ((priceChanged || activeChanged) && !dto.reason?.trim()) {
+      throw new BadRequestException("A reason is required for service price or status changes.");
+    }
 
     const service = await this.prisma.serviceItem.update({
       where: { id },
@@ -473,9 +485,9 @@ export class RbacService {
       resourceId: service.id,
       branchId: user?.branchId,
       severity: "high",
-      reason: dto.active === false ? "Service deactivated from admin control center." : undefined,
+      reason: dto.reason?.trim(),
       metadataJson: {
-        changedFields: Object.keys(dto),
+        changedFields,
         fromPrice: existing.price?.toString() ?? null,
         toPrice: service.price?.toString() ?? null,
         active: service.active,
@@ -487,7 +499,16 @@ export class RbacService {
     return service;
   }
 
+  async deactivateService(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    return this.changeServiceStatus(id, false, dto, user);
+  }
+
+  async reactivateService(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    return this.changeServiceStatus(id, true, dto, user);
+  }
+
   async adminVoidInvoice(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     validateOverride(dto);
     const invoice = await this.prisma.invoice.findUnique({ where: { id } });
     if (!invoice) throw new NotFoundException("Invoice not found.");
@@ -512,6 +533,7 @@ export class RbacService {
   }
 
   async adminCancelAppointment(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     validateOverride(dto);
     const appointment = await this.prisma.appointment.findUnique({ where: { id } });
     if (!appointment) throw new NotFoundException("Appointment not found.");
@@ -531,6 +553,7 @@ export class RbacService {
   }
 
   async adminCancelQueueTicket(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     validateOverride(dto);
     const ticket = await this.prisma.queueTicket.findUnique({ where: { id } });
     if (!ticket) throw new NotFoundException("Queue ticket not found.");
@@ -550,6 +573,7 @@ export class RbacService {
   }
 
   async adminArchivePatient(id: string, dto: AdminOverrideDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
     validateOverride(dto);
     const patient = await this.prisma.patient.findUnique({ where: { id } });
     if (!patient) throw new NotFoundException("Patient not found.");
@@ -604,6 +628,33 @@ export class RbacService {
     const role = await this.prisma.role.findUnique({ where: { name } });
     if (!role) throw new BadRequestException("Role is not available.");
     return role;
+  }
+
+  private async changeServiceStatus(id: string, active: boolean, dto: AdminOverrideDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
+    validateOverride(dto);
+    const existing = await this.prisma.serviceItem.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException("Service item not found.");
+
+    const service = await this.prisma.serviceItem.update({ where: { id }, data: { active } });
+    await this.audit.record({
+      actorUserId: user?.id,
+      action: active ? "service_item.reactivated" : "service_item.deactivated",
+      resourceType: "service_item",
+      resourceId: service.id,
+      branchId: user?.branchId,
+      severity: "high",
+      reason: dto.reason.trim(),
+      metadataJson: { code: service.code, previousActive: existing.active, active: service.active }
+    });
+
+    return service;
+  }
+}
+
+function assertOwnerOrAdmin(actor?: AuthUser) {
+  if (!actor || !(actor.roles.includes("Owner") || actor.roles.includes("Admin"))) {
+    throw new ForbiddenException("Owner or admin access is required.");
   }
 }
 
