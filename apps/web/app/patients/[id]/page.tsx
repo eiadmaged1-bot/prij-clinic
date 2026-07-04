@@ -698,7 +698,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
           <button className="button" type="submit" disabled={!encounterId || !selectedMedication}>Save prescription and continue</button>
           <p className="muted">Dose, frequency, and duration are not auto-filled.</p>
         </form>
-        <MedicationSafetyTerminal medication={terminalMedication} title="Medication Safety Terminal" />
+        <div className="doctor-advanced-tool">
+          <MedicationSafetyTerminal medication={terminalMedication} title="Medication Safety Terminal" />
+        </div>
       </div>
 
       <div className="doctor-friendly-grid">
@@ -709,7 +711,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
           <label>Clinical reason<textarea name="instructions" /></label>
           <button className="button" type="submit" disabled={!encounterId || !selectedInvestigation}>Save investigation and continue</button>
         </form>
-        <section className="panel">
+        <section className="panel doctor-advanced-tool">
           <h3>Clinical Note Terminal</h3>
           <p className="muted">Doctor review required. Notes stay here unless inserted into a draft field by the doctor.</p>
           <div className="form-actions">
@@ -1876,7 +1878,7 @@ function PatientActionPanel({
       </div>
       <div className="patient-action-strip" aria-label="Patient actions">
         {actions.map(([key, label, icon]) => (
-          <button className={`patient-action ${open === key ? "active" : ""}`} key={key} onClick={() => setOpen(key)} type="button">
+          <button className={`patient-action ${open === key ? "active" : ""}`} data-action-key={key} key={key} onClick={() => setOpen(key)} type="button">
             <ThreeDMedicalIcon name={icon as IconName} size="sm" />
             <span>{label}</span>
           </button>

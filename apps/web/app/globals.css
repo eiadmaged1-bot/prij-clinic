@@ -3183,6 +3183,142 @@ body {
   font-family: var(--font-sans);
 }
 
+.doctor-comfort-mode {
+  --density-font-scale: 1.12;
+  --density-control-height: 3.35rem;
+  --density-card-padding: 1.55rem;
+  --density-sidebar-width: 19.5rem;
+  --density-space: 1.25rem;
+  --background: #f5f8f7;
+  --background-soft: #fbfcfb;
+  --surface-muted: #f4f7f5;
+  --surface-strong: #e9f3ef;
+  --border: #d8e4df;
+  --accent: #2f6f62;
+  --accent-dark: #25584f;
+  --accent-soft: #e6f1ed;
+  color: var(--foreground);
+}
+
+.doctor-comfort-mode .app-main {
+  padding: 1.6rem;
+}
+
+.doctor-comfort-mode .button,
+.doctor-comfort-mode input,
+.doctor-comfort-mode select,
+.doctor-comfort-mode textarea,
+.doctor-comfort-mode .nav-item,
+.doctor-comfort-mode .patient-action,
+.doctor-comfort-mode .patient-tabs.simple .tab-button,
+.doctor-comfort-mode .visit-progress button {
+  min-height: 3.35rem;
+  font-size: 1.02rem;
+}
+
+.doctor-comfort-mode .button,
+.doctor-comfort-mode .patient-action,
+.doctor-comfort-mode .patient-tabs.simple .tab-button,
+.doctor-comfort-mode .visit-progress button {
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+
+.doctor-comfort-mode .button:hover:not(:disabled),
+.doctor-comfort-mode .quick-card:hover,
+.doctor-comfort-mode .module-card:hover {
+  transform: none;
+}
+
+.doctor-comfort-mode .doctor-comfort-toggle.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.doctor-comfort-mode .patient-simple-hero,
+.doctor-comfort-mode .doctor-hero {
+  grid-template-columns: minmax(0, 1fr);
+  background: linear-gradient(135deg, #ffffff, #f2f7f5);
+  color: var(--foreground);
+  padding: 1.6rem;
+}
+
+.doctor-comfort-mode .patient-avatar {
+  display: none;
+}
+
+.doctor-comfort-mode .doctor-hero h1,
+.doctor-comfort-mode .patient-simple-hero h1 {
+  font-size: clamp(2.2rem, 3.2vw, 3.1rem);
+}
+
+.doctor-comfort-mode .doctor-hero-actions,
+.doctor-comfort-mode .patient-primary-actions {
+  justify-content: flex-start;
+}
+
+.doctor-comfort-mode .doctor-today-grid,
+.doctor-comfort-mode .doctor-friendly-grid,
+.doctor-comfort-mode .dashboard-grid,
+.doctor-comfort-mode .content-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
+}
+
+.doctor-comfort-mode .patient-tabs.simple,
+.doctor-comfort-mode .visit-progress,
+.doctor-comfort-mode .patient-action-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  overflow: visible;
+}
+
+.doctor-comfort-mode .patient-tabs.simple .tab-button,
+.doctor-comfort-mode .visit-progress button,
+.doctor-comfort-mode .patient-action {
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="secretary-intake"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="ultrasound"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="documents"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="billing"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="follow-up-hints"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="allergies"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="medication-safety"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="ai-snapshot"],
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="history"],
+.doctor-comfort-mode .patient-action[data-action-key="report"],
+.doctor-comfort-mode .patient-action[data-action-key="ultrasound"],
+.doctor-comfort-mode .patient-action[data-action-key="invoice"],
+.doctor-comfort-mode .patient-action[data-action-key="payment"],
+.doctor-comfort-mode .patient-action[data-action-key="consent"],
+.doctor-comfort-mode .doctor-advanced-tool,
+.doctor-comfort-mode .comfort-switch {
+  display: none;
+}
+
+.doctor-comfort-mode .visit-card textarea,
+.doctor-comfort-mode .doctor-visit-flow textarea {
+  min-height: 12rem;
+}
+
+.doctor-comfort-mode .workflow-band {
+  gap: 0.75rem;
+}
+
+.doctor-comfort-mode .workflow-band span,
+.doctor-comfort-mode .workflow-band button {
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  min-height: 3rem;
+  padding: 0.75rem 0.9rem;
+}
+
 @media (max-width: 640px) {
   .theme-prij-heritage .portal-search {
     display: grid;
@@ -3263,5 +3399,30 @@ body {
 
   .theme-prij-heritage .app-main {
     padding: 1rem;
+  }
+
+  .doctor-comfort-mode .topbar,
+  .theme-prij-heritage.doctor-comfort-mode .topbar,
+  .theme-medicolize-portal.doctor-comfort-mode .topbar {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .doctor-comfort-mode .patient-tabs,
+  .doctor-comfort-mode .owner-tabs,
+  .doctor-comfort-mode .visit-progress,
+  .doctor-comfort-mode .patient-action-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    margin-inline: 0;
+    overflow: visible;
+    padding-bottom: 0;
+  }
+
+  .doctor-comfort-mode .patient-tabs .tab-button,
+  .doctor-comfort-mode .owner-tab,
+  .doctor-comfort-mode .visit-progress button {
+    max-width: none;
+    white-space: normal;
   }
 }

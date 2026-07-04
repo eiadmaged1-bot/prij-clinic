@@ -18,10 +18,11 @@ import {
 
 const defaultAppearanceSettings = {
   defaultTheme: "clinic-premium",
-  allowUserThemeOverride: true
+  allowUserThemeOverride: true,
+  defaultDoctorComfortMode: false
 };
 
-const allowedAppearanceThemes = new Set(["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
+const allowedAppearanceThemes = new Set(["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
 const accountInclude = {
   branch: true,
   userRoles: {
@@ -379,7 +380,7 @@ export class RbacService {
     if (user) assertOwnerOrAdmin(user);
     const setting = await this.prisma.systemSetting.findUnique({ where: { key: "appearance" } });
     const value = setting?.valueJson;
-    if (isAppearanceSettings(value)) return value;
+    if (isAppearanceSettings(value)) return { ...defaultAppearanceSettings, ...value };
     return defaultAppearanceSettings;
   }
 
@@ -387,7 +388,8 @@ export class RbacService {
     assertOwnerOrAdmin(user);
     const next = {
       defaultTheme: dto.defaultTheme,
-      allowUserThemeOverride: dto.allowUserThemeOverride
+      allowUserThemeOverride: dto.allowUserThemeOverride,
+      defaultDoctorComfortMode: dto.defaultDoctorComfortMode ?? false
     };
 
     const setting = await this.prisma.systemSetting.upsert({
@@ -412,7 +414,8 @@ export class RbacService {
       severity: "high",
       metadataJson: {
         defaultTheme: next.defaultTheme,
-        allowUserThemeOverride: next.allowUserThemeOverride
+        allowUserThemeOverride: next.allowUserThemeOverride,
+        defaultDoctorComfortMode: next.defaultDoctorComfortMode
       }
     });
 
@@ -779,6 +782,7 @@ function isAppearanceSettings(value: Prisma.JsonValue | null | undefined): value
   return (
     typeof candidate.defaultTheme === "string" &&
     allowedAppearanceThemes.has(candidate.defaultTheme) &&
-    typeof candidate.allowUserThemeOverride === "boolean"
+    typeof candidate.allowUserThemeOverride === "boolean" &&
+    (candidate.defaultDoctorComfortMode === undefined || typeof candidate.defaultDoctorComfortMode === "boolean")
   );
 }

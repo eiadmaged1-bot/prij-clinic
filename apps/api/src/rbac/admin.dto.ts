@@ -98,11 +98,15 @@ export class AdminOverrideDto {
 
 export class AppearanceSettingsDto {
   @IsString()
-  @IsIn(["clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"])
+  @IsIn(["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"])
   defaultTheme!: string;
 
   @IsBoolean()
   allowUserThemeOverride!: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  defaultDoctorComfortMode?: boolean;
 }
 
 export class CreateAccountDto {

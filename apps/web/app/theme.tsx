@@ -54,7 +54,9 @@ const fallbackTheme: AppThemeId = "prij-heritage";
 
 type ThemeContextValue = {
   theme: AppThemeId;
+  doctorComfortMode: boolean;
   setTheme: (theme: AppThemeId) => void;
+  setDoctorComfortMode: (enabled: boolean) => void;
   resetTheme: () => void;
 };
 
@@ -62,31 +64,42 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<AppThemeId>(fallbackTheme);
+  const [doctorComfortMode, setDoctorComfortModeState] = useState(false);
 
   useEffect(() => {
     const storedTheme = window.localStorage.getItem("prijClinicTheme");
     if (isThemeId(storedTheme)) {
       setThemeState(storedTheme);
     }
+    setDoctorComfortModeState(window.localStorage.getItem("prijDoctorComfortMode") === "enabled");
   }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  useEffect(() => {
+    document.documentElement.dataset.doctorComfortMode = doctorComfortMode ? "enabled" : "disabled";
+  }, [doctorComfortMode]);
+
   const value = useMemo<ThemeContextValue>(
     () => ({
       theme,
+      doctorComfortMode,
       setTheme(nextTheme) {
         setThemeState(nextTheme);
         window.localStorage.setItem("prijClinicTheme", nextTheme);
+      },
+      setDoctorComfortMode(enabled) {
+        setDoctorComfortModeState(enabled);
+        window.localStorage.setItem("prijDoctorComfortMode", enabled ? "enabled" : "disabled");
       },
       resetTheme() {
         setThemeState(fallbackTheme);
         window.localStorage.removeItem("prijClinicTheme");
       }
     }),
-    [theme]
+    [doctorComfortMode, theme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

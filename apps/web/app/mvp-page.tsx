@@ -309,11 +309,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [comfort, setComfort] = useState("comfortable");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { theme } = useTheme();
+  const { doctorComfortMode, setDoctorComfortMode, theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const permissions = user?.permissions ?? [];
   const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
+  const canUseDoctorComfort = hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const visibleNavGroups = navGroupOrder
     .map((group) => ({
       title: group,
@@ -349,7 +350,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort}`} data-density={comfort}>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
       <button
         aria-label="Close navigation"
         className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
@@ -403,6 +404,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               New Patient
             </Link>
             <span className="badge warning">Local Demo</span>
+            {canUseDoctorComfort ? (
+              <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
+                <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+                {doctorComfortMode ? "Comfort On" : "Doctor Comfort"}
+              </button>
+            ) : null}
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
                 <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">

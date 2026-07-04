@@ -9,15 +9,17 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 type AppearanceSettings = {
   defaultTheme: AppThemeId;
   allowUserThemeOverride: boolean;
+  defaultDoctorComfortMode: boolean;
 };
 
 const fallbackSettings: AppearanceSettings = {
   defaultTheme: "clinic-premium",
-  allowUserThemeOverride: true
+  allowUserThemeOverride: true,
+  defaultDoctorComfortMode: false
 };
 
 export default function AppearancePage() {
-  const { theme, setTheme, resetTheme } = useTheme();
+  const { doctorComfortMode, setDoctorComfortMode, theme, setTheme, resetTheme } = useTheme();
   const [settings, setSettings] = useState<AppearanceSettings>(fallbackSettings);
   const [selectedTheme, setSelectedTheme] = useState<AppThemeId>(theme);
   const [message, setMessage] = useState("");
@@ -66,7 +68,8 @@ export default function AppearancePage() {
     const defaultTheme = isThemeId(data.defaultTheme) ? data.defaultTheme : fallbackSettings.defaultTheme;
     const next = {
       defaultTheme,
-      allowUserThemeOverride: typeof data.allowUserThemeOverride === "boolean" ? data.allowUserThemeOverride : true
+      allowUserThemeOverride: typeof data.allowUserThemeOverride === "boolean" ? data.allowUserThemeOverride : true,
+      defaultDoctorComfortMode: typeof data.defaultDoctorComfortMode === "boolean" ? data.defaultDoctorComfortMode : false
     };
     setSettings(next);
     setSelectedTheme(defaultTheme);
@@ -79,7 +82,8 @@ export default function AppearancePage() {
 
     const next = {
       defaultTheme: selectedTheme,
-      allowUserThemeOverride: settings.allowUserThemeOverride
+      allowUserThemeOverride: settings.allowUserThemeOverride,
+      defaultDoctorComfortMode: settings.defaultDoctorComfortMode
     };
 
     const response = await fetch(`${getApiBaseUrl()}/admin/settings/appearance`, {
@@ -106,6 +110,7 @@ export default function AppearancePage() {
 
     setSettings(next);
     setTheme(selectedTheme);
+    setDoctorComfortMode(next.defaultDoctorComfortMode);
     setMessage("Appearance settings saved and audited.");
   }
 
@@ -118,6 +123,7 @@ export default function AppearancePage() {
 
   function resetBrowserTheme() {
     resetTheme();
+    setDoctorComfortMode(settings.defaultDoctorComfortMode);
     setSelectedTheme(settings.defaultTheme);
     setMessage("This browser will use the default theme again.");
     setError("");
@@ -145,6 +151,21 @@ export default function AppearancePage() {
             <p className="muted">Comfort is the balanced default. Large increases text, controls, sidebar items, cards, and rows for tablet or RDP use. Compact tightens spacing, chips, buttons, cards, and rows while keeping text readable.</p>
           </div>
           <span className="badge accent">Saved per browser</span>
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>Doctor Comfort Mode</h2>
+            <p className="muted">Larger doctor-facing controls, calmer colors, simplified patient tabs, and fewer advanced tools. Saved locally for this browser; owners can also set the shared default below.</p>
+          </div>
+          <span className="badge accent">{doctorComfortMode ? "On here" : "Off here"}</span>
+        </div>
+        <div className="form-actions">
+          <button className={`button secondary ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
+            {doctorComfortMode ? "Turn off here" : "Turn on here"}
+          </button>
         </div>
       </section>
 
@@ -191,6 +212,14 @@ export default function AppearancePage() {
             type="checkbox"
           />
           Allow each browser to use its own theme
+        </label>
+        <label className="toggle-row">
+          <input
+            checked={settings.defaultDoctorComfortMode}
+            onChange={(event) => setSettings((current) => ({ ...current, defaultDoctorComfortMode: event.target.checked }))}
+            type="checkbox"
+          />
+          Make Doctor Comfort Mode the shared default
         </label>
         <div className="form-actions">
           <button className="button" disabled={isSaving} onClick={saveDefault} type="button">

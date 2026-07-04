@@ -1971,14 +1971,16 @@ async function main() {
     update: {
       valueJson: {
         defaultTheme: "clinic-premium",
-        allowUserThemeOverride: true
+        allowUserThemeOverride: true,
+        defaultDoctorComfortMode: false
       }
     },
     create: {
       key: "appearance",
       valueJson: {
         defaultTheme: "clinic-premium",
-        allowUserThemeOverride: true
+        allowUserThemeOverride: true,
+        defaultDoctorComfortMode: false
       },
       updatedByUserId: demoOwner?.id
     }
