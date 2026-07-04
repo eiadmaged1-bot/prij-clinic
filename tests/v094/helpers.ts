@@ -54,6 +54,10 @@ async function loginWithAccount(page: Page, account: DemoAccount) {
     localStorage.clear();
     sessionStorage.clear();
   });
+  const switchAccount = page.getByRole("button", { name: /log out and switch account/i });
+  if (await switchAccount.isVisible().catch(() => false)) {
+    await switchAccount.click();
+  }
   await page.getByLabel(/staff id or email/i).fill(account.identifier);
   await page.getByLabel(/password/i).fill(account.password);
   await page.getByRole("button", { name: /^sign in$/i }).click();
