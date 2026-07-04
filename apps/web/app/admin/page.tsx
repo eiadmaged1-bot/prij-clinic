@@ -77,6 +77,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [syncHealth, setSyncHealth] = useState<SyncHealthSummary>({ total: 0, pending: 0, failed: 0, synced: 0, lastAttemptAt: null, entityTypes: [] });
+  const [userSearch, setUserSearch] = useState("");
 
   const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
   const apiBaseUrl = useMemo(() => (typeof window === "undefined" ? "" : getApiBaseUrl()), []);
@@ -88,6 +89,11 @@ export default function AdminPage() {
     }),
     [token]
   );
+  const filteredUsers = useMemo(() => {
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return users;
+    return users.filter((user) => [user.displayName, user.email, user.roles.join(" ")].some((value) => value.toLowerCase().includes(query)));
+  }, [userSearch, users]);
 
   useEffect(() => {
     void loadAdmin();
@@ -293,6 +299,22 @@ export default function AdminPage() {
 
       <section className="module-grid">
         {[
+          { href: "/admin/accounts", label: "Staff and permissions", description: "Create staff, review roles, and keep owner access protected." },
+          { href: "/admin/services", label: "Services and prices", description: "Adjust service catalog controls with reason-required audit." },
+          { href: "/admin/appearance", label: "Appearance", description: "Set the default clinic look and local browser preference." },
+          { href: "/admin/audit", label: "Audit logs", description: "Review clinical, account, and owner-control activity." },
+          { href: "/admin/settings", label: "Clinic setup", description: "Profile, rooms, branches, templates, and safety settings." },
+          { href: "/admin/drug-market", label: "Medicine data controls", description: "Reference import/review tools without patient dosing automation." }
+        ].map((item) => (
+          <Link className="module-card" href={item.href} key={item.href}>
+            <strong>{item.label}</strong>
+            <span className="muted">{item.description}</span>
+          </Link>
+        ))}
+      </section>
+
+      <section className="module-grid">
+        {[
           ["Clinic Profile", "Clinic name, branch identity, and contact details are planned for a guarded settings flow."],
           ["Branches and Rooms", "Branch and room setup is planned. No production scheduling policy is changed here."],
           ["Billing Settings", "Service prices, cost placeholders, and doctor share placeholders are active now. Taxes and gateways remain future work."],
@@ -451,11 +473,18 @@ export default function AdminPage() {
       <section className="dashboard-grid">
         <div className="panel">
           <div className="section-heading">
-            <h2>Users and Roles</h2>
-            <span className="badge">{users.length} users</span>
+            <div>
+              <h2>Users and Roles</h2>
+              <p className="muted">Search staff without opening code-like permission lists.</p>
+            </div>
+            <span className="badge">{filteredUsers.length} users</span>
           </div>
+          <label>
+            Search staff
+            <input onChange={(event) => setUserSearch(event.target.value)} placeholder="Name, email, or role" value={userSearch} />
+          </label>
           <div className="data-list">
-            {users.slice(0, 8).map((user) => (
+            {filteredUsers.slice(0, 8).map((user) => (
               <article className="data-row" key={user.id}>
                 <div className="data-row-header">
                   <strong>{user.displayName}</strong>
@@ -492,10 +521,10 @@ export default function AdminPage() {
           {(summary?.auditLogs ?? []).map((entry) => (
             <article className="data-row" key={entry.id}>
               <div className="data-row-header">
-                <strong>{entry.action.replaceAll("_", " ")}</strong>
+                <strong>{auditLabel(entry.action, entry.resourceType)}</strong>
                 <span className="badge">{entry.severity}</span>
               </div>
-              <p className="muted">{entry.resourceType} - {new Date(entry.createdAt).toLocaleString()}</p>
+              <p className="muted">{humanResourceType(entry.resourceType)} - {new Date(entry.createdAt).toLocaleString()}</p>
               {entry.reason ? <p className="muted">Reason: {entry.reason}</p> : null}
             </article>
           ))}
@@ -513,4 +542,23 @@ function Metric({ label, value }: { label: string; value: string | number }) {
       <p className="muted">Local demo setting</p>
     </article>
   );
+}
+
+function auditLabel(action: string, resourceType: string) {
+  const normalized = `${resourceType}.${action}`.toLowerCase();
+  if (normalized.includes("admin") && normalized.includes("control")) return "Owner opened Control Center";
+  if (normalized.includes("user") && normalized.includes("list")) return "User list viewed";
+  if (normalized.includes("role") || normalized.includes("permission")) return "Role permissions viewed";
+  if (normalized.includes("patient") && normalized.includes("update")) return "Patient file updated";
+  if (normalized.includes("draft") && normalized.includes("save")) return "Draft autosaved";
+  if (normalized.includes("investigation")) return "Investigation request updated";
+  if (normalized.includes("service")) return "Service catalog updated";
+  return action.replaceAll("_", " ").replaceAll(".", " ");
+}
+
+function humanResourceType(resourceType: string) {
+  return resourceType
+    .replaceAll("_", " ")
+    .replaceAll(".", " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
 }
