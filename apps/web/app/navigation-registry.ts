@@ -17,6 +17,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar", group: "Today", permissions: ["appointment.read", "appointments.read"] },
   { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients" },
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients" },
+  { href: "/doctor/waiting", label: "Doctor Waiting", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
   { href: "/doctor/visit", label: "Doctor Visit", icon: "encounter", group: "Clinical", permissions: ["encounter.create", "encounter.read"] },
   { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical", permissions: ["prescription.read"] },
   { href: "/care-assist", label: "Care Assist", icon: "ai", group: "Clinical", permissions: ["care_assist.read", "care_assist.evaluate"] },

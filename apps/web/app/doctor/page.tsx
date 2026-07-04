@@ -74,7 +74,7 @@ export default function DoctorModePage() {
           <span className="eyebrow">Waiting queue</span>
           <strong>{queue.length}</strong>
           <p className="muted">Patients waiting or moving through the clinic flow.</p>
-          <Link className="button compact" href="/queue">Open queue</Link>
+          <Link className="button compact" href="/doctor/waiting">Open waiting list</Link>
         </article>
         <article className="doctor-focus-card">
           <ThreeDMedicalIcon name="calendar" size="lg" tone="navy" />
@@ -95,7 +95,7 @@ export default function DoctorModePage() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <h2>Waiting patients</h2>
+            <h2>Patients waiting for doctor</h2>
             <p className="muted">Status: {status}</p>
           </div>
           <span className="badge accent">Simple list</span>
@@ -112,7 +112,7 @@ export default function DoctorModePage() {
               <ThreeDMedicalIcon name="queue" size="sm" />
               <div>
                 <strong>Queue {ticket.queueNumber ?? "patient"}</strong>
-                <span>{ticket.status ?? "Waiting"} - {ticket.priority ?? "Routine"}</span>
+                <span>{ticket.status ?? "Waiting"} - {ticket.priority ?? "Routine"} - Start or resume visit</span>
               </div>
               <span className="button compact secondary">
                 <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
