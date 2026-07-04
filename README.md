@@ -1,5 +1,16 @@
 # Prij Clinic
 
+## v0.12.6 Medication Safety Source Import + Review Workflow
+
+v0.12.6 adds Owner/Admin controlled medication safety source file preview, import commit, review queue, and approve/reject/retire decisions for pregnancy/lactation profile metadata.
+
+Imported rows are `needs_review` by default. Reviewed status requires source metadata and reviewer action with a reason. The workflow does not create fake pregnancy/lactation claims and does not automate prescribing, dosing, diagnosis, or treatment ranking. Real reviewed source population remains a separate governed workstream.
+
+```powershell
+npm run db:v126:import-med-safety
+npm run test:v126:med-safety-review
+```
+
 ## v0.12.5 Clinic Usability Lock + Source Review Prep
 
 v0.12.5 focuses on browser usability and medication safety source review prep. It tightens the path from login to patient creation, patient workspace, doctor visit, history, Care Assist, encounter, prescription, medication safety terminal, investigations, follow-up, and packet.

@@ -1,4 +1,31 @@
-﻿# Next Steps
+# Next Steps
+
+v0.12.6 medication safety source import and review next steps:
+
+1. Run the final focused checks:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run db:v123:med-safety:ready
+npm run test:v123:care-assist-safety
+npm run test:v124:clinical-safety-wording
+npm run test:v125:clinic-usability-lock
+npm run test:v126:med-safety-review
+npm run typecheck
+npm run build
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:v120:no-fake-ui
+```
+
+2. Import real source rows only from owner-provided or licensed/official exports.
+3. Keep imported rows review-gated until Owner/Admin review with a reason.
+4. Keep doctor approval mandatory and do not add autonomous prescribing, dosing, diagnosis, or treatment ranking.
+5. Do not create a release tag from this sprint.
 
 v0.12.1 clean database/reference foundation next steps:
 

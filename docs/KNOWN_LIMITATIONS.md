@@ -1,4 +1,11 @@
-﻿# Known Limitations
+# Known Limitations
+
+- v0.12.6 adds source import and review workflow, not a completed reviewed medication safety database.
+- Real reviewed pregnancy/lactation source population is a separate workstream requiring owner-approved or licensed/official files.
+- Import preview accepts owner-provided CSV/JSON/text content only; it does not scrape, browse, or acquire sources automatically.
+- Imported rows remain `needs_review` until an Owner/Admin records a review decision with a reason.
+- Approval requires source metadata, but clinical reliance still requires doctor review.
+- No autonomous prescribing, dosing, diagnosis, treatment ranking, or patient instruction generation is added.
 
 - v0.12.1 creates a local/dev clean-baseline process, not a production deletion, retention, legal, privacy, or clinical-governance policy.
 - Apply cleanup is for local/dev/development/test/CI only and must not be run against staging or production.

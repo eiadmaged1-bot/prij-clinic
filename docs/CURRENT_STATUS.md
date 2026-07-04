@@ -1,4 +1,15 @@
-﻿# Current Status
+# Current Status
+
+v0.12.6 Medication Safety Source Import + Review Workflow is in progress on branch `feature/v0.12.6-medication-safety-source-import-review`.
+
+v0.12.6 status:
+- Owner/Admin medication safety source import preview and commit endpoints are added.
+- Accepted imported rows are written as `needs_review` by default and never marked reviewed automatically.
+- Review queue supports approve, reject, and retire decisions with required reason and audit logging.
+- Approval requires source metadata; reviewer and reviewed time are server-owned.
+- Prescription safety terminal shows reviewed source metadata and review-required status without dosing or prescribing automation.
+- Category `E` maps to `REVIEW_REQUIRED` with a warning and is not a valid pregnancy category.
+- No web scraping, retail/pharmacy sources, fake pregnancy/lactation claims, autonomous prescribing, dosing, diagnosis, treatment ranking, external AI runtime call, DB reset, release tag, or raw source file commit is added.
 
 v0.12.1 Clean Database + Real Reference Foundation is in progress on branch `data/v0.12.1-clean-db-reference-foundation`.
 
