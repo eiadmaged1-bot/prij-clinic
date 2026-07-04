@@ -61,6 +61,36 @@ export class MedicationSafetyProfilesController {
     return { results: await this.profiles.search(query) };
   }
 
+  @Post("medication-safety-profiles/import-preview")
+  @Permissions("medication_safety_profile.manage")
+  importPreview(@Body() dto: Record<string, unknown>) {
+    return this.profiles.previewImport(dto);
+  }
+
+  @Post("medication-safety-profiles/import-commit")
+  @Permissions("medication_safety_profile.manage")
+  importCommit(@Body() dto: Record<string, unknown>, @CurrentUser() user: AuthUser) {
+    return this.profiles.commitImport(dto, user);
+  }
+
+  @Get("medication-safety-profiles/import-jobs")
+  @Permissions("medication_safety_profile.manage")
+  async importJobs() {
+    return { jobs: await this.profiles.importJobs() };
+  }
+
+  @Get("medication-safety-profiles/review-queue")
+  @Permissions("medication_safety_profile.manage")
+  async reviewQueue() {
+    return { results: await this.profiles.reviewQueue() };
+  }
+
+  @Post("medication-safety-profiles/:id/review-decision")
+  @Permissions("medication_safety_profile.manage")
+  reviewDecision(@Param("id") id: string, @Body() dto: Record<string, unknown>, @CurrentUser() user: AuthUser) {
+    return this.profiles.decideReview(id, dto, user);
+  }
+
   @Patch("medications/:id/safety-profile")
   @Permissions("medication_safety_profile.manage")
   update(@Param("id") id: string, @Body() dto: Record<string, unknown>, @CurrentUser() user: AuthUser) {

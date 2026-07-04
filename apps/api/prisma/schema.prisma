@@ -2855,6 +2855,7 @@ enum MedicationSafetyProfileReviewStatus {
   reviewed
   needs_review
   imported
+  rejected
   retired
 }
 
