@@ -570,9 +570,44 @@ function hasAnyPermission(permissions: string[], keys: string[]) {
   return keys.some((key) => permissions.includes(key));
 }
 
+const receptionistNav = new Set([
+  "/dashboard",
+  "/reception/today",
+  "/reception/check-in",
+  "/queue",
+  "/calendar",
+  "/patients",
+  "/patients/new",
+  "/tasks",
+  "/documents"
+]);
+
+const doctorNav = new Set([
+  "/dashboard",
+  "/doctor",
+  "/doctor/waiting",
+  "/patients",
+  "/doctor/visit",
+  "/prescriptions",
+  "/investigations",
+  "/ultrasound",
+  "/encounters",
+  "/medications",
+  "/guidelines",
+  "/protocol-atlas",
+  "/ai-drafts"
+]);
+
+function hasRole(roles: string[], names: string[]) {
+  return roles.some((role) => names.includes(role));
+}
+
 function canSeeNavItem(item: NavItem, roles: string[], permissions: string[], canOpenAdmin: boolean) {
   if (item.adminOnly) return canOpenAdmin;
   if (item.roles?.length && !item.roles.some((role) => roles.includes(role))) return false;
   if (item.permissions?.length && !hasAnyPermission(permissions, item.permissions)) return false;
+  if (hasRole(roles, ["Owner", "Admin"])) return true;
+  if (hasRole(roles, ["Reception", "Receptionist"])) return receptionistNav.has(item.href);
+  if (hasRole(roles, ["Doctor"])) return doctorNav.has(item.href);
   return true;
 }

@@ -12,7 +12,7 @@ export type NavItem = {
 
 export const navigationRegistry: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Today" },
-  { href: "/reception/today", label: "Reception", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.read"] },
+  { href: "/reception/today", label: "Reception Today", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.read"] },
   { href: "/reception/check-in", label: "Check-in", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
   { href: "/queue", label: "Queue", icon: "queue", group: "Today", permissions: ["queue.read"] },
   { href: "/calendar", label: "Calendar", icon: "calendar", group: "Today", permissions: ["appointment.read", "appointments.read"] },
