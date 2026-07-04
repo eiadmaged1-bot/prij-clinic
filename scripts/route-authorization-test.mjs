@@ -1,4 +1,5 @@
 import {
+  apiRequest,
   apiStatus,
   assertStatus,
   bodyFor,
@@ -46,6 +47,19 @@ async function main() {
     } catch (error) {
       row.anonymous = "FAIL";
       record.fail(`${label} anonymous`, error);
+    }
+
+    if (route.requiresReasonCheck) {
+      try {
+        const missingReason = await apiRequest(route.method, path, ownerToken, {});
+        assertStatus(missingReason.status, 400, `${label} missing reason`);
+        if (!/reason/i.test(JSON.stringify(missingReason.body))) {
+          throw new Error(`${label} missing reason response did not mention reason: ${JSON.stringify(missingReason.body)}`);
+        }
+        record.pass(`${label} rejects missing reason`);
+      } catch (error) {
+        record.fail(`${label} missing reason`, error);
+      }
     }
 
     try {

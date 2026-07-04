@@ -1,4 +1,4 @@
-import { apiJson, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, apiRequest, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("ADMIN-CONTROL");
 
@@ -41,7 +41,18 @@ async function main() {
     price: 111,
     currency: "EGP"
   });
-  const updatedService = await apiJson("PATCH", `/admin/services/${service.id}`, admin, { price: 222, active: false });
+  const missingReasonService = await apiRequest("PATCH", `/admin/services/${service.id}`, admin, { price: 222, active: false });
+  assertStatus(missingReasonService.status, 400, "service price/status update without reason");
+  if (!/reason/i.test(JSON.stringify(missingReasonService.body))) {
+    throw new Error(`service missing-reason response did not mention reason: ${JSON.stringify(missingReasonService.body)}`);
+  }
+  record.pass("service price/status update requires reason");
+
+  const updatedService = await apiJson("PATCH", `/admin/services/${service.id}`, admin, {
+    price: 222,
+    active: false,
+    reason: "Demo admin service price/status correction."
+  });
   if (String(updatedService.price) !== "222") throw new Error("service price update did not persist.");
   if (updatedService.active !== false) throw new Error("service deactivate did not persist.");
   record.pass("admin can add and update service pricing");
@@ -82,7 +93,7 @@ async function main() {
   const overrideAudit = audit.find((entry) => entry.resourceId === invoice.id && entry.action === "admin_override.invoice_voided");
   if (!overrideAudit?.reason) throw new Error("admin override audit entry with reason was not found.");
   const serviceAudit = audit.find((entry) => entry.resourceId === service.id && entry.action === "service_item.updated");
-  if (!serviceAudit) throw new Error("service update audit entry was not found.");
+  if (!serviceAudit?.reason) throw new Error("service update audit entry with reason was not found.");
   const appearanceAudit = audit.find((entry) => entry.action === "system_setting.appearance_updated");
   if (!appearanceAudit) throw new Error("appearance update audit entry was not found.");
   record.pass("admin control actions create audit entries");

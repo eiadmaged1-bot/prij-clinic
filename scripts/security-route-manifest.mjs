@@ -35,7 +35,7 @@ const routeDefinitions = [
   { method: "GET", path: "/queue/today", category: "queue", requiredPermission: "queue.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped queue data." },
   { method: "PATCH", path: "/queue/:queueTicketId/call", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
   { method: "PATCH", path: "/queue/:queueTicketId/complete", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
-  { method: "PATCH", path: "/queue/:queueTicketId/cancel", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor" },
+  { method: "PATCH", path: "/queue/:queueTicketId/cancel", category: "queue", requiredPermission: "queue.status_update", allowedAs: "owner", denyAs: "doctor", fixtureBody: "queueCancel", requiresReasonCheck: true, notes: "Queue cancellation is sensitive; reason is required and audited." },
   { method: "POST", path: "/encounters", category: "encounters", requiredPermission: "encounter.create", allowedAs: "owner", denyAs: "reception", fixtureBody: "encounter", notes: "Referenced-record create scope remains a known limitation." },
   { method: "GET", path: "/encounters", category: "encounters", requiredPermission: "encounter.read", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/encounters/:encounterId", category: "encounters", requiredPermission: "encounter.read", allowedAs: "owner", denyAs: "reception" },
@@ -267,6 +267,7 @@ export function bodyFor(kind, ids) {
     },
     appointmentStatus: { status: "booked" },
     queue: { patientId: ids.patientId, appointmentId: ids.appointmentId, priority: "routine" },
+    queueCancel: { reason: "Demo queue cancellation authorization check only." },
     encounter: {
       patientId: ids.patientId,
       appointmentId: ids.appointmentId,
