@@ -128,6 +128,7 @@
     "test:v126:med-safety-review": "node scripts/v126-medication-safety-review-test.mjs",
     "test:v127:demo-candidate-browser": "node scripts/v127-demo-candidate-browser.mjs",
     "test:v127:no-code-ui": "node scripts/v127-no-code-ui-test.mjs",
+    "test:v128:owner-control-gyn": "node scripts/v128-owner-control-gyn-test.mjs",
     "db:v109:queue-duplicates:dry-run": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --dry-run",
     "db:v109:queue-duplicates:apply": "node scripts/v109-resolve-legacy-queue-duplicates.mjs --apply",
     "db:v109:queue-migration-ready": "node scripts/v109-verify-queue-date-migration-ready.mjs",
