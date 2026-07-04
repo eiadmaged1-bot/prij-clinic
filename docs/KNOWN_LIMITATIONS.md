@@ -1,5 +1,13 @@
 # Known Limitations
 
+- v0.13.0-v0.14.0 skips the dedicated v0.12.9 QA sprint. Manual browser QA is intentionally left to the user after this mega sprint.
+- The mega sprint is not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
+- No real patient data should be used. Local/demo records must remain synthetic.
+- Reception, queue, billing, investigation, documents, pregnancy, fetus, antenatal, ultrasound, and reports use existing local workflow foundations and are not full external integrations.
+- There is no WhatsApp, DICOM/PACS, insurance/TPA, external AI runtime call, real payment gateway, mobile app, or full accounting ledger.
+- OB/GYN deepening is recording-only. It does not diagnose, prescribe, dose, rank treatment, diagnose FGR, interpret anomalies, or analyze fetal images.
+- Reviewed medication safety population remains a separate governed workstream.
+
 - v0.12.8 adds Owner Control Center and General Gynecology Starter workflows, but it is not production readiness, medical-device certification, privacy/legal signoff, or clinical governance approval.
 - Owner Control Center settings are protected and audited where implemented, but broader production configuration management, backup operations, monitoring, and legal readiness remain separate.
 - Service/price catalog entries are clinic billing settings only. There is no insurance/TPA workflow, real payment gateway, full accounting ledger, medication reference price integration, or investigation reference pricing engine.

@@ -1,5 +1,33 @@
 # Next Steps
 
+v0.13.0-v0.14.0 mega sprint next steps:
+
+1. Run final focused checks:
+
+```powershell
+git diff --check
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run test:v125:clinic-usability-lock
+npm run test:v126:med-safety-review
+npm run test:v128:owner-control-gyn
+npm run test:v13:clinic-day-loop
+npm run test:v14:obgyn-deepening
+npm run test:v14:no-unsafe-obgyn-automation
+npm run typecheck
+npm run build
+npm run test:web:api-base
+npm run test:security:cors
+npm run test:web:hydration-root
+npm run test:security:image-metadata
+npm run test:v120:no-fake-ui
+```
+
+2. User manual QA after this sprint should cover reception check-in, queue handoff, doctor waiting list, patient workspace actions, pregnancy/fetus/antenatal/ultrasound forms, documents/results timeline, and daily reports.
+3. Keep the sprint non-production. Do not add real patient data, WhatsApp, DICOM/PACS, insurance, external AI runtime calls, real payment gateway, automatic diagnosis, prescribing, dosing, FGR diagnosis, anomaly interpretation, or fetal image AI.
+4. Keep reviewed medication safety population as a separate governed workstream.
+5. Do not create a release tag.
+
 v0.12.8 owner control and gynecology starter next steps:
 
 1. Stabilize and browser-QA this combined sprint with fake/synthetic data only.

@@ -1,5 +1,17 @@
 # Prij Clinic
 
+## v0.13.0-v0.14.0 Clinic Operations + Documents + OB/GYN Deepening Mega Sprint
+
+This sprint skips the dedicated v0.12.9 QA sprint and adds a staged clinic operations leap: reception daily workspace, calendar/queue/doctor handoff, service/invoice visit links, investigation handoff, documents/results timeline, patient timeline, pregnancy episode deepening, fetus/multiple pregnancy starter, antenatal visit recording, OB ultrasound structured report starter, daily clinic reports, and a demo clinic day script.
+
+```powershell
+npm run test:v13:clinic-day-loop
+npm run test:v14:obgyn-deepening
+npm run test:v14:no-unsafe-obgyn-automation
+```
+
+Manual browser QA is deferred to the user after this mega sprint. This is not production-ready. Do not use real patient data. No WhatsApp, DICOM/PACS, insurance/TPA, external AI runtime calls, real payment gateway, automatic diagnosis, prescribing, dosing, FGR diagnosis, anomaly interpretation, treatment ranking, or fetal image AI were added. AI remains doctor-assist and draft-only. Reviewed medication safety population remains a governed workstream.
+
 ## v0.12.8 Owner Control Center + General Gynecology Starter
 
 v0.12.8 adds the staged Owner Control Center shell, Owner/Admin service price catalog controls, safe reason-required owner override actions, a focused patient workspace Gynecology tab, and recording-only general gynecology starter templates.

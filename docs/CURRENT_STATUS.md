@@ -1,5 +1,15 @@
 # Current Status
 
+v0.13.0-v0.14.0 Clinic Operations + Documents + OB/GYN Deepening Mega Sprint is in progress on branch `feature/v0.13-v0.14-clinic-ops-documents-obgyn-mega`.
+
+v0.13-v0.14 status:
+- This sprint skips the dedicated v0.12.9 QA sprint; user manual QA will happen after this mega sprint.
+- Reception daily workspace, calendar/queue daily loop, and doctor waiting list are added.
+- Patient workspace exposes service/invoice, investigation, document/result, pregnancy, fetus, antenatal, and ultrasound handoffs where existing models support them.
+- Daily clinic reports summary and demo clinic day documentation are added.
+- Not production-ready. No real patient data, WhatsApp, DICOM/PACS, insurance, external AI runtime calls, real payment gateway, automatic diagnosis, prescribing, dosing, FGR diagnosis, anomaly interpretation, or fetal image AI.
+- AI remains doctor-assist and draft-only. Reviewed medication safety population remains governed.
+
 v0.12.8 Owner Control Center + General Gynecology Starter is in progress on branch `feature/v0.12.8-owner-control-gyn-starter`.
 
 v0.12.8 status:
