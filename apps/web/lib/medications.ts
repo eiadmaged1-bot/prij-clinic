@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./api-base-url";
+import { expandSearchShortcut } from "./search-shortcuts";
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? sessionStorage.getItem("prijClinicToken") : null;
@@ -37,7 +38,7 @@ export type MedicationResult = {
 export function searchMedications(query: string) {
   return request<{ query: string; results: MedicationResult[] }>("/medications/search", {
     method: "POST",
-    body: JSON.stringify({ query })
+    body: JSON.stringify({ query: expandSearchShortcut(query) })
   });
 }
 

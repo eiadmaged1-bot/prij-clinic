@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./api-base-url";
+import { expandSearchShortcut } from "./search-shortcuts";
 
 function authHeaders() {
   const token = typeof window !== "undefined" ? sessionStorage.getItem("prijClinicToken") : null;
@@ -47,7 +48,7 @@ export type DrugMarketProduct = {
 };
 
 export function searchDrugMarket(query: string, countryCode?: string) {
-  return request<{ query: string; products: DrugMarketProduct[] }>("/drug-market/search", { method: "POST", body: JSON.stringify({ query, countryCode }) });
+  return request<{ query: string; products: DrugMarketProduct[] }>("/drug-market/search", { method: "POST", body: JSON.stringify({ query: expandSearchShortcut(query), countryCode }) });
 }
 
 export function listDrugMarketCountries() { return request("/drug-market/countries"); }

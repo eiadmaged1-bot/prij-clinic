@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
 type CatalogItem = { id: string; name: string; category: string; modality?: string | null };
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
@@ -33,7 +34,8 @@ export default function InvestigationsPage() {
   }, [query]);
 
   async function searchCatalog(value: string) {
-    const data = await apiGet(`/investigations/catalog${value.trim() ? `?q=${encodeURIComponent(value)}` : ""}`);
+    const expanded = expandSearchShortcut(value);
+    const data = await apiGet(`/investigations/catalog${expanded.trim() ? `?q=${encodeURIComponent(expanded)}` : ""}`);
     setCatalog((data.investigationCatalog ?? []) as CatalogItem[]);
   }
 

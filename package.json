@@ -44,6 +44,7 @@
     "test:obgyn:core": "node scripts/obgyn-core-depth-test.mjs",
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
     "test:premium:workflow": "node scripts/premium-workflow-test.mjs",
+    "test:smart-search": "node scripts/smart-search-shortcuts-test.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",
     "test:medications": "node scripts/medication-intelligence-test.mjs",
     "test:drug-market": "node scripts/medication-intelligence-test.mjs",

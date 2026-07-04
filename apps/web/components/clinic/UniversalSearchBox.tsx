@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { KeyboardEvent, useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
 type SearchResult = {
   id: string;
@@ -34,7 +35,7 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
     const token = sessionStorage.getItem("prijClinicToken");
     const timeout = window.setTimeout(() => {
       setLoading(true);
-      fetch(`${getApiBaseUrl()}/search/live?q=${encodeURIComponent(query)}&scope=${encodeURIComponent(scope)}`, {
+      fetch(`${getApiBaseUrl()}/search/live?q=${encodeURIComponent(expandSearchShortcut(query))}&scope=${encodeURIComponent(scope)}`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       })
