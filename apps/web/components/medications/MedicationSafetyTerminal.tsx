@@ -56,7 +56,11 @@ export function MedicationSafetyTerminal({
       </div>
       <dl className="profile-grid">
         <div><dt>Source</dt><dd>{safety?.sourceName || "Missing source"}</dd></div>
+        <div><dt>Source year</dt><dd>{safety?.sourceYear ?? "Not recorded"}</dd></div>
+        <div><dt>Source link</dt><dd>{safety?.sourceUrl || "Not recorded"}</dd></div>
         <div><dt>Review status</dt><dd>{safety?.reviewStatus ?? "needs_review"}</dd></div>
+        <div><dt>Reviewed by</dt><dd>{safety?.reviewedByUser?.displayName ?? safety?.reviewedByUser?.email ?? "Not recorded"}</dd></div>
+        <div><dt>Reviewed at</dt><dd>{formatDate(safety?.reviewedAt) || "Not recorded"}</dd></div>
         <div><dt>Confidence</dt><dd>{safety?.confidenceLevel ?? "unknown"}</dd></div>
         <div><dt>Last checked</dt><dd>{formatDate(safety?.lastCheckedAt) || "unknown"}</dd></div>
         <div><dt>Last updated</dt><dd>{formatDate(safety?.sourceLastUpdatedAt) || "unknown"}</dd></div>

@@ -59,6 +59,8 @@ export type MedicationSafetyProfileResult = {
     sourceVersionLabel?: string | null;
     sourceRefreshStatus?: string | null;
     sourceRefreshNote?: string | null;
+    reviewedAt?: string | null;
+    reviewedByUser?: { id: string; displayName?: string | null; email?: string | null } | null;
     pregnancyRiskSummary?: string | null;
     pregnancyClinicalConsiderations?: string | null;
     pregnancyDataSummary?: string | null;
@@ -82,6 +84,54 @@ export function searchMedicationSafetyProfiles(query = "") {
 export function updateMedicationSafetyProfileReview(medicationGenericId: string, input: Record<string, unknown>) {
   return request<MedicationSafetyProfileResult["profile"] & { id: string }>(`/reference/medications/${encodeURIComponent(medicationGenericId)}/safety-profile`, {
     method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export type MedicationSafetyImportPreview = {
+  summary: { rows: number; accepted: number; rejected: number; warnings: number };
+  accepted: Array<{
+    rowNumber: number;
+    genericName: string;
+    medicationGenericId: string;
+    legacyPregnancyCategory: string;
+    lactationRiskLevel: string;
+    sourceName: string;
+    sourceYear: number | null;
+    sourceType: string;
+    confidenceLevel: string;
+    reviewStatus: "needs_review";
+    warnings: string[];
+  }>;
+  rejected: Array<{ rowNumber: number; genericName?: string; errors: string[]; warnings: string[] }>;
+  warning: string;
+};
+
+export function previewMedicationSafetyImport(input: { fileName: string; content: string }) {
+  return request<MedicationSafetyImportPreview>("/reference/medication-safety-profiles/import-preview", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function commitMedicationSafetyImport(input: { fileName: string; content: string }) {
+  return request<{ jobId: string; createdOrUpdated: number; preview: MedicationSafetyImportPreview; reviewStatus: "needs_review" }>("/reference/medication-safety-profiles/import-commit", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function listMedicationSafetyImportJobs() {
+  return request<{ jobs: Array<{ id: string; resourceId?: string | null; actorUserId?: string | null; action: string; metadataJson?: unknown; createdAt: string }> }>("/reference/medication-safety-profiles/import-jobs");
+}
+
+export function listMedicationSafetyReviewQueue() {
+  return request<{ results: Array<MedicationSafetyProfileResult["profile"] & { id: string; medicationGeneric?: { id?: string; genericName?: string; familyName?: string | null; className?: string | null } }> }>("/reference/medication-safety-profiles/review-queue");
+}
+
+export function decideMedicationSafetyProfileReview(profileId: string, input: { decision: "approve" | "reject" | "retire"; reason: string }) {
+  return request<MedicationSafetyProfileResult["profile"] & { id: string }>(`/reference/medication-safety-profiles/${encodeURIComponent(profileId)}/review-decision`, {
+    method: "POST",
     body: JSON.stringify(input)
   });
 }
