@@ -96,7 +96,7 @@ function GuidedVisitContent() {
     if (typeof window === "undefined") return null;
     return sessionStorage.getItem("prijClinicToken");
   }, []);
-  const apiBaseUrl = useMemo(() => getApiBaseUrl(), []);
+  const apiBaseUrl = useMemo(() => (typeof window === "undefined" ? "" : getApiBaseUrl()), []);
   const autosave = useAutosaveDraft({
     key: `doctor-visit:${patientId ?? "unassigned"}`,
     entityType: "doctor_visit_draft",

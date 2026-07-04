@@ -195,6 +195,24 @@ export async function listOfflineOperations() {
   return records;
 }
 
+export async function clearSyncedOfflineOperations() {
+  const synced = (await listOfflineOperations()).filter((operation) => operation.status === "synced");
+  try {
+    const db = await openDraftDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(queueStoreName, "readwrite");
+      const store = tx.objectStore(queueStoreName);
+      synced.forEach((operation) => store.delete(operation.operationId));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch {
+    synced.forEach((operation) => localStorage.removeItem(`prij:sync-operation:${operation.operationId}`));
+  }
+  return synced.length;
+}
+
 export async function syncPendingOperations(apiBaseUrl: string, token?: string | null) {
   const operations = (await listOfflineOperations()).filter((operation) => operation.status === "pending" || operation.status === "failed");
   let syncedCount = 0;

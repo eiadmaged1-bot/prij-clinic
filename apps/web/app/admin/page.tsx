@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { clearSyncedOfflineOperations, listOfflineOperations, useOfflineSyncQueue } from "@/lib/autosave-draft";
 
 type ServiceItem = {
   id: string;
@@ -46,6 +47,15 @@ type ControlSummary = {
   auditLogs: Array<{ id: string; action: string; resourceType: string; severity: string; reason?: string | null; createdAt: string }>;
 };
 
+type SyncHealthSummary = {
+  total: number;
+  pending: number;
+  failed: number;
+  synced: number;
+  lastAttemptAt: string | null;
+  entityTypes: string[];
+};
+
 const emptyService = {
   code: "",
   name: "",
@@ -66,8 +76,11 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [syncHealth, setSyncHealth] = useState<SyncHealthSummary>({ total: 0, pending: 0, failed: 0, synced: 0, lastAttemptAt: null, entityTypes: [] });
 
   const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
+  const apiBaseUrl = useMemo(() => (typeof window === "undefined" ? "" : getApiBaseUrl()), []);
+  const syncQueue = useOfflineSyncQueue(apiBaseUrl, token);
   const headers = useMemo(
     () => ({
       "content-type": "application/json",
@@ -78,6 +91,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     void loadAdmin();
+    void loadSyncHealth();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -86,11 +100,11 @@ export default function AdminPage() {
     setError("");
     try {
       const [summaryResponse, servicesResponse, usersResponse, rolesResponse, medicationResponse] = await Promise.all([
-        fetch(`${getApiBaseUrl()}/admin/control-center`, { credentials: "include", headers }),
-        fetch(`${getApiBaseUrl()}/admin/services`, { credentials: "include", headers }),
-        fetch(`${getApiBaseUrl()}/admin/users`, { credentials: "include", headers }),
-        fetch(`${getApiBaseUrl()}/admin/roles`, { credentials: "include", headers }),
-        fetch(`${getApiBaseUrl()}/reference/medication-readiness`, { credentials: "include", headers })
+        fetch(`${apiBaseUrl}/admin/control-center`, { credentials: "include", headers }),
+        fetch(`${apiBaseUrl}/admin/services`, { credentials: "include", headers }),
+        fetch(`${apiBaseUrl}/admin/users`, { credentials: "include", headers }),
+        fetch(`${apiBaseUrl}/admin/roles`, { credentials: "include", headers }),
+        fetch(`${apiBaseUrl}/reference/medication-readiness`, { credentials: "include", headers })
       ]);
 
       if ([summaryResponse, servicesResponse, usersResponse, rolesResponse].some((response) => response.status === 401)) {
@@ -110,6 +124,53 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadSyncHealth() {
+    const operations = await listOfflineOperations();
+    const lastAttemptAt = operations
+      .map((operation) => operation.lastAttemptAt ?? operation.createdAt)
+      .sort()
+      .at(-1) ?? null;
+    setSyncHealth({
+      total: operations.length,
+      pending: operations.filter((operation) => operation.status === "pending").length,
+      failed: operations.filter((operation) => operation.status === "failed").length,
+      synced: operations.filter((operation) => operation.status === "synced").length,
+      lastAttemptAt,
+      entityTypes: Array.from(new Set(operations.map((operation) => operation.entityType))).sort()
+    });
+  }
+
+  async function syncNowFromOwnerCenter() {
+    await syncQueue.syncNow();
+    await loadSyncHealth();
+  }
+
+  async function clearSyncedFromOwnerCenter() {
+    if (!window.confirm("Clear synced local queue entries from this browser? Pending and failed drafts stay protected.")) return;
+    const cleared = await clearSyncedOfflineOperations();
+    setMessage(`Cleared ${cleared} synced local queue entr${cleared === 1 ? "y" : "ies"}.`);
+    await loadSyncHealth();
+  }
+
+  function exportSyncDiagnostic() {
+    const diagnostic = {
+      generatedAt: new Date().toISOString(),
+      pending: syncHealth.pending,
+      failed: syncHealth.failed,
+      synced: syncHealth.synced,
+      total: syncHealth.total,
+      lastAttemptAt: syncHealth.lastAttemptAt,
+      entityTypes: syncHealth.entityTypes
+    };
+    const blob = new Blob([JSON.stringify(diagnostic, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "prij-sync-diagnostic.json";
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   async function createService(event: FormEvent<HTMLFormElement>) {
@@ -247,6 +308,36 @@ export default function AdminPage() {
             <span className="muted">{description}</span>
           </article>
         ))}
+      </section>
+
+      <section className="panel">
+        <div className="section-heading">
+          <div>
+            <h2>Autosave and Sync Health</h2>
+            <p className="muted">This browser only. Diagnostic export excludes draft payloads and patient details.</p>
+          </div>
+          <span className={`badge ${syncHealth.failed ? "warning" : syncHealth.pending ? "accent" : ""}`}>
+            {syncHealth.pending + syncHealth.failed} pending
+          </span>
+        </div>
+        <div className="summary-grid">
+          <Metric label="Pending local drafts" value={syncHealth.pending} />
+          <Metric label="Failed sync attempts" value={syncHealth.failed} />
+          <Metric label="Synced local entries" value={syncHealth.synced} />
+          <Metric label="Last sync check" value={syncHealth.lastAttemptAt ? new Date(syncHealth.lastAttemptAt).toLocaleString() : "No local sync yet"} />
+        </div>
+        <p className="muted">Tracked draft areas: {syncHealth.entityTypes.length ? syncHealth.entityTypes.join(", ") : "None on this browser"}.</p>
+        <div className="form-actions">
+          <button className="button secondary compact" disabled={syncQueue.isSyncing} onClick={() => void syncNowFromOwnerCenter()} type="button">
+            {syncQueue.isSyncing ? "Syncing..." : "Sync now"}
+          </button>
+          <button className="button secondary compact" onClick={() => void clearSyncedFromOwnerCenter()} type="button">
+            Clear synced entries
+          </button>
+          <button className="button secondary compact" onClick={exportSyncDiagnostic} type="button">
+            Export diagnostic
+          </button>
+        </div>
       </section>
 
       <section className="dashboard-grid">
