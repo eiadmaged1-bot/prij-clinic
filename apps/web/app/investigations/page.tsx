@@ -7,17 +7,26 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type CatalogItem = { id: string; name: string; category: string; modality?: string | null };
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
+type Patient = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; phone?: string | null };
 
 export default function InvestigationsPage() {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [selected, setSelected] = useState<CatalogItem[]>([]);
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState("");
+  const [patientQuery, setPatientQuery] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [status, setStatus] = useState("Ready");
 
-  useEffect(() => { void loadRequests(); }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const routePatientId = params.get("patientId");
+    if (routePatientId) setPatientId(routePatientId);
+    void loadRequests();
+    void loadPatients();
+  }, []);
   useEffect(() => {
     const timeout = window.setTimeout(() => { void searchCatalog(query); }, 220);
     return () => window.clearTimeout(timeout);
@@ -31,6 +40,11 @@ export default function InvestigationsPage() {
   async function loadRequests() {
     const data = await apiGet("/clinical-requests");
     setRequests((data.clinicalRequests ?? []) as ClinicalRequest[]);
+  }
+
+  async function loadPatients() {
+    const data = await apiGet("/patients");
+    setPatients((data.patients ?? []) as Patient[]);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -78,7 +92,12 @@ export default function InvestigationsPage() {
         <article className="panel">
           <div className="section-heading"><h2>Request Builder</h2><span className="badge">{status}</span></div>
           <form className="form-grid" onSubmit={submit}>
-            <label>Patient ID<input value={patientId} onChange={(event) => setPatientId(event.target.value)} required /></label>
+            <SelectedPatientCard patient={patients.find((patient) => patient.id === patientId)} />
+            <label>Choose patient<input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Search name, phone, or file number" /></label>
+            <select value={patientId} onChange={(event) => setPatientId(event.target.value)} required>
+              <option value="">Select patient file</option>
+              {patients.filter((patient) => patientSearch(patient).includes(patientQuery.toLowerCase())).slice(0, 20).map((patient) => <option key={patient.id} value={patient.id}>{patientLabel(patient)}</option>)}
+            </select>
             <label>Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, ferritin, CA-125, X-ray, 4D ultrasound, vascular report" /></label>
             <div className="data-list">
               {catalog.slice(0, 10).map((item) => (
@@ -117,6 +136,19 @@ export default function InvestigationsPage() {
 
 function friendly(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function SelectedPatientCard({ patient }: { patient?: Patient }) {
+  return <div className="notice">{patient ? `Selected patient: ${patientLabel(patient)} | ${patient.medicalRecordNumber ?? "No file number"} | ${patient.phone ?? "No phone"}` : "Select a patient file before saving this request."}</div>;
+}
+
+function patientLabel(patient?: Patient | null) {
+  if (!patient) return "Patient";
+  return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
+}
+
+function patientSearch(patient: Patient) {
+  return `${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""} ${patient.phone ?? ""}`.toLowerCase();
 }
 
 async function apiGet(endpoint: string) {

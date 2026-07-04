@@ -9,6 +9,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 type Shortcut = { id: string; displayName: string; genericName: string; defaultDoseText?: string | null; defaultTimingText?: string | null; defaultDurationText?: string | null; defaultInstructions?: string | null };
 type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; itemsJson?: PrescriptionItem[] };
 type PrescriptionItem = { medicationName: string; dose?: string; frequency?: string; duration?: string; instructions?: string; notes?: string };
+type Patient = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; phone?: string | null };
 
 const emptyItem: PrescriptionItem = { medicationName: "", dose: "", frequency: "", duration: "", instructions: "", notes: "" };
 
@@ -17,22 +18,31 @@ export default function PrescriptionsPage() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [recent, setRecent] = useState<Record<string, unknown>[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [items, setItems] = useState<PrescriptionItem[]>([{ ...emptyItem }]);
   const [patientId, setPatientId] = useState("");
+  const [patientQuery, setPatientQuery] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("Ready");
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const routePatientId = params.get("patientId");
+    if (routePatientId) setPatientId(routePatientId);
+    void load();
+  }, []);
 
   async function load() {
-    const [shortcutData, templateData, prescriptionData] = await Promise.all([
+    const [shortcutData, templateData, prescriptionData, patientData] = await Promise.all([
       apiGet("/prescriptions/shortcuts"),
       apiGet("/prescriptions/templates"),
-      apiGet("/prescriptions")
+      apiGet("/prescriptions"),
+      apiGet("/patients")
     ]);
     setShortcuts((shortcutData.doctorMedicationShortcuts ?? []) as Shortcut[]);
     setTemplates((templateData.prescriptionTemplates ?? []) as Template[]);
     setRecent((prescriptionData.prescriptions ?? []) as Record<string, unknown>[]);
+    setPatients((patientData.patients ?? []) as Patient[]);
   }
 
   async function savePrescription(nextStatus = "draft") {
@@ -110,13 +120,18 @@ export default function PrescriptionsPage() {
           <div className="section-heading">
             <div>
               <h2>Prescription Builder</h2>
-              <p className="muted">Attach to a patient file by entering a patient ID from the patient workspace, or save as a standalone print draft.</p>
+              <p className="muted">Attach to the selected patient file, or open from a patient profile to fill the patient automatically.</p>
             </div>
             <span className="badge">{status}</span>
           </div>
           <UniversalSearchBox scope="prescriptions" />
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void savePrescription(); }}>
-            <label>Attach to patient ID<input value={patientId} onChange={(event) => setPatientId(event.target.value)} placeholder="Optional patient ID" /></label>
+            <SelectedPatientCard patient={patients.find((patient) => patient.id === patientId)} />
+            <label>Choose patient<input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Search name, phone, or file number" /></label>
+            <select value={patientId} onChange={(event) => setPatientId(event.target.value)}>
+              <option value="">Standalone print draft</option>
+              {patients.filter((patient) => patientSearch(patient).includes(patientQuery.toLowerCase())).slice(0, 20).map((patient) => <option key={patient.id} value={patient.id}>{patientLabel(patient)}</option>)}
+            </select>
             {items.map((item, index) => (
               <div className="panel compact-panel" key={index}>
                 <label>Medication name<input required value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
@@ -179,6 +194,19 @@ function RecordList({ rows }: { rows: Record<string, unknown>[] }) {
 
 function updateItem(index: number, key: keyof PrescriptionItem, value: string, setItems: (updater: (current: PrescriptionItem[]) => PrescriptionItem[]) => void) {
   setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
+}
+
+function SelectedPatientCard({ patient }: { patient?: Patient }) {
+  return <div className="notice">{patient ? `Selected patient: ${patientLabel(patient)} | ${patient.medicalRecordNumber ?? "No file number"} | ${patient.phone ?? "No phone"}` : "No patient selected. This will stay a standalone printable draft."}</div>;
+}
+
+function patientLabel(patient?: Patient | null) {
+  if (!patient) return "Patient";
+  return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
+}
+
+function patientSearch(patient: Patient) {
+  return `${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""} ${patient.phone ?? ""}`.toLowerCase();
 }
 
 async function apiGet(endpoint: string) {
