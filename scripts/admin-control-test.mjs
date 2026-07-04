@@ -41,10 +41,15 @@ async function main() {
     price: 111,
     currency: "EGP"
   });
-  const updatedService = await apiJson("PATCH", `/admin/services/${service.id}`, admin, { price: 222, active: false });
+  assertStatus(await apiStatus("PATCH", `/admin/services/${service.id}`, admin, { price: 222, active: false }), 400, "service price/status update without reason");
+  const updatedService = await apiJson("PATCH", `/admin/services/${service.id}`, admin, {
+    price: 222,
+    active: false,
+    reason: "Local demo service pricing correction from admin control test."
+  });
   if (String(updatedService.price) !== "222") throw new Error("service price update did not persist.");
   if (updatedService.active !== false) throw new Error("service deactivate did not persist.");
-  record.pass("admin can add and update service pricing");
+  record.pass("admin can add and update service pricing with reason");
 
   const patient = await apiJson("POST", "/patients", admin, {
     medicalRecordNumber: `DEMO-ADMIN-${Date.now()}`,

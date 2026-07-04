@@ -201,7 +201,7 @@ export default function AccountsPage() {
           </div>
           <span className="badge warning">Protected local demo</span>
         </div>
-        <p className="muted">Create local demo staff accounts, set role presets, and review access toggles. System Owner access is reserved for Eyad.</p>
+        <p className="muted">Create local demo staff accounts, set role and Permission presets, and review access toggles. System Owner access is reserved for Eyad.</p>
       </section>
 
       <SafetyAlert />
@@ -258,7 +258,7 @@ export default function AccountsPage() {
         <div className="panel">
           <div className="section-heading">
             <div>
-              <h2>Create test staff account</h2>
+              <h2>Create account</h2>
               <p className="muted">Local demo only. Do not use production credentials or real staff passwords.</p>
             </div>
           </div>
@@ -295,7 +295,7 @@ export default function AccountsPage() {
               Reason
               <input onChange={(event) => setCreateForm((current) => ({ ...current, reason: event.target.value }))} required value={createForm.reason} />
             </label>
-            <button className="button wide" type="submit">Create test staff account</button>
+            <button className="button wide" type="submit">Create account</button>
           </form>
         </div>
       </section>

@@ -76,7 +76,7 @@ export default function PatientsPage() {
           </div>
           <Link className="button" href="/patients/new">
             <ThreeDMedicalIcon name="patients" size="sm" />
-            New Patient
+            New Patient File
           </Link>
         </div>
         <p className="muted">Find or create a patient file, then continue from the patient workspace.</p>

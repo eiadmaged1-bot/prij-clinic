@@ -18,6 +18,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/calendar", label: "Calendar", icon: "calendar", group: "Today", permissions: ["appointment.read", "appointments.read"] },
   { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients" },
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients" },
+  { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
   { href: "/doctor/waiting", label: "Doctor Waiting", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
   { href: "/doctor/visit", label: "Doctor Visit", icon: "encounter", group: "Clinical", permissions: ["encounter.create", "encounter.read"] },
   { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical", permissions: ["prescription.read"] },
@@ -35,8 +36,8 @@ export const navigationRegistry: NavItem[] = [
   { href: "/protocol-atlas", label: "Protocol Atlas", icon: "ai", group: "Knowledge", permissions: ["protocol_atlas.read", "ai_management.read"] },
   { href: "/ai-drafts", label: "AI Drafts", icon: "ai", group: "Knowledge", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
   { href: "/medications", label: "Medications", icon: "prescription", group: "Medication Reference", permissions: ["medications.read", "medications.search"] },
-  { href: "/drug-market", label: "Drug Market", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
-  { href: "/admin/accounts", label: "Accounts", icon: "reception", group: "Admin", adminOnly: true },
+  { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
+  { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/owner-control", label: "Owner Control", icon: "admin", group: "Admin", adminOnly: true },
   { href: "/admin", label: "Admin Home", icon: "admin", group: "Admin", adminOnly: true }

@@ -275,7 +275,7 @@ export default function PatientFilePage() {
         <div className="patient-primary-actions">
           <button className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
             <ThreeDMedicalIcon name="encounter" size="sm" />
-            Start Visit
+            New Encounter
           </button>
           <Link className="button secondary large" href="/calendar">
             <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
@@ -391,7 +391,7 @@ function Overview({ patient, related }: { patient: Patient; related: Record<stri
         <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
         <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>
           <ThreeDMedicalIcon name="encounter" size="sm" />
-          Start Visit
+          New Encounter
         </Link>
       </article>
       <article className="panel">

@@ -71,7 +71,7 @@ export default function DoctorModePage() {
       <section className="doctor-today-grid">
         <article className="doctor-focus-card">
           <ThreeDMedicalIcon name="queue" size="lg" />
-          <span className="eyebrow">Waiting queue</span>
+          <span className="eyebrow">Waiting patients</span>
           <strong>{queue.length}</strong>
           <p className="muted">Patients waiting or moving through the clinic flow.</p>
           <Link className="button compact" href="/doctor/waiting">Open waiting list</Link>
