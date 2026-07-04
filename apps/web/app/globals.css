@@ -1170,6 +1170,23 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.clickable-chip {
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.protocol-status,
+.status-count-row .badge,
+.data-row-header .badge {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
+
+.compact-protocol-grid {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
 .quick-card,
 .module-card {
   display: grid;

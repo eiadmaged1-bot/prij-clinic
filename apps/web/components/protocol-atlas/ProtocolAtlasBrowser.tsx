@@ -12,6 +12,7 @@ export function ProtocolAtlasBrowser() {
   const [statusFilter, setStatusFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [view, setView] = useState<"cards" | "list">("cards");
   const [protocols, setProtocols] = useState<ProtocolSummary[]>([]);
   const [status, setStatus] = useState("Loading catalog");
 
@@ -87,27 +88,26 @@ export function ProtocolAtlasBrowser() {
         <span className="badge">Draft {counts.draft}</span>
         <span className="badge">Catalog-only {counts.catalogOnly}</span>
         <span className="badge">Retired {counts.retired}</span>
+        <button className={`button secondary compact ${view === "cards" ? "active" : ""}`} type="button" onClick={() => setView("cards")}>Cards</button>
+        <button className={`button secondary compact ${view === "list" ? "active" : ""}`} type="button" onClick={() => setView("list")}>Compact list</button>
       </div>
-      <div className="protocol-card-grid">
+      <div className={view === "cards" ? "protocol-card-grid compact-protocol-grid" : "dense-card-list"}>
         {protocols.map((protocol) => (
-          <article className="protocol-card" key={protocol.id}>
+          <article className={view === "cards" ? "protocol-card compact-panel" : "data-row dense"} key={protocol.id}>
             <div className="data-row-header">
               <strong>{protocol.title}</strong>
               <ProtocolStatusBadge status={protocol.implementationStatus} />
             </div>
-            <p className="muted">{protocol.specialtyGroup}</p>
-            <p className="muted">{aliases(protocol.aliases)}</p>
+            <p className="muted">{protocol.specialtyGroup} | {protocol.riskLevel}</p>
             <dl className="profile-grid">
-              <div><dt>Source</dt><dd>{protocol.sourceName}</dd></div>
+              <div><dt>Source</dt><dd>{shortSource(protocol.sourceName)}</dd></div>
               <div><dt>Risk</dt><dd>{protocol.riskLevel}</dd></div>
             </dl>
-            {protocol.implementationStatus === "verified" ? (
-              <p className="notice">Verified snapshot available for doctor review. Source: {protocol.sourceName}</p>
-            ) : protocol.implementationStatus === "draft" ? (
-              <p className="notice">Draft protocol. Management snapshot is hidden until verification is complete.</p>
-            ) : (
-              <p className="notice">Listed in the atlas, but management snapshot is not verified yet.</p>
-            )}
+            <details className="collapsible-help-panel">
+              <summary>Open details</summary>
+              <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
+              <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot summary may be shown for doctor review." : "Catalog-only and draft protocols do not generate management."}</p>
+            </details>
           </article>
         ))}
       </div>
@@ -117,4 +117,9 @@ export function ProtocolAtlasBrowser() {
 
 function aliases(value: unknown) {
   return Array.isArray(value) ? value.slice(0, 3).join(", ") : "Aliases not listed";
+}
+
+function shortSource(value?: string | null) {
+  if (!value) return "Source tracked";
+  return value.length > 28 ? `${value.slice(0, 28)}...` : value;
 }
