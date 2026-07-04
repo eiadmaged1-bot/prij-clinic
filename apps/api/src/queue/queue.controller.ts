@@ -4,7 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CheckInDto } from "./dto";
+import { CheckInDto, QueueCancelDto } from "./dto";
 import { QueueService } from "./queue.service";
 
 @Controller("queue")
@@ -38,7 +38,7 @@ export class QueueController {
 
   @Patch(":id/cancel")
   @Permissions("queue.status_update")
-  cancel(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.queue.cancel(id, user);
+  cancel(@Param("id") id: string, @Body() dto: QueueCancelDto, @CurrentUser() user: AuthUser) {
+    return this.queue.cancel(id, dto, user);
   }
 }

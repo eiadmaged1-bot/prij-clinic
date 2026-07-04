@@ -275,6 +275,8 @@ model Appointment {
   status          AppointmentStatus @default(booked)
   appointmentType String?
   source          String?
+  cancellationReason String?
+  noShowReason    String?
   notes           String?
   createdAt       DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime          @updatedAt @db.Timestamptz(3)
@@ -306,6 +308,7 @@ model QueueTicket {
   calledAt      DateTime?         @db.Timestamptz(3)
   completedAt   DateTime?         @db.Timestamptz(3)
   cancelledAt   DateTime?         @db.Timestamptz(3)
+  cancellationReason String?
   createdAt     DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
 

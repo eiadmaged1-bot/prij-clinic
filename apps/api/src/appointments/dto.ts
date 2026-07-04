@@ -35,4 +35,9 @@ export class CreateAppointmentDto {
 export class UpdateAppointmentStatusDto {
   @IsEnum(AppointmentStatus)
   status!: AppointmentStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }

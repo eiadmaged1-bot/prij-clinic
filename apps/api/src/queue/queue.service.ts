@@ -5,7 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceAppointment, assertCanReferencePatient } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { CheckInDto } from "./dto";
+import { CheckInDto, QueueCancelDto } from "./dto";
 import { toUtcDateOnly } from "./queue-date";
 
 @Injectable()
@@ -87,18 +87,23 @@ export class QueueService {
     });
   }
 
-  async cancel(id: string, user: AuthUser) {
+  async cancel(id: string, dto: QueueCancelDto, user: AuthUser) {
+    if (!dto.reason?.trim()) {
+      throw new BadRequestException("Queue cancellation reason is required.");
+    }
     return this.transition(id, user, "queue.cancelled", {
       status: "cancelled",
-      cancelledAt: new Date()
-    });
+      cancelledAt: new Date(),
+      cancellationReason: dto.reason.trim()
+    }, dto.reason.trim());
   }
 
   private async transition(
     id: string,
     user: AuthUser,
     action: string,
-    data: { status: "called" | "completed" | "cancelled"; calledAt?: Date; completedAt?: Date; cancelledAt?: Date }
+    data: { status: "called" | "completed" | "cancelled"; calledAt?: Date; completedAt?: Date; cancelledAt?: Date; cancellationReason?: string },
+    reason?: string
   ) {
     const existing = await this.prisma.queueTicket.findFirst({ where: { id, ...branchScope(user) } });
 
@@ -119,7 +124,8 @@ export class QueueService {
       resourceId: ticket.id,
       branchId: ticket.branchId,
       severity: "medium",
-      metadataJson: { from: existing.status, to: ticket.status }
+      reason,
+      metadataJson: { from: existing.status, to: ticket.status, reasonCaptured: Boolean(reason) }
     });
 
     return ticket;

@@ -5,7 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferencePatient, assertCanReferenceUserInBranch } from "../auth/reference-scope";
 import { branchScope, doctorScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateAppointmentDto } from "./dto";
+import { CreateAppointmentDto, UpdateAppointmentStatusDto } from "./dto";
 
 @Injectable()
 export class AppointmentsService {
@@ -87,11 +87,17 @@ export class AppointmentsService {
     return appointment;
   }
 
-  async updateStatus(id: string, status: AppointmentStatus, user: AuthUser) {
+  async updateStatus(id: string, dto: UpdateAppointmentStatusDto, user: AuthUser) {
     const existing = await this.get(id, user);
+    if ((dto.status === "cancelled" || dto.status === "no_show") && !dto.reason?.trim()) {
+      throw new BadRequestException("A reason is required for cancelled or no-show appointments.");
+    }
+    const data: Prisma.AppointmentUpdateInput = { status: dto.status };
+    if (dto.status === "cancelled") data.cancellationReason = dto.reason?.trim();
+    if (dto.status === "no_show") data.noShowReason = dto.reason?.trim();
     const appointment = await this.prisma.appointment.update({
       where: { id },
-      data: { status },
+      data,
       include: { patient: true }
     });
 
@@ -102,8 +108,9 @@ export class AppointmentsService {
       resourceId: appointment.id,
       branchId: appointment.branchId,
       severity: "medium",
-      metadataJson: { from: existing.status, to: appointment.status }
-    });
+        reason: dto.reason?.trim(),
+        metadataJson: { from: existing.status, to: appointment.status, reasonCaptured: Boolean(dto.reason?.trim()) }
+      });
 
     return appointment;
   }
