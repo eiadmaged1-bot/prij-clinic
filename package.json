@@ -191,6 +191,7 @@
     "test:v123:care-assist-safety": "node scripts/v123-care-assist-safety-test.mjs",
     "test:v124:doctor-visit-flow": "node scripts/v124-doctor-visit-flow-test.mjs",
     "test:v124:clinical-safety-wording": "node scripts/v124-clinical-safety-wording-test.mjs",
+    "test:v125:clinic-usability-lock": "node scripts/v125-clinic-usability-lock-test.mjs",
     "test:protocol-atlas": "node scripts/protocol-atlas-test.mjs",
     "test:ai-management": "node scripts/ai-management-test.mjs",
     "test:workflow:spine": "node scripts/clinic-workflow-spine-test.mjs",
