@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "../../mvp-page";
@@ -25,6 +25,7 @@ export default function ReceptionTodayPage() {
   const [dateRangeStart, setDateRangeStart] = useState(today);
   const [dateRangeEnd, setDateRangeEnd] = useState(today);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const selectedDate = useMemo(() => dateForMode(dateMode, customDate, today), [customDate, dateMode, today]);
@@ -49,30 +50,14 @@ export default function ReceptionTodayPage() {
     void load();
   }, [load]);
 
-  async function checkIn(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const payload = {
-      patientId: String(form.get("patientId") ?? ""),
-      appointmentId: String(form.get("appointmentId") ?? "") || undefined,
-      priority: String(form.get("priority") ?? "routine")
-    };
-    const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "content-type": "application/json", ...(headers ?? {}) },
-      body: JSON.stringify(payload)
-    });
-    setMessage(response.ok ? "Patient checked in." : "Could not check in patient. Check the selected file and role.");
-    if (response.ok) await load();
-  }
-
   const waiting = queue.filter((ticket) => ["waiting", "called"].includes(ticket.status));
   const deskCards = buildDeskCards(appointments, queue, invoices).filter((card) => {
     const textMatch = query.trim() ? card.searchText.includes(query.toLowerCase()) : true;
     const statusMatch = statusFilter === "all" || card.statusKey === statusFilter || card.paymentKey === statusFilter || card.resultKey === statusFilter || card.followUpKey === statusFilter;
-    return textMatch && statusMatch;
+    const trainingMatch = showTrainingRecords || !card.training;
+    return textMatch && statusMatch && trainingMatch;
   });
+  const hiddenTrainingCount = buildDeskCards(appointments, queue, invoices).filter((card) => card.training).length;
   const noPatients = deskCards.length === 0;
 
   return (
@@ -124,16 +109,20 @@ export default function ReceptionTodayPage() {
             <option value="results_pending">Results pending</option>
             <option value="follow_up_due">Follow-up due</option>
           </select></label>
+          <button className={`button secondary compact ${showTrainingRecords ? "active" : ""}`} type="button" onClick={() => setShowTrainingRecords((value) => !value)}>
+            {showTrainingRecords ? "Hide training records" : "Show training records"}
+          </button>
         </div>
+        {!showTrainingRecords && hiddenTrainingCount > 0 ? <p className="badge compact-safety-badge">Training records hidden: {hiddenTrainingCount}</p> : null}
         {dateMode === "range" ? <p className="muted">Showing selected range: {dateRangeStart} to {dateRangeEnd}. Current APIs use today&apos;s queue and selected appointment date.</p> : null}
       </section>
-      <section className="metric-grid">
+      <section className="compact-metric-grid">
         <Metric label="Appointments" value={appointments.length} />
         <Metric label="Waiting queue" value={waiting.length} />
         <Metric label="Unpaid notes" value={invoices.filter((invoice) => invoice.status !== "paid").length} />
         <Metric label="Workspace" value={status} />
       </section>
-      <section className="panel">
+      <section className="panel compact-panel">
         <div className="section-heading"><h2>Patient cards</h2><span className="badge">{deskCards.length}</span></div>
         {noPatients ? (
           <div className="empty-state compact-empty">
@@ -144,9 +133,9 @@ export default function ReceptionTodayPage() {
             <Link className="button secondary compact" href="/calendar">Open appointments</Link>
           </div>
         ) : null}
-        <div className="data-list">
+        <div className="dense-card-list">
           {deskCards.map((card) => (
-            <article className="data-row" key={card.id}>
+            <article className="data-row dense" key={card.id}>
               <div className="data-row-header"><strong>{card.patientName}</strong><span className="badge">{friendlyStatus(card.status)}</span></div>
               <p className="muted">{card.fileLine} | Arrival {card.arrivalTime} | Doctor {card.doctorName} | {card.visitType}</p>
               <p className="muted">Payment: {card.paymentStatus}</p>
@@ -159,18 +148,9 @@ export default function ReceptionTodayPage() {
           ))}
         </div>
       </section>
+      {message ? <p className="notice">{message}</p> : null}
       <section className="content-grid">
-        <article className="panel">
-          <div className="section-heading"><h2>Check in or walk in</h2><span className="badge">Reception only</span></div>
-          {message ? <p className="notice">{message}</p> : null}
-          <form className="form-grid" onSubmit={checkIn}>
-            <label>Patient file<select name="patientId" required><option value="">Select patient</option>{patients.map((patient) => <option key={patient.id} value={patient.id}>{patientLabel(patient)}</option>)}</select></label>
-            <label>Appointment<select name="appointmentId"><option value="">Walk-in or no appointment</option>{appointments.map((appointment) => <option key={appointment.id} value={appointment.id}>{appointmentTime(appointment.startAt)} - {patientLabel(appointment.patient)}</option>)}</select></label>
-            <label>Queue priority<select name="priority"><option value="routine">Routine</option><option value="priority">Priority note</option></select></label>
-            <button className="button" type="submit"><ThreeDMedicalIcon name="queue" size="sm" />Check in</button>
-          </form>
-        </article>
-        <article className="panel">
+        <article className="panel compact-panel">
           <div className="section-heading"><h2>Patient search</h2><Link className="button secondary compact" href="/patients">Open files</Link></div>
           <label>Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, file number, or phone" /></label>
           <div className="data-list">{filteredPatients.map((patient) => <Link className="data-row" key={patient.id} href={`/patients/${patient.id}`}><strong>{patientLabel(patient)}</strong><span className="badge">Open file</span></Link>)}</div>
@@ -185,7 +165,7 @@ export default function ReceptionTodayPage() {
 }
 
 function Metric({ label, value }: { label: string; value: string | number }) {
-  return <article className="metric-card"><span>{label}</span><strong>{value}</strong></article>;
+  return <article className="mini-metric-card"><span>{label}</span><strong>{value}</strong></article>;
 }
 
 function DailyList({ title, rows }: { title: string; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {
@@ -245,7 +225,8 @@ function buildDeskCards(appointments: Appointment[], queue: QueueTicket[], invoi
       paymentKey: invoice && invoice.status !== "paid" ? "payment_pending" : "",
       resultKey: "",
       followUpKey: "",
-      searchText: `${patientSearchText(appointment.patient)} ${appointment.appointmentType ?? ""} ${appointment.status}`.toLowerCase()
+      searchText: `${patientSearchText(appointment.patient)} ${appointment.appointmentType ?? ""} ${appointment.status}`.toLowerCase(),
+      training: isTrainingPatient(appointment.patient)
     };
   });
 
@@ -265,7 +246,8 @@ function buildDeskCards(appointments: Appointment[], queue: QueueTicket[], invoi
       paymentKey: invoice && invoice.status !== "paid" ? "payment_pending" : "",
       resultKey: "",
       followUpKey: "",
-      searchText: `${patientSearchText(ticket.patient)} ${ticket.status} ${ticket.priority ?? ""}`.toLowerCase()
+      searchText: `${patientSearchText(ticket.patient)} ${ticket.status} ${ticket.priority ?? ""}`.toLowerCase(),
+      training: isTrainingPatient(ticket.patient)
     };
   });
 
@@ -282,4 +264,10 @@ function invoiceFor(invoices: Invoice[], patientId: string) {
 
 function friendlyStatus(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function isTrainingPatient(patient?: Patient | null) {
+  const name = `${patient?.firstName ?? ""} ${patient?.lastName ?? ""}`.trim();
+  const mrn = patient?.medicalRecordNumber ?? "";
+  return /^Demo\b/i.test(name) || /^DEMO[-_]/i.test(mrn) || /Local training/i.test(name);
 }
