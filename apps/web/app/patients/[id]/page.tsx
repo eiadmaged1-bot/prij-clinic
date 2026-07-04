@@ -2122,12 +2122,7 @@ function RelatedPanel({ config, rows }: { config: TabConfig; rows: Record<string
           <div><dt>Balance</dt><dd>{statementBalance.toFixed(2)}</dd></div>
         </dl>
       ) : null}
-      {rows.length === 0 ? (
-        <div className="empty-state">
-          <ThreeDMedicalIcon name={config.icon} size="sm" tone="slate" />
-          <span>{config.empty}</span>
-        </div>
-      ) : null}
+      {rows.length === 0 ? <SmartPatientEmptyState config={config} /> : null}
       <div className="data-list">
         {rows.map((row, index) => (
           <article className="data-row" key={String(row.id ?? index)}>
@@ -2253,6 +2248,36 @@ function templateSummary(value: string) {
 function formatDate(value?: string | null) {
   if (!value) return "Not recorded";
   return value.slice(0, 10);
+}
+
+function SmartPatientEmptyState({ config }: { config: TabConfig }) {
+  const actionByKey: Record<string, [string, string]> = {
+    visits: ["doctor-visit", "Start visit"],
+    "doctor-note": ["doctor-visit", "Start visit"],
+    prescriptions: ["doctor-visit", "Open visit flow"],
+    investigations: ["doctor-visit", "Request during visit"],
+    results: ["investigations", "Open investigations"],
+    documents: ["documents", "Open documents"],
+    files: ["documents", "Open reports"],
+    billing: ["billing", "Create invoice"],
+    consents: ["documents", "Record consent"],
+    pregnancy: ["pregnancy", "Open pregnancy"],
+    referrals: ["referrals", "Create referral"],
+    tasks: ["timeline", "Open timeline"]
+  };
+  const action = actionByKey[config.key];
+
+  return (
+    <div className="empty-state smart-empty-state">
+      <ThreeDMedicalIcon name={config.icon} size="sm" tone="slate" />
+      <span>{config.empty}</span>
+      {action ? (
+        <button className="button secondary compact" type="button" onClick={() => document.querySelector<HTMLButtonElement>(`[data-tab-key="${action[0]}"]`)?.click()}>
+          {action[1]}
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 function formatDateTime(value?: string | null) {

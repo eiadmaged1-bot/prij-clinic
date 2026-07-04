@@ -9,6 +9,7 @@ type AuditEntry = {
   id: string;
   action: string;
   resourceType: string;
+  resourceId?: string | null;
   severity: string;
   reason?: string | null;
   createdAt: string;
@@ -52,15 +53,65 @@ export default function AdminAuditPage() {
           {entries.map((entry) => (
             <article className="data-row" key={entry.id}>
               <div className="data-row-header">
-                <strong>{entry.action.replaceAll("_", " ").replaceAll(".", " ")}</strong>
-                <span className="badge">{entry.severity}</span>
+                <strong>{auditActionLabel(entry.action)}</strong>
+                <span className={severityBadgeClass(entry.severity)}>{severityLabel(entry.severity)}</span>
               </div>
-              <p className="muted">{entry.resourceType} - {new Date(entry.createdAt).toLocaleString()}</p>
-              {entry.reason ? <p className="muted">Reason: {entry.reason}</p> : null}
+              <dl>
+                <div><dt>Record</dt><dd>{resourceLabel(entry.resourceType)}</dd></div>
+                <div><dt>When</dt><dd>{new Date(entry.createdAt).toLocaleString()}</dd></div>
+                {entry.resourceId ? <div><dt>Reference</dt><dd>{entry.resourceId.slice(0, 8)}</dd></div> : null}
+                {entry.reason ? <div className="wide"><dt>Reason</dt><dd>{entry.reason}</dd></div> : null}
+              </dl>
             </article>
           ))}
         </div>
       </section>
     </AppShell>
   );
+}
+
+function auditActionLabel(action: string) {
+  const known: Record<string, string> = {
+    "appointment.created": "Appointment created",
+    "queue.checked_in": "Patient checked in",
+    "encounter.created": "Visit draft created",
+    "encounter.updated": "Visit draft updated",
+    "encounter.signed": "Visit note signed",
+    "prescription.created": "Prescription draft created",
+    "investigation_order.created": "Investigation order created",
+    "report.created": "Report metadata created",
+    "invoice.created": "Invoice created",
+    "payment.recorded": "Payment recorded",
+    "consent.created": "Consent recorded",
+    "system_setting.appearance_updated": "Appearance settings updated"
+  };
+
+  return known[action] ?? action.replaceAll("_", " ").replaceAll(".", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function resourceLabel(resourceType: string) {
+  const known: Record<string, string> = {
+    system_setting: "System setting",
+    patient: "Patient file",
+    encounter: "Visit note",
+    prescription: "Prescription",
+    investigation_order: "Investigation order",
+    invoice: "Invoice",
+    payment: "Payment"
+  };
+
+  return known[resourceType] ?? resourceType.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function severityLabel(severity: string) {
+  if (severity === "high") return "High importance";
+  if (severity === "medium") return "Review";
+  if (severity === "low") return "Routine";
+  return severity || "Audit";
+}
+
+function severityBadgeClass(severity: string) {
+  if (severity === "high") return "badge danger";
+  if (severity === "medium") return "badge warning";
+  return "badge";
 }

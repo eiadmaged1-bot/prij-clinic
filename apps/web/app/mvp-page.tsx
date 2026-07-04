@@ -239,7 +239,13 @@ export function MvpPage({
             ) : null}
           </div>
           {error ? <p className="form-error">{error}</p> : null}
-          {endpoint ? <DataList rows={rows} status={status} /> : <EmptyState icon="files">No records are loaded for this workspace yet.</EmptyState>}
+          {endpoint ? (
+            <DataList rows={rows} status={status} />
+          ) : (
+            <EmptyState actionHref="/dashboard" actionLabel="Open dashboard" icon="files">
+              No records are loaded for this workspace yet.
+            </EmptyState>
+          )}
         </div>
       </section>
 
@@ -403,7 +409,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <ThreeDMedicalIcon name="patients" size="sm" />
               New Patient
             </Link>
-            <span className="badge warning">Local Demo</span>
+            <span className="badge warning compact-safety-badge">Local Demo</span>
             {canUseDoctorComfort ? (
               <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
                 <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
@@ -461,7 +467,11 @@ export function SafetyAlert() {
           AI remains assistive and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass doctor review.
         </p>
       </div>
-      <span className="badge danger">Not production-ready</span>
+      <div className="safety-badge-stack" aria-label="Safety status">
+        <span className="badge danger compact-safety-badge">Demo only</span>
+        <span className="badge warning compact-safety-badge">AI draft-only</span>
+        <span className="badge compact-safety-badge">Doctor review</span>
+      </div>
     </section>
   );
 }
@@ -472,7 +482,11 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
   }
 
   if (rows.length === 0) {
-    return <EmptyState>No records yet.</EmptyState>;
+    return (
+      <EmptyState actionHref="/patients/new" actionLabel="Create demo patient">
+        No records yet. Start with a safe local demo patient or refresh after creating a record.
+      </EmptyState>
+    );
   }
 
   return (
@@ -496,7 +510,7 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
               .map((key) => (
                 <div key={key}>
                   <dt>{labelize(key)}</dt>
-                  <dd>{String(row[key])}</dd>
+                  <dd>{formatRecordValue(key, row[key])}</dd>
                 </div>
               ))}
           </dl>
@@ -506,12 +520,13 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
   );
 }
 
-function EmptyState({ children, icon = "files" }: { children: ReactNode; icon?: IconName }) {
+function EmptyState({ children, icon = "files", actionHref, actionLabel }: { children: ReactNode; icon?: IconName; actionHref?: string; actionLabel?: string }) {
   return (
-    <p className="empty-state">
+    <div className="empty-state smart-empty-state">
       <ThreeDMedicalIcon name={icon} size="sm" tone="slate" />
       <span>{children}</span>
-    </p>
+      {actionHref && actionLabel ? <Link className="button secondary compact" href={actionHref}>{actionLabel}</Link> : null}
+    </div>
   );
 }
 
@@ -575,6 +590,22 @@ function primaryRole(roles: string[]) {
 
 function hasAnyPermission(permissions: string[], keys: string[]) {
   return keys.some((key) => permissions.includes(key));
+}
+
+function formatRecordValue(key: string, value: unknown) {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (value instanceof Date) return value.toLocaleString();
+  const text = String(value ?? "");
+  if (!text) return "Not recorded";
+  if ((key.endsWith("At") || key.toLowerCase().includes("date")) && /^\d{4}-\d{2}-\d{2}/.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: text.includes("T") ? "short" : undefined });
+  }
+  if (["totalAmount", "amount", "balanceAmount", "amountPaid"].includes(key)) {
+    const amount = Number(text);
+    if (!Number.isNaN(amount)) return amount.toFixed(2);
+  }
+  return text.replaceAll("_", " ");
 }
 
 const receptionistNav = new Set([

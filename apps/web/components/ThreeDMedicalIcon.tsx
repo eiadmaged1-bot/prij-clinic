@@ -65,6 +65,8 @@ export function ThreeDMedicalIcon({ name, label, size = "md", tone = "teal" }: T
       data-icon={name}
       role={label ? "img" : undefined}
     >
+      <span className="medical-icon-depth" aria-hidden="true" />
+      <span className="medical-icon-shine" aria-hidden="true" />
       <svg viewBox="0 0 24 24" aria-labelledby={label ? titleId : undefined} aria-hidden={label ? undefined : true} focusable="false">
         {label ? <title id={titleId}>{label}</title> : null}
         <circle cx="12" cy="12" r="9.5" className="medical-icon-glow" />
