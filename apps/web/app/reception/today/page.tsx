@@ -18,7 +18,7 @@ export default function ReceptionTodayPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [status, setStatus] = useState("Loading today");
-  const [message, setMessage] = useState("");
+  const [message] = useState("");
   const [query, setQuery] = useState("");
   const [dateMode, setDateMode] = useState("today");
   const [customDate, setCustomDate] = useState(today);

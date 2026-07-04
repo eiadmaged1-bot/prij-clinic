@@ -47,7 +47,6 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
 
   useEffect(() => { void load(); }, [load]);
 
-  const waiting = queue.filter((ticket) => ["waiting", "called"].includes(ticket.status));
   const completed = queue.filter((ticket) => ticket.status === "completed");
   const pendingRequests = orders.filter((order) => !["reviewed", "cancelled"].includes(order.status));
   const visibleAppointments = showTrainingRecords ? appointments : appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
