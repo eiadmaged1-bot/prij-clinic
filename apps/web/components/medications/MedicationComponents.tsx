@@ -19,7 +19,7 @@ import {
 } from "../../lib/drug-market";
 
 export function MedicationSearchBox() {
-  const [query, setQuery] = useState("ACEI");
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<MedicationResult[]>([]);
   const [status, setStatus] = useState("Ready");
 
@@ -28,7 +28,7 @@ export function MedicationSearchBox() {
     setStatus("Searching");
     try {
       const data = await searchMedications(query);
-      setResults(data.results);
+      setResults(rankMedicationResults(data.results, query));
       setStatus(`${data.results.length} result(s)`);
     } catch {
       setStatus("Sign in with a clinical account to search");
@@ -36,9 +36,10 @@ export function MedicationSearchBox() {
   }
 
   useEffect(() => {
-    void submit();
+    const timer = window.setTimeout(() => void submit(), 250);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [query]);
 
   return (
     <section className="panel">
@@ -54,7 +55,8 @@ export function MedicationSearchBox() {
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
-      <div className="card-grid">
+      {query.trim().length === 1 ? <p className="notice">Showing broad live matches. Type more letters to narrow the list.</p> : null}
+      <div className="dense-card-list">
         {results.map((result) => <MedicationResultCard key={`${result.type}-${result.id}`} result={result} />)}
       </div>
     </section>
@@ -63,10 +65,10 @@ export function MedicationSearchBox() {
 
 export function MedicationResultCard({ result }: { result: MedicationResult }) {
   return (
-    <article className="data-row">
+    <article className="data-row dense">
       <div className="data-row-header">
         <strong>{result.genericName || result.tradeName || result.family || result.familyName || "Medication reference"}</strong>
-        <span className="badge">{result.verificationStatus ?? "needs review"}</span>
+        <span className="badge">{medicationStatusLabel(result.verificationStatus)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{result.genericName || "Not listed"}</dd></div>
@@ -81,13 +83,21 @@ export function MedicationResultCard({ result }: { result: MedicationResult }) {
 
 export function DrugFamilyBrowser() {
   const [families, setFamilies] = useState<Array<{ id: string; code: string; displayName: string; verificationStatus: string }>>([]);
+  const [selected, setSelected] = useState<{ id: string; code: string; displayName: string; verificationStatus: string } | null>(null);
   useEffect(() => { void listDrugFamilies().then(setFamilies).catch(() => setFamilies([])); }, []);
+  const groups = groupFamilies(families);
   return (
     <section className="panel">
       <div className="section-heading"><h2>Drug Families</h2><span className="badge">Taxonomy</span></div>
-      <div className="chip-list">
-        {families.map((family) => <span className="badge" key={family.id}>{family.displayName}</span>)}
-      </div>
+      {groups.map(([group, rows]) => (
+        <div className="compact-panel" key={group}>
+          <h3>{group}</h3>
+          <div className="chip-list">
+            {rows.map((family) => <button className="badge clickable-chip" key={family.id} type="button" onClick={() => setSelected(family)}>{family.displayName}</button>)}
+          </div>
+        </div>
+      ))}
+      {selected ? <article className="compact-panel"><div className="section-heading"><h3>{selected.displayName}</h3><span className="badge">{medicationStatusLabel(selected.verificationStatus)}</span></div><p className="muted">Related medication family. Use as a search filter only; do not auto-prescribe.</p><Link className="button secondary compact" href={`/medications/search?q=${encodeURIComponent(selected.displayName)}`}>Use in medication search</Link></article> : null}
     </section>
   );
 }
@@ -172,6 +182,11 @@ export function DrugMarketSearchBox() {
 
   useEffect(() => { void submit(); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void submit(), 250);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   return (
     <section className="panel">
@@ -181,7 +196,7 @@ export function DrugMarketSearchBox() {
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
-      <div className="card-grid">{products.map((product) => <DrugMarketResultCard key={product.id} product={product} />)}</div>
+      <div className="dense-card-list">{products.map((product) => <DrugMarketResultCard key={product.id} product={product} />)}</div>
     </section>
   );
 }
@@ -189,16 +204,16 @@ export function DrugMarketSearchBox() {
 export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }) {
   const verified = product.variantSummary?.some((variant) => variant.verificationStatus === "verified");
   return (
-    <article className="data-row">
+    <article className="data-row dense">
       <div className="data-row-header">
         <strong>{product.tradeName}</strong>
-        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Verified" : "Needs review"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
+        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Official source verified" : "Clinical review required"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
         <div><dt>Drug family</dt><dd>{product.family || "Not listed"}</dd></div>
         <div><dt>Variants</dt><dd><StrengthVariantList variants={product.variantSummary ?? []} /></dd></div>
-        <div><dt>Review status</dt><dd>{verified ? "Verified" : product.verificationStatus === "verified" ? "Verified" : "Needs review"}</dd></div>
+        <div><dt>Review status</dt><dd>{verified ? "Source verified" : product.verificationStatus === "verified" ? "Source verified" : "Needs source review"}</dd></div>
         <div><dt>Updated</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not listed"}</dd></div>
       </dl>
       <Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link>
@@ -582,4 +597,59 @@ function sourceCountryLabel(countryCode: string) {
     UAE: "UAE data"
   };
   return labels[countryCode] ?? (countryCode || "Source-tracked");
+}
+
+function medicationStatusLabel(status?: string | null) {
+  if (status === "verified") return "Source verified";
+  if (status === "retired") return "Retired / unavailable";
+  if (status === "conflict" || status === "duplicate") return "Conflict / duplicate";
+  if (status === "placeholder" || status === "catalog_only") return "Catalog only";
+  return "Needs source review";
+}
+
+function rankMedicationResults(results: MedicationResult[], query: string) {
+  const q = query.trim().toLowerCase();
+  return [...results].sort((a, b) => scoreMedication(b, q) - scoreMedication(a, q));
+}
+
+function scoreMedication(result: MedicationResult, query: string) {
+  const name = String(result.genericName ?? result.tradeName ?? result.brandName ?? "").toLowerCase();
+  const family = String(result.family ?? result.familyName ?? "").toLowerCase();
+  let score = result.verificationStatus === "verified" ? 20 : 0;
+  if (!query) return score;
+  if (name === query) score += 100;
+  else if (name.startsWith(query)) score += 70;
+  else if (name.includes(query)) score += 40;
+  if (family.includes(query)) score += 25;
+  return score;
+}
+
+function groupFamilies(families: Array<{ id: string; code: string; displayName: string; verificationStatus: string }>) {
+  type BucketKey = "Common" | "Pain / Analgesics" | "Antibiotics" | "Cardio" | "Endocrine" | "Hormonal / OB-GYN" | "Respiratory" | "Neuro / Psych" | "Supplements" | "Other";
+  const buckets: Record<BucketKey, typeof families> = {
+    Common: [],
+    "Pain / Analgesics": [],
+    Antibiotics: [],
+    Cardio: [],
+    Endocrine: [],
+    "Hormonal / OB-GYN": [],
+    Respiratory: [],
+    "Neuro / Psych": [],
+    Supplements: [],
+    Other: []
+  };
+  for (const family of families) {
+    const text = `${family.code} ${family.displayName}`.toLowerCase();
+    const key: BucketKey = text.includes("analges") || text.includes("pain") || text.includes("nsaid") ? "Pain / Analgesics"
+      : text.includes("antibi") || text.includes("penicillin") || text.includes("ceph") ? "Antibiotics"
+      : text.includes("cardio") || text.includes("ace") || text.includes("beta") || text.includes("statin") ? "Cardio"
+      : text.includes("insulin") || text.includes("diabet") || text.includes("thyroid") ? "Endocrine"
+      : text.includes("hormon") || text.includes("contracept") || text.includes("ob") || text.includes("gyn") ? "Hormonal / OB-GYN"
+      : text.includes("asthma") || text.includes("respir") || text.includes("broncho") ? "Respiratory"
+      : text.includes("neuro") || text.includes("psych") || text.includes("ssri") ? "Neuro / Psych"
+      : text.includes("vitamin") || text.includes("supplement") || text.includes("herbal") ? "Supplements"
+      : families.indexOf(family) < 8 ? "Common" : "Other";
+    buckets[key].push(family);
+  }
+  return Object.entries(buckets).filter(([, rows]) => rows.length > 0);
 }
