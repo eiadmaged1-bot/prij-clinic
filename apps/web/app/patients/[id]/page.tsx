@@ -262,8 +262,8 @@ export default function PatientFilePage() {
           <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
           <div className="workflow-band">
             <span>{patient?.status ?? "Opening"}</span>
-            <span>Balance shown in Billing</span>
-            <span>Allergies tab</span>
+            <span>Workspace ready</span>
+            <span>Allergies available</span>
             <span>Medication safety available by role</span>
           </div>
         </div>
@@ -493,6 +493,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
   const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
   const [selectedInvestigation, setSelectedInvestigation] = useState<ReferenceResult | null>(null);
   const [hint, setHint] = useState("");
+  const [activeStep, setActiveStep] = useState("History");
   const encounterId = String(visit?.encounter?.id ?? "");
   const latestHistorySheetId = String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined;
   const terminalMedication = hoveredMedication ?? selectedMedication;
@@ -524,6 +525,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
     try {
       const data = await startDoctorVisit(patient.id);
       setVisit(data);
+      setActiveStep("History");
       setStatus("Draft visit open.");
     } catch {
       setStatus("Could not start visit. Check clinical role and permissions.");
@@ -535,6 +537,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
     if (!encounterId) return;
     const payload = values(event.currentTarget, ["chiefComplaint", "historyText", "examText", "assessmentText", "planText"]) as Record<string, string>;
     await updateDoctorVisit(patient.id, encounterId, payload);
+    setActiveStep("Prescription");
     setStatus("Encounter draft saved.");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
@@ -554,6 +557,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
       }]
     });
     setStatus("Prescription draft updated with generic medication.");
+    setActiveStep("Investigations");
     setVisit(await getCurrentDoctorVisit(patient.id));
     form.reset();
   }
@@ -568,6 +572,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
       items: [{ category: selectedInvestigation.category ?? "laboratory", testName: selectedInvestigation.label, instructions: payload.instructions }]
     });
     setStatus("Investigation request added.");
+    setActiveStep("Follow-up");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
@@ -576,12 +581,14 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
     if (!encounterId) return;
     await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string });
     setStatus("Follow-up task added.");
+    setActiveStep("Packet");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
   async function loadPacket() {
     if (!encounterId) return;
     setVisit(await getDoctorVisitPacket(patient.id, encounterId));
+    setActiveStep("Packet");
     setStatus("Visit packet refreshed.");
   }
 
@@ -594,15 +601,20 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         </div>
         <button className="button" type="button" onClick={() => void startVisit()}>Start Visit</button>
       </div>
-      <div className="workflow-band">
-        {(visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Print Packet"]).map((step) => <span key={step}>{step}</span>)}
+      <div className="workflow-band" aria-label="Doctor visit workflow stepper">
+        {(visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Packet"]).map((step) => (
+          <button className={activeStep === step || (step === "Print Packet" && activeStep === "Packet") ? "active" : ""} key={step} onClick={() => setActiveStep(step === "Print Packet" ? "Packet" : step)} type="button">
+            {step === "Print Packet" ? "Packet" : step}
+          </button>
+        ))}
       </div>
+      {encounterId ? <p className="notice">Active visit banner: draft visit is open for this patient.</p> : null}
       <p className="muted">{status}</p>
       {!encounterId ? <p className="warning-text">Start a visit before adding encounter, prescription, investigation, or follow-up items.</p> : null}
 
       <div className="doctor-friendly-grid">
         <section className="panel">
-          <h3>History</h3>
+          <div className="section-heading"><h3>History</h3><span className="badge">Step 1</span></div>
           <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload) => { await submitVisitAction(patient.id, endpoint, payload); onReload(); }} status={status} />
         </section>
         <CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} />
@@ -615,7 +627,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <label>Examination notes<textarea name="examText" defaultValue={String(visit?.encounter?.examText ?? "")} /></label>
         <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
         <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
-        <button className="button" type="submit" disabled={!encounterId}>Save draft</button>
+        <button className="button" type="submit" disabled={!encounterId}>Save encounter and continue</button>
       </form>
 
       <div className="doctor-friendly-grid">
@@ -632,8 +644,8 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
             ))}
           </div>
           {selectedMedication ? <p className="notice">Selected generic: {selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName}</p> : null}
-          <label>Manual doctor instructions<textarea name="instructions" placeholder="Manual instructions only" /></label>
-          <button className="button" type="submit" disabled={!encounterId || !selectedMedication}>Add generic medication to draft</button>
+          <label>Manual doctor instructions<textarea name="instructions" placeholder="Doctor-written instructions only" /></label>
+          <button className="button" type="submit" disabled={!encounterId || !selectedMedication}>Save prescription and continue</button>
           <p className="muted">Dose, frequency, and duration are not auto-filled.</p>
         </form>
         <MedicationSafetyTerminal medication={terminalMedication} title="Medication Safety Terminal" />
@@ -643,8 +655,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <form className="panel form-grid" onSubmit={(event) => void addInvestigation(event)}>
           <div className="section-heading"><h3>Investigations</h3><span className="badge">Request only</span></div>
           <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={setSelectedInvestigation} />
+          {selectedInvestigation ? <p className="notice">Selected investigation: {selectedInvestigation.label}</p> : null}
           <label>Clinical reason<textarea name="instructions" /></label>
-          <button className="button" type="submit" disabled={!encounterId || !selectedInvestigation}>Add requested investigation</button>
+          <button className="button" type="submit" disabled={!encounterId || !selectedInvestigation}>Save investigation and continue</button>
         </form>
         <section className="panel">
           <h3>Clinical Note Terminal</h3>
@@ -665,7 +678,8 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <label>Follow-up date<input name="dueAt" type="date" /></label>
         <label>Task title<input name="title" placeholder="Follow-up visit" /></label>
         <label>Note<textarea name="note" /></label>
-        <button className="button" type="submit" disabled={!encounterId}>Add follow-up task</button>
+        <p className="muted">Manual follow-up only. Treatment instructions are not generated automatically.</p>
+        <button className="button" type="submit" disabled={!encounterId}>Save follow-up and continue</button>
       </form>
 
       <section className="panel printable-summary">
@@ -692,6 +706,7 @@ function VisitPacketPreview({ visit, patient }: { visit: DoctorVisitState | null
       <p>File {patient.medicalRecordNumber} | Doctor review required</p>
       <section><h3>Encounter</h3><p>{String(visit?.encounter?.chiefComplaint ?? "No chief complaint saved.")}</p></section>
       <section><h3>History</h3><p>{String(visit?.historySheet?.chiefComplaint ?? "No history sheet summary saved.")}</p></section>
+      <section><h3>Care Assist findings</h3>{(visit?.careAssistFindings ?? []).length ? (visit?.careAssistFindings ?? []).slice(0, 8).map((finding, index) => <p key={String(finding.id ?? index)}>{String(finding.title ?? "Care Assist finding")} - {String(finding.status ?? "active")}</p>) : <p>No Care Assist findings saved for this visit.</p>}</section>
       <section><h3>Prescriptions</h3>{prescriptions.length ? prescriptions.map((prescription, index) => <p key={String(prescription.id ?? index)}>{String((prescription.items as Record<string, unknown>[] | undefined)?.map((item) => item.genericName ?? item.medicationName).join(", ") ?? "Generic medication")}</p>) : <p>No prescription draft in this visit.</p>}</section>
       <section><h3>Requested investigations</h3>{orders.length ? orders.map((order, index) => <p key={String(order.id ?? index)}>{String((order.items as Record<string, unknown>[] | undefined)?.map((item) => item.testName).join(", ") ?? "Investigation request")}</p>) : <p>No investigation requests in this visit.</p>}</section>
       <section><h3>Follow-up</h3>{followUps.length ? followUps.map((task, index) => <p key={String(task.id ?? index)}>{String(task.title ?? "Follow-up")} {String(task.dueAt ?? "").slice(0, 10)}</p>) : <p>No follow-up task saved.</p>}</section>
@@ -1114,7 +1129,7 @@ function ObgynWorkspace({
           </div>
           <p className="empty-state">
             <ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" />
-            <span>Record previous pregnancy details as clinician-entered history only. Use fake/demo data in this pilot environment.</span>
+            <span>Record previous pregnancy details as clinician-entered history only. Do not enter real patient data in this local review environment.</span>
           </p>
         </article>
 
@@ -1947,8 +1962,8 @@ function PrintPacketPanel({ patient, related, timelineItems }: { patient: Patien
       </div>
       <div className="print-packet">
         <h2>{patient.firstName} {patient.lastName}</h2>
-        <p>File {patient.medicalRecordNumber} | {patient.patientType ?? "General"} | Demo/local packet</p>
-        <p>Document archive is metadata-only in this demo. Doctor review required. No automatic interpretation.</p>
+        <p>File {patient.medicalRecordNumber} | {patient.patientType ?? "General"} | Visit packet</p>
+        <p>Document archive is metadata-only here. Doctor review required. No automatic interpretation.</p>
         {sections.map(([title, rows]) => (
           <section key={title}>
             <h3>{title}</h3>

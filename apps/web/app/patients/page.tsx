@@ -76,10 +76,10 @@ export default function PatientsPage() {
           </div>
           <Link className="button" href="/patients/new">
             <ThreeDMedicalIcon name="patients" size="sm" />
-            New Patient File
+            New Patient
           </Link>
         </div>
-        <p className="muted">Find or create a local training patient file, then work from inside that file.</p>
+        <p className="muted">Find or create a patient file, then continue from the patient workspace.</p>
       </section>
 
       <SafetyAlert />
@@ -101,7 +101,7 @@ export default function PatientsPage() {
             Search patient files
             <input
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by demo MRN or name"
+              placeholder="Search by file number or name"
               value={query}
             />
           </label>
@@ -117,7 +117,7 @@ export default function PatientsPage() {
         {status === "Loading" ? <div className="skeleton" /> : null}
 
         {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
-          <div className="empty-state">No patient files match this view. Create a local training patient file to begin.</div>
+          <div className="empty-state">No patient files match this view. Create a new patient file to begin.</div>
         ) : null}
 
         {filtered.length > 0 ? (

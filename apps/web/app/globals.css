@@ -909,7 +909,8 @@ body {
   gap: 0.5rem;
 }
 
-.workflow-band span {
+.workflow-band span,
+.workflow-band button {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: #ffffff;
@@ -917,6 +918,17 @@ body {
   font-size: 0.82rem;
   font-weight: 800;
   padding: 0.45rem 0.7rem;
+}
+
+.workflow-band button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.workflow-band button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
 }
 
 .content-grid {

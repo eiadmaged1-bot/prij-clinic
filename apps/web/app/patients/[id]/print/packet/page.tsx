@@ -27,7 +27,7 @@ export default function PatientVisitPacketPrintPage() {
     <main className="print-page">
       <button className="button no-print" type="button" onClick={() => window.print()}>Print packet</button>
       <h1>Patient Visit Packet</h1>
-      <p>Demo/local browser print. No PDF generation. Doctor review required.</p>
+      <p>Browser print. No PDF generation. Doctor review required.</p>
       {patient ? (
         <section>
           <h2>{String(patient.firstName)} {String(patient.lastName)}</h2>

@@ -39,7 +39,7 @@ const initialState: FormState = {
   address: "",
   nationalId: "",
   referralSource: "",
-  notes: "Local workflow review file only."
+  notes: ""
 };
 
 export default function NewPatientPage() {
@@ -130,7 +130,7 @@ export default function NewPatientPage() {
             Back to patients
           </Link>
         </div>
-        <p className="muted">Create the patient file first. Appointments, queue, clinical notes, billing, orders, and consents belong inside that file.</p>
+        <p className="muted">Create the patient file first. Appointments, queue, clinical notes, orders, consents, and billing stay inside that workspace.</p>
       </section>
 
       <SafetyAlert />
@@ -139,14 +139,14 @@ export default function NewPatientPage() {
         <div className="section-heading">
           <div>
             <h2>Patient file details</h2>
-            <p className="muted">Use local training details only. Duplicate warning is planned for a later backend check.</p>
+            <p className="muted">Enter only information intentionally provided for this local clinic workflow. Duplicate warning is planned for a later backend check.</p>
           </div>
           <span className="badge warning">No real patient data</span>
         </div>
 
         <form className="form-grid" onSubmit={submit}>
           <label>
-            Demo file number
+            File number
             <div className="input-action">
               <input
                 onChange={(event) => update("medicalRecordNumber", event.target.value)}
@@ -161,7 +161,7 @@ export default function NewPatientPage() {
           </label>
           <label>
             Full name
-            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Enter local training name" value={form.fullName} />
+            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Enter patient name" value={form.fullName} />
           </label>
           <label>
             First name
@@ -195,15 +195,15 @@ export default function NewPatientPage() {
           </label>
           <label>
             Age if DOB unknown
-            <input onChange={(event) => update("age", event.target.value)} placeholder="Optional demo age" value={form.age} />
+            <input onChange={(event) => update("age", event.target.value)} placeholder="Optional age note" value={form.age} />
           </label>
           <label>
             Phone
-            <input onChange={(event) => update("phone", event.target.value)} placeholder="Local training contact only" value={form.phone} />
+            <input onChange={(event) => update("phone", event.target.value)} placeholder="Optional contact number" value={form.phone} />
           </label>
           <label>
             Email
-            <input onChange={(event) => update("email", event.target.value)} placeholder="Local training email only" type="email" value={form.email} />
+            <input onChange={(event) => update("email", event.target.value)} placeholder="Optional email" type="email" value={form.email} />
           </label>
           <label>
             Address
@@ -211,7 +211,7 @@ export default function NewPatientPage() {
           </label>
           <label>
             National ID
-            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional local identifier only" value={form.nationalId} />
+            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional identifier" value={form.nationalId} />
           </label>
           <label>
             Source / referral

@@ -170,7 +170,7 @@ export class DoctorVisitService {
 }
 
 function visitWorkflow() {
-  return ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Print Packet"];
+  return ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Packet"];
 }
 
 function patientSummary(patient: { id: string; branchId: string | null; medicalRecordNumber: string; firstName: string; lastName: string; dateOfBirth: Date | null; sex: string | null; patientType: string }) {
