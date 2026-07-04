@@ -7,6 +7,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { autosaveLabel, saveLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
 
 const steps = [
   ["Complaint", "What brought the patient today?", "Chief complaint"],
@@ -95,6 +96,14 @@ function GuidedVisitContent() {
     if (typeof window === "undefined") return null;
     return sessionStorage.getItem("prijClinicToken");
   }, []);
+  const autosave = useAutosaveDraft({
+    key: `doctor-visit:${patientId ?? "unassigned"}`,
+    entityType: "doctor_visit_draft",
+    patientId,
+    payload: formState,
+    enabled: Boolean(patientId),
+    debounceMs: 400
+  });
 
   useEffect(() => {
     if (!patientId) return;
@@ -152,10 +161,21 @@ function GuidedVisitContent() {
   const current = steps[step]!;
 
   function addComplaint(label: string) {
+    let nextState = formState;
     setFormState((currentState) => {
       const existing = currentState.chiefComplaint.trim();
-      return { ...currentState, chiefComplaint: existing ? `${existing}; ${label}` : label };
+      nextState = { ...currentState, chiefComplaint: existing ? `${existing}; ${label}` : label };
+      return nextState;
     });
+    if (patientId) {
+      void saveLocalDraft({
+        key: `doctor-visit:${patientId}`,
+        entityType: "doctor_visit_draft",
+        patientId,
+        payload: nextState,
+        updatedAt: new Date().toISOString()
+      });
+    }
     setStep(0);
     setSaved("Complaint added to draft. Save when ready.");
   }
@@ -169,6 +189,7 @@ function GuidedVisitContent() {
             <h1>{current[0]}</h1>
             <p className="muted">{patientId ? `${patientName} - ${current[1]}` : current[1]}</p>
           </div>
+          <span className="badge accent">{autosaveLabel(autosave.state)}</span>
           <Link className="button secondary" href={patientId ? `/patients/${patientId}` : "/doctor"}>
             <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
             {patientId ? "Back to patient file" : "Back to Doctor Mode"}
