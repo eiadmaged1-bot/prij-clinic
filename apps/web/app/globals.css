@@ -1067,6 +1067,109 @@ body {
   background: #fbfdfd;
 }
 
+.operation-pipeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.pipeline-stage {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  min-height: 3.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(180deg, #ffffff, #f6fafb);
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+}
+
+.pipeline-stage span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.pipeline-stage strong {
+  font-size: 1.3rem;
+}
+
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.picker-row {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 3.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+}
+
+.picker-row span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.picker-row.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.selected-patient-card {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f8fbfc;
+  padding: 0.7rem;
+}
+
+.selected-patient-card span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.segmented-control {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.3rem;
+}
+
+.segmented-control button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 2.4rem;
+}
+
+.segmented-control button.active {
+  background: #ffffff;
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
+}
+
 .quick-card,
 .module-card {
   display: grid;
@@ -2744,6 +2847,8 @@ button.obgyn-template-card {
   .login-shell,
   .dashboard-grid,
   .compact-metric-grid,
+  .operation-pipeline,
+  .wizard-steps,
   .content-grid {
     grid-template-columns: 1fr;
   }
