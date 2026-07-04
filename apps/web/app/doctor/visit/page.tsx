@@ -19,6 +19,23 @@ const steps = [
   ["Finish Visit", "Review, save, then finish when ready.", "Final review"]
 ] as const;
 
+const complaintCards = [
+  "AUB",
+  "Pelvic pain",
+  "Dysmenorrhea",
+  "Dyspareunia",
+  "Vaginal discharge",
+  "UTI symptoms",
+  "Infertility",
+  "Amenorrhea",
+  "Heavy menstrual bleeding",
+  "Postmenopausal bleeding",
+  "Pregnancy follow-up",
+  "Bleeding in pregnancy",
+  "Reduced fetal movement",
+  "Routine follow-up"
+];
+
 export default function GuidedVisitPage() {
   return (
     <Suspense fallback={<GuidedVisitFallback />}>
@@ -134,6 +151,15 @@ function GuidedVisitContent() {
 
   const current = steps[step]!;
 
+  function addComplaint(label: string) {
+    setFormState((currentState) => {
+      const existing = currentState.chiefComplaint.trim();
+      return { ...currentState, chiefComplaint: existing ? `${existing}; ${label}` : label };
+    });
+    setStep(0);
+    setSaved("Complaint added to draft. Save when ready.");
+  }
+
   return (
     <AppShell>
       <section className="visit-shell">
@@ -161,6 +187,17 @@ function GuidedVisitContent() {
         </section>
 
         <form className="visit-card" onSubmit={saveDraft}>
+          {step === 0 ? (
+            <div className="obgyn-template-grid">
+              {complaintCards.map((label) => (
+                <button className="obgyn-template-card" key={label} type="button" onClick={() => addComplaint(label)}>
+                  <ThreeDMedicalIcon name={label.includes("pregnancy") || label.includes("fetal") ? "pregnancy" : "encounter"} size="sm" />
+                  <strong>{label}</strong>
+                  <p className="muted">Add to draft complaint</p>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <label>
             {current[2]}
             <textarea
