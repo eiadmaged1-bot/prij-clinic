@@ -78,3 +78,10 @@ export function getMedicationSafetyProfile(medicationGenericId: string) {
 export function searchMedicationSafetyProfiles(query = "") {
   return request<{ results: Array<MedicationSafetyProfileResult["profile"] & { id: string; medicationGeneric?: { id?: string; genericName?: string; familyName?: string | null; className?: string | null } }> }>(`/reference/medication-safety-profiles/search?q=${encodeURIComponent(query)}`);
 }
+
+export function updateMedicationSafetyProfileReview(medicationGenericId: string, input: Record<string, unknown>) {
+  return request<MedicationSafetyProfileResult["profile"] & { id: string }>(`/reference/medications/${encodeURIComponent(medicationGenericId)}/safety-profile`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}

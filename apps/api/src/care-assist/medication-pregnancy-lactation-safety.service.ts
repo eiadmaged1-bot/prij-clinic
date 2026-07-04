@@ -74,7 +74,12 @@ export class MedicationPregnancyLactationSafetyService {
     const notes = [clean(dto.reproductivePotentialNotes), categoryInput === "E" ? "Imported category E mapped to REVIEW_REQUIRED for doctor review." : null].filter(Boolean).join(" ") || null;
     const sourceName = clean(dto.sourceName) || "Not reviewed";
     const sourceType = clean(dto.sourceType) || "not_reviewed";
-    const reviewStatus = sourceType === "not_reviewed" || sourceName === "Not reviewed" ? "needs_review" : clean(dto.reviewStatus) || "needs_review";
+    const requestedReviewStatus = clean(dto.reviewStatus) || "needs_review";
+    const reviewReason = clean(dto.reviewReason) || clean(dto.sourceRefreshNote);
+    if (requestedReviewStatus === "reviewed" && (sourceType === "not_reviewed" || sourceName === "Not reviewed" || !reviewReason)) {
+      throw new BadRequestException("Reviewed medication safety profiles require a source name and review reason.");
+    }
+    const reviewStatus = requestedReviewStatus === "reviewed" ? "reviewed" : requestedReviewStatus;
     const lastCheckedAt = parseDate(dto.lastCheckedAt);
     const sourceLastUpdatedAt = parseDate(dto.sourceLastUpdatedAt);
     const sourceRefreshStatus = normalizeRefreshStatus(dto.sourceRefreshStatus, lastCheckedAt);
@@ -103,7 +108,7 @@ export class MedicationPregnancyLactationSafetyService {
         sourceLastUpdatedAt,
         sourceVersionLabel: clean(dto.sourceVersionLabel),
         sourceRefreshStatus,
-        sourceRefreshNote: clean(dto.sourceRefreshNote),
+        sourceRefreshNote: reviewReason ?? clean(dto.sourceRefreshNote),
         reviewedByUserId: reviewStatus === "reviewed" ? user.id : null,
         reviewedAt: reviewStatus === "reviewed" ? new Date() : null
       },
@@ -119,7 +124,7 @@ export class MedicationPregnancyLactationSafetyService {
         sourceLastUpdatedAt,
         sourceVersionLabel: clean(dto.sourceVersionLabel),
         sourceRefreshStatus,
-        sourceRefreshNote: clean(dto.sourceRefreshNote),
+        sourceRefreshNote: reviewReason ?? clean(dto.sourceRefreshNote),
         pregnancyRiskSummary: clean(dto.pregnancyRiskSummary),
         pregnancyClinicalConsiderations: clean(dto.pregnancyClinicalConsiderations),
         pregnancyDataSummary: clean(dto.pregnancyDataSummary),
@@ -142,7 +147,7 @@ export class MedicationPregnancyLactationSafetyService {
       resourceType: "medication_safety_profile",
       resourceId: profile.id,
       severity: "high",
-      metadataJson: { medicationGenericId, reviewStatus: profile.reviewStatus, legacyPregnancyCategory: profile.legacyPregnancyCategory, categoryEMapped: categoryInput === "E" }
+      metadataJson: { medicationGenericId, reviewStatus: profile.reviewStatus, legacyPregnancyCategory: profile.legacyPregnancyCategory, categoryEMapped: categoryInput === "E", reviewReason }
     });
 
     return profile;
