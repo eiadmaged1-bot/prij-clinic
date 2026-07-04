@@ -50,7 +50,7 @@ export function MedicationSearchBox() {
         <span className="badge warning">Doctor approval required</span>
       </div>
       <form className="inline-form" onSubmit={submit}>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search ACEI, beta blocker, NSAID, or demo trade name" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search generic name, family, class, or listed trade name" />
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
@@ -282,11 +282,8 @@ export function DrugMarketImportPanel() {
           </dl>
         </article>
         <article className="data-row">
-          <strong>Admin/developer commands</strong>
-          <pre><code>{`npm run medication:v100:source-list
-npm run medication:v100:source-acquire -- --file PATH --source NHRA --country BH --apply
-npm run medication:v100:reimport:dry-run -- --source NHRA --country BH --file PATH
-$env:APP_ENV="local"; npm run medication:v100:reimport:apply -- --source NHRA --country BH --file PATH`}</code></pre>
+          <strong>Owner import tools</strong>
+          <p className="muted">Use the controlled local operator scripts from project documentation. Do not upload patient data, secrets, or unapproved source files.</p>
         </article>
         <article className="data-row">
           <strong>Workflow</strong>
@@ -294,15 +291,15 @@ $env:APP_ENV="local"; npm run medication:v100:reimport:apply -- --source NHRA --
         </article>
         <article className="data-row">
           <strong>Accepted formats</strong>
-          <p className="muted">XLSX, CSV, and JSON are supported for owner-provided official files. PDF is accepted where a parser exists, including current Oman-style price-list parsing.</p>
+          <p className="muted">Spreadsheet and structured text files are supported for owner-provided official source files. Document uploads are accepted only where a reviewed importer exists.</p>
         </article>
         <article className="data-row">
           <strong>Country/source intake</strong>
-          <p className="muted">Egypt EDA, UAE MOHAP, Qatar MOPH, Kuwait MOH, Saudi SFDA, Bahrain NHRA, and Oman MOH use official public sources, approved APIs, or owner-provided official file upload paths only.</p>
+          <p className="muted">Egypt EDA, UAE MOHAP, Qatar MOPH, Kuwait MOH, Saudi SFDA, Bahrain NHRA, and Oman MOH use official public sources, approved integrations, or owner-provided official files only.</p>
         </article>
         <article className="data-row">
           <strong>Blocked fallback</strong>
-          <p className="muted">No fake fallback rows are created when a public source fails or requires approval. Egypt remains official upload plus targeted lookup only; UAE remains approved API or official upload only.</p>
+          <p className="muted">No placeholder fallback rows are created when a public source fails or requires approval. Egypt remains official upload plus targeted lookup only; UAE remains approved integration or official upload only.</p>
         </article>
       </div>
     </section>
@@ -322,7 +319,7 @@ export function DrugMarketCoverageDashboard() {
   const lowConfidenceBlocked = [bahrain, oman].reduce((sum, row) => sum + Number(row?.lowConfidenceBlocked ?? 0), 0);
   return (
     <section className="panel">
-      <div className="section-heading"><h2>Coverage Dashboard</h2><span className="badge">Demo excluded</span></div>
+      <div className="section-heading"><h2>Coverage Dashboard</h2><span className="badge">Placeholders excluded</span></div>
       <p className="muted">{status}</p>
       <div className="data-list two-column">
         <article className="data-row">
@@ -330,7 +327,7 @@ export function DrugMarketCoverageDashboard() {
           <dl>
             <div><dt>Export status</dt><dd>Latest local export verified before handoff</dd></div>
             <div><dt>Last restore drill</dt><dd>Stored under ignored local restore-drill reports</dd></div>
-            <div><dt>Demo rows</dt><dd>Excluded from real coverage</dd></div>
+            <div><dt>Placeholder rows</dt><dd>Excluded from reviewed coverage</dd></div>
           </dl>
         </article>
         <article className="data-row">
@@ -355,7 +352,7 @@ export function DrugMarketCoverageDashboard() {
               <div><dt>Review queue</dt><dd>{String(row.reviewItemCount ?? row.reviewItems ?? 0)}</dd></div>
               <div><dt>Verified</dt><dd>{String(row.rowsVerified ?? 0)}</dd></div>
               <div><dt>Rejected/retired</dt><dd>{String(row.rowsRejected ?? 0)} / {String(row.rowsRetired ?? 0)}</dd></div>
-              <div><dt>Demo rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
+              <div><dt>Placeholder rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
               <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
               <div><dt>Trust level</dt><dd>{confidenceBucket(row.parserConfidenceAverage)}</dd></div>
               <div><dt>Review mix</dt><dd>{formatConfidenceBuckets(row.parserConfidenceDistribution)}</dd></div>
