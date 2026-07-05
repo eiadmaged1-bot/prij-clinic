@@ -33,6 +33,8 @@ pnpm-debug.log*
 *.sqlite3
 *.db
 *.dump
+*.backup.sql
+*.sql.gz
 *.bak
 backups/
 

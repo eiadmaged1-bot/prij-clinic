@@ -11,7 +11,7 @@ if ($env:CI -eq "true") {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $backupDir = Join-Path $repoRoot $OutputDirectory
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$backupPath = Join-Path $backupDir "prij-clinic-local-$timestamp.sql"
+$backupPath = Join-Path $backupDir "prij-clinic-local-$timestamp.backup.sql"
 
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
 
@@ -32,6 +32,11 @@ while ((Get-Date) -lt $deadline) {
 docker exec prij-clinic-postgres pg_isready -U prij_clinic_dev -d prij_clinic_dev *> $null
 if ($LASTEXITCODE -ne 0) {
   throw "Local Postgres did not become ready."
+}
+
+docker exec prij-clinic-postgres pg_dump --version *> $null
+if ($LASTEXITCODE -ne 0) {
+  throw "pg_dump is not available in the local Postgres container. Install PostgreSQL client tools or rebuild the local Postgres service image."
 }
 
 $dump = docker exec prij-clinic-postgres pg_dump -U prij_clinic_dev -d prij_clinic_dev --no-owner --no-acl

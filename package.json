@@ -143,6 +143,7 @@
     "test:v160:security-readiness-dashboard": "node scripts/v160-security-readiness-dashboard-test.mjs",
     "test:v160:rbac-readiness": "node scripts/v160-rbac-readiness-test.mjs",
     "test:v160:audit-governance": "node scripts/v160-audit-governance-test.mjs",
+    "test:v160:backup-readiness": "node scripts/v160-backup-readiness-test.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",
@@ -244,6 +245,8 @@
     "prisma:migrate:dev": "npm run prisma:migrate:dev -w apps/api",
     "prisma:seed": "npm run prisma:seed -w apps/api",
     "backup:local": "powershell -ExecutionPolicy Bypass -File scripts/backup-local-db.ps1",
+    "backup:verify": "powershell -ExecutionPolicy Bypass -File scripts/backup-verify.ps1",
+    "backup:readiness": "powershell -ExecutionPolicy Bypass -File scripts/backup-readiness.ps1",
     "backup:staging": "powershell -ExecutionPolicy Bypass -File scripts/backup-staging-db.ps1",
     "restore:local": "powershell -ExecutionPolicy Bypass -File scripts/restore-local-db.ps1"
   },
