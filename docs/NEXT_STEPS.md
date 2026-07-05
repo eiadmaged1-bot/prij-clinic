@@ -1,5 +1,16 @@
 # Next Steps
 
+After v0.18.1, do not add product scope until staging QA results are reviewed.
+
+Required before any production or real patient data use:
+- Complete manual role-by-role browser QA using `docs/ROLE_BY_ROLE_BROWSER_QA.md`.
+- Complete legal/privacy review and consent policy approval.
+- Complete a real backup and restore drill in controlled non-production.
+- Configure HTTPS, managed secrets, monitoring, audit retention, log retention, and incident response.
+- Keep external AI disabled by default and keep AI draft-only until a doctor approves output.
+
+Do not add WhatsApp, DICOM/PACS, insurance/TPA, real payment gateway, full accounting ledger, mobile app, external AI runtime calls, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claims.
+
 After v0.18.0, continue staging validation without adding clinical features.
 
 Required before production or real patient data:

@@ -1,5 +1,23 @@
 # Prij Clinic
 
+## v0.18.1 Staging Browser QA Lock
+
+v0.18.1 locks the v0.18.0 staging deployment package with browser-facing QA and final stabilization only. It does not add product features.
+
+Key command:
+
+```powershell
+npm run test:v181:browser-qa-lock
+```
+
+Primary v0.18.1 docs:
+
+- `docs/V0_18_1_STAGING_BROWSER_QA_LOCK.md`
+- `docs/ROLE_BY_ROLE_BROWSER_QA.md`
+- `docs/STAGING_BROWSER_QA_CHECKLIST.md`
+
+Safety boundaries remain unchanged: no real patient data, no external AI by default, no autonomous diagnosis/prescribing/dosing, no fake clinical claims, no real payment gateway, no WhatsApp, no DICOM/PACS, no insurance/TPA, no full ledger, and no mobile app.
+
 ## v0.18.0 Staging Deployment Package
 
 v0.18.0 is a staging deployment package and local production simulation sprint only. It is not a production release and must not be used with real patient data.

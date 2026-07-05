@@ -1,5 +1,17 @@
 # Current Status
 
+v0.18.1 Staging Browser QA Lock is in progress on `stabilize/v0.18.1-staging-browser-qa-lock`.
+
+Scope:
+- Browser-facing staging QA lock for v0.18.0 routes, role-by-role browser checklist documentation, final staging stabilization, and release tagging if final checks pass.
+
+Safety status:
+- No new product features are added.
+- Real patient data remains blocked.
+- External AI remains disabled by default.
+- AI remains draft-only and doctor-approved.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, external integrations, fake clinical claims, or real payment gateway are added.
+
 v0.18.0 Staging Deployment Package is in progress on `feature/v0.18.0-staging-deployment-package`.
 
 Scope:

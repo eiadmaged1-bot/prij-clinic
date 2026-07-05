@@ -1,5 +1,14 @@
 # Known Limitations
 
+v0.18.1 staging browser QA lock limitations:
+
+- v0.18.1 is a staging/browser QA lock only, not a production release.
+- Automated browser-facing QA is source/static route coverage; it does not replace manual browser testing for every role.
+- Real patient data remains blocked.
+- External AI remains disabled by default.
+- AI remains draft-only and doctor-reviewed.
+- Production still requires legal/privacy review, deployment hardening, monitored backups, restore drills, secrets management, and role-by-role signoff.
+
 v0.18.0 staging deployment package limitations:
 
 - v0.18.0 is staging package only, not a production release.
