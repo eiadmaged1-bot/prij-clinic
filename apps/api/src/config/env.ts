@@ -69,8 +69,13 @@ export function validateRuntimeEnv() {
     errors.push("AI_FEATURES_ENABLED must stay false for this release candidate.");
   }
 
-  if (process.env.AI_PROVIDER && process.env.AI_PROVIDER !== "disabled") {
-    errors.push("AI_PROVIDER must be disabled for this release candidate.");
+  const disabledAiProviders = new Set(["disabled", "disabled_mock"]);
+  if (process.env.AI_PROVIDER && !disabledAiProviders.has(process.env.AI_PROVIDER)) {
+    errors.push("AI_PROVIDER must be disabled or disabled_mock for this release candidate.");
+  }
+
+  if (process.env.EXTERNAL_AI_ENABLED === "true") {
+    errors.push("EXTERNAL_AI_ENABLED must stay false for this release candidate.");
   }
 
   const jwtSecret = process.env.JWT_SECRET ?? "";

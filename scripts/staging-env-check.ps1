@@ -45,6 +45,12 @@ function Require-Key([string]$Name) {
   "JWT_EXPIRES_IN",
   "AI_FEATURES_ENABLED",
   "AI_PROVIDER",
+  "EXTERNAL_AI_ENABLED",
+  "WEB_ORIGIN",
+  "CORS_ORIGINS",
+  "CORS_ALLOWED_ORIGINS",
+  "PATIENT_FILE_STORAGE_MODE",
+  "BACKUP_DIR",
   "SEED_DEMO_DATA",
   "SEED_DEMO_OWNER",
   "DEMO_OWNER_EMAIL",
@@ -68,16 +74,24 @@ if ($values["AI_FEATURES_ENABLED"] -ne "false") {
   $errors.Add("AI_FEATURES_ENABLED must be false.")
 }
 
-if ($values["AI_PROVIDER"] -ne "disabled") {
-  $errors.Add("AI_PROVIDER must be disabled.")
+if ($values["AI_PROVIDER"] -notin @("disabled", "disabled_mock")) {
+  $errors.Add("AI_PROVIDER must be disabled or disabled_mock.")
 }
 
-if ($values["SEED_DEMO_DATA"] -ne "true") {
-  $errors.Add("SEED_DEMO_DATA must be true for this fake-data-only local staging trial.")
+if ($values["EXTERNAL_AI_ENABLED"] -ne "false") {
+  $errors.Add("EXTERNAL_AI_ENABLED must be false.")
 }
 
-if ($values["SEED_DEMO_OWNER"] -ne "true") {
-  $errors.Add("SEED_DEMO_OWNER must be true for staging demo login tests.")
+if ($values["PATIENT_FILE_STORAGE_MODE"] -ne "metadata_only") {
+  $errors.Add("PATIENT_FILE_STORAGE_MODE must be metadata_only until secure storage is approved.")
+}
+
+if ($values["SEED_DEMO_DATA"] -ne "false") {
+  $errors.Add("SEED_DEMO_DATA must be false for the committed staging example.")
+}
+
+if ($values["SEED_DEMO_OWNER"] -ne "false") {
+  $errors.Add("SEED_DEMO_OWNER must be false for the committed staging example.")
 }
 
 $jwtSecret = $values["JWT_SECRET"]

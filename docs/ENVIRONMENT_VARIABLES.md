@@ -1,15 +1,17 @@
 # Environment Variables
 
-Use `.env.example` for local placeholders and `.env.production.example` for production-shaped placeholders. Do not commit real `.env` files, secrets, passwords, tokens, patient data, or database files.
+Use `.env.example` for local placeholders, `.env.staging.example` for staging placeholders, and `.env.production.example` for production-shaped placeholders. Do not commit real `.env` files, secrets, passwords, tokens, patient data, or database files.
 
 Required production/staging checks:
 - `APP_ENV` and `NODE_ENV` must match the target environment.
 - `DATABASE_URL` must be configured outside git and must never be printed.
 - `JWT_SECRET` must be configured outside git and must never be printed.
-- `APP_URL`, `API_URL`, and `NEXT_PUBLIC_API_URL` must use HTTPS for staging and production.
+- `APP_URL`, `WEB_ORIGIN`, `API_URL`, and `NEXT_PUBLIC_API_URL` must use HTTPS for staging and production.
+- `CORS_ORIGINS` and `CORS_ALLOWED_ORIGINS` must use explicit HTTPS origins without wildcards.
 - `DEMO_MODE=false` for production-shaped environments.
 - `PATIENT_FILE_STORAGE_MODE=metadata_only` unless a reviewed secure storage mode is approved.
-- `AI_FEATURES_ENABLED=false` and `AI_PROVIDER=disabled` by default.
+- `BACKUP_DIR` must point to an ignored backup path such as `backups/staging`.
+- `AI_FEATURES_ENABLED=false`, `AI_PROVIDER=disabled` or `disabled_mock`, and `EXTERNAL_AI_ENABLED=false` by default.
 
 Production guidance:
 - Store secrets in the deployment platform or a managed secret store.
