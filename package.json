@@ -148,6 +148,7 @@
     "test:v160:production-readiness": "node scripts/v160-production-readiness-test.mjs",
     "test:v160:ai-safety-readiness": "node scripts/v160-ai-safety-readiness-test.mjs",
     "test:v160:security-real-data-readiness": "node scripts/v160-security-real-data-readiness-suite.mjs",
+    "test:v161:startup-readiness": "node scripts/v161-startup-readiness-test.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",
