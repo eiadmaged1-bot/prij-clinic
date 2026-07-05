@@ -1,5 +1,17 @@
 # Known Limitations
 
+v1.0.0 Pilot Release Candidate limitations:
+
+- v1.0.0 is a Pilot Release Candidate, not a full production release.
+- Real patient data remains blocked until legal, privacy, backup, and role-by-role signoff are complete.
+- Manual role-by-role browser signoff is still required before real clinic use.
+- External AI is disabled by default.
+- AI remains assistive, draft-only, and doctor-approved.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, or AI final-record writing is implemented.
+- No payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, or mobile app is included.
+- Backup readiness is not a monitored production backup program; controlled restore drill and operational monitoring remain required.
+- Browser/source checks do not replace legal, privacy, deployment, and operational review.
+
 v0.18.1 staging browser QA lock limitations:
 
 - v0.18.1 is a staging/browser QA lock only, not a production release.

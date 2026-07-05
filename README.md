@@ -1,5 +1,44 @@
 # Prij Clinic
 
+## v1.0.0 Pilot Release Candidate
+
+v1.0.0 is the first Pilot Release Candidate package for controlled staging review. It is not a full production release and must not be used with real patient data until legal/privacy, backup/restore, deployment, and role-by-role signoff are complete.
+
+This sprint is release packaging, final verification, documentation, and tagging only. It does not add product features, rewrite architecture, or add clinical logic.
+
+Key commands:
+
+```powershell
+npm run staging:simulate
+npm run test:v180:staging-smoke
+npm run test:v180:backup-staging-readiness
+npm run test:v181:browser-qa-lock
+npm run test:v144:clinic-walkthrough
+npm run test:v150:mvp-business-walkthrough
+npm run test:v160:security-real-data-readiness
+npm run test:v161:security-deployment-prep-lock
+npm run test:v170:ai-safety-layer
+npm run test:v170:prompt-injection-guard
+npm run test:v170:safe-ai-assistant
+npm run test:ai:regression
+npm run test:security:ci
+npm run test:security:expanded
+npm run test:accounts:rbac
+npm run typecheck
+npm run build
+```
+
+Pilot safety boundaries: external AI is disabled by default; AI is draft-only and doctor-approved; there is no autonomous diagnosis, prescribing, dosing, treatment ranking, real payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full ledger, mobile app, or real patient data approval.
+
+Primary v1.0.0 Pilot RC docs:
+
+- `docs/V1_0_0_PILOT_RELEASE_CANDIDATE.md`
+- `docs/PILOT_RELEASE_NOTES.md`
+- `docs/PILOT_LIMITATIONS.md`
+- `docs/PILOT_RUNBOOK.md`
+- `docs/PILOT_QA_CHECKLIST.md`
+- `docs/PILOT_RELEASE_MANIFEST.md`
+
 ## v0.18.1 Staging Browser QA Lock
 
 v0.18.1 locks the v0.18.0 staging deployment package with browser-facing QA and final stabilization only. It does not add product features.

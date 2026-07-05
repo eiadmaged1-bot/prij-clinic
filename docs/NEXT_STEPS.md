@@ -1,5 +1,16 @@
 # Next Steps
 
+After v1.0.0 Pilot Release Candidate, do not add product scope until final release checks and manual role-by-role browser signoff are reviewed.
+
+Required before real clinic use:
+- Complete manual role-by-role browser QA for Owner, Admin, Doctor, Receptionist, Accountant, and Nurse.
+- Complete legal/privacy review and consent policy approval.
+- Complete a controlled backup and restore drill.
+- Confirm HTTPS, managed secrets, exact CORS origins, monitoring, audit retention, log retention, and incident response.
+- Keep external AI disabled by default and keep AI draft-only until a doctor approves output.
+
+Do not add WhatsApp, DICOM/PACS, insurance/TPA, real payment gateway, full accounting ledger, mobile app, external AI runtime calls, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claims before pilot signoff.
+
 After v0.18.1, do not add product scope until staging QA results are reviewed.
 
 Required before any production or real patient data use:

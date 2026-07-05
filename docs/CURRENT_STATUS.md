@@ -1,5 +1,20 @@
 # Current Status
 
+v1.0.0 Pilot Release Candidate is in progress on `release/v1.0.0-pilot-rc`.
+
+Scope:
+- Release packaging, final verification, documentation, and tagging only.
+- Preserve the clinic walkthrough lock, MVP business layer, security/readiness gates, staging package, browser QA lock, and safe AI assistant draft-only behavior.
+- Do not add product features, architecture rewrites, or new clinical logic.
+
+Safety status:
+- v1.0.0 is a Pilot Release Candidate, not a full production release.
+- Real patient data remains blocked until legal/privacy, backup/restore, deployment, and role-by-role signoff are complete.
+- External AI is disabled by default.
+- AI remains draft-only and doctor-approved.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, fake clinical claims, real payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full ledger, or mobile app is included.
+- Manual role-by-role browser signoff is still required before real clinic use.
+
 v0.18.1 Staging Browser QA Lock is in progress on `stabilize/v0.18.1-staging-browser-qa-lock`.
 
 Scope:
