@@ -152,6 +152,7 @@
     "test:v161:deployment-prep": "node scripts/v161-deployment-prep-test.mjs",
     "test:v161:backup-runbook": "node scripts/v161-backup-runbook-test.mjs",
     "test:v161:role-by-role-readiness": "node scripts/v161-role-by-role-readiness-test.mjs",
+    "test:v161:security-deployment-prep-lock": "node scripts/v161-security-deployment-prep-lock-suite.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",
