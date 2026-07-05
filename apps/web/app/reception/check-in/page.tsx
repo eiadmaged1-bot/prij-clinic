@@ -75,6 +75,7 @@ export default function ReceptionCheckInPage() {
           <div className="topbar-actions">
             <Link className="button secondary compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" tone="slate" />Today Desk</Link>
             <Link className="button compact" href="/patients/new"><ThreeDMedicalIcon name="patients" size="sm" />New patient</Link>
+            <Link className="button secondary compact" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Scan QR</Link>
           </div>
         </div>
         <p className="muted">Fast patient check-in without large dropdowns. Walk-ins can continue without an appointment.</p>

@@ -1041,6 +1041,81 @@ details.form-fieldset summary {
   width: 100%;
 }
 
+.reception-home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.reception-action-card {
+  align-items: center;
+  background: linear-gradient(180deg, var(--surface), var(--surface-muted));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  display: flex;
+  font-size: 1.2rem;
+  font-weight: 750;
+  gap: 0.85rem;
+  justify-content: center;
+  min-height: 132px;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.reception-action-card:hover,
+.reception-action-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  outline: none;
+}
+
+.returning-patient-panel {
+  margin-bottom: 1rem;
+}
+
+.patient-qr-backdrop {
+  align-items: center;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 60;
+}
+
+.patient-qr-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  max-width: 420px;
+  padding: 1rem;
+  width: min(100%, 420px);
+}
+
+.patient-qr-image {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: block;
+  margin: 1rem auto;
+  max-width: 280px;
+  padding: 1rem;
+  width: 100%;
+}
+
+.qr-video {
+  aspect-ratio: 4 / 3;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
 .safety-badge-stack {
   display: flex;
   flex: 0 0 auto;
@@ -4111,5 +4186,13 @@ body {
   .doctor-comfort-mode .visit-progress button {
     max-width: none;
     white-space: normal;
+  }
+
+  .reception-home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reception-action-card {
+    min-height: 112px;
   }
 }
