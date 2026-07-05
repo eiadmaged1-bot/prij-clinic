@@ -5,6 +5,7 @@ Use fake/demo data only.
 ## Automated Gates
 
 - [ ] `git diff --check`
+- [ ] `npm run test:v101:pilot-signoff-qr`
 - [ ] `npm run prisma:generate`
 - [ ] `npm run prisma:migrate:deploy`
 - [ ] `npm run prisma:seed`
@@ -39,6 +40,21 @@ Use fake/demo data only.
 - [ ] Receptionist
 - [ ] Accountant
 - [ ] Nurse
+
+## v1.0.1 Pilot Signoff QR Workflow
+
+- [ ] Universal top-right account/logout menu is visible for every signed-in role, including Receptionist.
+- [ ] Tailscale local-dev mobile login works through `npm run dev:tailscale`; Tailscale Funnel/public exposure is not used.
+- [ ] Local firewall allows private tailnet TCP `3000` and `3001` only when needed.
+- [ ] `/reception` shows Waiting List, New Patient, and Returning Patient only.
+- [ ] New Patient opens `/patients/new`.
+- [ ] Returning Patient lookup searches by name, phone, patient ID, and MRN where available.
+- [ ] Patient file shows Patient QR.
+- [ ] QR contains patient ID only; it does not include name, phone, DOB, address, diagnosis, visit text, or medical information.
+- [ ] Login and RBAC are required to resolve QR.
+- [ ] Receptionist can scan QR to open the patient file.
+- [ ] Receptionist can check in/add to queue only after confirmation.
+- [ ] Phone camera scanning is manually tested; HTTPS may be required, and manual patient ID fallback exists.
 
 ## Safety Confirmation
 

@@ -1,5 +1,17 @@
 # Known Limitations
 
+v1.0.1 Pilot Signoff Lock limitations:
+
+- v1.0.1 is a pilot signoff lock, not a production release.
+- Patient QR contains patient ID only, but login and RBAC are still required before the ID resolves to a patient file.
+- QR scan uses browser camera support when available; phone camera scanning may require HTTPS and remains actual-device manual QA.
+- Manual patient ID fallback is required and included for camera/HTTPS limitations.
+- Receptionist check-in/add-to-queue from QR requires confirmation and queue permission.
+- Tailscale support is local development only, not public production exposure. Do not use Tailscale Funnel.
+- Local firewall rules may need TCP `3000` and `3001` for private tailnet testing.
+- Real patient data remains blocked.
+- External AI remains disabled by default and draft-only.
+
 UI Cleanup + Tailscale Mobile Access limitations:
 
 - Tailscale support is local development only and requires the phone to be connected to the same tailnet.

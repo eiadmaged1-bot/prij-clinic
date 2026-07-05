@@ -1,5 +1,13 @@
 # Next Steps
 
+After v1.0.1 Pilot Signoff Lock:
+- Run manual role-by-role browser QA, including receptionist `/reception`, Returning Patient lookup, `/reception/qr-scan`, patient QR modal, and queue confirmation.
+- Run actual phone QA on a device connected to the same Tailscale tailnet using `npm run dev:tailscale`.
+- Confirm private firewall access to TCP `3000` and `3001` where needed for local-dev Tailscale testing.
+- Confirm camera scanning behavior on the phone; use manual patient ID fallback when HTTPS/camera permission blocks scanning.
+- Keep Tailscale local-dev only; do not use Tailscale Funnel or public production exposure.
+- Keep real patient data blocked and external AI disabled by default.
+
 After UI Cleanup + Tailscale Mobile Access + Universal Logout:
 - Run manual phone QA on a device connected to the same Tailscale tailnet using `npm run dev:tailscale` and `scripts/print-tailscale-dev-url.ps1`.
 - Confirm local firewall rules allow private tailnet access to ports `3000` and `3001` only as needed.

@@ -1,5 +1,25 @@
 # Current Status
 
+v1.0.1 Pilot Signoff Lock is implemented on `stabilize/v1.0.1-pilot-signoff-lock`.
+
+Completed in v1.0.1:
+- Preserved the v1.0.0 Pilot Release Candidate baseline.
+- Preserved universal top-right account/logout menu, receptionist logout access, display/login fallback, and role badge.
+- Preserved Tailscale local-dev mobile login support, `npm run dev:tailscale`, dynamic API host logic, local-dev CORS, and no Tailscale Funnel/public exposure.
+- Simplified `/reception` to Waiting List, New Patient, and Returning Patient.
+- Added Returning Patient lookup by name, phone, patient ID, and MRN where available.
+- Added Patient QR to patient files.
+- Added `/reception/qr-scan` with camera scanning when supported and manual patient ID fallback.
+- QR contains patient ID only, and resolving it still requires login and RBAC.
+- Receptionist can check in/add to queue only after explicit confirmation.
+
+Safety status:
+- Real patient data remains blocked.
+- External AI remains disabled by default.
+- AI remains draft-only and doctor-reviewed.
+- No WhatsApp, DICOM/PACS, insurance/TPA, payment gateway, full ledger, mobile app, external AI runtime call, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claim was added.
+- Actual phone camera QA remains manual; HTTPS may be required by mobile browsers.
+
 UI Cleanup + Tailscale Mobile Access + Universal Logout is implemented on `fix/ui-cleanup-tailscale-mobile-login`.
 
 Completed in this sprint:

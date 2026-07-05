@@ -27,6 +27,11 @@ Use fake/demo data only. Do not enter real patient data, real payment details, s
 
 - Open `/patients/new`.
 - Open `/reception`.
+- Confirm `/reception` shows only Waiting List, New Patient, and Returning Patient as the main home actions.
+- Use Returning Patient lookup by name, phone, patient ID, and MRN where available.
+- Open `/reception/qr-scan`.
+- Scan a fake/demo patient QR or enter the patient ID manually, then confirm the patient file opens.
+- Confirm Check in / Add to queue requires an explicit click and does not happen automatically.
 - Open `/reception/check-in`.
 - Open `/queue`.
 - Open `/calendar`.
@@ -46,4 +51,5 @@ Use fake/demo data only. Do not enter real patient data, real payment details, s
 - Disallowed role surfaces are blocked or hidden.
 - No real patient data is used.
 - No unsafe clinical automation wording or external AI enabled wording appears.
-
+- Patient QR contains patient ID only and still requires login/RBAC.
+- Tailscale phone QA remains manual local-dev QA only, not public production exposure.

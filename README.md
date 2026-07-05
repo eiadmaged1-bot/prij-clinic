@@ -1,5 +1,26 @@
 # Prij Clinic
 
+## v1.0.1 Pilot Signoff Lock
+
+v1.0.1 locks the pilot stabilization scope: universal logout/account menu, Tailscale local-dev mobile login support, receptionist clean home, Returning Patient lookup, Patient QR, and receptionist QR scan workflow.
+
+- `/reception` now focuses on Waiting List, New Patient, and Returning Patient.
+- Returning Patient lookup supports name, phone, patient ID, and MRN where available.
+- Patient files show Patient QR.
+- QR contains patient ID only.
+- Login and RBAC are still required to resolve QR or open patient files.
+- `/reception/qr-scan` supports camera scanning where the browser allows it and manual patient ID fallback where HTTPS/camera permission blocks scanning.
+- Receptionist can check in/add to queue after confirmation; the QR scan does not auto-check-in.
+- Tailscale support is local-dev only through `npm run dev:tailscale`; do not use Tailscale Funnel or public production exposure.
+- Local firewall may need TCP `3000` and `3001` for private tailnet phone QA.
+- Real patient data remains blocked and external AI remains disabled by default.
+
+Verification:
+
+```powershell
+npm run test:v101:pilot-signoff-qr
+```
+
 ## UI Cleanup + Tailscale Mobile Access + Universal Logout
 
 This sprint keeps Prij Clinic local/private and demo-only while improving compact clinic screens, making logout visible from the top account menu for every signed-in role, and adding tailnet-only mobile development access.
