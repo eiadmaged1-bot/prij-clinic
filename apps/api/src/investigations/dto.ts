@@ -43,6 +43,17 @@ export class CreateInvestigationOrderDto {
 export class UpdateInvestigationOrderStatusDto {
   @IsEnum(InvestigationOrderStatus)
   status!: InvestigationOrderStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+}
+
+export class CancelClinicalRequestDto {
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
 }
 
 export class ClinicalRequestItemDto {

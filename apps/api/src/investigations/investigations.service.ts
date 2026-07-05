@@ -101,12 +101,20 @@ export class InvestigationsService {
     return order;
   }
 
-  async updateOrderStatus(id: string, status: InvestigationOrderStatus, user: AuthUser) {
+  async updateOrderStatus(id: string, status: InvestigationOrderStatus, user: AuthUser, reason?: string) {
     const existing = await this.getOrder(id, user);
+    const trimmedReason = reason?.trim();
+
+    if ((status === "cancelled" || status === "voided") && !trimmedReason) {
+      throw new BadRequestException("A reason is required to cancel or void an investigation order.");
+    }
+
     const order = await this.prisma.investigationOrder.update({
       where: { id },
       data: {
         status,
+        ...(status === "cancelled" ? { cancellationReason: trimmedReason } : {}),
+        ...(status === "voided" ? { voidReason: trimmedReason } : {}),
         items: { updateMany: { where: {}, data: { status } } }
       },
       include: { items: true, patient: true, encounter: true }
@@ -118,7 +126,8 @@ export class InvestigationsService {
       resourceType: "investigation_order",
       resourceId: order.id,
       severity: "high",
-      metadataJson: { from: existing.status, to: order.status }
+      reason: trimmedReason,
+      metadataJson: { from: existing.status, to: order.status, reasonCaptured: Boolean(trimmedReason) }
     });
 
     return order;
@@ -195,8 +204,8 @@ export class InvestigationsService {
     return toClinicalRequest(order);
   }
 
-  async cancelClinicalRequest(id: string, user: AuthUser) {
-    const order = await this.updateOrderStatus(id, "cancelled", user);
+  async cancelClinicalRequest(id: string, reason: string, user: AuthUser) {
+    const order = await this.updateOrderStatus(id, "cancelled", user, reason);
     return toClinicalRequest(order);
   }
 

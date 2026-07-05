@@ -61,6 +61,10 @@ export function validateRuntimeEnv() {
     errors.push("APP_URL is required in staging and production so CORS can be restricted to the web app origin.");
   }
 
+  if ((isProduction || isStaging) && process.env.APP_URL?.startsWith("http://")) {
+    errors.push("APP_URL must use HTTPS in staging and production.");
+  }
+
   if (process.env.AI_FEATURES_ENABLED === "true") {
     errors.push("AI_FEATURES_ENABLED must stay false for this release candidate.");
   }
@@ -86,6 +90,19 @@ export function validateRuntimeEnv() {
 
   if (isProduction && insecureJwtSecrets.has(jwtSecret.toLowerCase())) {
     errors.push("JWT_SECRET uses an insecure example value and is forbidden in production.");
+  }
+
+  if ((isProduction || isStaging) && process.env.DEMO_MODE === "true") {
+    errors.push("DEMO_MODE is forbidden in staging and production.");
+  }
+
+  if ((isProduction || isStaging) && process.env.PATIENT_FILE_STORAGE_MODE === "local_demo_file") {
+    errors.push("PATIENT_FILE_STORAGE_MODE=local_demo_file is forbidden in staging and production.");
+  }
+
+  const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
+  if (isProduction && !/^\d+[smh]$/.test(jwtExpiresIn)) {
+    errors.push("JWT_EXPIRES_IN must be a short seconds/minutes/hours value in production.");
   }
 
   const demoPasswords = [

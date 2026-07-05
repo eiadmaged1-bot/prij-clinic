@@ -4,7 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CreateClinicalRequestDto, CreateInvestigationOrderDto, UpdateInvestigationOrderStatusDto } from "./dto";
+import { CancelClinicalRequestDto, CreateClinicalRequestDto, CreateInvestigationOrderDto, UpdateInvestigationOrderStatusDto } from "./dto";
 import { InvestigationsService } from "./investigations.service";
 
 @Controller("investigations")
@@ -43,7 +43,7 @@ export class InvestigationsController {
     @Body() dto: UpdateInvestigationOrderStatusDto,
     @CurrentUser() user: AuthUser
   ) {
-    return this.investigations.updateOrderStatus(id, dto.status, user);
+    return this.investigations.updateOrderStatus(id, dto.status, user, dto.reason);
   }
 }
 
@@ -84,7 +84,7 @@ export class ClinicalRequestsController {
 
   @Post(":id/cancel")
   @Permissions("clinical_requests.cancel")
-  cancel(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.investigations.cancelClinicalRequest(id, user);
+  cancel(@Param("id") id: string, @Body() dto: CancelClinicalRequestDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.cancelClinicalRequest(id, dto.reason, user);
   }
 }

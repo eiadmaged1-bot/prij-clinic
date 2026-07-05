@@ -3,6 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import { loadRootEnv, validateRuntimeEnv } from "./config/env";
 import { createCorsOptions } from "./config/cors-origins";
+import { securityHeadersMiddleware } from "./config/security-headers";
 
 async function bootstrap() {
   loadRootEnv();
@@ -11,6 +12,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const port = Number(process.env.API_PORT ?? 3001);
   const host = process.env.API_HOST;
+
+  app.use(securityHeadersMiddleware);
 
   app.useGlobalPipes(
     new ValidationPipe({

@@ -20,6 +20,8 @@ export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
   async record(event: AuditEventInput) {
+    const metadataJson = sanitizeAuditMetadata(event.metadataJson);
+
     await this.prisma.auditLog.create({
       data: {
         actorUserId: event.actorUserId ?? null,
@@ -28,11 +30,11 @@ export class AuditService {
         resourceId: event.resourceId ?? null,
         branchId: event.branchId ?? null,
         severity: event.severity ?? "low",
-        reason: event.reason ?? null,
-        metadataJson: event.metadataJson ?? undefined,
+        reason: sanitizeAuditString(event.reason) ?? null,
+        metadataJson: metadataJson ?? undefined,
         ipAddress: event.ipAddress ?? null,
-        userAgent: event.userAgent ?? null,
-        requestId: event.requestId ?? null
+        userAgent: sanitizeAuditString(event.userAgent, 300) ?? null,
+        requestId: sanitizeAuditString(event.requestId, 120) ?? null
       } as unknown as never
     });
   }
@@ -60,4 +62,59 @@ export class AuditService {
       } as unknown as never
     });
   }
+}
+
+const REDACTED = "[redacted]";
+const SENSITIVE_KEY_PATTERN = /(password|passcode|secret|token|authorization|cookie|api[_-]?key|jwt|session|credential|private[_-]?key)/i;
+
+export function sanitizeAuditMetadata(value: unknown, depth = 0): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return sanitizeAuditObject(value as Record<string, unknown>, depth);
+}
+
+function sanitizeAuditObject(value: Record<string, unknown>, depth: number): Record<string, unknown> {
+  if (depth >= 5) {
+    return { truncated: true };
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, entry]) => {
+      if (SENSITIVE_KEY_PATTERN.test(key)) {
+        return [key, REDACTED];
+      }
+
+      return [key, sanitizeAuditValue(entry, depth + 1)];
+    })
+  );
+}
+
+function sanitizeAuditValue(value: unknown, depth: number): unknown {
+  if (typeof value === "string") {
+    return sanitizeAuditString(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 50).map((entry) => sanitizeAuditValue(entry, depth + 1));
+  }
+
+  if (value && typeof value === "object") {
+    return sanitizeAuditObject(value as Record<string, unknown>, depth);
+  }
+
+  return value;
+}
+
+function sanitizeAuditString(value: string | null | undefined, maxLength = 500) {
+  if (!value) {
+    return value;
+  }
+
+  const redacted = value
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, "Bearer [redacted]")
+    .replace(/(sk-[A-Za-z0-9_-]{8,}|sk-proj-[A-Za-z0-9_-]{8,})/g, REDACTED);
+
+  return redacted.length > maxLength ? `${redacted.slice(0, maxLength)}...` : redacted;
 }

@@ -139,6 +139,7 @@
     "test:v1431:post-visual-hotfix": "node scripts/v1431-post-visual-hotfix-test.mjs",
     "test:v144:clinic-walkthrough": "node scripts/v144-clinic-walkthrough-test.mjs",
     "test:v150:mvp-business-walkthrough": "node scripts/v150-mvp-business-walkthrough-test.mjs",
+    "test:v160:real-data-readiness": "node scripts/v160-real-data-readiness-test.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",
