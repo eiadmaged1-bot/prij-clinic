@@ -1,5 +1,16 @@
 # Known Limitations
 
+v0.16.0 readiness limitations:
+
+- v0.16.0 prepares for real patient data readiness, but it is not a full legal, compliance, security, or production-readiness certification.
+- No real patient data is seeded or imported.
+- No fake clinical data is added.
+- Local backup readiness scripts are not a deployed production backup program.
+- Consent tracking exists, but final legal text, clinic policy, and jurisdiction review remain required.
+- AI remains doctor-assist and draft-only; it cannot diagnose, prescribe, dose, rank treatments, or write final clinical records autonomously.
+- Medication safety population and reviewed source status remain governed separately.
+- Role-by-role browser QA and deployment security stabilization remain required before real patient data.
+
 - v0.14.4 walkthrough regression is static/source-level. Full browser visual QA and role-by-role workflow execution remain manual.
 - `/clinic-day/walkthrough` points to module routes for patient-specific steps; the operator must open the synthetic patient profile after creation.
 - Print packet route requires an existing patient id: `/patients/[id]/print/packet`.

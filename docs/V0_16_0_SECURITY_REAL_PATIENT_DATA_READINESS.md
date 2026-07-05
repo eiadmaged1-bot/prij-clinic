@@ -5,6 +5,7 @@ This sprint prepares the clinic system for intentional real patient data readine
 ## Readiness Controls Added
 
 - API responses now receive baseline security headers without adding a new dependency.
+- `/admin/security-readiness` now provides an Owner/Admin readiness dashboard backed by a protected audited API response.
 - Strict staging and production runtime validation now rejects:
   - `DEMO_MODE=true`
   - `PATIENT_FILE_STORAGE_MODE=local_demo_file`
@@ -12,7 +13,8 @@ This sprint prepares the clinic system for intentional real patient data readine
   - weak or production-inappropriate `JWT_EXPIRES_IN` format
 - Audit logging now redacts credential-like metadata keys and bearer/API-key-like string values before persistence.
 - Investigation order cancellation and void transitions now require a reason, persist the reason in the modeled reason fields, and include reason capture in audit metadata.
-- A static v0.16 readiness gate was added as `npm run test:v160:real-data-readiness`.
+- Static v0.16 readiness gates cover real-data readiness, security dashboard, RBAC, audit governance, backup readiness, PHI/document safety, production readiness, and AI safety.
+- The combined v0.16 suite is `npm run test:v160:security-real-data-readiness`.
 
 ## Preserved Locks
 
@@ -27,3 +29,14 @@ This sprint prepares the clinic system for intentional real patient data readine
 - Hosting/network hardening review, TLS termination review, logging retention review, and database access review.
 - End-to-end RBAC and audit verification against the selected production roles.
 - Written policy that AI and Care Assist outputs remain draft-only until reviewed and approved by a doctor.
+
+## v0.16.0 Completion Boundaries
+
+- v0.16.0 prepares for real patient data readiness, but does not claim full legal or production readiness.
+- No real patient data is seeded.
+- No fake clinical data is added.
+- Local backup readiness is not a deployed production backup program.
+- AI remains doctor-assist and draft-only.
+- No automatic diagnosis, prescribing, dosing, FGR diagnosis, or treatment ranking is added.
+- Reviewed medication safety population remains governed separately.
+- Next sprint is security stabilization + deployment prep.

@@ -1,5 +1,40 @@
 # Prij Clinic
 
+## v0.16.0 Security + Real Patient Data Readiness
+
+v0.16.0 prepares Prij Clinic for real patient data readiness review. It does not claim full legal, compliance, operational, or production readiness, and it does not authorize real patient data entry yet.
+
+Added readiness scope:
+
+- API security headers, stricter production/staging env validation, audit metadata redaction, and reason-required investigation cancel/void governance.
+- Owner/Admin `/admin/security-readiness` dashboard.
+- Source-level readiness gates for RBAC, audit governance, backup readiness, PHI/document safety, production readiness, AI safety, and combined v0.16 regression.
+- Local backup readiness only; deployed backups still require production scheduling, retention, monitoring, and restore drills.
+
+Safety boundaries:
+
+- No real patient data is seeded.
+- No fake clinical data is added.
+- AI remains doctor-assist and draft-only.
+- No automatic diagnosis, prescribing, dosing, FGR diagnosis, or treatment ranking is added.
+- Reviewed medication safety population remains governed separately.
+- Next sprint is security stabilization + deployment prep.
+
+```powershell
+npm run test:v160:security-real-data-readiness
+```
+
+Primary docs:
+
+- `docs/SECURITY_READINESS.md`
+- `docs/REAL_PATIENT_DATA_READINESS.md`
+- `docs/ROLE_PERMISSION_MATRIX.md`
+- `docs/AUDIT_GOVERNANCE.md`
+- `docs/BACKUP_READINESS.md`
+- `docs/PHI_PII_DOCUMENT_SAFETY.md`
+- `docs/PRODUCTION_READINESS_CHECKLIST.md`
+- `docs/AI_SAFETY_READINESS.md`
+
 ## v0.14.4 Clinic Demo Walkthrough Lock
 
 v0.14.4 adds a compact guided local walkthrough at `/clinic-day/walkthrough` for the connected clinic day path: owner setup, reception, patient creation, check-in, doctor waiting, patient profile, doctor visit draft, prescription draft, investigation request, follow-up, and patient packet printing.

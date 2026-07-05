@@ -1,5 +1,18 @@
 # Next Steps
 
+Recommended next sprint: security stabilization + deployment prep.
+
+Focus areas:
+
+- Run role-by-role browser QA against Owner, Admin, Doctor, Receptionist, Accountant, and Nurse boundaries.
+- Prepare deployment secrets management, TLS, CORS, database access, log retention, and monitoring.
+- Convert local backup readiness into monitored production backup scheduling, retention, and restore drills.
+- Complete consent/legal/privacy review before real patient data.
+- Review audit retention, export, and incident-response procedures.
+- Keep AI disabled by default, doctor-assist, and draft-only unless a future sprint completes a separate reviewed AI safety plan.
+
+Do not add WhatsApp, DICOM/PACS, insurance, a real payment gateway, full ledger, mobile app, external AI runtime calls, automatic diagnosis, automatic prescribing, automatic dosing, or fake clinical claims in the stabilization sprint.
+
 Recommended next sprint:
 - Run manual browser QA for `/clinic-day/walkthrough` through one full synthetic clinic day.
 - Run full manual browser QA for v0.14.3.1 on laptop and mobile widths.

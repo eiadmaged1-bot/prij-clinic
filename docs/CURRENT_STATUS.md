@@ -1,5 +1,25 @@
 # Current Status
 
+v0.16.0 Security + Real Patient Data Readiness is complete on the feature branch.
+
+Completed in v0.16.0:
+- API security headers are wired.
+- Strict production/staging environment validation is tightened.
+- Audit metadata redaction and bounding are present.
+- Investigation cancel/void transitions require a reason.
+- `/admin/security-readiness` is Owner/Admin protected and backed by an audited API endpoint.
+- RBAC, audit governance, backup readiness, PHI/document safety, production readiness, AI safety, and combined v0.16 regression gates are registered.
+- Documentation now covers security readiness, role permissions, audit governance, real patient data readiness, backup readiness, PHI/PII document safety, production readiness, AI safety, current status, next steps, and known limitations.
+
+Safety status:
+- v0.16.0 prepares for real patient data readiness, but does not claim full legal or production readiness.
+- No real patient data is seeded.
+- No fake clinical data is added.
+- AI remains doctor-assist and draft-only.
+- No automatic diagnosis, prescribing, dosing, FGR diagnosis, or treatment ranking is added.
+- Reviewed medication safety population remains governed separately.
+- Next sprint is security stabilization + deployment prep.
+
 v0.14.4 clinic demo walkthrough lock is implemented on the local demo branch.
 
 Completed in v0.14.4:
