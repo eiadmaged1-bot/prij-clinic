@@ -24,8 +24,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    command: sh -c "npm run prisma:migrate:deploy && npm run start:api"
     ports:
       - "3001:3001"
+    volumes:
+      - staging_backups:/app/backups
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health >/dev/null 2>&1"]
       interval: 15s
@@ -54,3 +57,4 @@ services:
 
 volumes:
   staging_postgres_data:
+  staging_backups:

@@ -48,7 +48,10 @@ async function main() {
     throw new Error("Staging smoke test requires APP_ENV=staging.");
   }
 
-  if (process.env.AI_FEATURES_ENABLED === "true" || process.env.AI_PROVIDER !== "disabled") {
+  if (
+    process.env.AI_FEATURES_ENABLED === "true" ||
+    !["disabled", "disabled_mock"].includes(process.env.AI_PROVIDER)
+  ) {
     throw new Error("AI must remain disabled for staging smoke tests.");
   }
 
