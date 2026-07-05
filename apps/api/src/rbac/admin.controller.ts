@@ -110,6 +110,34 @@ export class AdminController {
     return this.rbac.controlCenterSummary(request.user);
   }
 
+  @Get("security-readiness")
+  @Permissions("clinic_settings.manage")
+  async securityReadiness(@Req() request: RequestWithUser) {
+    await this.auditAdminRead(request, "admin.security_readiness.read", "security_readiness");
+
+    return {
+      generatedAt: new Date().toISOString(),
+      status: "readiness_review_required",
+      sections: [
+        { label: "Authentication readiness", status: "Configured", detail: "JWT authentication and session checks are active for protected app surfaces." },
+        { label: "RBAC readiness", status: "Configured", detail: "Owner/Admin settings use backend permission guards; role boundaries remain checked by regression tests." },
+        { label: "Audit readiness", status: "Configured", detail: "Clinical, billing, queue, account, and admin actions keep audit records with redacted metadata." },
+        { label: "Document upload safety", status: "Configured", detail: "Patient document uploads are scoped, allowlisted, and image metadata is sanitized before storage." },
+        { label: "Backup readiness", status: "Local workflow", detail: "Local backup and verification scripts write only to ignored backup folders." },
+        { label: "Consent readiness", status: "Limited", detail: "Consent records are tracked, but deployment-specific legal review is still required." },
+        { label: "Production environment readiness", status: "Guarded", detail: "Production validation blocks demo mode, local demo file storage, non-HTTPS app URLs, and weak JWT settings." },
+        { label: "Seed/data safety", status: "Guarded", detail: "No real patient data or fake clinical patient data is seeded by v0.16 readiness checks." },
+        { label: "PHI/PII protection", status: "Guarded", detail: "UI and source checks avoid raw storage paths, stack traces, secrets, and internal identifiers where possible." },
+        { label: "AI safety status", status: "Draft-only", detail: "AI remains assistive, disabled by default, and cannot diagnose, prescribe, dose, or change records autonomously." }
+      ],
+      blockers: [
+        "Complete deployment-specific legal, privacy, and consent review.",
+        "Configure monitored production backups and restore drills outside local readiness scripts.",
+        "Complete security stabilization and deployment preparation before real patient data entry."
+      ]
+    };
+  }
+
   @Get("services")
   @Permissions("clinic_settings.manage")
   async servicesList(@Req() request: RequestWithUser) {

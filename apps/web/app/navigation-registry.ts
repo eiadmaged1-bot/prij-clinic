@@ -40,6 +40,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
   { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin", adminOnly: true },
   { href: "/admin/services", label: "Admin Services", icon: "billing", group: "Admin", adminOnly: true },
+  { href: "/admin/security-readiness", label: "Security Readiness", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/admin/medication-safety-profiles", label: "Medication Safety Review", icon: "ai", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/owner-control", label: "Owner Control", icon: "admin", group: "Admin", adminOnly: true },

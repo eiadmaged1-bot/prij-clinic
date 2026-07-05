@@ -306,6 +306,7 @@ export default function AdminPage() {
           { href: "/clinic-day/walkthrough", label: "Clinic walkthrough", description: "Run the connected local training clinic day from owner setup through print packet." },
           { href: "/admin/accounts", label: "Staff and permissions", description: "Create staff, review roles, and keep owner access protected." },
           { href: "/admin/services", label: "Services and prices", description: "Adjust service catalog controls with reason-required audit." },
+          { href: "/admin/security-readiness", label: "Security readiness", description: "Review real patient data readiness gates, blockers, and safety posture." },
           { href: "/admin/appearance", label: "Appearance", description: "Set the default clinic look and local browser preference." },
           { href: "/admin/audit", label: "Audit logs", description: "Review clinical, account, and owner-control activity." },
           { href: "/admin/settings", label: "Clinic setup", description: "Profile, rooms, branches, templates, and safety settings." },
