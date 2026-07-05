@@ -119,6 +119,27 @@ export class PatientsService {
     return patient;
   }
 
+  async qrInfo(id: string, user: AuthUser) {
+    const patient = await this.get(id, user);
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient.qr_resolved",
+      resourceType: "patient",
+      resourceId: patient.id,
+      branchId: patient.branchId,
+      severity: "medium",
+      metadataJson: { patientIdOnly: true }
+    });
+
+    return {
+      patientId: patient.id,
+      displayName: `${patient.firstName} ${patient.lastName}`.trim(),
+      medicalRecordNumber: patient.medicalRecordNumber,
+      status: patient.status
+    };
+  }
+
   async followUpHints(id: string, user: AuthUser) {
     const patient = await this.get(id, user);
     const [intakes, requests, prescriptions, allergies, currentMedications] = await Promise.all([

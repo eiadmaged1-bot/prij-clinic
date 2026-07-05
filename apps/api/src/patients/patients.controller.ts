@@ -47,6 +47,12 @@ export class PatientsController {
     return this.patients.get(id, user);
   }
 
+  @Get(":id/qr")
+  @Permissions("patient.read")
+  qr(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.qrInfo(id, user);
+  }
+
   @Get(":id/timeline")
   @Permissions("patient.read")
   timeline(@Param("id") id: string, @CurrentUser() user: AuthUser) {

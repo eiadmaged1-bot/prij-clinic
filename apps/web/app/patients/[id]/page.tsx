@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
@@ -15,6 +16,7 @@ import { AppShell, SafetyAlert } from "../../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
+import { patientQrSvgDataUri } from "@/lib/patient-qr";
 
 type Patient = {
   id: string;
@@ -169,6 +171,7 @@ export default function PatientFilePage() {
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
+  const [qrOpen, setQrOpen] = useState(false);
 
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const visibleTabs = useMemo(
@@ -328,6 +331,10 @@ export default function PatientFilePage() {
             <ThreeDMedicalIcon name="billing" size="sm" tone="slate" />
             New Invoice
           </Link>
+          <button className="button secondary large" type="button" onClick={() => setQrOpen(true)} disabled={!patient}>
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+            Patient QR
+          </button>
         </div>
       </section>
 
@@ -345,6 +352,7 @@ export default function PatientFilePage() {
 
       {patient ? (
         <>
+          {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
           <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} services={services} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
 
@@ -2093,6 +2101,37 @@ function PatientActionPanel({
 
 function SelectedPatientSummary({ patient }: { patient: Patient }) {
   return <div className="selected-patient-card"><strong>{patient.firstName} {patient.lastName}</strong><span>File {patient.medicalRecordNumber} | {patient.phone || patient.email || "No contact saved"} | {patient.status}</span></div>;
+}
+
+function PatientQrModal({ patient, onClose }: { patient: Patient; onClose: () => void }) {
+  const qrSource = patientQrSvgDataUri(patient.id);
+
+  return (
+    <div className="patient-qr-backdrop" role="dialog" aria-modal="true" aria-label="Patient QR">
+      <section className="patient-qr-modal">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Patient QR</p>
+            <h2>{patient.firstName} {patient.lastName}</h2>
+            <p className="muted">File {patient.medicalRecordNumber}</p>
+          </div>
+          <button className="button secondary compact no-print" type="button" onClick={onClose}>Close</button>
+        </div>
+        <Image className="patient-qr-image" src={qrSource} alt="Patient QR" width={280} height={280} unoptimized data-qr-payload={patient.id} />
+        <p className="muted">QR contains patient ID only. Login and role access are still required.</p>
+        <div className="form-actions no-print">
+          <button className="button" type="button" onClick={() => window.print()}>
+            <ThreeDMedicalIcon name="reports" size="sm" />
+            Print QR
+          </button>
+          <Link className="button secondary" href="/reception/qr-scan">
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+            Scan workflow
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function MorePatientSections({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
