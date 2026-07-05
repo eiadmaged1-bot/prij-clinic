@@ -266,7 +266,7 @@ export function bodyFor(kind, ids) {
       notes: "Demo appointment authorization test only."
     },
     appointmentStatus: { status: "booked" },
-    queue: { patientId: ids.patientId, appointmentId: ids.appointmentId, priority: "routine" },
+    queue: { patientId: ids.patientId, appointmentId: ids.appointmentId, priority: "routine", visitType: "kashf" },
     queueCancel: { reason: "Demo queue cancellation authorization check only." },
     encounter: {
       patientId: ids.patientId,

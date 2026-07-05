@@ -12,6 +12,7 @@ export type NavItem = {
 
 export const navigationRegistry: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Today" },
+  { href: "/inbox", label: "Pending Work", icon: "queue", group: "Today" },
   { href: "/clinic-day/walkthrough", label: "Clinic Walkthrough", icon: "timeline", group: "Today", roles: ["Owner", "Admin", "Doctor"], permissions: ["patient.read", "queue.read", "encounter.read"] },
   { href: "/reception/today", label: "Reception Today", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.read"] },
   { href: "/reception/check-in", label: "Check-in", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },

@@ -170,8 +170,8 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
             <section className="guideline-hero">
               <div>
                 <p className="eyebrow">Private clinical evidence library</p>
-                <h1>Guideline Center</h1>
-                <p>Evidence library only. Doctor review required.</p>
+                <h1>Guideline Library + Live Guideline Search</h1>
+                <p>Browse Guidelines, Search All Guidelines, and Ask Evidence Library. Evidence library only. Doctor review required.</p>
               </div>
               <ThreeDMedicalIcon name="files" size="lg" tone="teal" />
             </section>
@@ -213,12 +213,12 @@ function GuidelineShell({ title, message, children }: { title: string; message?:
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">Clinical Guideline Center</p>
+            <p className="eyebrow">Guideline Library</p>
             <h1>{title}</h1>
           </div>
           <span className="badge warning">Evidence summary only</span>
         </div>
-        <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
+        <p className="muted">{message ?? "Owner/Admin manage sources. Doctors browse and search. Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
       </section>
       {children}
     </>
@@ -246,7 +246,7 @@ function SearchPanel(props: {
             <span className="badge accent">{result.citationLabel}</span>
           </article>
         ))}
-        {!props.results.length ? <Empty text="No source found in your local library." /> : null}
+        {!props.results.length ? <Empty text="No matching source found in your local guideline library." /> : null}
       </div>
     </section>
   );
@@ -267,7 +267,7 @@ function AskPanel(props: {
       </form>
       <article className="evidence-answer">
         <strong>Evidence summary from local library only.</strong>
-        <p>{props.answer || "No source found in your local library."}</p>
+        <p>{props.answer || "No matching source found in your local guideline library."}</p>
         <p className="muted">Doctor review required. Evidence summary only.</p>
       </article>
       {props.citations.map((citation) => <span className="badge accent" key={citation.citationLabel}>{citation.citationLabel}</span>)}
@@ -417,7 +417,7 @@ function Empty({ text }: { text: string }) {
 
 function cards(canUpload: boolean, canImport: boolean, canReview: boolean) {
   return [
-    { href: "/guidelines/search", title: "Search Library", copy: "Find indexed sections with citations.", icon: "search" as const },
+    { href: "/guidelines/search", title: "Search All Guidelines", copy: "Find indexed sections with citations.", icon: "search" as const },
     { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
     { href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },
     { href: "/guidelines/sources", title: "Sources Registry", copy: canImport ? "Manage open and restricted sources." : "Review source access types.", icon: "reports" as const },
@@ -428,8 +428,8 @@ function cards(canUpload: boolean, canImport: boolean, canReview: boolean) {
 
 function titleFor(view: GuidelineCenterProps["view"]) {
   const titles = {
-    home: "Guideline Center",
-    search: "Search Evidence Library",
+    home: "Browse Guidelines",
+    search: "Search All Guidelines",
     ask: "Ask Evidence Library",
     sources: "Sources Registry",
     upload: "Upload Licensed PDF",

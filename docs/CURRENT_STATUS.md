@@ -210,3 +210,10 @@ Safety status:
 - Clinical AI remains assistive and draft-only.
 
 Next sprint should be Security + Real Patient Data Readiness.
+# v1.1.0 Current Status
+
+v1.1.0 improves zero-paper workflow and bilingual UI. The shared shell has a top-right `EN / عربي` language switcher; Arabic mode is RTL. `كشف`, `إعادة`, `استشارة`, and `مستعجل` stay Arabic in all languages, and `مستعجل` means urgent examination / `كشف مستعجل`.
+
+Guideline Library stores, browses, and searches only indexed local/allowed sources. There is no paywall bypass, no copyrighted guideline PDF/text committed, no external AI enabled by default, and evidence answers require citations with doctor review.
+
+Real patient data remains blocked until signoff.

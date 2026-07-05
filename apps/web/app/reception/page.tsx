@@ -3,17 +3,21 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { VisitTypeSelector } from "../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
 type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; status?: string | null };
-type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; patient?: Patient | null };
+type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; visitType?: VisitTypeValue | null; patient?: Patient | null };
 
 export default function ReceptionHomePage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [query, setQuery] = useState("");
   const [lookupOpen, setLookupOpen] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const [status, setStatus] = useState("Loading");
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -41,6 +45,27 @@ export default function ReceptionHomePage() {
   const results = visiblePatients
     .filter((patient) => !query.trim() || patientSearchText(patient).includes(query.trim().toLowerCase()))
     .slice(0, 8);
+  const counts = visitTypeCounts(waiting);
+
+  async function addReturningPatientToQueue() {
+    if (!selectedPatient || !visitType) {
+      setStatus("Select patient and visit type first");
+      return;
+    }
+    setStatus("Adding to queue");
+    const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(headers ?? {}) },
+      body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
+    }).catch(() => null);
+    setStatus(response?.ok ? "Patient added to queue" : "Could not add patient to queue");
+    if (response?.ok) {
+      setSelectedPatient(null);
+      setVisitType("");
+      await load();
+    }
+  }
 
   return (
     <AppShell>
@@ -67,6 +92,14 @@ export default function ReceptionHomePage() {
           <ThreeDMedicalIcon name="search" size="lg" />
           <span>Returning Patient</span>
         </button>
+        <Link className="reception-action-card" href="/reception/qr-scan">
+          <ThreeDMedicalIcon name="search" size="lg" tone="navy" />
+          <span>Scan QR</span>
+        </Link>
+        <Link className="reception-action-card" href="/reception/check-in">
+          <ThreeDMedicalIcon name="queue" size="lg" tone="slate" />
+          <span>Quick check-in</span>
+        </Link>
       </section>
 
       {lookupOpen ? (
@@ -94,13 +127,24 @@ export default function ReceptionHomePage() {
           </div>
           <div className="dense-card-list">
             {results.map((patient) => (
-              <Link className="picker-row" key={patient.id} href={`/patients/${patient.id}`}>
+              <button className={`picker-row ${selectedPatient?.id === patient.id ? "active" : ""}`} key={patient.id} type="button" onClick={() => setSelectedPatient(patient)}>
                 <strong>{patientLabel(patient)}</strong>
-                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | Open file</span>
-              </Link>
+                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | Select for check-in</span>
+              </button>
             ))}
             {!results.length ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No matching patient found.</span></p> : null}
           </div>
+          {selectedPatient ? (
+            <div className="selected-patient-card">
+              <strong>{patientLabel(selectedPatient)}</strong>
+              <span>{selectedPatient.medicalRecordNumber ?? "No MRN"} | {selectedPatient.phone ?? "No phone"}</span>
+              <VisitTypeSelector value={visitType} onChange={setVisitType} compact />
+              <div className="form-actions">
+                <Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>Open file</Link>
+                <button className="button compact" type="button" onClick={() => void addReturningPatientToQueue()} disabled={!visitType}>Add to queue</button>
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -109,13 +153,19 @@ export default function ReceptionHomePage() {
           <h2>Waiting List</h2>
           <span className="badge">{waiting.length}</span>
         </div>
+        <div className="visit-type-counts" aria-label="Visit type counts">
+          <span>كشف {counts.kashf}</span>
+          <span>إعادة {counts.recheck}</span>
+          <span>استشارة {counts.consultation}</span>
+          <span>مستعجل {counts.urgent_kashf}</span>
+        </div>
         {waiting.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients waiting.</span></p> : null}
         <div className="dense-card-list">
           {waiting.map((ticket) => (
             <article className="data-row dense" key={ticket.id}>
               <div className="data-row-header">
                 <strong>Queue {ticket.queueNumber ?? ""} - {patientLabel(ticket.patient)}</strong>
-                <span className="badge">{ticket.status.replaceAll("_", " ")}</span>
+                <span className="badge">{visitTypeLabel(ticket.visitType)}</span>
               </div>
               <p className="muted">{ticket.priority ?? "routine"} queue handoff.</p>
               <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open file</Link>

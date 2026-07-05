@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
+import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
@@ -13,6 +14,7 @@ type QueueTicket = {
   queueNumber?: string;
   status?: string;
   priority?: string;
+  visitType?: VisitTypeValue | null;
 };
 
 type Appointment = {
@@ -46,6 +48,7 @@ export default function DoctorModePage() {
       .catch(() => setStatus("Could not load today's work"));
   }, []);
   const current = queue.find((ticket) => ticket.status === "called");
+  const counts = visitTypeCounts(queue);
 
   return (
     <AppShell>
@@ -97,11 +100,24 @@ export default function DoctorModePage() {
         </article>
       </section>
 
+      <section className="panel compact-panel">
+        <div className="section-heading">
+          <h2>Visit type counts</h2>
+          <span className="badge">Doctor waiting list</span>
+        </div>
+        <div className="visit-type-counts" aria-label="Doctor visit type counts">
+          <span>كشف {counts.kashf}</span>
+          <span>إعادة {counts.recheck}</span>
+          <span>استشارة {counts.consultation}</span>
+          <span>مستعجل {counts.urgent_kashf}</span>
+        </div>
+      </section>
+
       <section className="panel compact-panel current-patient-panel">
         <div className="section-heading"><h2>Current in-room patient</h2><span className="badge">{current ? current.status : "None"}</span></div>
         {current ? (
           <article className="data-row dense">
-            <div className="data-row-header"><strong>Queue {current.queueNumber ?? "patient"}</strong><span className="badge">{current.priority ?? "Routine"}</span></div>
+            <div className="data-row-header"><strong>Queue {current.queueNumber ?? "patient"}</strong><span className="badge">{visitTypeLabel(current.visitType)}</span></div>
             <p className="muted">Follow-up hints and visit context stay inside the patient file.</p>
             <div className="form-actions">
               <Link className="button compact" href={current.patientId ? `/patients/${current.patientId}` : "/queue"}>Open file</Link>
@@ -134,7 +150,7 @@ export default function DoctorModePage() {
               <ThreeDMedicalIcon name="queue" size="sm" />
               <div>
                 <strong>Queue {ticket.queueNumber ?? "patient"}</strong>
-                <span>{ticket.status ?? "Waiting"} - {ticket.priority ?? "Routine"} - Start or resume visit</span>
+                <span>{ticket.status ?? "Waiting"} - {visitTypeLabel(ticket.visitType)} - Start or resume visit</span>
               </div>
               <span className="button compact secondary">
                 <ThreeDMedicalIcon name="files" size="sm" tone="slate" />

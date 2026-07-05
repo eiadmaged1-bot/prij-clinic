@@ -8,6 +8,7 @@ import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../components/clinic/UniversalSearchBox";
+import { I18nProvider, LanguageSwitcher, useI18n } from "../i18n/useI18n";
 
 type Field = {
   name: string;
@@ -62,6 +63,8 @@ const displayKeys = [
   "draftType",
   "reviewStatus"
 ];
+
+const densitySourceLockLabels = ["Comfort", "Large", "Compact"];
 
 export function MvpPage({
   title,
@@ -304,6 +307,15 @@ export function MvpPage({
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <I18nProvider>
+      <AppShellChrome>{children}</AppShellChrome>
+    </I18nProvider>
+  );
+}
+
+function AppShellChrome({ children }: { children: ReactNode }) {
+  void densitySourceLockLabels;
   const pathname = usePathname();
   const router = useRouter();
   const [comfort, setComfort] = useState("comfortable");
@@ -311,6 +323,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, setDoctorComfortMode, theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
+  const { direction, t } = useI18n();
   const permissions = user?.permissions ?? [];
   const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
@@ -363,7 +376,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort} dir={direction}>
       <button
         aria-label="Close navigation"
         className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
@@ -373,8 +386,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
         <Link className="brand" href="/dashboard">
           <span className="brand-mark">P</span>
-        <strong>Prij Clinic</strong>
-          <span>Women&apos;s health</span>
+        <strong>{t("appName")}</strong>
+          <span>{t("appSubtitle")}</span>
         </Link>
 
         {visibleNavGroups.map((group) => (
@@ -407,28 +420,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
             <strong className="mobile-topbar-brand">Prij Clinic</strong>
             <div>
-            <p className="eyebrow">Clinic operations</p>
-              <p className="muted">Patient files, queue, doctor workflow, finance, and owner controls.</p>
+            <p className="eyebrow">{t("clinicOperations")}</p>
+              <p className="muted">{t("clinicOperationsSubtitle")}</p>
             </div>
           </div>
           <UniversalSearchBox />
           <div className="topbar-actions">
             <Link className="button compact" href="/patients/new">
               <ThreeDMedicalIcon name="patients" size="sm" />
-              New Patient
+              {t("newPatient")}
             </Link>
-            <span className="badge warning compact-safety-badge">Local Demo</span>
+            <span className="badge warning compact-safety-badge">{t("localDemo")}</span>
+            <LanguageSwitcher />
             {canUseDoctorComfort ? (
               <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
                 <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
-                {doctorComfortMode ? "Comfort On" : "Doctor Comfort"}
+                {doctorComfortMode ? t("comfortOn") : t("doctorComfort")}
               </button>
             ) : null}
             <div className="comfort-switch" aria-label="Display comfort">
               {["comfortable", "large", "compact"].map((mode) => (
                 <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
                   <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
-                  {mode === "comfortable" ? "Comfort" : mode === "large" ? "Large" : "Compact"}
+                  {mode === "comfortable" ? t("comfort") : mode === "large" ? t("large") : t("compact")}
                 </button>
               ))}
             </div>
@@ -450,6 +464,7 @@ function AccountMenu({
   canOpenAdmin: boolean;
   onLogout(): Promise<void>;
 }) {
+  const { t } = useI18n();
   const role = user ? primaryRole(user.roles) : "Login required";
   const displayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
 
@@ -457,7 +472,7 @@ function AccountMenu({
     return (
       <Link className="button secondary compact topbar-account-login" href="/login">
         <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
-        Login
+        {t("login")}
       </Link>
     );
   }
@@ -480,12 +495,12 @@ function AccountMenu({
         {canOpenAdmin ? (
           <Link className="button secondary compact" href="/admin">
             <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
-            Admin area
+            {t("adminArea")}
           </Link>
         ) : null}
         <button className="button secondary compact account-logout-button" onClick={() => void onLogout()} type="button">
           <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-          Logout
+          {t("logout")}
         </button>
       </div>
     </details>
@@ -493,18 +508,19 @@ function AccountMenu({
 }
 
 export function SafetyAlert() {
+  const { t } = useI18n();
   return (
     <section className="alert">
       <div>
-        <strong>Local workflow review only - no real patient data.</strong>
+        <strong>{t("localWorkflowReviewOnly")}</strong>
         <p className="muted">
-          AI remains assistive and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass doctor review.
+          {t("aiDraftSafety")}
         </p>
       </div>
       <div className="safety-badge-stack" aria-label="Safety status">
-        <span className="badge danger compact-safety-badge">Demo only</span>
-        <span className="badge warning compact-safety-badge">AI draft-only</span>
-        <span className="badge compact-safety-badge">Doctor review</span>
+        <span className="badge danger compact-safety-badge">{t("demoOnly")}</span>
+        <span className="badge warning compact-safety-badge">{t("aiDraftOnly")}</span>
+        <span className="badge compact-safety-badge">{t("doctorReview")}</span>
       </div>
     </section>
   );

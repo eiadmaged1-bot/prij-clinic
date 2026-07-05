@@ -731,7 +731,8 @@ export class PatientsService {
               appointmentId: input.appointmentId,
               queueNumber,
               queueDate: input.queueDate,
-              checkedInAt: input.checkedInAt
+              checkedInAt: input.checkedInAt,
+              visitType: "kashf"
             },
             include: { patient: true, appointment: true }
           });

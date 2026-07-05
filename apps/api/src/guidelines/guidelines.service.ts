@@ -29,6 +29,8 @@ import { assertSafePublicUrl } from "./utils/safe-url";
 import { keywords, normalizeText } from "./utils/text-normalizer";
 
 type SearchMode = "SEARCH_ONLY" | "MOCK_RAG" | "CITATION_SUMMARY";
+const supportedGuidelineOrganizations = ["ACOG", "RCOG", "NICE", "WHO", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "Other women’s health sources"];
+const demoGuidelineDisclaimer = "Demo guideline sample - not clinical use.";
 type UploadedGuidelineFile = {
   buffer: Buffer;
   mimetype: string;
@@ -490,10 +492,11 @@ export class GuidelinesService {
     const search = await this.search({ q: dto.question, specialty: dto.specialty, topic: dto.topic, limit: "5" }, user, "MOCK_RAG");
     if (!search.results.length) {
       return {
-        answer: "No source found in your local library.",
+        answer: "No matching source found in your local guideline library.",
         warning: "Doctor review required. Evidence summary only.",
         citations: [],
         mode: dto.mode ?? "concise",
+        externalAiEnabled: false,
         externalAiAccess: false,
         doctorReviewRequired: true
       };
@@ -513,6 +516,7 @@ export class GuidelinesService {
         sectionHeading: result.sectionHeading
       })),
       mode: dto.mode ?? "concise",
+      externalAiEnabled: false,
       externalAiAccess: false,
       doctorReviewRequired: true
     };

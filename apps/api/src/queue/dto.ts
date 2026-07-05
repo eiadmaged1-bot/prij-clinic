@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
-import { QueuePriority } from "@prisma/client";
+import { QueuePriority, VisitType } from "@prisma/client";
 
 export class CheckInDto {
   @IsUUID()
@@ -12,6 +12,9 @@ export class CheckInDto {
   @IsOptional()
   @IsEnum(QueuePriority)
   priority?: QueuePriority;
+
+  @IsEnum(VisitType)
+  visitType!: VisitType;
 }
 
 export class QueueCancelDto {

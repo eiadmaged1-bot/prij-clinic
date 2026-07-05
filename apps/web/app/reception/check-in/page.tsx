@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { PatientPicker, SelectedPatientSummary, patientLabel, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
+import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 type Patient = PatientPickerPatient;
-type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient };
+type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient; visitType?: VisitTypeValue | null };
 
 export default function ReceptionCheckInPage() {
   const today = new Date().toISOString().slice(0, 10);
@@ -19,6 +21,7 @@ export default function ReceptionCheckInPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [priority, setPriority] = useState("routine");
+  const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Loading");
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
@@ -51,6 +54,10 @@ export default function ReceptionCheckInPage() {
       setStatus("Select a patient first");
       return;
     }
+    if (!visitType) {
+      setStatus("Select visit type first");
+      return;
+    }
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
@@ -58,7 +65,8 @@ export default function ReceptionCheckInPage() {
       body: JSON.stringify({
         patientId: selectedPatient.id,
         appointmentId: selectedAppointment?.id || undefined,
-        priority
+        priority,
+        visitType
       })
     });
     setStatus(response.ok ? "Patient checked in" : "Could not check in patient");
@@ -105,14 +113,18 @@ export default function ReceptionCheckInPage() {
           </article>
           <article className="compact-panel">
             <span className="badge">Step 3</span>
+            <VisitTypeSelector value={visitType} onChange={setVisitType} compact />
+          </article>
+          <article className="compact-panel">
+            <span className="badge">Step 4</span>
             <div className="segmented-control" aria-label="Queue priority">
               {["routine", "priority"].map((value) => <button className={priority === value ? "active" : ""} key={value} type="button" onClick={() => setPriority(value)}>{value === "routine" ? "Routine" : "Priority note"}</button>)}
             </div>
             {selectedPatient ? <SelectedPatientSummary patient={selectedPatient} /> : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patient selected.</span></p>}
           </article>
           <article className="compact-panel">
-            <span className="badge">Step 4</span>
-            <button className="button" type="button" onClick={() => void submit()} disabled={!selectedPatient}><ThreeDMedicalIcon name="queue" size="sm" />Check in</button>
+            <span className="badge">Step 5</span>
+            <button className="button" type="button" onClick={() => void submit()} disabled={!selectedPatient || !visitType}><ThreeDMedicalIcon name="queue" size="sm" />Check in</button>
             <p className="muted">Patient file, appointment link, and queue priority are saved for reception-to-doctor handoff.</p>
           </article>
         </div>

@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import type { AuthUser } from "../auth/auth.types";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
@@ -15,9 +16,13 @@ export class SearchService {
       this.can(user, "patient.read") ? this.patients(query, user) : null,
       this.canAny(user, ["medications.search", "medications.read", "prescription.read"]) ? this.medications(query, user) : null,
       this.can(user, "investigation.read") ? this.investigations(query) : null,
+      this.can(user, "appointment.read") || this.can(user, "appointments.read") ? this.appointments(query, user) : null,
+      this.can(user, "billing.read") ? this.invoices(query, user) : null,
       this.can(user, "clinical_requests.read") ? this.clinicalRequests(query, user) : null,
+      this.can(user, "prescription.read") ? this.prescriptions(query, user) : null,
       this.can(user, "prescription_templates.read") ? this.prescriptionTemplates(query, user) : null,
-      this.can(user, "patient_document.read") ? this.documents(query, user) : null
+      this.can(user, "patient_document.read") ? this.documents(query, user) : null,
+      this.canAny(user, ["guideline.read", "guidelines.read", "guidelines.search"]) ? this.guidelines(query) : null
     ]);
 
     return {
@@ -142,6 +147,91 @@ export class SearchService {
       }));
   }
 
+  private appointments(q: string, user: AuthUser): Promise<SearchSection> {
+    return this.prisma.appointment
+      .findMany({
+        where: {
+          ...patientBranchScope(user),
+          OR: [
+            { appointmentType: { contains: q, mode: "insensitive" } },
+            appointmentStatusValue(q) ? { status: { equals: appointmentStatusValue(q) } } : undefined,
+            { patient: { firstName: { contains: q, mode: "insensitive" } } },
+            { patient: { lastName: { contains: q, mode: "insensitive" } } },
+            { patient: { medicalRecordNumber: { contains: q, mode: "insensitive" } } }
+          ].filter(Boolean) as Prisma.AppointmentWhereInput[]
+        },
+        include: { patient: true },
+        take: 6,
+        orderBy: { startAt: "desc" }
+      })
+      .then((appointments) => ({
+        title: "Appointments",
+        results: appointments.map((appointment) => ({
+          id: appointment.id,
+          entityType: "appointment",
+          title: `${appointment.patient.firstName} ${appointment.patient.lastName}`.trim(),
+          subtitle: `${appointment.appointmentType ?? "Visit"} | ${appointment.status}`,
+          href: `/patients/${appointment.patientId}`
+        }))
+      }));
+  }
+
+  private invoices(q: string, user: AuthUser): Promise<SearchSection> {
+    return this.prisma.invoice
+      .findMany({
+        where: {
+          ...patientBranchScope(user),
+          OR: [
+            { invoiceNumber: { contains: q, mode: "insensitive" } },
+            { patient: { firstName: { contains: q, mode: "insensitive" } } },
+            { patient: { lastName: { contains: q, mode: "insensitive" } } },
+            { patient: { medicalRecordNumber: { contains: q, mode: "insensitive" } } }
+          ]
+        },
+        include: { patient: true },
+        take: 6,
+        orderBy: { createdAt: "desc" }
+      })
+      .then((invoices) => ({
+        title: "Invoices",
+        results: invoices.map((invoice) => ({
+          id: invoice.id,
+          entityType: "invoice",
+          title: invoice.invoiceNumber,
+          subtitle: `${invoice.patient.firstName} ${invoice.patient.lastName} | ${invoice.status}`,
+          href: `/patients/${invoice.patientId}`
+        }))
+      }));
+  }
+
+  private prescriptions(q: string, user: AuthUser): Promise<SearchSection> {
+    return this.prisma.prescription
+      .findMany({
+        where: {
+          ...patientBranchScope(user),
+          OR: [
+            { notes: { contains: q, mode: "insensitive" } },
+            { patient: { firstName: { contains: q, mode: "insensitive" } } },
+            { patient: { lastName: { contains: q, mode: "insensitive" } } },
+            { items: { some: { medicationName: { contains: q, mode: "insensitive" } } } }
+          ]
+        },
+        include: { patient: true, items: true },
+        take: 6,
+        orderBy: { createdAt: "desc" }
+      })
+      .then((prescriptions) => ({
+        title: "Prescriptions",
+        results: prescriptions.map((prescription) => ({
+          id: prescription.id,
+          entityType: "prescription",
+          title: prescription.items.map((item) => item.medicationName).join(", ") || "Prescription",
+          subtitle: `${prescription.patient ? `${prescription.patient.firstName} ${prescription.patient.lastName}`.trim() : "Patient"} | ${prescription.status}`,
+          href: prescription.patientId ? `/patients/${prescription.patientId}` : undefined
+        }))
+      }));
+  }
+
   private prescriptionTemplates(q: string, user: AuthUser): Promise<SearchSection> {
     return this.prisma.prescriptionTemplate
       .findMany({
@@ -195,6 +285,33 @@ export class SearchService {
       }));
   }
 
+  private guidelines(q: string): Promise<SearchSection> {
+    return this.prisma.guidelineDocument
+      .findMany({
+        where: {
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { topic: { contains: q, mode: "insensitive" } },
+            { specialty: { contains: q, mode: "insensitive" } },
+            { organization: { contains: q, mode: "insensitive" } },
+            { chunks: { some: { text: { contains: q, mode: "insensitive" } } } }
+          ]
+        },
+        take: 6,
+        orderBy: { updatedAt: "desc" }
+      })
+      .then((documents) => ({
+        title: "Guidelines",
+        results: documents.map((document) => ({
+          id: document.id,
+          entityType: "guideline",
+          title: document.title,
+          subtitle: `${document.organization} | ${document.versionLabel ?? "version not set"}`,
+          href: "/guidelines/search"
+        }))
+      }));
+  }
+
   private can(user: AuthUser, permission: string) {
     return user.permissions.includes(permission);
   }
@@ -208,6 +325,11 @@ type SearchSection = {
   title: string;
   results: Array<{ id: string; entityType: string; title: string; subtitle?: string | null; href?: string }>;
 };
+
+function appointmentStatusValue(value: string) {
+  const normalized = value.toLowerCase();
+  return ["booked", "rescheduled", "cancelled", "completed", "no_show"].includes(normalized) ? normalized as never : undefined;
+}
 
 function branchPatientListScope(user: AuthUser) {
   if (user.roles.includes("Owner") || user.roles.includes("Admin")) return {};

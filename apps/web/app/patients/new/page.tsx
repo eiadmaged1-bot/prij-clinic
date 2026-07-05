@@ -1,12 +1,14 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
+import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import type { VisitTypeValue } from "@/lib/visit-types";
 
 type FormState = {
   medicalRecordNumber: string;
@@ -23,6 +25,8 @@ type FormState = {
   referralSource: string;
   notes: string;
 };
+
+type ExistingPatient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null };
 
 const initialState: FormState = {
   medicalRecordNumber: makeMrn(),
@@ -46,6 +50,21 @@ export default function NewPatientPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
+  const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
+
+  useEffect(() => {
+    const token = sessionStorage.getItem("prijClinicToken");
+    fetch(`${getApiBaseUrl()}/patients`, {
+      credentials: "include",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    })
+      .then(async (response) => response.ok ? (await response.json()) as { patients?: ExistingPatient[] } : { patients: [] })
+      .then((body) => setExistingPatients(body.patients ?? []))
+      .catch(() => setExistingPatients([]));
+  }, []);
+
+  const duplicateWarnings = useMemo(() => possibleDuplicateWarnings(form, existingPatients), [existingPatients, form]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,6 +80,9 @@ export default function NewPatientPage() {
       const lastName = form.lastName.trim() || nameParts.slice(1).join(" ") || "Patient";
       if (!firstName) {
         throw new Error("Enter a full name or first name before creating the patient file.");
+      }
+      if (!visitType) {
+        throw new Error("Select visit type before saving and checking in.");
       }
       const noteParts = [
         form.notes.trim(),
@@ -103,6 +125,15 @@ export default function NewPatientPage() {
       }
 
       const patient = (await response.json()) as { id: string };
+      await fetch(`${getApiBaseUrl()}/queue/check-in`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ patientId: patient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
+      }).catch(() => undefined);
       await fetch(`${getApiBaseUrl()}/patient-intake`, {
         method: "POST",
         credentials: "include",
@@ -126,7 +157,7 @@ export default function NewPatientPage() {
           }
         })
       }).catch(() => undefined);
-      setSuccess("Patient file created. Opening the patient workspace.");
+      setSuccess("Patient file created and added to the queue. Opening the patient workspace.");
       router.push(`/patients/${patient.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to create patient file.");
@@ -238,6 +269,17 @@ export default function NewPatientPage() {
             Notes
             <textarea onChange={(event) => update("notes", event.target.value)} rows={3} value={form.notes} />
           </label>
+          <div className="wide">
+            <VisitTypeSelector value={visitType} onChange={setVisitType} />
+          </div>
+
+          {duplicateWarnings.length ? (
+            <div className="alert warning wide" data-testid="duplicate-patient-warning">
+              <strong>Possible duplicate patient</strong>
+              <p className="muted">{duplicateWarnings.join(" ")}</p>
+              <p className="muted">Review the existing file before continuing. Reception or admin may continue when appropriate.</p>
+            </div>
+          ) : null}
 
           {error ? <p className="form-error wide">{error}</p> : null}
           {success ? <p className="success-message wide">{success}</p> : null}
@@ -260,4 +302,24 @@ export default function NewPatientPage() {
 
 function makeMrn() {
   return `LOCAL-PAT-${Date.now().toString().slice(-8)}`;
+}
+
+function possibleDuplicateWarnings(form: FormState, patients: ExistingPatient[]) {
+  const phone = normalize(form.phone);
+  const mrn = normalize(form.medicalRecordNumber);
+  const fullName = normalize(form.fullName || `${form.firstName} ${form.lastName}`);
+  const warnings: string[] = [];
+
+  for (const patient of patients) {
+    const patientName = normalize(`${patient.firstName ?? ""} ${patient.lastName ?? ""}`);
+    if (phone && normalize(patient.phone) === phone) warnings.push(`Phone matches ${patientName || "an existing patient"}.`);
+    if (mrn && normalize(patient.medicalRecordNumber) === mrn) warnings.push(`MRN matches ${patientName || "an existing patient"}.`);
+    if (fullName && patientName && patientName === fullName) warnings.push(`Name matches existing file ${patient.medicalRecordNumber ?? ""}.`);
+  }
+
+  return Array.from(new Set(warnings)).slice(0, 3);
+}
+
+function normalize(value?: string | null) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }

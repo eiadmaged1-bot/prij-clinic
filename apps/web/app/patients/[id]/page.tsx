@@ -353,6 +353,7 @@ export default function PatientFilePage() {
       {patient ? (
         <>
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
+          <PatientQuickActions patient={patient} setActiveTab={setActiveTab} onShowQr={() => setQrOpen(true)} />
           <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} services={services} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
 
@@ -408,6 +409,42 @@ export default function PatientFilePage() {
         <div className="skeleton" />
       ) : null}
     </AppShell>
+  );
+}
+
+function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patient: Patient; setActiveTab(tab: string): void; onShowQr(): void }) {
+  const actions: Array<{ label: string; tab?: string; href?: string; onClick?: () => void; icon: IconName }> = [
+    { label: "Add visit", tab: "doctor-visit", icon: "encounter" },
+    { label: "Add prescription", tab: "prescriptions", icon: "prescription" },
+    { label: "Request investigation", tab: "investigations", icon: "investigations" },
+    { label: "Add payment", tab: "billing", icon: "billing" },
+    { label: "Upload document placeholder", tab: "documents", icon: "files" },
+    { label: "Print packet", href: `/patients/${patient.id}/print/packet`, icon: "reports" },
+    { label: "Book follow-up", href: "/calendar", icon: "calendar" },
+    { label: "Show QR", onClick: onShowQr, icon: "search" },
+    { label: "Add consent placeholder", tab: "documents", icon: "consent" }
+  ];
+
+  return (
+    <section className="panel compact-panel patient-quick-actions" aria-label="Patient quick actions">
+      <div className="section-heading">
+        <h2>Quick actions</h2>
+        <span className="badge">Role-aware workflow</span>
+      </div>
+      <div className="toolbar compact-toolbar">
+        {actions.map((action) => action.href ? (
+          <Link className="button secondary compact" href={action.href} key={action.label}>
+            <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+            {action.label}
+          </Link>
+        ) : (
+          <button className="button secondary compact" key={action.label} type="button" onClick={action.onClick ?? (() => action.tab && setActiveTab(action.tab))}>
+            <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+            {action.label}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -562,8 +599,27 @@ function InvestigationsPanel({ related }: { related: Record<string, Record<strin
 }
 
 function DocumentsPanel({ related }: { related: Record<string, Record<string, unknown>[]> }) {
+  const documentPlaceholders = ["old report", "lab result", "ultrasound report", "consent form", "referral letter", "operation report", "previous prescription"];
+  const consentPlaceholders = ["general clinic consent", "procedure consent", "ultrasound/media consent", "data/privacy consent", "future AI-assistance consent placeholder"];
+
   return (
     <section className="dashboard-grid">
+      <article className="panel compact-panel">
+        <div className="section-heading">
+          <h2>Document placeholders</h2>
+          <span className="badge">Metadata only</span>
+        </div>
+        <p className="muted">Use these placeholders to plan paperless intake. Do not upload real PHI in this sprint.</p>
+        <div className="tag-list">{documentPlaceholders.map((item) => <span className="badge" key={item}>{item}</span>)}</div>
+      </article>
+      <article className="panel compact-panel">
+        <div className="section-heading">
+          <h2>Consent placeholders</h2>
+          <span className="badge warning">Doctor review</span>
+        </div>
+        <p className="muted">Consent records stay placeholders until approved legal text and clinic signoff exist.</p>
+        <div className="tag-list">{consentPlaceholders.map((item) => <span className="badge" key={item}>{item}</span>)}</div>
+      </article>
       <RelatedPanel config={{ key: "documents", label: "Documents", icon: "files", empty: "No archived document metadata yet." }} rows={related.documents ?? []} />
       <RelatedPanel config={{ key: "files", label: "Reports", icon: "reports", empty: "No report record yet. Add report metadata only after doctor review." }} rows={related.files ?? []} />
       <RelatedPanel config={{ key: "consents", label: "Consents", icon: "consent", empty: "No consent record yet." }} rows={related.consents ?? []} />
@@ -2306,13 +2362,24 @@ function billingRowSummary(row: Record<string, unknown>) {
 }
 
 function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] }) {
-  const displayItems = items.length > 0 ? items : [{ title: "Patient file opened", description: `MRN ${patient.medicalRecordNumber}`, type: "patients", status: patient.status, dateTime: new Date().toISOString() }];
+  const [filter, setFilter] = useState("All");
+  const filters = ["All", "Clinical", "Billing", "Documents", "Pregnancy", "Gynecology", "Investigations", "AI drafts", "Queue/appointments"];
+  const baseItems = items.length > 0 ? items : [{ title: "Patient file opened", description: `MRN ${patient.medicalRecordNumber}`, type: "patients", status: patient.status, dateTime: new Date().toISOString() }];
+  const displayItems = filter === "All" ? baseItems : baseItems.filter((item) => timelineMatchesFilter(item, filter));
   return (
     <section className="panel">
       <div className="section-heading">
         <h2>Timeline</h2>
         <span className="badge">{displayItems.length} items</span>
       </div>
+      <div className="segmented-control timeline-filter-control" aria-label="Patient timeline filters">
+        {filters.map((option) => (
+          <button className={filter === option ? "active" : ""} key={option} type="button" onClick={() => setFilter(option)}>
+            {option}
+          </button>
+        ))}
+      </div>
+      {displayItems.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /><span>No timeline items in this filter.</span></p> : null}
       <div className="timeline-list">
         {displayItems.map((item, index) => (
           <article className="timeline-item" key={`${item.title}-${index}`}>
@@ -2331,6 +2398,21 @@ function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] 
       </div>
     </section>
   );
+}
+
+function timelineMatchesFilter(item: TimelineItem, filter: string) {
+  const text = `${item.type} ${item.title} ${item.description}`.toLowerCase();
+  const map: Record<string, string[]> = {
+    Clinical: ["visit", "encounter", "prescription", "clinical"],
+    Billing: ["billing", "invoice", "payment"],
+    Documents: ["document", "report", "consent", "file"],
+    Pregnancy: ["pregnancy", "antenatal", "ob"],
+    Gynecology: ["gynecology", "gyn"],
+    Investigations: ["investigation", "order", "result"],
+    "AI drafts": ["ai", "draft"],
+    "Queue/appointments": ["queue", "appointment"]
+  };
+  return (map[filter] ?? []).some((keyword) => text.includes(keyword));
 }
 
 function PrintPacketPanel({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {

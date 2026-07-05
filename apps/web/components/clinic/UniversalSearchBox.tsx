@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { KeyboardEvent, useEffect, useMemo, useState } from "react";
+import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
@@ -23,6 +23,7 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
   const [sections, setSections] = useState<SearchSection[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const flatResults = useMemo(() => sections.flatMap((section) => section.results), [sections]);
 
@@ -50,6 +51,17 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
     return () => window.clearTimeout(timeout);
   }, [query, scope]);
 
+  useEffect(() => {
+    function onShortcut(event: globalThis.KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        inputRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onShortcut);
+    return () => window.removeEventListener("keydown", onShortcut);
+  }, []);
+
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (!flatResults.length) return;
     if (event.key === "ArrowDown") {
@@ -68,10 +80,11 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
 
   return (
     <label className="portal-search universal-search" aria-label="Universal clinic search">
-      <span>Search</span>
+      <span>Search <kbd>Ctrl+K</kbd></span>
       <input
+        ref={inputRef}
         value={query}
-        placeholder="Patients, medicines, investigations, requests"
+        placeholder="Patients, phone, MRN, appointments, invoices, investigations, prescriptions, documents, guidelines"
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={onKeyDown}
       />

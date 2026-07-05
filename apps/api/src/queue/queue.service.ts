@@ -16,6 +16,10 @@ export class QueueService {
   ) {}
 
   async checkIn(dto: CheckInDto, user: AuthUser) {
+    if (!dto.visitType) {
+      throw new BadRequestException("Visit type is required before check-in.");
+    }
+
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const branchId = patient.branchId ?? (await this.resolveBranchId(user));
 
@@ -39,6 +43,7 @@ export class QueueService {
         patientId: dto.patientId,
         appointmentId: dto.appointmentId ?? null,
         priority: dto.priority ?? "routine",
+        visitType: dto.visitType,
         checkedInAt,
         queueDate
       });
@@ -57,7 +62,7 @@ export class QueueService {
       resourceId: ticket.id,
       branchId,
       severity: "medium",
-      metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10) }
+      metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10), visitType: dto.visitType }
     });
 
     return ticket;
@@ -143,6 +148,7 @@ export class QueueService {
     patientId: string;
     appointmentId: string | null;
     priority: "routine" | "priority";
+    visitType: "kashf" | "recheck" | "consultation" | "urgent_kashf";
     checkedInAt: Date;
     queueDate: Date;
   }) {
@@ -159,7 +165,8 @@ export class QueueService {
               queueNumber,
               queueDate: input.queueDate,
               checkedInAt: input.checkedInAt,
-              priority: input.priority
+              priority: input.priority,
+              visitType: input.visitType
             },
             include: { patient: true, appointment: true }
           });

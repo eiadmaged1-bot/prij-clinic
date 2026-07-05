@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
+import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 type ResolvedPatient = { patientId: string; displayName: string; medicalRecordNumber?: string | null; status?: string | null };
@@ -19,6 +21,7 @@ export default function ReceptionQrScanPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const [manualId, setManualId] = useState("");
   const [resolved, setResolved] = useState<ResolvedPatient | null>(null);
+  const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Ready");
   const [scannerStatus, setScannerStatus] = useState("Camera scanner optional");
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -96,12 +99,16 @@ export default function ReceptionQrScanPage() {
 
   async function checkIn() {
     if (!resolved) return;
+    if (!visitType) {
+      setStatus("Select visit type first");
+      return;
+    }
     setStatus("Adding to queue");
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json", ...(headers ?? {}) },
-      body: JSON.stringify({ patientId: resolved.patientId, priority: "routine" })
+      body: JSON.stringify({ patientId: resolved.patientId, priority: "routine", visitType })
     }).catch(() => null);
     setStatus(response?.ok ? "Patient added to queue." : "Could not add to queue. Check your role.");
   }
@@ -146,9 +153,10 @@ export default function ReceptionQrScanPage() {
             <div className="selected-patient-card">
               <strong>{resolved.displayName || "Patient found"}</strong>
               <span>{resolved.medicalRecordNumber ? `File ${resolved.medicalRecordNumber}` : "Patient file ready"}</span>
+              <VisitTypeSelector value={visitType} onChange={setVisitType} compact />
               <div className="form-actions">
                 <Link className="button compact" href={`/patients/${resolved.patientId}`}>Open file</Link>
-                <button className="button secondary compact" type="button" onClick={() => void checkIn()}>Check in / Add to queue</button>
+                <button className="button secondary compact" type="button" onClick={() => void checkIn()} disabled={!visitType}>Check in / Add to queue</button>
               </div>
             </div>
           ) : null}

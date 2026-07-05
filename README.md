@@ -1236,3 +1236,12 @@ Primary docs:
 - `docs/PATIENT_STATEMENT.md`
 - `docs/DAILY_REPORTS.md`
 - `docs/CLINIC_SETTINGS.md`
+# Prij Clinic v1.1.0
+
+v1.1.0 adds the zero-paper clinic workflow foundation, bilingual `EN / عربي` UI switching, required Arabic visit type selection, pending work inbox, global smart search, paperless document/consent placeholders, and Guideline Library + Live Guideline Search foundation.
+
+Arabic mode is RTL. `كشف`, `إعادة`, `استشارة`, and `مستعجل` stay Arabic in all languages. `مستعجل` means urgent examination / `كشف مستعجل`.
+
+Guideline Library uses indexed local/allowed sources only. No paywall bypass, copyrighted guideline PDFs/text, or external AI is enabled by default. Evidence answers require citations and doctor review.
+
+Do not use real patient data until signoff.
