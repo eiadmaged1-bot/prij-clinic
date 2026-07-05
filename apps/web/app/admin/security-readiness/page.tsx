@@ -21,7 +21,7 @@ type SecurityReadiness = {
 
 const fallbackSections: ReadinessSection[] = [
   { label: "Authentication readiness", status: "Review", detail: "Sign in with Owner/Admin access to load the protected readiness review." },
-  { label: "RBAC readiness", status: "Review", detail: "Role boundaries are checked by backend guards and regression scripts." },
+  { label: "Role access readiness", status: "Review", detail: "Role boundaries are checked by access guards and regression scripts." },
   { label: "Audit readiness", status: "Review", detail: "Audit governance checks must pass before real patient data entry." },
   { label: "Document upload safety", status: "Review", detail: "Upload allowlists and metadata sanitization stay part of the readiness gate." },
   { label: "Backup readiness", status: "Review", detail: "Local backup scripts are available; production backup operations still require deployment setup." },
