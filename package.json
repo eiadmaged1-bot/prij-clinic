@@ -142,6 +142,7 @@
     "test:v160:real-data-readiness": "node scripts/v160-real-data-readiness-test.mjs",
     "test:v160:security-readiness-dashboard": "node scripts/v160-security-readiness-dashboard-test.mjs",
     "test:v160:rbac-readiness": "node scripts/v160-rbac-readiness-test.mjs",
+    "test:v160:audit-governance": "node scripts/v160-audit-governance-test.mjs",
     "test:v141:mega-manual-qa-smoke": "node scripts/v141-mega-manual-qa-smoke.mjs",
     "test:clinic-workflow": "node scripts/clinic-workflow-unification-test.mjs",
     "test:universal-search": "node scripts/clinic-workflow-unification-test.mjs",
