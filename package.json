@@ -48,6 +48,7 @@
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",
     "test:v180:staging-smoke": "node scripts/v180-staging-smoke-test.mjs",
     "test:v180:backup-staging-readiness": "node scripts/v180-backup-staging-readiness-test.mjs",
+    "test:v181:browser-qa-lock": "node scripts/v181-browser-qa-lock-test.mjs",
     "staging:simulate": "node scripts/staging-simulate.mjs",
     "staging:start": "powershell -ExecutionPolicy Bypass -File scripts/staging-start.ps1",
     "staging:stop": "powershell -ExecutionPolicy Bypass -File scripts/staging-stop.ps1",
