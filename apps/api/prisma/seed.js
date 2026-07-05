@@ -2088,20 +2088,30 @@ async function main() {
     where: {
       branchId: mainBranch.id,
       patientId: demoPatientA.id,
-      appointmentId: demoAppointment.id,
-      status: "waiting"
+      appointmentId: demoAppointment.id
     }
   });
 
   if (!existingTicket) {
     const checkedInAt = new Date();
+    const queueDate = toUtcDateOnly(checkedInAt);
+    const lastTicketForDate = await prisma.queueTicket.findFirst({
+      where: {
+        branchId: mainBranch.id,
+        queueDate
+      },
+      orderBy: {
+        queueNumber: "desc"
+      }
+    });
+
     await prisma.queueTicket.create({
       data: {
         branchId: mainBranch.id,
         patientId: demoPatientA.id,
         appointmentId: demoAppointment.id,
-        queueNumber: 1,
-        queueDate: toUtcDateOnly(checkedInAt),
+        queueNumber: (lastTicketForDate?.queueNumber ?? 0) + 1,
+        queueDate,
         status: "waiting",
         priority: "routine",
         checkedInAt
