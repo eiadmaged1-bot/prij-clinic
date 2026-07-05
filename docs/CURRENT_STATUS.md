@@ -1,5 +1,22 @@
 # Current Status
 
+v0.17.1 Safe AI Review Lock is implemented on `stabilize/v0.17.1-safe-ai-review-lock`.
+
+Completed in v0.17.1:
+- Seed idempotency is fixed for local/demo queue tickets without resetting, dropping, or deleting queue data.
+- The v0.17.0 Safe AI Assistant layer is locked intact.
+- AI assistant checks confirm drafts require doctor approval.
+- External AI remains disabled by default.
+- Receptionist/accountant and other lower-role clinical AI access remains blocked by RBAC.
+- Prompt-injection guard checks still pass.
+- Final regression checks passed before tagging.
+
+Safety status:
+- AI is draft-only and doctor-assist only.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, or final record writing is added.
+- v0.17.1 is not production AI.
+- Future copy-to-record requires a separate audited, doctor-confirmed workflow.
+
 v0.17.0 Safe AI Assistant Layer is implemented on `feature/v0.17.0-safe-ai-assistant-layer`.
 
 Completed in v0.17.0:

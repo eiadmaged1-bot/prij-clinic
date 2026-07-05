@@ -1,5 +1,23 @@
 # Prij Clinic
 
+## v0.17.1 Safe AI Review Lock
+
+v0.17.1 locks the v0.17.0 Safe AI Assistant layer and fixes local/demo seed idempotency for queue tickets. AI remains draft-only, doctor-assist only, and requires doctor approval. External AI is disabled by default. The system does not autonomously diagnose, prescribe, dose, rank treatments, or write AI output into final clinical records.
+
+This is not production AI. Future copy-to-record requires a separate audited, doctor-confirmed workflow.
+
+```powershell
+npm run prisma:seed
+npm run test:v170:ai-safety-layer
+npm run test:v170:prompt-injection-guard
+npm run test:v170:safe-ai-assistant
+npm run test:ai:regression
+```
+
+Primary v0.17.1 doc:
+
+- `docs/V0_17_1_SAFE_AI_REVIEW_LOCK.md`
+
 ## v0.17.0 Safe AI Assistant Layer
 
 v0.17.0 adds the first safe AI assistant layer: `/ai-assistant`, patient-file AI assistant panel, deterministic local summary drafts, missing-field checklist, follow-up reminder draft, patient-scoped file search, doctor approval/rejection workflow, AI audit events, and prompt-injection guard checks.

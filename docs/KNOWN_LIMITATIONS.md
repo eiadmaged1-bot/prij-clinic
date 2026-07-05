@@ -1,5 +1,14 @@
 # Known Limitations
 
+v0.17.1 Safe AI review lock limitations:
+
+- v0.17.1 locks the Safe AI Assistant layer; it is not production AI.
+- AI remains draft-only and requires doctor review/approval.
+- External AI remains disabled by default.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, or final record writing is implemented.
+- Seed idempotency is fixed for local/demo queue tickets, but seed data remains synthetic/demo-only.
+- Future copy-to-record requires a separate audited, doctor-confirmed workflow.
+
 v0.17.0 AI assistant limitations:
 
 - v0.17.0 is not a production AI release.

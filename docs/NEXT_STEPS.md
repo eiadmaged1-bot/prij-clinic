@@ -1,5 +1,16 @@
 # Next Steps
 
+After v0.17.1, keep the Safe AI Assistant layer locked while preparing only governance-reviewed changes.
+
+Required before any future copy-to-record or production AI workflow:
+- Keep AI output draft-only until an authorized doctor explicitly reviews it.
+- Design copy-to-record as a separate audited, doctor-confirmed workflow.
+- Keep external AI disabled by default unless a future privacy, consent, vendor, and security review approves it.
+- Keep PHI/PII inside the local system unless explicit future governance allows otherwise.
+- Keep receptionist/accountant access blocked from clinical AI tools.
+
+Do not add autonomous diagnosis, prescribing, dosing, treatment ranking, final clinical record writing, external AI calls, or fake production medical claims.
+
 After v0.17.0, keep AI work in a safety-hardening track.
 
 Required before production AI or external AI:
