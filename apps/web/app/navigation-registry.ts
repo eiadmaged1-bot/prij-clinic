@@ -35,6 +35,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/documents", label: "Documents", icon: "files", group: "Operations", permissions: ["patient_document.read"] },
   { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Knowledge", permissions: ["guidelines.read", "guidelines.search"] },
   { href: "/protocol-atlas", label: "Protocol Atlas", icon: "ai", group: "Knowledge", permissions: ["protocol_atlas.read", "ai_management.read"] },
+  { href: "/ai-assistant", label: "AI Assistant", icon: "ai", group: "Knowledge", roles: ["Owner", "Admin", "Doctor"], permissions: ["ai_draft.request", "ai_draft.read"] },
   { href: "/ai-drafts", label: "AI Drafts", icon: "ai", group: "Knowledge", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
   { href: "/medications", label: "Medications", icon: "prescription", group: "Medication Reference", permissions: ["medications.read", "medications.search"] },
   { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },

@@ -645,6 +645,7 @@ const doctorNav = new Set([
   "/medications",
   "/guidelines",
   "/protocol-atlas",
+  "/ai-assistant",
   "/ai-drafts"
 ]);
 

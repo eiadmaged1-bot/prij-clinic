@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
+import { SafeAiAssistantPanel } from "../../../components/ai-assistant/SafeAiAssistantPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
 import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
 import { MedicationSafetyTerminal } from "../../../components/medications/MedicationSafetyTerminal";
@@ -377,7 +378,7 @@ export default function PatientFilePage() {
           {active.key === "medications" ? <PatientMedicationList /> : null}
           {active.key === "allergies" ? <PatientAllergyList /> : null}
           {active.key === "medication-safety" ? <MedicationSafetyWorkspace patientId={patient.id} /> : null}
-          {active.key === "ai-snapshot" ? <CareAssistPanel patientId={patient.id} /> : null}
+          {active.key === "ai-snapshot" ? <SafeAiAssistantPanel patientId={patient.id} /> : null}
           {active.key === "more" ? <MorePatientSections setActiveTab={setActiveTab} /> : null}
           {active.key === "pregnancy" ? (
             <>

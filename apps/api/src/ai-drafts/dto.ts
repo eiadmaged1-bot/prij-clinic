@@ -28,3 +28,13 @@ export class ReviewAiDraftDto {
   @MaxLength(1000)
   reviewNote?: string;
 }
+
+export class GenerateAssistantDraftDto {
+  @IsString()
+  @MaxLength(80)
+  draftKind!: string;
+
+  @IsOptional()
+  @IsUUID()
+  encounterId?: string;
+}
