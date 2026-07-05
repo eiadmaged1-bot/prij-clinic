@@ -1,7 +1,5 @@
 # Doctor Visit Cockpit
 
-Doctor workflow shows current patient context, visit type badges, waiting counts, and quick actions such as note, prescription, investigation, follow-up, and print packet.
+The cockpit shows patient context, mouse-first documentation, generated note preview, prescription and investigation areas, follow-up, print packet access, and safe AI draft helper surfaces where present.
 
-The app does not diagnose, prescribe, dose, rank treatment, or complete records automatically.
-
-AI support remains draft-only and doctor-review required.
+Required section progress covers Complaint, History, Exam, Plan, and Follow-up with complete, missing, and optional states.

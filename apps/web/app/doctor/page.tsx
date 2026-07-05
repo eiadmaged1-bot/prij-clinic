@@ -7,6 +7,13 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import {
+  closeDayChecklist,
+  copyableMessageTemplates,
+  guidedStaffHelpItems,
+  openDayChecklist,
+  waitingTimeAlert
+} from "@/lib/v1200-productivity";
 
 type QueueTicket = {
   id: string;
@@ -167,6 +174,55 @@ export default function DoctorModePage() {
         ))}
       </section>
 
+      <section className="doctor-productivity-grid" aria-label="Clinic productivity workflow features">
+        <ChecklistPanel title="Open Day Checklist" items={openDayChecklist} />
+        <ChecklistPanel title="Close Day Checklist" items={closeDayChecklist} />
+        <section className="panel compact-panel">
+          <div className="section-heading">
+            <h2>Waiting-time alerts</h2>
+            <span className="badge warning">{waitingTimeAlert(40)}</span>
+          </div>
+          <p className="muted">Alerts surface when a patient has waited 20+ minutes or 40+ minutes.</p>
+          <div className="workflow-band compact">
+            <span>{waitingTimeAlert(20)}</span>
+            <span>{waitingTimeAlert(40)}</span>
+          </div>
+        </section>
+        <section className="panel compact-panel queue-print-source">
+          <div className="section-heading">
+            <h2>Queue ticket / QR card print</h2>
+            <span className="badge">Browser print</span>
+          </div>
+          <div className="print-ticket-preview">
+            <strong>Queue number</strong>
+            <span>Patient name</span>
+            <span>Visit type: كشف / إعادة / استشارة / مستعجل</span>
+            <span>Doctor</span>
+            <span>Time</span>
+          </div>
+          <div className="form-actions">
+            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print queue ticket</button>
+            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print patient QR card</button>
+            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print patient sticker / file label / investigation request label</button>
+          </div>
+        </section>
+        <ChecklistPanel title="Guided staff help" items={guidedStaffHelpItems} />
+        <section className="panel compact-panel">
+          <div className="section-heading">
+            <h2>Copyable message templates</h2>
+            <span className="badge warning">Copy text only</span>
+          </div>
+          <div className="dense-card-list">
+            {copyableMessageTemplates.map((template) => (
+              <button className="picker-row" key={template} type="button" onClick={() => void navigator.clipboard?.writeText(template)}>
+                <strong>{template}</strong>
+                <span>No WhatsApp sending or automatic communication</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </section>
+
       <section className="panel">
         <div className="section-heading">
           <div>
@@ -194,5 +250,24 @@ export default function DoctorModePage() {
         </div>
       </section>
     </AppShell>
+  );
+}
+
+function ChecklistPanel({ title, items }: { title: string; items: string[] }) {
+  return (
+    <section className="panel compact-panel">
+      <div className="section-heading">
+        <h2>{title}</h2>
+        <span className="badge">Manual checklist</span>
+      </div>
+      <div className="dense-card-list">
+        {items.map((item) => (
+          <label className="picker-row checklist-row" key={item}>
+            <input type="checkbox" />
+            <strong>{item}</strong>
+          </label>
+        ))}
+      </div>
+    </section>
   );
 }

@@ -4292,3 +4292,170 @@ body {
   background: var(--accent);
   color: #fff;
 }
+
+/* v1.2 mouse-first doctor workflow and productivity pack */
+.mouse-first-workspace,
+.case-feed-panel,
+.case-board-panel,
+.mother-baby-workspace,
+.smart-ob-tags {
+  display: grid;
+  gap: 1rem;
+}
+
+.mouse-first-grid,
+.doctor-productivity-grid,
+.case-board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.mouse-chip-panel,
+.selected-preview-panel {
+  display: grid;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.clinical-chip-cloud,
+.chip-category-row,
+.required-section-progress,
+.selected-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+
+.clinical-chip,
+.selected-chip {
+  display: inline-grid;
+  min-width: min(100%, 9.5rem);
+  min-height: 3.25rem;
+  align-content: center;
+  gap: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  padding: 0.65rem 0.8rem;
+  text-align: left;
+}
+
+.clinical-chip span,
+.selected-chip span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.clinical-chip.active,
+.selected-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  box-shadow: 0 0 0 2px rgb(15 143 140 / 12%);
+}
+
+.mouse-section-tabs {
+  flex-wrap: wrap;
+}
+
+.generated-note-preview {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  padding: 0.9rem;
+}
+
+.generated-note-text {
+  min-height: 8rem;
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--foreground);
+  padding: 0.85rem;
+}
+
+.important-patient-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgb(180 35 24 / 22%);
+  border-radius: 8px;
+  background: #fff7f4;
+  color: var(--foreground);
+  margin-bottom: 0.85rem;
+  padding: 0.85rem;
+}
+
+.important-patient-banner > div:nth-child(2) {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 12rem;
+}
+
+.important-patient-banner span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.case-feed-summary-card,
+.case-board-card,
+.mother-card,
+.baby-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.lazy-feed-list {
+  max-height: 48rem;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.print-ticket-preview {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0.9rem;
+}
+
+.checklist-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.checklist-row input {
+  width: 1.15rem;
+  min-height: 1.15rem;
+}
+
+@media (max-width: 720px) {
+  .important-patient-banner,
+  .mouse-first-grid,
+  .doctor-productivity-grid,
+  .case-board-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .important-patient-banner {
+    display: grid;
+  }
+
+  .clinical-chip,
+  .selected-chip {
+    width: 100%;
+  }
+}

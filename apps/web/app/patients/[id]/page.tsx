@@ -17,6 +17,16 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
+import {
+  caseBoards,
+  conceptionMethodChips,
+  currentPregnancyTags,
+  feedItemTypes,
+  importantPatientBannerItems,
+  previousHistoryChips,
+  smartClinicalTags,
+  waitingTimeAlert
+} from "@/lib/v1200-productivity";
 
 type Patient = {
   id: string;
@@ -121,6 +131,8 @@ type ServiceItem = {
 
 const tabs: TabConfig[] = [
   { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
+  { key: "case-feed", label: "Case Feed", icon: "timeline", empty: "No case feed items yet.", permissions: ["patient.read", "encounter.read"] },
+  { key: "case-boards", label: "Case Boards", icon: "queue", empty: "No case boards yet.", permissions: ["patient.read"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
   { key: "visits", label: "Visits", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "secretary-intake", label: "Secretary Intake", icon: "files", endpoint: "/patient-intake?patientId=:patientId", collectionKey: "patientIntakes", empty: "No patient-reported intake yet.", permissions: ["patient_intake.read"] },
@@ -130,6 +142,7 @@ const tabs: TabConfig[] = [
   { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation or clinical request yet.", permissions: ["clinical_requests.read", "investigation.read"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "mother-baby", label: "Mother-Baby", icon: "pregnancy", empty: "No mother-baby workspace yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "documents", label: "Files / Gallery", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
   { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
@@ -353,6 +366,7 @@ export default function PatientFilePage() {
       {patient ? (
         <>
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
+          <ImportantPatientBanner patient={patient} related={related} />
           <PatientQuickActions patient={patient} setActiveTab={setActiveTab} onShowQr={() => setQrOpen(true)} />
           <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} services={services} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
@@ -367,6 +381,8 @@ export default function PatientFilePage() {
           </section>
 
           {active.key === "overview" ? <Overview patient={patient} related={related} timelineItems={timelineItems} /> : null}
+          {active.key === "case-feed" ? <PatientCaseFeed patient={patient} related={related} timelineItems={timelineItems} /> : null}
+          {active.key === "case-boards" ? <CaseBoardsPanel patient={patient} related={related} /> : null}
           {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
           {active.key === "history" ? (
             <>
@@ -389,8 +405,10 @@ export default function PatientFilePage() {
           {active.key === "medication-safety" ? <MedicationSafetyWorkspace patientId={patient.id} /> : null}
           {active.key === "ai-snapshot" ? <SafeAiAssistantPanel patientId={patient.id} /> : null}
           {active.key === "more" ? <MorePatientSections setActiveTab={setActiveTab} /> : null}
+          {active.key === "mother-baby" ? <MotherBabyWorkspace pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
           {active.key === "pregnancy" ? (
             <>
+              <SmartObHistoryTags />
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
               <ObgynWorkspace
                 patient={patient}
@@ -401,7 +419,7 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "doctor-visit" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
+          {active.key !== "overview" && active.key !== "case-feed" && active.key !== "case-boards" && active.key !== "mother-baby" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "doctor-visit" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
             <RelatedPanel config={active} rows={related[active.key] ?? []} />
           ) : null}
         </>
@@ -444,6 +462,229 @@ function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patient: Pat
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+function ImportantPatientBanner({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
+  const pendingResults = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
+  const unpaid = (related.billing ?? []).filter((row) => ["issued", "partially_paid"].includes(String(row.status ?? ""))).length;
+  const activePregnancy = (related.pregnancy ?? []).some((row) => String(row.status ?? "").toLowerCase() === "active");
+  const items = importantPatientBannerItems.filter((item) => {
+    if (item === "Pregnant") return activePregnancy;
+    if (item === "Pending result") return pendingResults > 0;
+    if (item === "Outstanding payment") return unpaid > 0;
+    return true;
+  });
+
+  return (
+    <section className="important-patient-banner" aria-label="Important patient banner">
+      <ThreeDMedicalIcon name="consent" size="sm" tone="rose" />
+      <div>
+        <strong>{patient.firstName} {patient.lastName}</strong>
+        <span>Internal alerts only. Doctor confirms clinical meaning before record changes.</span>
+      </div>
+      <div className="workflow-band compact">
+        {items.map((item) => <span key={item}>{item}</span>)}
+      </div>
+    </section>
+  );
+}
+
+function PatientCaseFeed({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
+  const pregnancies = related.pregnancy ?? [];
+  const currentPregnancy = pregnancies.find((row) => String(row.status ?? "").toLowerCase() === "active");
+  const rows = [
+    ...timelineItems.slice(0, 8).map((item) => ({ title: item.title, status: item.status, text: item.description, type: item.type })),
+    ...feedItemTypes.map((type) => ({ title: type, status: "Available type", text: "Patient-linked internal feed item. Role-based access applies.", type }))
+  ].slice(0, 16);
+
+  return (
+    <section className="panel case-feed-panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Patient Case Feed</p>
+          <h2>Internal medical thread</h2>
+          <p className="muted">Private patient-file feed only. It is not Facebook, social posting, or external sharing.</p>
+        </div>
+        <span className="badge accent">Role-aware</span>
+      </div>
+      <article className="data-row case-feed-summary-card">
+        <div className="data-row-header">
+          <strong>{patient.firstName} {patient.lastName}</strong>
+          <span className="badge">MRN {patient.medicalRecordNumber}</span>
+        </div>
+        <dl className="profile-grid">
+          <div><dt>Age</dt><dd>{patient.dateOfBirth ? patient.dateOfBirth.slice(0, 10) : "Not set"}</dd></div>
+          <div><dt>QR</dt><dd>Patient ID only</dd></div>
+          <div><dt>Visit type</dt><dd>كشف / إعادة / استشارة / مستعجل</dd></div>
+          <div><dt>Pregnancy status</dt><dd>{currentPregnancy ? "Active pregnancy" : "Not recorded"}</dd></div>
+          <div><dt>Important tags</dt><dd>{smartClinicalTags.slice(0, 4).map(([, label]) => label).join(", ")}</dd></div>
+          <div><dt>Important alerts</dt><dd>{importantPatientBannerItems.join(", ")}</dd></div>
+        </dl>
+      </article>
+      <div className="timeline-list lazy-feed-list">
+        {rows.map((row, index) => (
+          <article className="timeline-item" key={`${row.title}-${index}`}>
+            <ThreeDMedicalIcon name={timelineIcon(String(row.type))} size="sm" />
+            <div>
+              <div className="data-row-header">
+                <strong>{row.title}</strong>
+                <span className="badge">{row.status}</span>
+              </div>
+              <p className="muted">{row.text}</p>
+              <p className="muted">Visit item can show visit number, date, visit type, pregnancy week, mother summary, Baby A/B summary, attachments, prescription, investigations, and follow-up.</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CaseBoardsPanel({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
+  const pendingActions = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
+  const lastVisit = String((related.visits ?? [])[0]?.createdAt ?? (related.visits ?? [])[0]?.visitDate ?? "No visit yet");
+
+  return (
+    <section className="panel case-board-panel">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Smart Clinical Tags and Case Boards</p>
+          <h2>Searchable patient cohorts</h2>
+          <p className="muted">Doctors see clinical boards. Reception sees allowed operational boards. Accountants do not see clinical boards.</p>
+        </div>
+        <span className="badge warning">No global data leakage</span>
+      </div>
+      <div className="clinical-chip-cloud" aria-label="Smart tags">
+        {smartClinicalTags.map(([tag, label]) => (
+          <Link className="clinical-chip" href={`/patients?tag=${encodeURIComponent(tag)}`} key={tag}>
+            <strong>{label}</strong>
+            <span>{tag} - opens matching patients</span>
+          </Link>
+        ))}
+      </div>
+      <div className="case-board-grid">
+        {caseBoards.map((board) => (
+          <article className="data-row case-board-card" key={board}>
+            <div className="data-row-header">
+              <strong>{board}</strong>
+              <span className="badge">{board.includes("Pending") ? "Operational" : "Clinical"}</span>
+            </div>
+            <dl className="profile-grid">
+              <div><dt>Patient name</dt><dd>{patient.firstName} {patient.lastName}</dd></div>
+              <div><dt>Age</dt><dd>{patient.dateOfBirth ? patient.dateOfBirth.slice(0, 10) : "Not set"}</dd></div>
+              <div><dt>Last visit</dt><dd>{lastVisit}</dd></div>
+              <div><dt>Main tag</dt><dd>{board.replace(" Board", "")}</dd></div>
+              <div><dt>Pregnancy week</dt><dd>Record-linked when pregnant</dd></div>
+              <div><dt>Pending actions</dt><dd>{pendingActions}</dd></div>
+              <div><dt>Next follow-up</dt><dd>From follow-up tasks</dd></div>
+              <div><dt>Important alert</dt><dd>{waitingTimeAlert(20)}</dd></div>
+            </dl>
+            <Link className="button compact secondary" href={`/patients/${patient.id}`}>Open file</Link>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SmartObHistoryTags() {
+  const [current, setCurrent] = useState("twins");
+  const [conception, setConception] = useState("حقن مجهري ICSI");
+  const [selectedHistory, setSelectedHistory] = useState<string[]>(["Previous C-section", "Previous normal delivery", "ولد", "بنت"]);
+  const currentTag = currentPregnancyTags.find((tag) => tag.value === current);
+
+  function toggleHistory(label: string) {
+    setSelectedHistory((items) => items.includes(label) ? items.filter((item) => item !== label) : [...items, label]);
+  }
+
+  return (
+    <section className="panel smart-ob-tags" aria-label="Smart OB History Tags">
+      <div className="section-heading">
+        <div>
+          <h2>Smart OB History Tags</h2>
+          <p className="muted">Reception may collect basic history only if policy allows. Doctor confirmation remains required for clinical history.</p>
+        </div>
+        <span className="badge warning">Doctor confirmation</span>
+      </div>
+      <div className="doctor-friendly-grid">
+        <div>
+          <h3>Current pregnancy</h3>
+          <div className="clinical-chip-cloud">
+            {currentPregnancyTags.map((tag) => (
+              <button className={`clinical-chip ${current === tag.value ? "active" : ""}`} key={tag.value} type="button" onClick={() => setCurrent(tag.value)}>
+                <strong>{tag.label}</strong>
+                <span>{tag.arabicLabel}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3>Conception method tags</h3>
+          <div className="clinical-chip-cloud">
+            {conceptionMethodChips.map((label) => (
+              <button className={`clinical-chip ${conception === label ? "active" : ""}`} key={label} type="button" onClick={() => setConception(label)}>
+                <strong>{label}</strong>
+                <span>Click/select chip</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <h3>Previous history chips</h3>
+      <div className="clinical-chip-cloud">
+        {previousHistoryChips.map((label) => (
+          <button className={`clinical-chip ${selectedHistory.includes(label) ? "active" : ""}`} key={label} type="button" onClick={() => toggleHistory(label)}>
+            <strong>{label}</strong>
+            <span>Structured history</span>
+          </button>
+        ))}
+      </div>
+      <article className="notice">
+        Current pregnancy: {conception}<br />
+        Fetus: {currentTag?.label ?? "Not selected"}<br />
+        Previous: 1 قيصري, 1 طبيعي<br />
+        Children: ولد + بنت
+      </article>
+    </section>
+  );
+}
+
+function MotherBabyWorkspace({ pregnancies, reports, orders }: { pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[] }) {
+  const active = pregnancies.find((row) => String(row.status ?? "").toLowerCase() === "active") ?? pregnancies[0];
+  const fetusCount = Math.max(1, active?.fetuses?.length ?? 2);
+  const babyLabels = fetusCount > 1 ? ["Baby A", "Baby B", ...(fetusCount > 2 ? ["Baby C"] : [])] : ["Baby"];
+
+  return (
+    <section className="panel mother-baby-workspace" aria-label="Mother-Baby Pregnancy Workspace">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Mother-Baby Pregnancy Workspace</p>
+          <h2>{fetusCount > 1 ? "Mother, Baby A, Baby B" : "Mother and Baby"}</h2>
+          <p className="muted">Mother data stays mother-specific. Baby A/B data stays baby-specific. Doctor writes final interpretation.</p>
+        </div>
+        <span className="badge">Doctor interpretation</span>
+      </div>
+      <div className="case-board-grid">
+        <article className="data-row mother-card">
+          <div className="data-row-header"><strong>Mother</strong><span className="badge">Mother-specific</span></div>
+          <dl className="profile-grid">
+            {["BP", "Weight", "Symptoms", "Labs", "Risk notes", "Plan"].map((item) => <div key={item}><dt>{item}</dt><dd>Doctor-entered field</dd></div>)}
+          </dl>
+        </article>
+        {babyLabels.map((label, index) => (
+          <article className="data-row baby-card" key={label}>
+            <div className="data-row-header"><strong>{label}</strong><span className="badge">Baby-specific</span></div>
+            <dl className="profile-grid">
+              {["Gestational age", "Presentation", "Placenta", "Fluid", "Biometry", "Doppler notes", "Ultrasound notes"].map((item) => (
+                <div key={item}><dt>{item}</dt><dd>{index === 0 ? `${reports.length} reports / ${orders.length} orders linked when supported` : "Separate notes"}</dd></div>
+              ))}
+            </dl>
+          </article>
+        ))}
+      </div>
+      <p className="notice">The app records separated mother and baby details only. Growth concern labels, anomaly interpretation, ranked treatment choices, and fetal diagnosis wording must be written by the doctor.</p>
     </section>
   );
 }

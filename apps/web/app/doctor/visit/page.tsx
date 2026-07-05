@@ -8,6 +8,18 @@ import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { autosaveLabel, enqueueOfflineOperation, saveLocalDraft, useAutosaveDraft, useOfflineSyncQueue } from "@/lib/autosave-draft";
+import {
+  buildMouseFirstDraftNote,
+  clinicalChipGroups,
+  clinicalChips,
+  continueLastWorkItems,
+  doctorFavoriteGroups,
+  mouseFirstSections,
+  resultsReviewInboxItems,
+  topClinicalChips,
+  type ClinicalChip,
+  type MouseFirstSection
+} from "@/lib/v1200-productivity";
 
 const steps = [
   ["Complaint", "What brought the patient today?", "Chief complaint"],
@@ -82,6 +94,12 @@ function GuidedVisitContent() {
   const [error, setError] = useState("");
   const [encounterId, setEncounterId] = useState("");
   const [patientName, setPatientName] = useState("Selected patient");
+  const [visitMode, setVisitMode] = useState<"mouse" | "detailed">("mouse");
+  const [chipSearch, setChipSearch] = useState("");
+  const [activeMouseSection, setActiveMouseSection] = useState<MouseFirstSection>("Complaint");
+  const [selectedChips, setSelectedChips] = useState<ClinicalChip[]>([]);
+  const [, setChipHistory] = useState<ClinicalChip[]>([]);
+  const [mouseFreeText, setMouseFreeText] = useState("");
   const [formState, setFormState] = useState({
     chiefComplaint: "",
     historyText: "",
@@ -97,11 +115,16 @@ function GuidedVisitContent() {
     return sessionStorage.getItem("prijClinicToken");
   }, []);
   const apiBaseUrl = useMemo(() => (typeof window === "undefined" ? "" : getApiBaseUrl()), []);
+  const generatedDraftNote = useMemo(() => buildMouseFirstDraftNote(selectedChips, mouseFreeText), [mouseFreeText, selectedChips]);
+  const hasUnsavedChanges = useMemo(
+    () => selectedChips.length > 0 || Boolean(mouseFreeText.trim()) || Object.values(formState).some((value) => value.trim()),
+    [formState, mouseFreeText, selectedChips.length]
+  );
   const autosave = useAutosaveDraft({
     key: `doctor-visit:${patientId ?? "unassigned"}`,
     entityType: "doctor_visit_draft",
     patientId,
-    payload: formState,
+    payload: { ...formState, mouseFirstSelected: selectedChips.map((chip) => chip.label), mouseFirstFreeText: mouseFreeText, generatedDraftNote },
     enabled: Boolean(patientId),
     debounceMs: 400
   });
@@ -121,6 +144,16 @@ function GuidedVisitContent() {
       .catch(() => undefined);
   }, [apiBaseUrl, patientId, token]);
 
+  useEffect(() => {
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeLeave);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeave);
+  }, [hasUnsavedChanges]);
+
   async function saveDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -131,11 +164,18 @@ function GuidedVisitContent() {
     }
 
     const payload = {
-      chiefComplaint: formState.chiefComplaint,
-      historyText: formState.historyText,
-      examText: formState.examText,
+      chiefComplaint: mergeDraftField(formState.chiefComplaint, selectedChips.filter((chip) => chip.section === "Complaint").map((chip) => chip.label)),
+      historyText: mergeDraftField(formState.historyText, selectedChips.filter((chip) => chip.section === "History" || chip.section === "OB/GYN history").map((chip) => chip.label)),
+      examText: mergeDraftField(formState.examText, selectedChips.filter((chip) => chip.section === "Examination").map((chip) => chip.label)),
       assessmentText: formState.assessmentText,
-      planText: [formState.planText, formState.prescriptionPlan ? `Prescription plan: ${formState.prescriptionPlan}` : "", formState.ordersPlan ? `Orders: ${formState.ordersPlan}` : ""]
+      planText: [
+        formState.planText,
+        selectedChips.filter((chip) => chip.section === "Plan" || chip.section === "Follow-up").map((chip) => chip.label).join("; "),
+        selectedChips.filter((chip) => chip.section === "Investigations").map((chip) => chip.label).join("; "),
+        mouseFreeText.trim(),
+        formState.prescriptionPlan ? `Prescription plan: ${formState.prescriptionPlan}` : "",
+        formState.ordersPlan ? `Orders: ${formState.ordersPlan}` : ""
+      ]
         .filter(Boolean)
         .join("\n")
     };
@@ -165,6 +205,28 @@ function GuidedVisitContent() {
     const encounter = await response.json() as { id?: string };
     if (encounter.id) setEncounterId(encounter.id);
     setSaved("Visit draft saved to the patient file.");
+  }
+
+  function toggleChip(chip: ClinicalChip) {
+    setSelectedChips((current) => {
+      const exists = current.some((item) => item.label === chip.label && item.section === chip.section);
+      if (exists) return current.filter((item) => !(item.label === chip.label && item.section === chip.section));
+      setChipHistory((history) => [...history, chip]);
+      return [...current, chip];
+    });
+  }
+
+  function undoLastClick() {
+    setChipHistory((history) => {
+      const last = history.at(-1);
+      if (!last) return history;
+      setSelectedChips((current) => current.filter((item) => !(item.label === last.label && item.section === last.section)));
+      return history.slice(0, -1);
+    });
+  }
+
+  function clearSection(section: MouseFirstSection) {
+    setSelectedChips((current) => current.filter((chip) => chip.section !== section));
   }
 
   const current = steps[step]!;
@@ -225,6 +287,102 @@ function GuidedVisitContent() {
               <span>{label}</span>
             </button>
           ))}
+        </section>
+
+        <section className="panel mouse-first-workspace" aria-label="Doctor Mouse-First Mode">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Doctor Mouse-First Mode</p>
+              <h2>Mouse Mode / Detailed Mode</h2>
+              <p className="muted">Routine documentation is chip-driven. Free text is a fallback for unusual details, and the note stays draft-only until the doctor saves it.</p>
+            </div>
+            <div className="segmented-control" aria-label="Visit documentation mode">
+              <button className={visitMode === "mouse" ? "active" : ""} type="button" onClick={() => setVisitMode("mouse")}>Mouse Mode</button>
+              <button className={visitMode === "detailed" ? "active" : ""} type="button" onClick={() => setVisitMode("detailed")}>Detailed Mode</button>
+            </div>
+          </div>
+
+          <div className="required-section-progress" aria-label="Required section progress">
+            {mouseFirstSections.map((section) => {
+              const status = selectedChips.some((chip) => chip.section === section) || (section === "Plan" && formState.planText.trim()) ? "complete" : section === "Follow-up" ? "optional" : "missing";
+              return <span className={`badge ${status === "complete" ? "accent" : status === "missing" ? "warning" : ""}`} key={section}>{section}: {status}</span>;
+            })}
+          </div>
+
+          {hasUnsavedChanges ? (
+            <div className="notice unsaved-change-warning">
+              <strong>Unsaved changes warning</strong>
+              <span> Save draft before leaving, or choose Leave anyway if the doctor intentionally discards the local draft.</span>
+              <div className="form-actions">
+                <button className="button secondary compact" type="button" onClick={() => setSaved("Use Save Draft below to write this draft to the patient file.")}>Save draft</button>
+                <Link className="button secondary compact" href={patientId ? `/patients/${patientId}` : "/doctor"}>Leave anyway</Link>
+              </div>
+            </div>
+          ) : null}
+
+          {visitMode === "mouse" ? (
+            <div className="mouse-first-grid">
+              <div className="mouse-chip-panel">
+                <div className="segmented-control mouse-section-tabs" aria-label="Mouse-first sections">
+                  {mouseFirstSections.map((section) => (
+                    <button className={activeMouseSection === section ? "active" : ""} key={section} type="button" onClick={() => setActiveMouseSection(section)}>
+                      {section}
+                    </button>
+                  ))}
+                </div>
+                <h3>Top 12 common chips</h3>
+                <ChipCloud chips={topClinicalChips.filter((chip) => chip.section === activeMouseSection || activeMouseSection === "Complaint")} selected={selectedChips} onToggle={toggleChip} />
+                <h3>Categories</h3>
+                <div className="chip-category-row">
+                  {clinicalChipGroups.map((group) => <span className="badge" key={group}>{group}</span>)}
+                </div>
+                <label>
+                  Search chips
+                  <input value={chipSearch} onChange={(event) => setChipSearch(event.target.value)} placeholder="Search structured chips" />
+                </label>
+                <ChipCloud
+                  chips={clinicalChips.filter((chip) => chip.section === activeMouseSection && chip.label.toLowerCase().includes(chipSearch.toLowerCase())).slice(0, 18)}
+                  selected={selectedChips}
+                  onToggle={toggleChip}
+                />
+                <label>
+                  Free text fallback
+                  <textarea value={mouseFreeText} onChange={(event) => setMouseFreeText(event.target.value)} placeholder="Only add unusual or custom details here." />
+                </label>
+              </div>
+              <aside className="selected-preview-panel">
+                <div className="section-heading">
+                  <h3>Selected items preview</h3>
+                  <div className="form-actions">
+                    <button className="button secondary compact" type="button" onClick={undoLastClick}>Undo last click</button>
+                    <button className="button secondary compact" type="button" onClick={() => clearSection(activeMouseSection)}>Clear section</button>
+                  </div>
+                </div>
+                {selectedChips.length === 0 ? <p className="empty-state compact smart-empty-state">No chips selected yet.</p> : null}
+                <div className="selected-chip-list">
+                  {selectedChips.map((chip) => (
+                    <button className="selected-chip active" key={`${chip.section}-${chip.label}`} type="button" onClick={() => toggleChip(chip)}>
+                      <strong>{chip.label}</strong>
+                      <span>{chip.section} - remove selected item</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="generated-note-preview">
+                  <h3>Generated note preview</h3>
+                  <div className="generated-note-text">{generatedDraftNote || "Select chips to build a draft note preview."}</div>
+                  <p className="notice">Draft-only. No automatic diagnosis, prescribing, dosing, or treatment ranking.</p>
+                </div>
+              </aside>
+            </div>
+          ) : (
+            <p className="notice">Detailed Mode is active. Use the detailed fields below when chips are not enough.</p>
+          )}
+        </section>
+
+        <section className="doctor-productivity-grid" aria-label="Doctor productivity pack">
+          <ProductivityPanel title="Continue Last Work" items={[...continueLastWorkItems.doctor, ...continueLastWorkItems.receptionist]} />
+          <ProductivityPanel title="Doctor Results Review Inbox" items={resultsReviewInboxItems} />
+          <ProductivityPanel title="Doctor Favorites" items={doctorFavoriteGroups} />
         </section>
 
         <form className="visit-card" onSubmit={saveDraft}>
@@ -289,4 +447,52 @@ function fieldForStep(step: number): VisitField {
   if (step === 4) return "prescriptionPlan";
   if (step === 5) return "ordersPlan";
   return "planText";
+}
+
+function ChipCloud({
+  chips,
+  selected,
+  onToggle
+}: {
+  chips: ClinicalChip[];
+  selected: ClinicalChip[];
+  onToggle(chip: ClinicalChip): void;
+}) {
+  return (
+    <div className="clinical-chip-cloud">
+      {chips.map((chip) => {
+        const active = selected.some((item) => item.label === chip.label && item.section === chip.section);
+        return (
+          <button className={`clinical-chip ${active ? "active" : ""}`} key={`${chip.section}-${chip.label}`} type="button" onClick={() => onToggle(chip)}>
+            <strong>{chip.label}</strong>
+            <span>{chip.category ?? chip.group}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProductivityPanel({ title, items }: { title: string; items: string[] }) {
+  return (
+    <section className="panel compact-panel">
+      <div className="section-heading">
+        <h2>{title}</h2>
+        <span className="badge">Manual shortcuts</span>
+      </div>
+      <div className="dense-card-list">
+        {items.map((item) => (
+          <button className="picker-row" key={item} type="button">
+            <strong>{item}</strong>
+            <span>No automatic clinical action</span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function mergeDraftField(existing: string, chips: string[]) {
+  const parts = [existing.trim(), chips.join("; ")].filter(Boolean);
+  return parts.join(existing.trim() && chips.length ? "\n" : "");
 }

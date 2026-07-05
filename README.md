@@ -1,5 +1,13 @@
 # Prij Clinic
 
+## v1.2.0 Mouse-First Productivity Pack
+
+v1.2.0 adds a mouse-first doctor workflow, patient case feed, smart clinical tags, case boards, Mother-Baby pregnancy workspace, OB history tags, conception method tags, results review inbox, doctor favorites, auto-save, continue-last-work, clinic open/close checklists, waiting alerts, print helpers, guided staff help, and copyable message templates.
+
+Routine documentation should be 95-99% mouse/touch driven, with free text as fallback. AI and clinical helper output remains draft-only until reviewed and approved by a doctor. There is no automatic diagnosis, prescribing, dosing, or treatment ranking.
+
+Patient case feed is internal only, not social posting. Mother, Baby A, and Baby B data are separated. Conception method tags include طبيعي / تنشيط تبويض / حقن مجهري ICSI / غير معروف. Real patient data remains blocked until signoff, and external AI remains disabled by default.
+
 ## v1.0.1 Pilot Signoff Lock
 
 v1.0.1 locks the pilot stabilization scope: universal logout/account menu, Tailscale local-dev mobile login support, receptionist clean home, Returning Patient lookup, Patient QR, and receptionist QR scan workflow.
