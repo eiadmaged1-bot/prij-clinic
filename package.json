@@ -195,6 +195,7 @@
     "medication:v101:import-status": "node scripts/v101-official-medication-import-status.mjs",
     "medication:v101:operator": "powershell -ExecutionPolicy Bypass -File scripts/v101-official-medication-import-operator.ps1",
     "test:v101:official-medication-import-operator": "node scripts/v101-official-medication-import-operator-test.mjs",
+    "test:v101:pilot-signoff-qr": "node scripts/v101-pilot-signoff-qr-test.mjs",
     "test:v102:mobile": "playwright test --config=playwright.config.ts tests/v102",
     "test:v102:mobile:headed": "playwright test --config=playwright.config.ts tests/v102 --headed",
     "design:export-html": "node scripts/export-ui-theme-html.mjs",
