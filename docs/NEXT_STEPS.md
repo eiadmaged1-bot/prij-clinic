@@ -1,5 +1,16 @@
 # Next Steps
 
+After v0.16.1, continue staging deployment validation without adding new product features.
+
+Required next steps before real patient data:
+- Complete deployment, backup, legal/privacy, and role-by-role QA gates.
+- Run a controlled restore drill in non-production before claiming backup/restore readiness.
+- Verify production secrets, TLS, CORS, monitoring, log retention, audit retention, and incident response.
+- Keep `DEMO_MODE=false` for production-shaped environments and keep demo credentials disabled.
+- Keep external AI disabled by default; AI remains doctor-assist and draft-only.
+
+Do not add WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, real payment gateway, mobile app, external AI runtime calls, automatic diagnosis, automatic prescribing, automatic dosing, treatment ranking, or fake clinical claims in this stabilization path.
+
 Recommended next sprint: security stabilization + deployment prep.
 
 Focus areas:

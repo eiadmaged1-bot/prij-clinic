@@ -1,5 +1,24 @@
 # Prij Clinic
 
+## v0.16.1 Security Deployment Prep Lock
+
+v0.16.1 is staging/deployment prep, not a production release. It locks the v0.14.4 clinic walkthrough, v0.15.0 MVP business layer, and v0.16.0 security and real patient data readiness gates while adding startup, deployment prep, backup/restore runbook, role-by-role readiness, and combined regression checks.
+
+Real patient data entry is still blocked until deployment, backup, legal/privacy, and role-by-role QA are complete. External AI remains disabled unless explicitly configured in a later reviewed sprint. AI remains doctor-assist and draft-only. There is no autonomous diagnosis, prescribing, dosing, treatment ranking, WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, real payment gateway, or mobile app.
+
+```powershell
+npm run test:v161:security-deployment-prep-lock
+```
+
+Primary v0.16.1 docs:
+
+- `docs/V0_16_1_SECURITY_DEPLOYMENT_PREP_LOCK.md`
+- `docs/DEPLOYMENT_PREP_CHECKLIST.md`
+- `docs/STAGING_DEPLOYMENT_PLAN.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/BACKUP_RESTORE_RUNBOOK.md`
+- `docs/PRODUCTION_SAFETY_LIMITATIONS.md`
+
 ## v0.16.0 Security + Real Patient Data Readiness
 
 v0.16.0 prepares Prij Clinic for real patient data readiness review. It does not claim full legal, compliance, operational, or production readiness, and it does not authorize real patient data entry yet.

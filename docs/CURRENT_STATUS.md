@@ -1,5 +1,16 @@
 # Current Status
 
+v0.16.1 Security Deployment Prep Lock is in progress on the stabilization branch.
+
+v0.16.1 is staging/deployment prep, not a production release. It locks the v0.14.4 clinic walkthrough, v0.15.0 MVP business layer, and v0.16.0 security/readiness gates while adding local startup, deployment prep, backup/restore runbook, role-by-role source readiness, and combined regression checks.
+
+Safety status:
+- Real patient data entry is still blocked until deployment, backup, legal/privacy, and role-by-role QA are complete.
+- External AI remains disabled unless explicitly configured in a later reviewed sprint.
+- AI remains doctor-assist and draft-only.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, or fake clinical claims are added.
+- No WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, real payment gateway, or mobile app is included.
+
 v0.16.0 Security + Real Patient Data Readiness is complete on the feature branch.
 
 Completed in v0.16.0:

@@ -1,5 +1,15 @@
 # Known Limitations
 
+v0.16.1 deployment prep limitations:
+
+- v0.16.1 is staging/deployment prep only, not a production release.
+- Real patient data entry remains blocked until deployment, backup, legal/privacy, and role-by-role QA are complete.
+- Backup scripts prove local readiness only; monitored production backups and a restore drill remain required.
+- Restore is manual/admin-controlled only and is not run by readiness checks.
+- External AI remains disabled unless explicitly configured later.
+- AI remains doctor-assist and draft-only with no autonomous diagnosis, prescribing, dosing, or treatment ranking.
+- No WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, real payment gateway, or mobile app is included.
+
 v0.16.0 readiness limitations:
 
 - v0.16.0 prepares for real patient data readiness, but it is not a full legal, compliance, security, or production-readiness certification.
