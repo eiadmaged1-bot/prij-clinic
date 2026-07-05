@@ -1,5 +1,17 @@
 # Known Limitations
 
+v0.18.0 staging deployment package limitations:
+
+- v0.18.0 is staging package only, not a production release.
+- Real patient data remains blocked.
+- External AI is disabled by default.
+- AI remains draft-only and doctor-approved.
+- `/ai-drafts` is the intentional implemented AI draft API route; `/ai/drafts` is not the current route.
+- Doctor patient reads are branch-scoped because patient-to-doctor assignment is not modeled.
+- Backup readiness is local/staging package readiness only; production still requires monitored encrypted backups and a restore drill.
+- No payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, or mobile app is included.
+- Production requires legal/privacy review, real backup/restore drill, HTTPS, monitoring, secrets management, role-by-role browser QA, and deployment hardening.
+
 v0.17.1 Safe AI review lock limitations:
 
 - v0.17.1 locks the Safe AI Assistant layer; it is not production AI.

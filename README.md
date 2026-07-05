@@ -1,5 +1,37 @@
 # Prij Clinic
 
+## v0.18.0 Staging Deployment Package
+
+v0.18.0 is a staging deployment package and local production simulation sprint only. It is not a production release and must not be used with real patient data.
+
+Key commands:
+
+```powershell
+npm run staging:simulate
+npm run test:v180:staging-smoke
+npm run test:v180:backup-staging-readiness
+npm run staging:start
+npm run staging:health-check
+npm run staging:stop
+```
+
+Safety defaults:
+
+- External AI is disabled by default with `AI_PROVIDER=disabled_mock` in staging examples and `EXTERNAL_AI_ENABLED=false`.
+- AI remains draft-only until reviewed and approved by a doctor.
+- `.env.staging.example` contains placeholders only; do not commit `.env.staging`, secrets, real patient data, backups, uploads, logs, reports, screenshots, or local database files.
+- No payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, mobile app, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claims are included.
+
+Production still requires legal/privacy review, a real backup/restore drill, HTTPS, monitoring, secrets management, role-by-role browser QA, and deployment hardening.
+
+Primary v0.18.0 docs:
+
+- `docs/V0_18_0_STAGING_DEPLOYMENT_PACKAGE.md`
+- `docs/STAGING_DEPLOYMENT_PLAN.md`
+- `docs/DEPLOYMENT_COMMANDS.md`
+- `docs/STAGING_SMOKE_TESTS.md`
+- `docs/BACKUP_RESTORE_RUNBOOK.md`
+
 ## v0.17.1 Safe AI Review Lock
 
 v0.17.1 locks the v0.17.0 Safe AI Assistant layer and fixes local/demo seed idempotency for queue tickets. AI remains draft-only, doctor-assist only, and requires doctor approval. External AI is disabled by default. The system does not autonomously diagnose, prescribe, dose, rank treatments, or write AI output into final clinical records.

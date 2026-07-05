@@ -1,5 +1,18 @@
 # Current Status
 
+v0.18.0 Staging Deployment Package is in progress on `feature/v0.18.0-staging-deployment-package`.
+
+Scope:
+- Staging Docker/deployment package, environment examples, local production simulation, staging smoke tests, health checks, migration deploy verification, backup readiness, upload/storage path readiness, seed safety, security header/CORS/env validation checks, deployment docs, and regressions.
+
+Safety status:
+- v0.18.0 is staging package only, not a production release.
+- Real patient data remains blocked.
+- External AI is disabled by default.
+- AI remains draft-only and doctor-approved.
+- No payment gateway, WhatsApp, DICOM/PACS, insurance/TPA, full accounting ledger, mobile app, external AI runtime calls, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claims are added.
+- Production requires legal/privacy review, real backup/restore drill, HTTPS, monitoring, secrets management, role-by-role browser QA, and deployment hardening.
+
 v0.17.1 Safe AI Review Lock is implemented on `stabilize/v0.17.1-safe-ai-review-lock`.
 
 Completed in v0.17.1:

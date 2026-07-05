@@ -1,6 +1,6 @@
 # Production Safety Limitations
 
-v0.16.1 is not a production release. It is a security stabilization and deployment-prep lock.
+v0.18.0 is not a production release. It is a staging deployment package and local production simulation sprint.
 
 Current limitations:
 - Real patient data entry remains blocked until deployment, backup, legal/privacy, and role-by-role QA are complete.
@@ -9,6 +9,7 @@ Current limitations:
 - Consent/legal text still requires clinic and jurisdiction review.
 - Role-by-role browser QA remains required.
 - Production secrets, TLS, CORS, monitoring, audit retention, and incident response require deployment review.
+- Production requires legal/privacy review, real backup/restore drill, HTTPS, monitoring, secrets management, role-by-role browser QA, and deployment hardening.
 
 Clinical and integration limits:
 - AI is doctor-assist and draft-only.

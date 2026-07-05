@@ -1,5 +1,17 @@
 # Next Steps
 
+After v0.18.0, continue staging validation without adding clinical features.
+
+Required before production or real patient data:
+- Complete legal/privacy review.
+- Complete a real backup and restore drill in a controlled non-production environment.
+- Configure HTTPS, monitoring, managed secrets, audit retention, log retention, and incident response.
+- Run role-by-role browser QA for Owner, Admin, Doctor, Receptionist, Accountant, and Nurse.
+- Confirm CORS origins, security headers, backup encryption, storage retention, and seed policy in the deployment environment.
+- Keep external AI disabled by default and keep AI draft-only until a doctor approves output.
+
+Do not add WhatsApp, DICOM/PACS, insurance/TPA, real payment gateway, full accounting ledger, mobile app, external AI runtime calls, autonomous diagnosis, autonomous prescribing, autonomous dosing, treatment ranking, or fake clinical claims in this staging path.
+
 After v0.17.1, keep the Safe AI Assistant layer locked while preparing only governance-reviewed changes.
 
 Required before any future copy-to-record or production AI workflow:
