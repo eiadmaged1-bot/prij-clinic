@@ -1,5 +1,16 @@
 # Next Steps
 
+After v0.17.0, keep AI work in a safety-hardening track.
+
+Required before production AI or external AI:
+- Complete clinical governance review of every draft type.
+- Add explicit consent, privacy review, vendor review, and data processing controls before any PHI/PII leaves the system.
+- Add browser E2E coverage for doctor review and rejection paths.
+- Add copy-to-record only as a future doctor-confirmed, audited action if governance approves it.
+- Keep external AI disabled by default.
+
+Do not add autonomous diagnosis, prescribing, dosing, treatment ranking, WhatsApp, SMS/email sending, DICOM/PACS, insurance/TPA, real payment gateway, or fake clinical claims.
+
 After v0.16.1, continue staging deployment validation without adding new product features.
 
 Required next steps before real patient data:

@@ -1,5 +1,17 @@
 # Known Limitations
 
+v0.17.0 AI assistant limitations:
+
+- v0.17.0 is not a production AI release.
+- AI drafts are deterministic local drafts and still require doctor approval.
+- External AI calls are disabled by default.
+- Draft approval does not copy text into final clinical records.
+- Patient-file search is patient-scoped and role-aware, but it is not semantic AI search.
+- Missing-field checklist is completeness support only, not clinical advice.
+- Follow-up reminder text is not sent automatically and contains no sensitive clinical detail by default.
+- PHI/PII must not be sent externally unless explicit future governance is added.
+- Prompt-injection protection treats external/user-provided content as untrusted, but future document/OCR pipelines need additional review before production use.
+
 v0.16.1 deployment prep limitations:
 
 - v0.16.1 is staging/deployment prep only, not a production release.

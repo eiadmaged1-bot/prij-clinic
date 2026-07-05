@@ -1,5 +1,26 @@
 # Current Status
 
+v0.17.0 Safe AI Assistant Layer is implemented on `feature/v0.17.0-safe-ai-assistant-layer`.
+
+Completed in v0.17.0:
+- `/ai-assistant` shell and patient-file assistant panel.
+- Deterministic patient history summary draft.
+- Deterministic visit note summary draft.
+- Missing-field checklist.
+- Follow-up reminder draft with no sending integration.
+- Patient-scoped file search helper.
+- Doctor approval/rejection workflow on AI draft artifacts.
+- AI audit events and prompt-injection warning checks.
+- v0.17 source-level regression scripts.
+
+Safety status:
+- AI is assistive only.
+- AI drafts require doctor approval.
+- No autonomous diagnosis, prescribing, dosing, treatment ranking, or final clinical decision is added.
+- External AI calls are disabled by default.
+- PHI/PII must not be sent externally unless explicit future governance is added.
+- v0.17.0 is not a production AI release.
+
 v0.16.1 Security Deployment Prep Lock is in progress on the stabilization branch.
 
 v0.16.1 is staging/deployment prep, not a production release. It locks the v0.14.4 clinic walkthrough, v0.15.0 MVP business layer, and v0.16.0 security/readiness gates while adding local startup, deployment prep, backup/restore runbook, role-by-role source readiness, and combined regression checks.

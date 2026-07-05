@@ -1,5 +1,26 @@
 # Prij Clinic
 
+## v0.17.0 Safe AI Assistant Layer
+
+v0.17.0 adds the first safe AI assistant layer: `/ai-assistant`, patient-file AI assistant panel, deterministic local summary drafts, missing-field checklist, follow-up reminder draft, patient-scoped file search, doctor approval/rejection workflow, AI audit events, and prompt-injection guard checks.
+
+AI is assistive only. AI drafts require doctor approval. The app does not autonomously diagnose, prescribe, dose, rank treatments, send patient communications, or write AI text into final clinical records. External AI calls are disabled by default, and PHI/PII must not be sent externally unless explicit future governance is added.
+
+```powershell
+npm run test:v170:ai-safety-layer
+npm run test:v170:prompt-injection-guard
+npm run test:v170:safe-ai-assistant
+```
+
+Primary v0.17.0 docs:
+
+- `docs/V0_17_0_SAFE_AI_ASSISTANT_LAYER.md`
+- `docs/AI_ASSISTANT_WORKFLOW.md`
+- `docs/AI_DRAFT_APPROVAL.md`
+- `docs/PROMPT_INJECTION_PROTECTION.md`
+- `docs/AI_AUDIT_LOGGING.md`
+- `docs/AI_LIMITATIONS.md`
+
 ## v0.16.1 Security Deployment Prep Lock
 
 v0.16.1 is staging/deployment prep, not a production release. It locks the v0.14.4 clinic walkthrough, v0.15.0 MVP business layer, and v0.16.0 security and real patient data readiness gates while adding startup, deployment prep, backup/restore runbook, role-by-role readiness, and combined regression checks.

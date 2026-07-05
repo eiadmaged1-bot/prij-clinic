@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import {
   generatePatientAiDraft,
@@ -46,12 +46,7 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
     }
   }, [fixedPatientId, patientId]);
 
-  useEffect(() => {
-    if (!patientId) return;
-    void loadAssistant(patientId);
-  }, [patientId]);
-
-  async function loadAssistant(nextPatientId = patientId) {
+  const loadAssistant = useCallback(async (nextPatientId = patientId) => {
     setStatus("Loading");
     try {
       const data = await getPatientAiAssistant(nextPatientId);
@@ -61,7 +56,12 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
       setAssistant(null);
       setStatus("Your role cannot open clinical AI tools.");
     }
-  }
+  }, [patientId]);
+
+  useEffect(() => {
+    if (!patientId) return;
+    void loadAssistant(patientId);
+  }, [loadAssistant, patientId]);
 
   async function generate(kind: string) {
     if (!patientId) return;
