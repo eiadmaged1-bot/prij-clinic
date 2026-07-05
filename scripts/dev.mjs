@@ -2,7 +2,15 @@ import { spawn, spawnSync } from "node:child_process";
 
 const isWindows = process.platform === "win32";
 const isLanMode = process.argv.includes("--lan");
-const commands = ["dev:api", isLanMode ? "dev:web:lan" : "dev:web"];
+const isTailscaleMode = process.argv.includes("--tailscale");
+if (isTailscaleMode) {
+  process.env.API_HOST = process.env.API_HOST || "0.0.0.0";
+  process.env.WEB_HOST = process.env.WEB_HOST || "0.0.0.0";
+  process.env.HOST = process.env.HOST || "0.0.0.0";
+  process.env.NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK = process.env.NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK || "true";
+  process.env.CORS_ALLOW_TAILSCALE_DEV = process.env.CORS_ALLOW_TAILSCALE_DEV || "true";
+}
+const commands = ["dev:api", isLanMode || isTailscaleMode ? "dev:web:lan" : "dev:web"];
 let stopping = false;
 
 function spawnDev(script) {

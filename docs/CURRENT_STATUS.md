@@ -1,5 +1,18 @@
 # Current Status
 
+UI Cleanup + Tailscale Mobile Access + Universal Logout is implemented on `fix/ui-cleanup-tailscale-mobile-login`.
+
+Completed in this sprint:
+- Shared top-right account menu with display/login fallback, role badge, profile info, and Logout for all signed-in roles, including receptionist.
+- Tailscale tailnet-only local dev mode with `npm run dev:tailscale`, dynamic browser API host resolution, local-dev Tailscale CORS, and `scripts/print-tailscale-dev-url.ps1`.
+- Compact UI cleanup for shared pages, patient files, new patient intake, check-in, and appointment list labeling.
+- Training/demo records are hidden by default on patient/check-in flows with explicit “Show training records” controls.
+- Sensitive intake remains optional and collapsed, defaulting to “Unknown / not asked.”
+
+Safety status:
+- No real patient data, public exposure, Tailscale Funnel, external AI calls, real payment gateway, auth weakening, RBAC weakening, audit weakening, or AI safety weakening was added.
+- Staging/production CORS remains exact HTTPS origin oriented; Tailscale dynamic access is local/dev only.
+
 v1.0.0 Pilot Release Candidate is in progress on `release/v1.0.0-pilot-rc`.
 
 Scope:

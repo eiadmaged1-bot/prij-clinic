@@ -699,6 +699,78 @@ body {
   justify-content: flex-end;
 }
 
+.account-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.account-menu summary,
+.topbar-account-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.55rem;
+  max-width: min(18rem, 34vw);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  color: var(--foreground);
+  cursor: pointer;
+  list-style: none;
+  padding: 0.45rem 0.65rem;
+}
+
+.account-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.account-summary-copy {
+  display: grid;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.account-summary-copy strong,
+.account-summary-copy span {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-summary-copy span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 80;
+  display: grid;
+  gap: 0.55rem;
+  width: min(18rem, 88vw);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  padding: 0.7rem;
+}
+
+.account-menu-profile {
+  display: grid;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.6rem;
+}
+
+.account-menu-panel .button {
+  justify-content: flex-start;
+  width: 100%;
+}
+
 .user-menu {
   display: flex;
   flex-wrap: wrap;
@@ -850,6 +922,23 @@ body {
 .compact-safety-badge {
   min-height: 1.85rem;
   white-space: nowrap;
+}
+
+.compact-content-grid {
+  gap: 0.85rem;
+}
+
+.compact-section-heading {
+  gap: 0.65rem;
+}
+
+.compact-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+details.form-fieldset summary {
+  cursor: pointer;
+  font-weight: 850;
 }
 
 .patient-picker {
@@ -3982,6 +4071,17 @@ body {
   .theme-prij-heritage .topbar .portal-search,
   .topbar > .topbar-actions {
     display: none;
+  }
+
+  .account-menu summary,
+  .topbar-account-login {
+    max-width: 9.5rem;
+    padding-inline: 0.5rem;
+  }
+
+  .account-summary-copy strong,
+  .account-summary-copy span {
+    max-width: 6.8rem;
   }
 
   .theme-prij-heritage .app-main {

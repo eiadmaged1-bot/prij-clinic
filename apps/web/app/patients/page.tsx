@@ -155,7 +155,21 @@ export default function PatientsPage() {
         {status === "Loading" ? <div className="skeleton" /> : null}
 
         {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
-          <div className="empty-state">No patient files match this view. Create a new patient file to begin.</div>
+          <div className="empty-state smart-empty-state">
+            <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+            <span>
+              {!showTrainingRecords && patients.some(isSeededTrainingRecord)
+                ? "No local patient files match this view. Training records are hidden."
+                : "No patient files match this view. Create a new patient file to begin."}
+            </span>
+            {!showTrainingRecords && patients.some(isSeededTrainingRecord) ? (
+              <button className="button secondary compact" onClick={() => setShowTrainingRecords(true)} type="button">
+                Show training records
+              </button>
+            ) : (
+              <Link className="button secondary compact" href="/patients/new">New Patient File</Link>
+            )}
+          </div>
         ) : null}
 
         {filtered.length > 0 ? (

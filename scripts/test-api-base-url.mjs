@@ -85,7 +85,16 @@ function assertThrowsMessage(fn, messagePart) {
     { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
     { hostname: "100.127.4.46", protocol: "http:" }
   );
-  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "Tailscale IPv4 same-host fallback is accepted in dev");
+}
+
+{
+  const { getApiBaseUrl, isTailscaleMagicDnsHost } = loadApiBaseUrl(
+    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
+    { hostname: "prij-clinic.tailnet-name.ts.net", protocol: "http:" }
+  );
+  assert.equal(isTailscaleMagicDnsHost("prij-clinic.tailnet-name.ts.net"), true, "Tailscale MagicDNS host is recognized");
+  assert.equal(getApiBaseUrl(), "http://prij-clinic.tailnet-name.ts.net:3001", "Tailscale MagicDNS same-host fallback is accepted in dev");
 }
 
 {

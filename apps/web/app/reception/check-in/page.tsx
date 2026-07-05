@@ -15,6 +15,7 @@ export default function ReceptionCheckInPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [appointmentQuery, setAppointmentQuery] = useState("");
+  const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [priority, setPriority] = useState("routine");
@@ -35,7 +36,12 @@ export default function ReceptionCheckInPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const appointmentMatches = appointments
+  const visiblePatients = showTrainingRecords ? patients : patients.filter((patient) => !isTrainingPatient(patient));
+  const visibleAppointments = showTrainingRecords ? appointments : appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
+  const hiddenTrainingCount =
+    patients.filter(isTrainingPatient).length + appointments.filter((appointment) => isTrainingPatient(appointment.patient)).length;
+
+  const appointmentMatches = visibleAppointments
     .filter((appointment) => !selectedPatient || appointment.patientId === selectedPatient.id)
     .filter((appointment) => `${appointmentLabel(appointment)} ${appointment.status}`.toLowerCase().includes(appointmentQuery.toLowerCase()))
     .slice(0, 8);
@@ -76,10 +82,17 @@ export default function ReceptionCheckInPage() {
       <SafetyAlert />
       <section className="panel compact-panel check-in-wizard">
         <div className="section-heading"><h2>Check in or walk in</h2><span className="badge">{status}</span></div>
+        <div className="toolbar compact-toolbar">
+          <label className="toggle-row">
+            <input checked={showTrainingRecords} onChange={(event) => setShowTrainingRecords(event.target.checked)} type="checkbox" />
+            Show training records
+          </label>
+          {!showTrainingRecords && hiddenTrainingCount > 0 ? <span className="badge compact-safety-badge">Training records hidden</span> : null}
+        </div>
         <div className="wizard-steps">
           <article className="compact-panel">
             <span className="badge">Step 1</span>
-            <PatientPicker patients={patients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { setSelectedPatient(patients.find((patient) => patient.id === id) ?? null); setSelectedAppointment(null); }} required label="Select patient" />
+            <PatientPicker patients={visiblePatients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { setSelectedPatient(patients.find((patient) => patient.id === id) ?? null); setSelectedAppointment(null); }} required label="Select patient" />
           </article>
           <article className="compact-panel">
             <span className="badge">Step 2</span>
@@ -109,4 +122,10 @@ export default function ReceptionCheckInPage() {
 
 function appointmentLabel(appointment: Appointment) {
   return `${new Date(appointment.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${patientLabel(appointment.patient)} - ${appointment.appointmentType ?? "Visit"}`;
+}
+
+function isTrainingPatient(patient?: Patient | null) {
+  const name = patientLabel(patient);
+  const mrn = patient?.medicalRecordNumber ?? "";
+  return /^Demo\b/i.test(name) || /^DEMO[-_]/i.test(mrn) || /Local training/i.test(name);
 }

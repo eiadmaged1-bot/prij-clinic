@@ -11,6 +11,7 @@ type CorsOriginConfig = {
   exactOrigins: Set<string>;
   privateCidrs: PrivateCidrRule[];
   privatePorts: Set<string>;
+  allowTailscaleDevOrigins: boolean;
 };
 
 const defaultDevelopmentOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
@@ -149,6 +150,23 @@ function parseExactOrigins(environment: RuntimeEnvironment) {
   return new Set(values.map((origin) => normalizeOrigin(origin, environment)));
 }
 
+function isTailscaleIpv4Number(value: number) {
+  const first = value >>> 24;
+  const second = (value >>> 16) & 255;
+  return first === 100 && second >= 64 && second <= 127;
+}
+
+function isTailscaleMagicDnsHost(hostname: string) {
+  const normalized = hostname.toLowerCase();
+  if (!normalized.endsWith(".ts.net") || normalized === ".ts.net") {
+    return false;
+  }
+
+  return normalized
+    .split(".")
+    .every((label) => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
+}
+
 function parsePrivateCidrs(environment: RuntimeEnvironment) {
   const values = (process.env.CORS_PRIVATE_CIDRS ?? "")
     .split(",")
@@ -167,16 +185,18 @@ export function createCorsOriginConfig(): CorsOriginConfig {
   const exactOrigins = parseExactOrigins(environment);
   const privateCidrs = parsePrivateCidrs(environment);
   const privatePorts = parsePrivatePorts(process.env.CORS_PRIVATE_PORTS);
+  const allowTailscaleDevOrigins =
+    !isStrictEnvironment(environment) && process.env.CORS_ALLOW_TAILSCALE_DEV !== "false";
 
   if (isStrictEnvironment(environment) && exactOrigins.size === 0) {
     console.warn(`[cors] ${environment} has no configured exact origins; browser CORS is fail-closed.`);
   }
 
   console.log(
-    `[cors] environment=${environment} exactOrigins=${exactOrigins.size} privateCidrs=${privateCidrs.length}`
+    `[cors] environment=${environment} exactOrigins=${exactOrigins.size} privateCidrs=${privateCidrs.length} tailscaleDev=${allowTailscaleDevOrigins}`
   );
 
-  return { environment, exactOrigins, privateCidrs, privatePorts };
+  return { environment, exactOrigins, privateCidrs, privatePorts, allowTailscaleDevOrigins };
 }
 
 export function isCorsOriginAllowed(origin: string | undefined, config: CorsOriginConfig) {
@@ -201,6 +221,15 @@ export function isCorsOriginAllowed(origin: string | undefined, config: CorsOrig
 
   if (isStrictEnvironment(config.environment)) {
     return false;
+  }
+
+  if (
+    config.allowTailscaleDevOrigins &&
+    url.protocol === "http:" &&
+    url.port === "3000" &&
+    (isTailscaleMagicDnsHost(url.hostname) || isTailscaleIpv4Number(ipv4ToNumber(url.hostname) ?? 0))
+  ) {
+    return true;
   }
 
   const ipNumber = ipv4ToNumber(url.hostname);

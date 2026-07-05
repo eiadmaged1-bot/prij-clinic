@@ -1,5 +1,22 @@
 # Prij Clinic
 
+## UI Cleanup + Tailscale Mobile Access + Universal Logout
+
+This sprint keeps Prij Clinic local/private and demo-only while improving compact clinic screens, making logout visible from the top account menu for every signed-in role, and adding tailnet-only mobile development access.
+
+Tailscale local dev:
+
+```powershell
+npm run dev:tailscale
+powershell -ExecutionPolicy Bypass -File scripts/print-tailscale-dev-url.ps1
+```
+
+Open the printed `http://<tailscale-ip>:3000` URL on a phone connected to the same Tailscale account/tailnet. The API is expected at `http://<tailscale-ip>:3001/health`. Do not use Tailscale Funnel or public internet exposure. See `docs/TAILSCALE_MOBILE_ACCESS.md`.
+
+Logout is available from the top-right account menu for Owner, Admin, Doctor, Receptionist, Nurse, and Accountant accounts. The menu shows the display name or login fallback plus a role badge.
+
+Compact UI cleanup reduces repeated demo/safety text, keeps training/demo records behind explicit controls on normal patient/reception flows, avoids raw UUID appointment titles, and keeps sensitive intake optional/collapsed by default.
+
 ## v1.0.0 Pilot Release Candidate
 
 v1.0.0 is the first Pilot Release Candidate package for controlled staging review. It is not a full production release and must not be used with real patient data until legal/privacy, backup/restore, deployment, and role-by-role signoff are complete.

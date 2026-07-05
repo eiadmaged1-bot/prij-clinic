@@ -1,5 +1,12 @@
 # Next Steps
 
+After UI Cleanup + Tailscale Mobile Access + Universal Logout:
+- Run manual phone QA on a device connected to the same Tailscale tailnet using `npm run dev:tailscale` and `scripts/print-tailscale-dev-url.ps1`.
+- Confirm local firewall rules allow private tailnet access to ports `3000` and `3001` only as needed.
+- Verify login/logout manually for Owner, Admin, Doctor, Receptionist, Nurse, and Accountant in a browser session.
+- Continue compact UI cleanup on deeper module-specific screens during normal product work.
+- Keep Tailscale access tailnet-only; do not use Tailscale Funnel or public internet exposure.
+
 After v1.0.0 Pilot Release Candidate, do not add product scope until final release checks and manual role-by-role browser signoff are reviewed.
 
 Required before real clinic use:

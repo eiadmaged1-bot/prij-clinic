@@ -201,20 +201,16 @@ export function MvpPage({
                 {primaryAction[1]}
               </Link>
             ) : null}
-            <span className="badge warning">Demo/local only</span>
-            <span className="badge accent">AI disabled</span>
+            <span className="badge warning compact-safety-badge">Local demo</span>
           </div>
         </div>
-        <p className="muted">
-          Use local training records only. This interface is for workflow review and is not ready for real patient use.
-        </p>
       </section>
 
       <SafetyAlert />
 
-      <section className="content-grid">
+      <section className="content-grid compact-content-grid">
         <div className="panel compact-panel">
-          <div className="section-heading">
+          <div className="section-heading compact-section-heading">
             <div>
               <h2>Records</h2>
               <p className="muted">Status: {status}</p>
@@ -248,7 +244,7 @@ export function MvpPage({
 
       {createEndpoint && createFields.length > 0 ? (
         <section className="panel">
-          <div className="section-heading">
+          <div className="section-heading compact-section-heading">
             <div>
               <h2>Safe local form</h2>
               {createNote ? <p className="muted">{createNote}</p> : null}
@@ -436,37 +432,63 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               ))}
             </div>
-            <div className="user-menu" aria-label="Current user">
-              <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />
-              <div className="user-menu-copy">
-                <strong>{user?.displayName ?? "Not signed in"}</strong>
-                <span>{user ? `${primaryRole(user.roles)} role` : "Login required"}</span>
-              </div>
-              {user ? (
-                <>
-                  {canOpenAdmin ? (
-                    <Link className="button secondary compact" href="/admin">
-                      <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
-                      Owner
-                    </Link>
-                  ) : null}
-                  <button className="button secondary compact" onClick={signOut} type="button">
-                    <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <Link className="button secondary compact" href="/login">
-                  <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
-                  Login
-                </Link>
-              )}
-            </div>
           </div>
+          <AccountMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
         </header>
         {children}
       </div>
     </main>
+  );
+}
+
+function AccountMenu({
+  user,
+  canOpenAdmin,
+  onLogout
+}: {
+  user: ReturnType<typeof useSession>["user"];
+  canOpenAdmin: boolean;
+  onLogout(): Promise<void>;
+}) {
+  const role = user ? primaryRole(user.roles) : "Login required";
+  const displayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
+
+  if (!user) {
+    return (
+      <Link className="button secondary compact topbar-account-login" href="/login">
+        <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
+        Login
+      </Link>
+    );
+  }
+
+  return (
+    <details className="account-menu" aria-label="Current account">
+      <summary>
+        <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />
+        <span className="account-summary-copy">
+          <strong>{displayName}</strong>
+          <span>{role}</span>
+        </span>
+      </summary>
+      <div className="account-menu-panel">
+        <div className="account-menu-profile">
+          <strong>{displayName}</strong>
+          <span className="badge">{role}</span>
+          <span className="muted">{user.loginId || user.email}</span>
+        </div>
+        {canOpenAdmin ? (
+          <Link className="button secondary compact" href="/admin">
+            <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
+            Admin area
+          </Link>
+        ) : null}
+        <button className="button secondary compact account-logout-button" onClick={() => void onLogout()} type="button">
+          <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+          Logout
+        </button>
+      </div>
+    </details>
   );
 }
 
@@ -506,7 +528,7 @@ function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: s
       {rows.slice(0, 12).map((row, index) => (
         <article className="data-row" key={String(row.id ?? index)}>
           <div className="data-row-header">
-            {row.id && row.medicalRecordNumber ? (
+              {row.id && row.medicalRecordNumber ? (
               <Link href={`/patients/${String(row.id)}`}>
                 <strong>{rowLabel(row)}</strong>
               </Link>
@@ -543,7 +565,10 @@ function EmptyState({ children, icon = "files", actionHref, actionLabel }: { chi
 }
 
 function rowLabel(row: Record<string, unknown>) {
-  return String(row.displayName ?? row.invoiceNumber ?? row.title ?? row.medicalRecordNumber ?? row.id ?? "Record");
+  const appointmentTitle = appointmentRowLabel(row);
+  if (appointmentTitle) return appointmentTitle;
+  const label = String(row.displayName ?? row.invoiceNumber ?? row.title ?? row.medicalRecordNumber ?? "Record");
+  return isUuidLike(label) ? "Record" : label;
 }
 
 function labelize(value: string) {
@@ -618,6 +643,24 @@ function formatRecordValue(key: string, value: unknown) {
     if (!Number.isNaN(amount)) return amount.toFixed(2);
   }
   return text.replaceAll("_", " ");
+}
+
+function appointmentRowLabel(row: Record<string, unknown>) {
+  if (!("startAt" in row) && !("appointmentType" in row)) return "";
+  const patient = row.patient && typeof row.patient === "object" ? (row.patient as Record<string, unknown>) : {};
+  const patientName = String(
+    patient.displayName ??
+      [patient.firstName, patient.lastName].filter(Boolean).join(" ") ??
+      row.patientName ??
+      "Patient"
+  ).trim();
+  const time = typeof row.startAt === "string" ? formatRecordValue("startAt", row.startAt) : "Time not set";
+  const visitType = String(row.appointmentType ?? "Clinic visit");
+  return `${patientName || "Patient"} - ${time} - ${visitType}`;
+}
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 const receptionistNav = new Set([

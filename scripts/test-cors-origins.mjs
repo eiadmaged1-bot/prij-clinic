@@ -54,12 +54,19 @@ function assertConfigThrows(env, messagePart) {
 {
   const { cors, config } = withConfig({ APP_ENV: "local", CORS_ORIGINS: "http://100.127.4.46:3000" });
   assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), true, "exact configured Tailscale origin allowed");
-  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.47:3000", config), false, "unconfigured Tailscale origin rejected");
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.47:3000", config), true, "dev Tailscale range origin allowed");
 }
 
 {
   const { cors, config } = withConfig({ APP_ENV: "local", CORS_ORIGINS: "http://localhost:3000" });
-  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), false, "absent Tailscale origin rejected");
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), true, "Tailscale IPv4 origin allowed in local dev");
+  assert.equal(cors.isCorsOriginAllowed("http://prij-clinic.tailnet.ts.net:3000", config), true, "Tailscale MagicDNS origin allowed in local dev");
+  assert.equal(cors.isCorsOriginAllowed("http://prij-clinic.tailnet.ts.net:3002", config), false, "Tailscale MagicDNS wrong web port rejected");
+}
+
+{
+  const { cors, config } = withConfig({ APP_ENV: "local", CORS_ORIGINS: "http://localhost:3000", CORS_ALLOW_TAILSCALE_DEV: "false" });
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), false, "Tailscale dev allowance can be disabled");
 }
 
 for (const cidr of ["192.168.1.0/24", "10.0.0.0/8", "172.16.0.0/12"]) {
@@ -93,6 +100,7 @@ assertConfigThrows({ APP_ENV: "production", CORS_ORIGINS: "http://192.168.1.50:3
   assert.equal(cors.isCorsOriginAllowed("https://clinic.example.test", config), true, "production exact origin allowed");
   assert.equal(cors.isCorsOriginAllowed("https://evil.example.test", config), false, "unexpected public origin denied");
   assert.equal(cors.isCorsOriginAllowed("http://192.168.1.55:3000", config), false, "production dynamic LAN denied");
+  assert.equal(cors.isCorsOriginAllowed("http://100.127.4.46:3000", config), false, "production dynamic Tailscale denied");
 }
 
 {

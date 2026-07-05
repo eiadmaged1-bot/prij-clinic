@@ -94,6 +94,17 @@ export function isMdnsLocalHost(hostname: string) {
     .every((label) => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
 }
 
+export function isTailscaleMagicDnsHost(hostname: string) {
+  const normalized = hostname.toLowerCase();
+  if (!normalized.endsWith(".ts.net") || normalized === ".ts.net") {
+    return false;
+  }
+
+  return normalized
+    .split(".")
+    .every((label) => label.length > 0 && label.length <= 63 && /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label));
+}
+
 export function isSafeDevApiOrigin(origin: string) {
   try {
     const url = new URL(origin);
@@ -111,7 +122,13 @@ export function isSafeDevApiOrigin(origin: string) {
       return false;
     }
 
-    return isLocalhost(hostname) || isPrivateIpv4(hostname) || isMdnsLocalHost(hostname) || isTailscaleOrCgnatIpv4(hostname);
+    return (
+      isLocalhost(hostname) ||
+      isPrivateIpv4(hostname) ||
+      isMdnsLocalHost(hostname) ||
+      isTailscaleOrCgnatIpv4(hostname) ||
+      isTailscaleMagicDnsHost(hostname)
+    );
   } catch {
     return false;
   }
@@ -154,7 +171,12 @@ export function resolveConfiguredLanApiOrigin() {
   if (
     !lanHost ||
     lanHost.includes("*") ||
-    (!isPrivateIpv4(lanHost) && !isMdnsLocalHost(lanHost.toLowerCase()) && !isTailscaleOrCgnatIpv4(lanHost))
+    (
+      !isPrivateIpv4(lanHost) &&
+      !isMdnsLocalHost(lanHost.toLowerCase()) &&
+      !isTailscaleOrCgnatIpv4(lanHost) &&
+      !isTailscaleMagicDnsHost(lanHost.toLowerCase())
+    )
   ) {
     return undefined;
   }
@@ -200,7 +222,7 @@ export function getApiBaseUrl() {
   if (
     isDevelopmentRuntime() &&
     isAllowedLanFallback() &&
-    (isPrivateIpv4(hostname) || isMdnsLocalHost(hostname))
+    (isPrivateIpv4(hostname) || isMdnsLocalHost(hostname) || isTailscaleOrCgnatIpv4(hostname) || isTailscaleMagicDnsHost(hostname))
   ) {
     return `http://${hostname}:${defaultLanApiPort}`;
   }

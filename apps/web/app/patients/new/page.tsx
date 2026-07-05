@@ -193,8 +193,8 @@ export default function NewPatientPage() {
             Last name
             <input onChange={(event) => update("lastName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.lastName} />
           </label>
-          <fieldset className="form-fieldset wide compact-panel clinical-privacy-section">
-            <legend>Sensitive clinical details</legend>
+          <details className="form-fieldset wide compact-panel clinical-privacy-section">
+            <summary>Sensitive details</summary>
             <p className="muted">Optional and respectful. Reception can leave this as not asked.</p>
             <label>
               Sexual activity status
@@ -205,7 +205,7 @@ export default function NewPatientPage() {
                 <option value="prefer_not_to_say">Prefer not to say</option>
               </select>
             </label>
-          </fieldset>
+          </details>
           <label>
             Date of birth
             <input onChange={(event) => update("dateOfBirth", event.target.value)} type="date" value={form.dateOfBirth} />

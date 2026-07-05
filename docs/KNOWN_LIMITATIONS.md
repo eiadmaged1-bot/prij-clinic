@@ -1,5 +1,14 @@
 # Known Limitations
 
+UI Cleanup + Tailscale Mobile Access limitations:
+
+- Tailscale support is local development only and requires the phone to be connected to the same tailnet.
+- No public hosting, Tailscale Funnel, HTTPS production deployment, mobile app package, or production readiness claim is added.
+- MagicDNS depends on the user’s Tailscale DNS configuration and device resolution.
+- Local firewall rules may still need to allow inbound ports `3000` and `3001`.
+- UI cleanup is targeted to the current noisy screens; deeper module pages still need manual role-by-role browser QA.
+- Training/demo filtering is a UI declutter control, not a production data separation policy.
+
 v1.0.0 Pilot Release Candidate limitations:
 
 - v1.0.0 is a Pilot Release Candidate, not a full production release.
