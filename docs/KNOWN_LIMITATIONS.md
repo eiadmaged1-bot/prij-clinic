@@ -11,3 +11,7 @@ Libya medication rows remain hidden/import-pending until an official source is u
 Medication interaction checks are assistive. Unknown means no verified source record is loaded, not that a pair is safe.
 
 The Next.js development issue overlay can appear only on the dev server. Use the production-like build/start path in `docs/LOCAL_TAILSCALE_QA.md` for visual mobile QA screenshots.
+
+Public tunnel workflows are QA/testing only. Do not use real patient data through ngrok, Cloudflare Quick Tunnel, or any public URL until deployment, privacy, backup, access-control, and security signoff is complete.
+
+Cloudflare Quick Tunnel URLs are temporary random `trycloudflare.com` subdomains. A stable public route requires an owned domain added to Cloudflare or an equivalent deployment setup.
