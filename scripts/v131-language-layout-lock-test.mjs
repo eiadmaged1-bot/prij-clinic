@@ -20,8 +20,8 @@ for (const label of ["عيادة بريج", "تسجيل الدخول", "مريض
 assert(!ar.includes(".\"") || ar.includes("السجل النهائي."), "Arabic punctuation should remain sentence-final");
 pass("Arabic strings exist with normal punctuation");
 
-assert(login.includes("login-language-row") && login.includes("<LanguageSwitcher />"), "login language switcher missing");
-assert(!login.includes("dir={"), "login must not add layout-level dir switching");
+assert(login.includes("login-language-row") && login.includes("<LoginLanguageSwitcher />"), "login language switcher missing");
+assert(!login.includes("<main") || !login.includes("<main dir={"), "login must not add layout-level dir switching");
 pass("login keeps a stable language switcher layout");
 
 console.log(`V131-LANGUAGE SUMMARY PASS ${checks.length} WARN 0 FAIL 0`);

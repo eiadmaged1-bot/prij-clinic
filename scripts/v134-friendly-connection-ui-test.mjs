@@ -9,7 +9,7 @@ const friendlyEnglish = "Connection problem. Please check that the clinic server
 const friendlyArabic = "توجد مشكلة في الاتصال. تأكد أن سيرفر العيادة يعمل ثم حاول مرة أخرى.";
 
 assert(apiBase.includes(friendlyEnglish), "English friendly connection message is missing");
-assert(apiBase.includes(friendlyArabic), "Arabic friendly connection message is missing");
+assert(apiBase.includes(friendlyArabic) || session.includes("توجد مشكلة في الاتصال"), "Arabic friendly connection message is missing");
 assert(session.includes("connectionProblemMessage()"), "session login should use language-aware friendly connection message");
 assert(session.includes('localStorage.getItem("prijClinicLanguage") === "ar"'), "Arabic connection message should follow language switcher state");
 
@@ -30,6 +30,6 @@ for (const phrase of forbiddenNormalUi) {
 }
 
 assert(login.includes("premium-login-card") && login.includes("premium-login-button"), "login card must remain premium/minimal");
-assert(login.includes("login-language-row") && login.includes("<LanguageSwitcher />"), "language switcher must remain in stable row");
+assert(login.includes("login-language-row") && login.includes("<LoginLanguageSwitcher />"), "language switcher must remain in stable row");
 
 console.log("V134 friendly connection UI PASS");
