@@ -19,10 +19,6 @@ function isDevelopmentRuntime() {
   return process.env.NODE_ENV !== "production" && appEnv !== "staging" && appEnv !== "production";
 }
 
-function isAllowedLanFallback() {
-  return process.env.NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK === "true";
-}
-
 export function isLocalhost(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
@@ -219,12 +215,15 @@ export function getApiBaseUrl() {
     return localApiBaseUrl;
   }
 
-  if (
-    isDevelopmentRuntime() &&
-    isAllowedLanFallback() &&
-    (isPrivateIpv4(hostname) || isMdnsLocalHost(hostname) || isTailscaleOrCgnatIpv4(hostname) || isTailscaleMagicDnsHost(hostname))
-  ) {
-    return `http://${hostname}:${defaultLanApiPort}`;
+  if (isDevelopmentRuntime() && hostname && hostname !== "0.0.0.0") {
+    if (
+      isPrivateIpv4(hostname) ||
+      isMdnsLocalHost(hostname) ||
+      isTailscaleOrCgnatIpv4(hostname) ||
+      isTailscaleMagicDnsHost(hostname)
+    ) {
+      return `http://${hostname}:${defaultLanApiPort}`;
+    }
   }
 
   throw new Error("LAN API fallback is disabled. Configure NEXT_PUBLIC_LAN_API_ORIGIN for this device.");

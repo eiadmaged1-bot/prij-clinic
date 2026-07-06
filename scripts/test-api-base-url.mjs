@@ -74,27 +74,27 @@ function assertThrowsMessage(fn, messagePart) {
 
 {
   const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
+    { NODE_ENV: "development" },
     { hostname: "192.168.1.50", protocol: "http:" }
   );
-  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "private IPv4 fallback is accepted in dev");
+  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "private IPv4 fallback is accepted in dev without manual LAN env");
 }
 
 {
   const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
+    { NODE_ENV: "development" },
     { hostname: "100.127.4.46", protocol: "http:" }
   );
-  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "Tailscale IPv4 same-host fallback is accepted in dev");
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "Tailscale IPv4 same-host fallback is accepted in dev without manual LAN env");
 }
 
 {
   const { getApiBaseUrl, isTailscaleMagicDnsHost } = loadApiBaseUrl(
-    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
+    { NODE_ENV: "development" },
     { hostname: "prij-clinic.tailnet-name.ts.net", protocol: "http:" }
   );
   assert.equal(isTailscaleMagicDnsHost("prij-clinic.tailnet-name.ts.net"), true, "Tailscale MagicDNS host is recognized");
-  assert.equal(getApiBaseUrl(), "http://prij-clinic.tailnet-name.ts.net:3001", "Tailscale MagicDNS same-host fallback is accepted in dev");
+  assert.equal(getApiBaseUrl(), "http://prij-clinic.tailnet-name.ts.net:3001", "Tailscale MagicDNS same-host fallback is accepted in dev without manual LAN env");
 }
 
 {
@@ -151,7 +151,7 @@ function assertThrowsMessage(fn, messagePart) {
     { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "false" },
     { hostname: "192.168.1.50", protocol: "http:" }
   );
-  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
+  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "same-host dev LAN fallback is not disabled by missing manual env");
 }
 
 console.log("PASS api-base-url LAN resolution hardening tests");
