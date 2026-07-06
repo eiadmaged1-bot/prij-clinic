@@ -5,6 +5,10 @@ import { apiUnreachableMessage, sameOriginApiProxyPath } from "@/lib/api-base-ur
 
 const tokenKey = "prijClinicToken";
 const sessionMessageKey = "prijClinicSessionMessage";
+const authRequestTimeoutMs = 8_000;
+const authLoginPath = `${sameOriginApiProxyPath}/auth/login`;
+const authMePath = `${sameOriginApiProxyPath}/auth/me`;
+const authLogoutPath = `${sameOriginApiProxyPath}/auth/logout`;
 
 function connectionProblemMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
@@ -24,6 +28,26 @@ function invalidLoginMessage() {
 
 function sessionStartMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar" ? "تعذر بدء الجلسة." : "Could not start your session.";
+}
+
+function authRequestFailed(response: Response) {
+  return response.status >= 500;
+}
+
+async function fetchAuth(url: typeof authLoginPath | typeof authMePath | typeof authLogoutPath, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), authRequestTimeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+  } catch {
+    return null;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 export type SessionUser = {
@@ -71,6 +95,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (nextMessage) {
       sessionStorage.setItem(sessionMessageKey, nextMessage);
       setMessage(nextMessage);
+    } else {
+      sessionStorage.removeItem(sessionMessageKey);
+      setMessage("");
     }
     setToken(null);
     setUser(null);
@@ -84,25 +111,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(tokenKey, storedToken);
     }
 
-    const response = await fetch(`${sameOriginApiProxyPath}/auth/me`, {
+    const response = await fetchAuth(authMePath, {
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
-    }).catch(() => null);
+    });
 
-    if (!response || response.status === 401) {
-      clearSession(response ? sessionEndedMessage() : undefined);
+    if (!response || authRequestFailed(response)) {
+      setToken(null);
+      setUser(null);
+      setStatus("unauthenticated");
+      setMessage(connectionProblemMessage());
+      return;
+    }
+
+    if (response.status === 401) {
+      clearSession(storedToken ? sessionEndedMessage() : undefined);
       return;
     }
 
     if (!response.ok) {
-      setStatus("unauthenticated");
-      setUser(null);
+      clearSession(storedToken ? sessionEndedMessage() : undefined);
       return;
     }
 
-    const data = (await response.json()) as { user?: SessionUser };
-    if (!data.user) {
-      clearSession(sessionEndedMessage());
+    const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
+    if (!data?.user) {
+      setToken(null);
+      setUser(null);
+      setStatus("unauthenticated");
+      setMessage(connectionProblemMessage());
       return;
     }
 
@@ -116,12 +153,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const response = await fetch(`${sameOriginApiProxyPath}/auth/login`, {
+    const response = await fetchAuth(authLoginPath, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ identifier: input.identifier, password: input.password })
-    }).catch(() => null);
+    });
 
     if (!response) {
       throw new Error(connectionProblemMessage());
@@ -131,12 +168,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw new Error(invalidLoginMessage());
     }
 
-    if (!response.ok) {
+    if (authRequestFailed(response)) {
       throw new Error(connectionProblemMessage());
     }
 
-    const data = (await response.json()) as { token?: string; user?: SessionUser };
-    if (!data.token || !data.user) {
+    if (!response.ok) {
+      throw new Error(invalidLoginMessage());
+    }
+
+    const data = (await response.json().catch(() => null)) as { token?: string; user?: SessionUser } | null;
+    if (!data?.token || !data.user) {
       throw new Error(sessionStartMessage());
     }
 
@@ -151,11 +192,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const storedToken = token ?? localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
-    await fetch(`${sameOriginApiProxyPath}/auth/logout`, {
+    await fetchAuth(authLogoutPath, {
       method: "POST",
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
-    }).catch(() => undefined);
+    });
     clearSession();
   }, [clearSession, token]);
 
