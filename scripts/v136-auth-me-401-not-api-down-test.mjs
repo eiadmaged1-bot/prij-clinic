@@ -15,7 +15,7 @@ const networkFailureIndex = session.indexOf("if (!response || authRequestFailed(
 assert(networkFailureIndex >= 0 && networkFailureIndex < unauthorizedIndex, "network/proxy/5xx failures must be handled before auth/me 401");
 
 const networkFailureBlock = session.slice(networkFailureIndex, unauthorizedIndex);
-assert(networkFailureBlock.includes("setMessage(connectionProblemMessage())"), "network/proxy/5xx failures must show connection problem");
+assert(networkFailureBlock.includes('setMessage(storedToken ? connectionProblemMessage() : "")'), "network/proxy/5xx failures must show connection problem only for an existing stored session");
 assert(networkFailureBlock.includes('setStatus("unauthenticated")'), "network/proxy/5xx failures must leave login reachable");
 
 console.log("V136 auth/me 401 not API down PASS");

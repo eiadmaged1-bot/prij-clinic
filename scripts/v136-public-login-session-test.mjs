@@ -11,7 +11,7 @@ assert(session.includes('const authLoginPath = `${sameOriginApiProxyPath}/auth/l
 assert(session.includes('const authLogoutPath = `${sameOriginApiProxyPath}/auth/logout`'), "logout must use same-origin auth/logout");
 assert(session.includes("authRequestTimeoutMs"), "auth reachability must include a timeout path");
 assert(session.includes("authRequestFailed(response)") && session.includes("response.status >= 500"), "5xx auth/proxy failures must be classified as reachability failures");
-assert(session.includes("setMessage(connectionProblemMessage())"), "true auth reachability failures must show the friendly connection message");
+assert(session.includes('setMessage(storedToken ? connectionProblemMessage() : "")'), "true auth reachability failures must show the friendly connection message only for an existing stored session");
 assert(session.includes("clearSession(storedToken ? sessionEndedMessage() : undefined)"), "auth/me 401 must only show session-ended when a stored session existed");
 assert(!session.includes("clearSession(response ? sessionEndedMessage() : undefined)"), "auth/me 401 without a stored token must not be treated as an ended session");
 assert(login.includes("session.status === \"unauthenticated\"") || login.includes("premium-login-card"), "normal unauthenticated login form must render");

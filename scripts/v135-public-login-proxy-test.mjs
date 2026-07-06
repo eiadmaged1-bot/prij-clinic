@@ -23,6 +23,7 @@ assert(!/getApiBaseUrl\(\)\/auth\/(login|me|logout)/.test(session), "login/sessi
 assert(!/localhost:3001\/auth\/(login|me|logout)/.test(session), "login/session browser calls must not target localhost:3001");
 assert(!/:3001\/auth\/(login|me|logout)/.test(session), "login/session browser calls must not target host:3001");
 assert(apiBase.includes('sameOriginApiProxyPath = "/api/backend"'), "same-origin proxy path constant must remain available");
-assert(nextConfig.includes('source: "/api/backend/:path*"'), "rewrite fallback for /api/backend must remain documented in Next config");
+assert(!nextConfig.includes('source: "/api/backend/:path*"'), "Next rewrite must not bypass route-handler auth proxy");
+assert(route.includes('normalized !== "origin"'), "route-handler proxy must strip public browser Origin before internal API auth");
 
 console.log("V135 public login proxy PASS");
