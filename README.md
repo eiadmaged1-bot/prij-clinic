@@ -1253,3 +1253,10 @@ Arabic mode is RTL. `كشف`, `إعادة`, `استشارة`, and `مستعجل`
 Guideline Library uses indexed local/allowed sources only. No paywall bypass, copyrighted guideline PDFs/text, or external AI is enabled by default. Evidence answers require citations and doctor review.
 
 Do not use real patient data until signoff.
+# v1.2.1 Responsive Reception Cleanup Lock
+
+v1.2.1 cleans the app and removes visible demo/test clutter from normal workflow UI. The New Patient form now uses Full name and Year of birth, removes referral/source from patient creation, and keeps sensitive status as a bottom `Not sexually active` checkbox only.
+
+Receptionist home is a single-purpose workflow with waiting count, with-doctor, next patient, waiting line, New Patient, Returning Patient, and QR/manual return flow. `مستعجل` is its own visit type and automatically becomes next after the current in-room patient. Doctors can preview waiting patients without starting the visit.
+
+Responsive support covers mobile, tablet, laptop, desktop, and Arabic RTL. Real patient data remains blocked until final signoff. External AI remains disabled by default, and the system must not provide autonomous diagnosis, prescribing, dosing, or treatment ranking.

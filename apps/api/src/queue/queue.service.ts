@@ -65,17 +65,31 @@ export class QueueService {
       metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10), visitType: dto.visitType }
     });
 
+    if (dto.visitType === "urgent_kashf") {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "queue.urgent_priority_assigned",
+        resourceType: "queue_ticket",
+        resourceId: ticket.id,
+        branchId,
+        severity: "medium",
+        metadataJson: { patientId: dto.patientId, queueNumber: ticket.queueNumber, visitType: dto.visitType }
+      });
+    }
+
     return ticket;
   }
 
-  today(user: AuthUser) {
+  async today(user: AuthUser) {
     const queueDate = toUtcDateOnly();
 
-    return this.prisma.queueTicket.findMany({
+    const tickets = await this.prisma.queueTicket.findMany({
       where: { queueDate, ...branchScope(user) },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
+
+    return tickets.sort((left, right) => queueSortRank(left) - queueSortRank(right) || left.queueNumber - right.queueNumber);
   }
 
   async call(id: string, user: AuthUser) {
@@ -209,4 +223,13 @@ export class QueueService {
 
 function isUniqueViolation(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function queueSortRank(ticket: { status: string; visitType: string }) {
+  if (ticket.status === "called") return 0;
+  if (ticket.status === "waiting" && ticket.visitType === "urgent_kashf") return 1;
+  if (ticket.status === "waiting") return 2;
+  if (ticket.status === "completed") return 3;
+  if (ticket.status === "cancelled") return 4;
+  return 5;
 }

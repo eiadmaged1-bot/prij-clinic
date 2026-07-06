@@ -1,6 +1,6 @@
 const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
-const EMAIL = process.env.DEMO_TEST_EMAIL || process.env.DEMO_OWNER_EMAIL || "demo.owner@prij.local";
-const PASSWORD = process.env.DEMO_TEST_PASSWORD || process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
+const EMAIL = process.env.DEMO_ADMIN_LOGIN || process.env.DEMO_TEST_EMAIL || process.env.DEMO_OWNER_EMAIL || "eyad";
+const PASSWORD = process.env.DEMO_ADMIN_PASSWORD || process.env.DEMO_TEST_PASSWORD || process.env.DEMO_OWNER_PASSWORD || "eyad";
 const TIMEOUT_MS = Number(process.env.API_WAIT_TIMEOUT_MS || 90_000);
 
 const results = [];

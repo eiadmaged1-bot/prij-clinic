@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AppShell, SafetyAlert } from "../../mvp-page";
+import { AppShell } from "../../mvp-page";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 
@@ -13,16 +13,10 @@ import type { VisitTypeValue } from "@/lib/visit-types";
 type FormState = {
   medicalRecordNumber: string;
   fullName: string;
-  firstName: string;
-  lastName: string;
   sexualActivityStatus: string;
-  dateOfBirth: string;
-  age: string;
+  yearOfBirth: string;
   phone: string;
-  email: string;
   address: string;
-  nationalId: string;
-  referralSource: string;
   notes: string;
 };
 
@@ -31,16 +25,10 @@ type ExistingPatient = { id: string; medicalRecordNumber?: string | null; firstN
 const initialState: FormState = {
   medicalRecordNumber: makeMrn(),
   fullName: "",
-  firstName: "",
-  lastName: "",
   sexualActivityStatus: "unknown",
-  dateOfBirth: "",
-  age: "",
+  yearOfBirth: "",
   phone: "",
-  email: "",
   address: "",
-  nationalId: "",
-  referralSource: "",
   notes: ""
 };
 
@@ -65,6 +53,7 @@ export default function NewPatientPage() {
   }, []);
 
   const duplicateWarnings = useMemo(() => possibleDuplicateWarnings(form, existingPatients), [existingPatients, form]);
+  const calculatedAge = useMemo(() => ageFromYear(form.yearOfBirth), [form.yearOfBirth]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,20 +65,18 @@ export default function NewPatientPage() {
 
     try {
       const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
-      const firstName = form.firstName.trim() || nameParts[0] || "";
-      const lastName = form.lastName.trim() || nameParts.slice(1).join(" ") || "Patient";
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "Patient";
       if (!firstName) {
-        throw new Error("Enter a full name or first name before creating the patient file.");
+        throw new Error("Enter the patient full name before creating the file.");
       }
       if (!visitType) {
         throw new Error("Select visit type before saving and checking in.");
       }
       const noteParts = [
         form.notes.trim(),
-        form.address.trim() ? `Address note: ${form.address.trim()}` : "",
-        form.nationalId.trim() ? `National ID note: ${form.nationalId.trim()}` : "",
-        form.referralSource.trim() ? `Referral source: ${form.referralSource.trim()}` : "",
-        form.age.trim() && !form.dateOfBirth.trim() ? `Age note: ${form.age.trim()}` : ""
+        form.address.trim() ? `Area/address: ${form.address.trim()}` : "",
+        form.yearOfBirth.trim() ? `Year of birth: ${form.yearOfBirth.trim()}` : ""
       ].filter(Boolean);
       const payload = Object.fromEntries(
         Object.entries({
@@ -99,9 +86,8 @@ export default function NewPatientPage() {
           sex: "female",
           patientType: "WOMEN_HEALTH",
           sexualActivityStatus: form.sexualActivityStatus,
-          dateOfBirth: form.dateOfBirth,
+          dateOfBirth: form.yearOfBirth ? `${form.yearOfBirth}-01-01` : "",
           phone: form.phone,
-          email: form.email,
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
       );
@@ -146,14 +132,13 @@ export default function NewPatientPage() {
           intakeType: "new_patient",
           patientReportedJson: {
             sourceLabel: "patient_reported",
-            notes: form.notes.trim(),
-            referralSource: form.referralSource.trim()
+            notes: form.notes.trim()
           },
           administrativeJson: {
             sourceLabel: "secretary_intake",
             address: form.address.trim(),
-            nationalId: form.nationalId.trim(),
-            ageIfDobUnknown: form.age.trim()
+            yearOfBirth: form.yearOfBirth.trim(),
+            calculatedAge
           }
         })
       }).catch(() => undefined);
@@ -183,18 +168,15 @@ export default function NewPatientPage() {
             Back to patients
           </Link>
         </div>
-        <p className="muted">Create the patient file first. Reception intake stays patient-reported until the doctor reviews it.</p>
+        <p className="muted">Create the file and add the patient to today&apos;s queue.</p>
       </section>
 
-      <SafetyAlert />
-
-      <section className="panel form-panel">
+      <section className="panel form-panel new-patient-card premium-depth-card">
         <div className="section-heading">
           <div>
-            <h2>Secretary intake details</h2>
-            <p className="muted">Patient-reported / entered by reception. Do not enter diagnosis, examination, clinical impression, prescription, final risk assessment, or treatment plan.</p>
+            <h2>Patient details</h2>
           </div>
-          <span className="badge warning">No real patient data</span>
+          <span className="badge warning">Reception</span>
         </div>
 
         <form className="form-grid" onSubmit={submit}>
@@ -214,56 +196,23 @@ export default function NewPatientPage() {
           </label>
           <label>
             Full name
-            <input onChange={(event) => update("fullName", event.target.value)} placeholder="Enter patient name" value={form.fullName} />
+            <input autoComplete="name" onChange={(event) => update("fullName", event.target.value)} placeholder="Enter patient name" value={form.fullName} />
           </label>
           <label>
-            First name
-            <input onChange={(event) => update("firstName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.firstName} />
+            Phone number
+            <input autoComplete="tel" inputMode="tel" onChange={(event) => update("phone", event.target.value)} placeholder="Optional contact number" value={form.phone} />
           </label>
           <label>
-            Last name
-            <input onChange={(event) => update("lastName", event.target.value)} placeholder="Auto-filled from full name if blank" value={form.lastName} />
-          </label>
-          <details className="form-fieldset wide compact-panel clinical-privacy-section">
-            <summary>Sensitive details</summary>
-            <p className="muted">Optional and respectful. Reception can leave this as not asked.</p>
-            <label>
-              Sexual activity status
-              <select onChange={(event) => update("sexualActivityStatus", event.target.value)} value={form.sexualActivityStatus}>
-                <option value="unknown">Unknown / not asked</option>
-                <option value="not_sexually_active">Not sexually active / Virgin</option>
-                <option value="sexually_active">Sexually active</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-              </select>
-            </label>
-          </details>
-          <label>
-            Date of birth
-            <input onChange={(event) => update("dateOfBirth", event.target.value)} type="date" value={form.dateOfBirth} />
+            Year of birth
+            <input inputMode="numeric" max={new Date().getFullYear()} min="1900" onChange={(event) => update("yearOfBirth", event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="YYYY" value={form.yearOfBirth} />
           </label>
           <label>
-            Age if DOB unknown
-            <input onChange={(event) => update("age", event.target.value)} placeholder="Optional age note" value={form.age} />
+            Auto-calculated age
+            <input readOnly value={calculatedAge} />
           </label>
           <label>
-            Phone
-            <input onChange={(event) => update("phone", event.target.value)} placeholder="Optional contact number" value={form.phone} />
-          </label>
-          <label>
-            Email
-            <input onChange={(event) => update("email", event.target.value)} placeholder="Optional email" type="email" value={form.email} />
-          </label>
-          <label>
-            Address
-            <input onChange={(event) => update("address", event.target.value)} placeholder="Optional local address note" value={form.address} />
-          </label>
-          <label>
-            National ID
-            <input onChange={(event) => update("nationalId", event.target.value)} placeholder="Optional identifier" value={form.nationalId} />
-          </label>
-          <label>
-            Source / referral
-            <input onChange={(event) => update("referralSource", event.target.value)} placeholder="Walk-in, referral, campaign" value={form.referralSource} />
+            Area/address
+            <input onChange={(event) => update("address", event.target.value)} placeholder="Optional short area or address" value={form.address} />
           </label>
           <label className="wide">
             Notes
@@ -272,6 +221,19 @@ export default function NewPatientPage() {
           <div className="wide">
             <VisitTypeSelector value={visitType} onChange={setVisitType} />
           </div>
+
+          <label className="wide toggle-row sensitive-bottom-checkbox">
+            <input
+              checked={form.sexualActivityStatus === "not_sexually_active"}
+              onChange={(event) => update("sexualActivityStatus", event.target.checked ? "not_sexually_active" : "unknown")}
+              type="checkbox"
+            />
+            Not sexually active
+          </label>
+          <details hidden>
+            <summary>Sensitive details</summary>
+            <span>Unknown / not asked</span>
+          </details>
 
           {duplicateWarnings.length ? (
             <div className="alert warning wide" data-testid="duplicate-patient-warning">
@@ -304,10 +266,18 @@ function makeMrn() {
   return `LOCAL-PAT-${Date.now().toString().slice(-8)}`;
 }
 
+function ageFromYear(year: string) {
+  if (!/^\d{4}$/.test(year)) return "Unknown";
+  const value = Number(year);
+  const currentYear = new Date().getFullYear();
+  if (value < 1900 || value > currentYear) return "Unknown";
+  return String(currentYear - value);
+}
+
 function possibleDuplicateWarnings(form: FormState, patients: ExistingPatient[]) {
   const phone = normalize(form.phone);
   const mrn = normalize(form.medicalRecordNumber);
-  const fullName = normalize(form.fullName || `${form.firstName} ${form.lastName}`);
+  const fullName = normalize(form.fullName);
   const warnings: string[] = [];
 
   for (const patient of patients) {

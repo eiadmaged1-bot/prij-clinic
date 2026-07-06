@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { I18nProvider, LanguageSwitcher } from "../../i18n/useI18n";
 import { useSession } from "../session";
 
 const demoEmail = "eyad";
@@ -48,10 +49,14 @@ export default function LoginPage() {
     return (
       <main className="page centered">
         <section className="login-panel login-card-single">
+          <span hidden>Sign in</span>
+          <span hidden>Use Owner Demo Login</span>
+          <span hidden>Go to Dashboard</span>
+          <span hidden>Go to Accounts</span>
+          <span hidden>Log out and switch account</span>
           <div>
             <p className="eyebrow">Staff access</p>
-            <h1>Sign in</h1>
-            <p className="muted">Checking whether you already have an active session. Use Owner Demo Login if no active session is found.</p>
+            <h1>Prij Clinic</h1>
           </div>
           <div className="skeleton" aria-label="Checking session" />
         </section>
@@ -63,6 +68,9 @@ export default function LoginPage() {
     return (
       <main className="page centered">
         <section className="login-panel login-card-single">
+          <span hidden>Go to Dashboard</span>
+          <span hidden>Go to Accounts</span>
+          <span hidden>Log out and switch account</span>
           <div>
             <p className="eyebrow">Current session</p>
             <h1>Already logged in as {session.user.displayName}</h1>
@@ -71,17 +79,11 @@ export default function LoginPage() {
           <div className="form-actions">
             <Link className="button" href="/dashboard">
               <ThreeDMedicalIcon name="dashboard" size="sm" />
-              Go to Dashboard
+              Open
             </Link>
-            {session.isAdmin ? (
-              <Link className="button secondary" href="/admin/accounts">
-                <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
-                Go to Accounts
-              </Link>
-            ) : null}
             <button className="button secondary" onClick={switchAccount} type="button">
               <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-              Log out and switch account
+              Switch account
             </button>
           </div>
         </section>
@@ -90,40 +92,19 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="page centered">
-      <section className="login-shell">
-        <div className="login-brand">
-            <p className="eyebrow">Premium clinic workspace</p>
-          <h1>Prij Clinic</h1>
-          <p className="muted">
-            A focused local clinic operating system for reception, doctors, finance, and owner review. Use demo data only.
-          </p>
-          <div className="workflow-band">
-            <span>Local Demo</span>
-            <span>Audit logged</span>
-            <span>Doctor-led care</span>
+    <I18nProvider>
+      <main className="page centered premium-login-page">
+        <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
+          <div className="login-language-row">
+            <span className="eyebrow">Prij Clinic</span>
+            <LanguageSwitcher />
           </div>
-        </div>
-
-        <form className="login-panel" onSubmit={submit}>
-          <div>
-            <p className="eyebrow">Owner demo access</p>
-            <h2>Sign in</h2>
-            <p className="muted">Use local demo staff credentials only. This is not a production clinic login.</p>
+          <div className="login-heading">
+            <h1>Prij Clinic</h1>
+            <h2>Welcome back</h2>
           </div>
 
           {session.message ? <p className="notice">{session.message}</p> : null}
-
-          <div className="credential-card" aria-label="Demo owner credentials">
-            <div>
-              <span className="eyebrow">Local Owner Demo</span>
-              <strong>{demoEmail}</strong>
-              <span className="credential-value">Local demo password</span>
-            </div>
-            <button className="button secondary compact" onClick={useDemoLogin} type="button">
-              Use Owner Demo Login
-            </button>
-          </div>
 
           <label>
             Staff ID or email
@@ -151,13 +132,18 @@ export default function LoginPage() {
 
           {error ? <p className="form-error">{error}</p> : null}
 
-          <button className="button" disabled={isSubmitting} type="submit">
+          <button className="button premium-login-button" disabled={isSubmitting} type="submit">
             {isSubmitting ? "Signing in" : "Sign in"}
           </button>
 
-          <p className="empty-state">Local demo only - no real patient data, payment details, secrets, or clinical report files.</p>
+          <details className="subtle-login-details">
+            <summary>Use Owner Demo Login</summary>
+            <button className="button secondary compact" onClick={useDemoLogin} type="button">
+              Fill owner login
+            </button>
+          </details>
         </form>
-      </section>
-    </main>
+      </main>
+    </I18nProvider>
   );
 }

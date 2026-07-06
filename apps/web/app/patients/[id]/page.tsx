@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { SafeAiAssistantPanel } from "../../../components/ai-assistant/SafeAiAssistantPanel";
@@ -174,7 +174,9 @@ export default function PatientFilePage() {
   void CalculatorsPanel;
   void PrintPacketPanel;
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const patientId = params.id;
+  const isPreviewMode = searchParams.get("preview") === "queue" || searchParams.get("preview") === "history";
   const [patient, setPatient] = useState<Patient | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
@@ -350,6 +352,19 @@ export default function PatientFilePage() {
           </button>
         </div>
       </section>
+
+      {isPreviewMode ? (
+        <section className="alert preview-mode-banner" data-testid="doctor-queue-preview-mode">
+          <div>
+            <strong>Preview mode — visit not started</strong>
+            <p className="muted" dir="rtl">وضع المعاينة — الزيارة لم تبدأ</p>
+          </div>
+          <Link className="button compact" href={`/doctor/visit?patientId=${patientId}`}>
+            <ThreeDMedicalIcon name="encounter" size="sm" />
+            Start Visit
+          </Link>
+        </section>
+      ) : null}
 
       <SafetyAlert />
 

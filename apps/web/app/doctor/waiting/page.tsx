@@ -10,7 +10,7 @@ export default function DoctorWaitingPage() {
         mode="doctor"
         eyebrow="Doctor"
         title="Doctor Waiting List"
-        description="Patients checked in for the doctor are shown with queue status, visit type badge, counts for كشف / إعادة / استشارة / مستعجل, intake readiness, and requested investigation follow-up hints."
+        description="Patients checked in for the doctor are shown with queue status, visit type badge, counts for كشف / إعادة / استشارة / مستعجل, preview actions, and explicit Start Visit controls."
       />
     </>
   );

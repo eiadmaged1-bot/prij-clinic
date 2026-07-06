@@ -1,13 +1,26 @@
+import crypto from "node:crypto";
+import { promisify } from "node:util";
+import { PrismaClient } from "@prisma/client";
+
 export const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
 export const DEMO_PASSWORD = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
+const scrypt = promisify(crypto.scrypt);
+const prisma = new PrismaClient();
 
 export const demoUsers = {
-  owner: "demo.owner@prij.local",
-  doctor: "demo.doctor@prij.local",
-  reception: "demo.reception@prij.local",
-  accountant: "demo.accountant@prij.local",
-  nurse: "demo.nurse@prij.local"
+  owner: process.env.DEMO_ADMIN_LOGIN || "eyad",
+  doctor: "runtime.doctor@prij.local",
+  reception: "runtime.reception@prij.local",
+  accountant: "runtime.accountant@prij.local",
+  nurse: "runtime.nurse@prij.local"
 };
+
+const runtimeRoleByEmail = new Map([
+  [demoUsers.doctor, "Doctor"],
+  [demoUsers.reception, "Receptionist"],
+  [demoUsers.accountant, "Accountant"],
+  [demoUsers.nurse, "Nurse"]
+]);
 
 const routeDefinitions = [
   { method: "GET", path: "/auth/me", category: "auth", requiredPermission: "authenticated", allowedAs: "owner", denyAs: null, notes: "Broad authenticated route." },
@@ -163,9 +176,57 @@ export async function waitForApi(timeoutMs = Number(process.env.API_WAIT_TIMEOUT
 }
 
 export async function login(email, password = DEMO_PASSWORD) {
+  if (email === demoUsers.owner && password === DEMO_PASSWORD) {
+    password = process.env.DEMO_ADMIN_PASSWORD || "eyad";
+  }
+  await ensureRuntimeUser(email, password);
   const body = await apiJson("POST", "/auth/login", null, { email, password });
   if (!body.token) throw new Error(`Login did not return token for ${email}`);
   return body.token;
+}
+
+async function ensureRuntimeUser(email, password) {
+  const roleName = runtimeRoleByEmail.get(email);
+  if (!roleName) return;
+
+  const branch = await prisma.branch.findFirst({ orderBy: { createdAt: "asc" } });
+  const role = await prisma.role.findUnique({ where: { name: roleName } });
+  if (!branch || !role) return;
+
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: {
+      displayName: `Runtime ${roleName}`,
+      status: "active",
+      branchId: branch.id,
+      permissionPreset: "advanced",
+      protectedAccount: false,
+      passwordHash: await hashPassword(password),
+      failedLoginCount: 0,
+      lockedUntil: null
+    },
+    create: {
+      email,
+      displayName: `Runtime ${roleName}`,
+      status: "active",
+      branchId: branch.id,
+      permissionPreset: "advanced",
+      protectedAccount: false,
+      passwordHash: await hashPassword(password)
+    }
+  });
+
+  await prisma.userRole.upsert({
+    where: { userId_roleId_branchId: { userId: user.id, roleId: role.id, branchId: branch.id } },
+    update: {},
+    create: { userId: user.id, roleId: role.id, branchId: branch.id }
+  });
+}
+
+async function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString("base64url");
+  const key = await scrypt(password, salt, 64);
+  return `scrypt:16384:8:1:${salt}:${key.toString("base64url")}`;
 }
 
 export async function apiJson(method, path, token, body) {

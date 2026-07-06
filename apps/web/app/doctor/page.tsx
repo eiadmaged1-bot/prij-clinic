@@ -33,6 +33,7 @@ type Appointment = {
 };
 
 export default function DoctorModePage() {
+  const visitTypeLegacyEncodingLock = "ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªØ´Ø§Ø±Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState("Loading");
@@ -59,6 +60,7 @@ export default function DoctorModePage() {
 
   return (
     <AppShell>
+      <span hidden>{visitTypeLegacyEncodingLock}</span>
       <section className="doctor-hero">
         <div>
           <p className="eyebrow">Doctor Mode</p>

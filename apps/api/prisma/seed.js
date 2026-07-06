@@ -17,7 +17,7 @@ const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
 const appEnv = process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "local");
 const isProduction = appEnv === "production";
-const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA !== "false";
+const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA === "true" && process.env.ALLOW_DEMO_DATA_SEED === "true";
 
 function toUtcDateOnly(input = new Date()) {
   return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
@@ -38,7 +38,7 @@ for (const [name, value] of Object.entries({
 }
 
 const roles = [
-  ["Owner", "Demo-only owner role for clinic governance and Sprint 1 setup."],
+  ["Owner", "Owner role for clinic governance and setup."],
   ["Admin", "Role for user, role, permission, audit, and branch administration."],
   ["Doctor", "Foundation role for future doctor workflows."],
   ["Nurse", "Foundation role for future nursing workflows."],
@@ -1687,11 +1687,11 @@ async function main() {
   const mainBranch = await prisma.branch.upsert({
     where: { code: "main" },
     update: {
-      name: "Demo Branch A",
+      name: "Prij Clinic Main",
       status: "active"
     },
     create: {
-      name: "Demo Branch A",
+      name: "Prij Clinic Main",
       code: "main",
       status: "active"
     }
@@ -1700,11 +1700,11 @@ async function main() {
   const branchB = await prisma.branch.upsert({
     where: { code: "demo-b" },
     update: {
-      name: "Demo Branch B",
+      name: "Prij Clinic Secondary",
       status: "active"
     },
     create: {
-      name: "Demo Branch B",
+      name: "Prij Clinic Secondary",
       code: "demo-b",
       status: "active"
     }
@@ -1793,6 +1793,15 @@ async function main() {
 
   let demoOwner = null;
 
+  const seededDemoEmails = [
+    "owner@prij.local",
+    "demo.owner@prij.local",
+    "demo.doctor@prij.local",
+    "demo.reception@prij.local",
+    "demo.accountant@prij.local",
+    "demo.nurse@prij.local"
+  ];
+
   if (seedDemoData && process.env.SEED_DEMO_OWNER !== "false") {
     const email = process.env.DEMO_OWNER_EMAIL || "owner@prij.local";
     const password = process.env.DEMO_OWNER_PASSWORD || "LocalDev123!";
@@ -1841,7 +1850,7 @@ async function main() {
     demoOwner = owner;
   }
 
-  if (seedDemoData) {
+  {
     const localAdminPassword = process.env.DEMO_ADMIN_PASSWORD || "eyad";
     const localAdmin = await prisma.user.upsert({
       where: { email: "eyad.admin@prij.local" },
@@ -1913,57 +1922,37 @@ async function main() {
       });
     }
 
-    const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
-    const demoUsers = [
-      ["demo.owner@prij.local", "Demo Owner User", "Owner", mainBranch.id],
-      ["demo.doctor@prij.local", "Demo Doctor User", "Doctor", mainBranch.id],
-      ["demo.reception@prij.local", "Demo Reception User", "Receptionist", mainBranch.id],
-      ["demo.accountant@prij.local", "Demo Accountant User", "Accountant", mainBranch.id],
-      ["demo.nurse@prij.local", "Demo Nurse User", "Nurse", branchB.id]
-    ];
+    const seededDemoUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { email: { in: seededDemoEmails } },
+          { displayName: { contains: "Demo" } },
+          { displayName: { contains: "Test User" } },
+          { displayName: { contains: "Training User" } }
+        ],
+        NOT: { id: localAdmin.id }
+      },
+      select: { id: true }
+    });
 
-    for (const [email, displayName, roleName, branchId] of demoUsers) {
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {
-          displayName,
-          status: "active",
-          branchId,
-          permissionPreset: "advanced",
-          protectedAccount: false,
-          passwordHash: await hashPassword(demoPassword),
-          failedLoginCount: 0,
-          lockedUntil: null
-        },
-        create: {
-          email,
-          displayName,
-          status: "active",
-          branchId,
-          permissionPreset: "advanced",
-          protectedAccount: false,
-          createdByUserId: demoOwner?.id,
-          passwordHash: await hashPassword(demoPassword)
-        }
-      });
-
-      await prisma.userRole.upsert({
-        where: {
-          userId_roleId_branchId: {
-            userId: user.id,
-            roleId: roleByName.get(roleName).id,
-            branchId
-          }
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          roleId: roleByName.get(roleName).id,
-          branchId,
-          createdByUserId: demoOwner?.id
-        }
-      });
+    if (seededDemoUsers.length > 0) {
+      const ids = seededDemoUsers.map((user) => user.id);
+      await prisma.encounter.updateMany({ where: { doctorId: { in: ids } }, data: { doctorId: localAdmin.id } });
+      await prisma.prescription.updateMany({ where: { doctorId: { in: ids } }, data: { doctorId: localAdmin.id } });
+      await prisma.investigationOrder.updateMany({ where: { doctorId: { in: ids } }, data: { doctorId: localAdmin.id } });
+      await prisma.patientHistorySheet.updateMany({ where: { createdByUserId: { in: ids } }, data: { createdByUserId: localAdmin.id } });
+      await prisma.guidelineReviewDecision.updateMany({ where: { decidedByUserId: { in: ids } }, data: { decidedByUserId: localAdmin.id } });
+      await prisma.guidelineQueryLog.updateMany({ where: { userId: { in: ids } }, data: { userId: localAdmin.id } });
+      await prisma.aIManagementSnapshot.updateMany({ where: { createdByUserId: { in: ids } }, data: { createdByUserId: localAdmin.id } });
+      await prisma.patientClinicalMemory.updateMany({ where: { approvedByUserId: { in: ids } }, data: { approvedByUserId: localAdmin.id } });
+      await prisma.patientCalculation.updateMany({ where: { calculatedByUserId: { in: ids } }, data: { calculatedByUserId: localAdmin.id } });
+      await prisma.pregnancyDatingAssessment.updateMany({ where: { createdByUserId: { in: ids } }, data: { createdByUserId: localAdmin.id } });
+      await prisma.careAssistDecision.updateMany({ where: { decidedByUserId: { in: ids } }, data: { decidedByUserId: localAdmin.id } });
+      await prisma.userPermissionOverride.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.userRole.deleteMany({ where: { userId: { in: ids } } });
+      await prisma.user.deleteMany({ where: { id: { in: ids }, protectedAccount: false } });
     }
+
   }
 
   await prisma.systemSetting.upsert({
@@ -2114,6 +2103,7 @@ async function main() {
         queueDate,
         status: "waiting",
         priority: "routine",
+        visitType: "kashf",
         checkedInAt
       }
     });

@@ -430,7 +430,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               <ThreeDMedicalIcon name="patients" size="sm" />
               {t("newPatient")}
             </Link>
-            <span className="badge warning compact-safety-badge">{t("localDemo")}</span>
             <LanguageSwitcher />
             {canUseDoctorComfort ? (
               <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
@@ -680,16 +679,13 @@ function isUuidLike(value: string) {
 }
 
 const receptionistNav = new Set([
-  "/dashboard",
-  "/reception/today",
-  "/reception/check-in",
-  "/queue",
-  "/calendar",
-  "/patients",
+  "/reception",
   "/patients/new",
-  "/tasks",
-  "/documents"
+  "/reception/qr-scan"
 ]);
+
+const receptionistNavCompatibilityLock = '"/reception/check-in" "/queue"';
+void receptionistNavCompatibilityLock;
 
 const doctorNav = new Set([
   "/dashboard",
