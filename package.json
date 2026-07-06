@@ -9,6 +9,8 @@
   ],
   "scripts": {
     "dev": "node scripts/dev.mjs",
+    "dev:public": "node scripts/dev.mjs --public",
+    "dev:public:ngrok": "node scripts/dev.mjs --public",
     "dev:start": "node scripts/dev.mjs --lan",
     "dev:lan": "node scripts/dev.mjs --lan",
     "dev:tailscale": "node scripts/dev.mjs --tailscale",
@@ -232,6 +234,9 @@
     "test:security:expanded": "node scripts/security-test-all.mjs",
     "test:security:cors": "node scripts/test-cors-origins.mjs",
     "test:web:api-base": "node scripts/test-api-base-url.mjs",
+    "test:v134:single-origin-api-proxy": "node scripts/v134-single-origin-api-proxy-test.mjs",
+    "test:v134:public-mobile-access": "node scripts/v134-public-mobile-access-test.mjs",
+    "test:v134:friendly-connection-ui": "node scripts/v134-friendly-connection-ui-test.mjs",
     "test:ui-cleanup-tailscale": "node scripts/ui-cleanup-tailscale-logout-test.mjs",
     "test:web:hydration-root": "node scripts/test-next-hydration-root.mjs",
     "test:v114:responsive-shell": "playwright test tests/v114/real-app-responsive-shell.spec.ts --config=playwright.config.ts",

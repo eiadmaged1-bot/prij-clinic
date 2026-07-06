@@ -1,5 +1,39 @@
 # Prij Clinic
 
+## v1.3.4 Public Mobile Single-Origin Access
+
+v1.3.4 enables public mobile QA through one public web URL.
+
+- Browser opens one URL on port 3000.
+- Browser API calls use the same-origin `/api/backend` path.
+- The web server proxies API requests internally to `http://localhost:3001` by default.
+- Override the internal API target with `PRIJ_API_INTERNAL_ORIGIN` when needed.
+- API port 3001 stays internal and does not need ngrok, Cloudflare Tunnel, LAN, or Tailscale exposure.
+- The same pattern works for localhost, LAN, Tailscale, ngrok, Cloudflare Quick Tunnel, and future domain/VPS deployment.
+
+Public QA:
+
+```powershell
+npm run dev:public
+ngrok http 3000
+```
+
+Cloudflare Quick Tunnel:
+
+```powershell
+cloudflared tunnel --url http://localhost:3000
+```
+
+Public tunnels are QA/testing only until deployment/security signoff. Do not use real patient data through a public tunnel. External AI remains disabled by default, and there is no autonomous diagnosis, prescribing, dosing, treatment ranking, or automatic clinical finalization.
+
+Verification:
+
+```powershell
+npm run test:v134:single-origin-api-proxy
+npm run test:v134:public-mobile-access
+npm run test:v134:friendly-connection-ui
+```
+
 ## v1.3.3 Workflow Compression + Guideline Import Fix
 
 v1.3.3 fixes workflow compression and Guideline Library actual import after v1.3.2 real-device QA.

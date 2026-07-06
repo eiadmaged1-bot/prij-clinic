@@ -4,6 +4,10 @@ import { spawn, spawnSync } from "node:child_process";
 const isWindows = process.platform === "win32";
 const isLanMode = process.argv.includes("--lan");
 const isTailscaleMode = process.argv.includes("--tailscale");
+const isPublicMode = process.argv.includes("--public");
+if (isPublicMode) {
+  preparePublicProfile();
+}
 if (isLanMode || isTailscaleMode) {
   process.env.API_HOST = process.env.API_HOST || "0.0.0.0";
   process.env.WEB_HOST = process.env.WEB_HOST || "0.0.0.0";
@@ -98,4 +102,28 @@ function printLanProfile() {
   if (tailscale) console.log(`[dev:lan] Tailscale device URL: http://${tailscale}:3000`);
   if (lan) console.log(`[dev:lan] LAN device URL: http://${lan}:3000`);
   if (!tailscale) console.log("[dev:lan] Tailscale IPv4 not detected. Start Tailscale, then rerun this command if phone QA needs it.");
+}
+
+function runNpmScript(script) {
+  const result = isWindows
+    ? spawnSync("cmd.exe", ["/d", "/s", "/c", `npm run ${script}`], { stdio: "inherit", windowsHide: true })
+    : spawnSync("npm", ["run", script], { stdio: "inherit" });
+
+  if (result.status && result.status !== 0) {
+    process.exit(result.status);
+  }
+}
+
+function preparePublicProfile() {
+  process.env.PRIJ_API_INTERNAL_ORIGIN = process.env.PRIJ_API_INTERNAL_ORIGIN || "http://localhost:3001";
+  console.log("[dev:public] Preparing local public QA profile.");
+  console.log("[dev:public] API stays internal at http://localhost:3001 through PRIJ_API_INTERNAL_ORIGIN.");
+  console.log("[dev:public] Browser API calls use same-origin /api/backend through the web server.");
+  console.log("[dev:public] Only one public tunnel to http://localhost:3000 is required.");
+  console.log("[dev:public] Start ngrok separately with: ngrok http 3000");
+  console.log("[dev:public] Or start Cloudflare Quick Tunnel with: cloudflared tunnel --url http://localhost:3000");
+  console.log("[dev:public] Public tunnel use is for QA only until deployment/security signoff.");
+  runNpmScript("dev:stop");
+  runNpmScript("prisma:repair");
+  runNpmScript("prisma:seed");
 }
