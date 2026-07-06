@@ -41,14 +41,14 @@ type DashboardSummary = {
 const workflow = ["Reception", "Appointment", "Queue", "Doctor", "Orders", "Reports", "Finance", "Owner review"];
 
 const quickActions: Array<[string, string, string, IconName]> = [
-  ["/clinic-day/walkthrough", "Clinic walkthrough", "Run the connected local training clinic day.", "timeline"],
-  ["/patients/new", "New Patient", "Start a local training registration without real patient data.", "patients"],
-  ["/appointments", "New Appointment", "Schedule a safe local visit.", "calendar"],
-  ["/queue", "Queue Check-in", "Move a local patient file into today's queue.", "queue"],
-  ["/doctor/visit", "Guided Visit", "Open a large step-by-step doctor note.", "doctor"],
+  ["/reception", "Reception", "Open the front desk workflow.", "reception"],
+  ["/patients/new", "New Patient", "Create a patient file.", "patients"],
+  ["/appointments", "Appointment", "Schedule a visit.", "calendar"],
+  ["/queue", "Waiting Line", "Manage arrivals.", "queue"],
+  ["/doctor", "Doctor", "Open the clinical workspace.", "doctor"],
   ["/billing", "Create Invoice", "Record manual clinic charges without a gateway.", "billing"],
-  ["/medications", "Search Medication", "Open official reference metadata and safety tools.", "prescription"],
-  ["/admin", "Owner Control Center", "Settings, services, roles, audit, backup status.", "admin"]
+  ["/medications", "Medication Reference", "Search reference metadata.", "prescription"],
+  ["/admin", "Admin", "Settings, users, services, and audit.", "admin"]
 ];
 
 const portalModules: Array<[string, string, string, string, string]> = [
@@ -186,7 +186,6 @@ export default function DashboardPage() {
               <p className="eyebrow">{isAccountant ? "Finance workspace" : "Reception workspace"}</p>
               <h1 data-testid="page-heading">{isAccountant ? "Daily finance" : "Front desk home"}</h1>
             </div>
-            <span className="badge warning">Local Demo</span>
           </div>
           <p className="muted">
             {isAccountant
@@ -194,7 +193,6 @@ export default function DashboardPage() {
               : "Create patient files, schedule visits, check in arrivals, and hand them off to the doctor."}
           </p>
         </section>
-        <SafetyAlert />
         <section className="summary-grid">
           <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
           <Metric label="Waiting queue" value={summary?.operational.waitingQueue ?? "-"} />
@@ -259,9 +257,9 @@ export default function DashboardPage() {
         </section>
 
         <section className="portal-status">
-          <span>No real patient data</span>
-          <span>AI disabled</span>
-          <span>Local demo only</span>
+          <span>Protected access</span>
+          <span>Doctor approval</span>
+          <span>Audit ready</span>
         </section>
       </AppShell>
     );
@@ -303,7 +301,7 @@ export default function DashboardPage() {
             ["/patients", "Patient Files", "Open patient records and create new files.", "Patients"],
             ["/calendar", "Calendar", "Review schedule and daily bookings.", "Ops"],
             ["/queue", "Queue", "Manage waiting patients and check-in.", "Ops"],
-            ["/investigations", "Lab Orders", "Track demo investigation orders.", "Clinical"],
+            ["/investigations", "Lab Orders", "Track investigation orders.", "Clinical"],
             ["/billing", "Finance", "Open invoices and payment records.", "Finance"],
             ["/admin", "Owner Control", "Settings, prices, users, themes, and audit review.", "Owner"]
           ] as Array<[string, string, string, string]>).filter(([href]) => href !== "/admin" || canOpenAdmin).map(([href, title, description, badge]) => (
@@ -331,15 +329,12 @@ export default function DashboardPage() {
               Logout
             </button>
             <span className="badge accent">{user?.roles.join(", ") || "Staff"}</span>
-            <span className="badge warning">Local Demo</span>
           </div>
         </div>
         <p className="muted">
           A visible home for today&apos;s clinic flow: reception, queue, doctor workspace, orders, finance, medications, and owner controls.
         </p>
       </section>
-
-      <SafetyAlert />
 
       <section className="summary-grid" aria-label="Operational summary">
         <Metric label="Appointments today" value={summary?.operational.appointmentsToday ?? "-"} />
@@ -386,11 +381,11 @@ export default function DashboardPage() {
               </div>
               <div>
                 <dt>Branch</dt>
-                <dd>{user.branchId ?? "Demo scope"}</dd>
+                <dd>{user.branchId ?? "Primary clinic"}</dd>
               </div>
               <div className="wide">
                 <dt>Access</dt>
-                <dd>{user.permissions.length > 0 ? "Clinic access enabled for this demo role" : "No extra access shown"}</dd>
+                <dd>{user.permissions.length > 0 ? "Clinic access enabled for this role" : "No extra access shown"}</dd>
               </div>
             </dl>
           ) : (
@@ -402,7 +397,7 @@ export default function DashboardPage() {
       <section className="panel">
         <div className="section-heading">
           <h2>Clinic workflow</h2>
-          <span className="badge accent">End-to-end demo</span>
+          <span className="badge accent">Daily flow</span>
         </div>
         <div className="workflow-band">
           {workflow.map((step) => (
@@ -427,7 +422,7 @@ function Metric({ label, value, detail }: { label: string; value: number | strin
     <article className="metric-card">
       <span>{label}</span>
       <strong>{value}</strong>
-      <p className="muted">{detail ?? "Local demo summary"}</p>
+      <p className="muted">{detail ?? "Current"}</p>
     </article>
   );
 }

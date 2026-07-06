@@ -19,7 +19,7 @@ export default function AppointmentsPage() {
         { name: "startAt", label: "Start", type: "datetime-local", required: true },
         { name: "endAt", label: "End", type: "datetime-local", required: true },
         { name: "appointmentType", label: "Visit type", defaultValue: "Clinic visit" },
-        { name: "notes", label: "Reception note", defaultValue: "Local demo appointment only." }
+        { name: "notes", label: "Reception note", defaultValue: "Appointment note." }
       ]}
     />
   );

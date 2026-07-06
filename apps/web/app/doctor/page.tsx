@@ -151,7 +151,7 @@ export default function DoctorModePage() {
           {queue.length === 0 ? (
             <p className="empty-state">
               <ThreeDMedicalIcon name="queue" size="sm" tone="slate" />
-              <span>No waiting patient is loaded. Open Patients to start a demo visit.</span>
+              <span>No waiting patient is loaded. Open Patients to start a visit.</span>
             </p>
           ) : null}
           {queue.map((ticket) => (

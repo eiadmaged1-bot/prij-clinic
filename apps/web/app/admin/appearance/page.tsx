@@ -137,7 +137,7 @@ export default function AppearancePage() {
             <p className="eyebrow">Admin</p>
             <h1>Appearance Settings</h1>
           </div>
-          <span className="badge warning">Local demo only</span>
+          <span className="badge warning">Protected setting</span>
         </div>
         <p className="muted">Choose the visual style for the demo workspace. Changes to the default are protected and audited.</p>
       </section>
@@ -201,7 +201,7 @@ export default function AppearancePage() {
         <div className="section-heading">
           <div>
             <h2>Default appearance</h2>
-            <p className="muted">Saved changes affect the shared local demo setting and write an audit entry.</p>
+            <p className="muted">Saved changes affect the shared appearance setting and write an audit entry.</p>
           </div>
           <span className="badge accent">{themes.find((appTheme) => appTheme.id === settings.defaultTheme)?.name ?? "Original Premium"}</span>
         </div>

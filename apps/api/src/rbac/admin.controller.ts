@@ -10,6 +10,7 @@ import {
   AccountStatusChangeDto,
   AdminOverrideDto,
   AppearanceSettingsDto,
+  ClinicProfileSettingsDto,
   CreateAccountDto,
   CreateServiceItemDto,
   ResetAccountPasswordDto,
@@ -165,6 +166,20 @@ export class AdminController {
   @Permissions("clinic_settings.manage")
   updateAppearanceSettings(@Body() dto: AppearanceSettingsDto, @Req() request: RequestWithUser) {
     return this.rbac.updateAppearanceSettings(dto, request.user);
+  }
+
+  @Get("settings/clinic-profile")
+  @Permissions("clinic_settings.manage")
+  async clinicProfileSettings(@Req() request: RequestWithUser) {
+    await this.auditAdminRead(request, "admin.clinic_profile.read", "system_setting");
+
+    return this.rbac.getClinicProfileSettings(request.user);
+  }
+
+  @Patch("settings/clinic-profile")
+  @Permissions("clinic_settings.manage")
+  updateClinicProfileSettings(@Body() dto: ClinicProfileSettingsDto, @Req() request: RequestWithUser) {
+    return this.rbac.updateClinicProfileSettings(dto, request.user);
   }
 
   @Post("services")

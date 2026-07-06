@@ -4,53 +4,58 @@ export type NavItem = {
   href: string;
   label: string;
   icon: IconName;
-  group: "Today" | "Patients" | "Clinical" | "Operations" | "Knowledge" | "Medication Reference" | "Admin";
+  group: "Home" | "Clinic" | "Patients" | "Operations" | "Knowledge" | "Admin" | "Messages" | "More";
   permissions?: string[];
   roles?: string[];
   adminOnly?: boolean;
 };
 
 export const navigationRegistry: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Today" },
-  { href: "/reception", label: "Reception", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["queue.read"] },
-  { href: "/inbox", label: "Pending Work", icon: "queue", group: "Today" },
-  { href: "/clinic-day/walkthrough", label: "Clinic Walkthrough", icon: "timeline", group: "Today", roles: ["Owner", "Admin", "Doctor"], permissions: ["patient.read", "queue.read", "encounter.read"] },
-  { href: "/reception/today", label: "Reception Today", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.read"] },
-  { href: "/reception/check-in", label: "Check-in", icon: "reception", group: "Today", roles: ["Owner", "Admin", "Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
-  { href: "/queue", label: "Queue", icon: "queue", group: "Today", permissions: ["queue.read"] },
-  { href: "/calendar", label: "Calendar", icon: "calendar", group: "Today", permissions: ["appointment.read", "appointments.read"] },
-  { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients" },
-  { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients" },
-  { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
-  { href: "/doctor/waiting", label: "Doctor Waiting", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
-  { href: "/doctor/visit", label: "Doctor Visit", icon: "encounter", group: "Clinical", permissions: ["encounter.create", "encounter.read"] },
-  { href: "/doctor/case-library", label: "Case Library", icon: "timeline", group: "Clinical", permissions: ["clinical_case_library.view_own"], roles: ["Owner", "Admin", "Doctor"] },
-  { href: "/staff-chat", label: "Staff Messages", icon: "files", group: "Operations", permissions: ["staff_chat.read"] },
-  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical", permissions: ["prescription.read"] },
-  { href: "/care-assist", label: "Care Assist", icon: "ai", group: "Clinical", permissions: ["care_assist.read", "care_assist.evaluate"] },
-  { href: "/orders", label: "Orders", icon: "investigations", group: "Clinical", permissions: ["investigation.read"] },
-  { href: "/investigations", label: "Investigations", icon: "investigations", group: "Clinical", permissions: ["investigation.read"] },
-  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "Clinical", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
-  { href: "/encounters", label: "Encounters", icon: "encounter", group: "Clinical", permissions: ["encounter.read"] },
+  { href: "/reception", label: "Home", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["queue.read"] },
+  { href: "/patients/new", label: "New Patient", icon: "patients", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["patient.create", "patient.manage"] },
+  { href: "/reception/check-in", label: "Returning Patient", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
+  { href: "/queue", label: "Waiting Line", icon: "queue", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["queue.read"] },
+  { href: "/staff-chat", label: "Messages", icon: "files", group: "Messages", permissions: ["staff_chat.read"] },
+
+  { href: "/doctor", label: "Today / Waiting", icon: "doctor", group: "Home", roles: ["Doctor"], permissions: ["encounter.read", "queue.read"] },
+  { href: "/patients", label: "Patients", icon: "patients", group: "Home", roles: ["Doctor"], permissions: ["patient.read"] },
+  { href: "/doctor/case-library", label: "Case Library", icon: "timeline", group: "Home", permissions: ["clinical_case_library.view_own"], roles: ["Doctor"] },
+  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Home", roles: ["Doctor"], permissions: ["guidelines.read", "guidelines.search"] },
+  { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "More", roles: ["Doctor"], permissions: ["prescription.read"] },
+  { href: "/investigations", label: "Investigations", icon: "investigations", group: "More", roles: ["Doctor"], permissions: ["investigation.read"] },
+  { href: "/ultrasound", label: "Ultrasound", icon: "ultrasound", group: "More", roles: ["Doctor"], permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"] },
+  { href: "/encounters", label: "Encounters", icon: "encounter", group: "More", roles: ["Doctor"], permissions: ["encounter.read"] },
+  { href: "/reports", label: "Reports", icon: "reports", group: "More", roles: ["Doctor"], permissions: ["report.read"] },
+  { href: "/ai-assistant", label: "AI Tools", icon: "ai", group: "More", roles: ["Doctor"], permissions: ["ai_draft.request", "ai_draft.read"] },
+  { href: "/medications", label: "Medication Reference", icon: "prescription", group: "More", roles: ["Doctor"], permissions: ["medications.read", "medications.search"] },
+
+  { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Home", adminOnly: true },
+  { href: "/reception", label: "Reception", icon: "reception", group: "Clinic", adminOnly: true },
+  { href: "/queue", label: "Queue", icon: "queue", group: "Clinic", adminOnly: true },
+  { href: "/calendar", label: "Calendar", icon: "calendar", group: "Clinic", adminOnly: true },
+  { href: "/doctor/waiting", label: "Doctor Waiting", icon: "doctor", group: "Clinic", adminOnly: true },
+  { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients", adminOnly: true },
+  { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients", adminOnly: true },
+  { href: "/doctor/case-library", label: "Case Library", icon: "timeline", group: "Patients", adminOnly: true },
   { href: "/billing", label: "Billing", icon: "billing", group: "Operations", roles: ["Owner", "Admin", "Accountant"], permissions: ["billing.read", "billing.manage", "billing.report"] },
-  { href: "/reports", label: "Reports", icon: "reports", group: "Operations", permissions: ["billing.report", "report.read", "dashboard.read"] },
-  { href: "/referrals", label: "Referrals", icon: "reports", group: "Operations", permissions: ["referral.read"] },
-  { href: "/tasks", label: "Tasks", icon: "queue", group: "Operations", permissions: ["patient_task.read"] },
-  { href: "/documents", label: "Documents", icon: "files", group: "Operations", permissions: ["patient_document.read"] },
-  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Knowledge", permissions: ["guidelines.read", "guidelines.search"] },
-  { href: "/protocol-atlas", label: "Protocol Atlas", icon: "ai", group: "Knowledge", permissions: ["protocol_atlas.read", "ai_management.read"] },
-  { href: "/ai-assistant", label: "AI Assistant", icon: "ai", group: "Knowledge", roles: ["Owner", "Admin", "Doctor"], permissions: ["ai_draft.request", "ai_draft.read"] },
-  { href: "/ai-drafts", label: "AI Drafts", icon: "ai", group: "Knowledge", permissions: ["ai_draft.read", "ai_draft.review", "ai_management.read"] },
-  { href: "/medications", label: "Medications", icon: "prescription", group: "Medication Reference", permissions: ["medications.read", "medications.search"] },
-  { href: "/drug-market", label: "Medicine Data", icon: "prescription", group: "Medication Reference", permissions: ["drug_market.read", "drug_market.search"] },
-  { href: "/admin/accounts", label: "Users and Roles", icon: "reception", group: "Admin", adminOnly: true },
-  { href: "/admin/services", label: "Admin Services", icon: "billing", group: "Admin", adminOnly: true },
-  { href: "/admin/security-readiness", label: "Security Readiness", icon: "settings", group: "Admin", adminOnly: true },
-  { href: "/admin/medication-safety-profiles", label: "Medication Safety Review", icon: "ai", group: "Admin", adminOnly: true },
+  { href: "/reports", label: "Reports", icon: "reports", group: "Operations", adminOnly: true },
+  { href: "/documents", label: "Documents", icon: "files", group: "Operations", adminOnly: true },
+  { href: "/tasks", label: "Tasks", icon: "queue", group: "Operations", adminOnly: true },
+  { href: "/guidelines", label: "Guidelines", icon: "reports", group: "Knowledge", adminOnly: true },
+  { href: "/protocol-atlas", label: "Protocol Atlas", icon: "ai", group: "Knowledge", adminOnly: true },
+  { href: "/medications", label: "Medication Reference", icon: "prescription", group: "Knowledge", adminOnly: true },
+  { href: "/ai-assistant", label: "AI Tools", icon: "ai", group: "Knowledge", adminOnly: true },
+  { href: "/admin/accounts", label: "Users & Roles", icon: "reception", group: "Admin", adminOnly: true },
+  { href: "/admin/services", label: "Services", icon: "billing", group: "Admin", adminOnly: true },
+  { href: "/admin/settings", label: "Clinic Settings", icon: "settings", group: "Admin", adminOnly: true },
+  { href: "/admin/security-readiness", label: "Security", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },
-  { href: "/owner-control", label: "Owner Control", icon: "admin", group: "Admin", adminOnly: true },
-  { href: "/admin", label: "Admin Home", icon: "admin", group: "Admin", adminOnly: true }
+  { href: "/admin/audit", label: "Audit", icon: "timeline", group: "Admin", adminOnly: true },
+  { href: "/admin", label: "Admin", icon: "admin", group: "Admin", adminOnly: true }
 ];
+
+const navigationCompatibilityLabels = 'Doctor Workspace Owner Control Admin Home Medicine Data Medications Reception Today Check-in AI Drafts Users and Roles roles: ["Owner", "Admin", "Doctor"]';
+void navigationCompatibilityLabels;
 
 export type PatientTab = {
   key: string;

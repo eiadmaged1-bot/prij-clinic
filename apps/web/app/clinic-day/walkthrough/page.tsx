@@ -112,10 +112,10 @@ export default function ClinicDayWalkthroughPage() {
         <div className="header-row">
           <div>
             <p className="eyebrow">Clinic walkthrough</p>
-            <h1>Run clinic day demo</h1>
+            <h1>Clinic day walkthrough</h1>
           </div>
           <div className="topbar-actions">
-            <span className="badge warning">Local demo</span>
+            <span className="badge warning">Guided review</span>
             <span className="badge accent">Doctor review</span>
             <span className="badge">AI draft-only</span>
           </div>
@@ -158,7 +158,7 @@ export default function ClinicDayWalkthroughPage() {
           <span className="badge warning">Training only</span>
         </div>
         <ul className="feature-list">
-          <li>No real patient data, external AI calls, WhatsApp, DICOM/PACS, payment gateway, or production readiness claim.</li>
+          <li>No external AI calls, WhatsApp, DICOM/PACS, payment gateway, or readiness claim is made here.</li>
           <li>AI and Care Assist remain draft-only support and require doctor review.</li>
           <li>Medication reference strength and form stay metadata only; patient instructions are doctor-written.</li>
           <li>Signed clinical records are not silently changed by autosave.</li>

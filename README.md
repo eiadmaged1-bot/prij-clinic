@@ -1,5 +1,28 @@
 # Prij Clinic
 
+## v1.3.1 Premium UI + Navigation QA Cleanup
+
+v1.3.1 fixes the first manual QA issues after v1.3.0.
+
+- Arabic switch translates text only and does not rearrange layout, icons, logo, cards, topbar controls, sidebar, or form fields.
+- The landing page is now a premium minimal staff entry.
+- Demo/local/not-real wording is removed from normal UI clutter.
+- Dashboard and admin cards are compact.
+- Clinic Settings is editable for Owner/Admin with audit.
+- Navigation is role-based and simplified: Receptionist sees a minimal front-desk workflow, Doctor sees focused clinical workflow, and Owner/Admin sees grouped system navigation.
+- Local same-PC and Tailscale QA remain mandatory.
+- External AI remains disabled by default; there is no autonomous diagnosis, prescribing, dosing, or treatment ranking.
+
+Verification:
+
+```powershell
+npm run test:v131:language-layout-lock
+npm run test:v131:premium-minimal-ui
+npm run test:v131:editable-settings
+npm run test:v131:navigation-cleanup
+npm run test:v131:local-tailscale-qa
+```
+
 ## v1.3.0 Doctor Signature + Case Library + Internal Staff Chat
 
 v1.3.0 adds doctor visit signatures, a Doctor Case Library, and internal staff chat.

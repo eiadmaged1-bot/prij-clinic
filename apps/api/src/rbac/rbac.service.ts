@@ -8,6 +8,7 @@ import {
   AccountStatusChangeDto,
   AdminOverrideDto,
   AppearanceSettingsDto,
+  ClinicProfileSettingsDto,
   CreateAccountDto,
   CreateServiceItemDto,
   ResetAccountPasswordDto,
@@ -21,6 +22,18 @@ const defaultAppearanceSettings = {
   defaultTheme: "clinic-premium",
   allowUserThemeOverride: true,
   defaultDoctorComfortMode: false
+};
+
+const defaultClinicProfileSettings = {
+  clinicName: "Prij Clinic",
+  phone: "",
+  address: "",
+  workingHours: "09:00-17:00",
+  defaultAppointmentDuration: 30,
+  currency: "EGP",
+  invoicePrefix: "PRJ",
+  receiptFooterNote: "",
+  densityMode: "comfortable"
 };
 
 const allowedAppearanceThemes = new Set(["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
@@ -463,6 +476,54 @@ export class RbacService {
     return next;
   }
 
+  async getClinicProfileSettings(user?: AuthUser) {
+    if (user) assertOwnerOrAdmin(user);
+    const setting = await this.prisma.systemSetting.findUnique({ where: { key: "clinicProfile" } });
+    const value = setting?.valueJson;
+    if (isClinicProfileSettings(value)) return { ...defaultClinicProfileSettings, ...value };
+    return defaultClinicProfileSettings;
+  }
+
+  async updateClinicProfileSettings(dto: ClinicProfileSettingsDto, user?: AuthUser) {
+    assertOwnerOrAdmin(user);
+    assertReasonForSensitiveChange(dto.reason);
+    const next = {
+      clinicName: cleanText(dto.clinicName, 120),
+      phone: cleanText(dto.phone ?? "", 40),
+      address: cleanText(dto.address ?? "", 240),
+      workingHours: cleanText(dto.workingHours ?? "", 80) || defaultClinicProfileSettings.workingHours,
+      defaultAppointmentDuration: Math.min(240, Math.max(5, Math.round(dto.defaultAppointmentDuration))),
+      currency: dto.currency,
+      invoicePrefix: cleanCode(dto.invoicePrefix, 12) || defaultClinicProfileSettings.invoicePrefix,
+      receiptFooterNote: cleanText(dto.receiptFooterNote ?? "", 240),
+      densityMode: dto.densityMode
+    };
+
+    const setting = await this.prisma.systemSetting.upsert({
+      where: { key: "clinicProfile" },
+      create: { key: "clinicProfile", valueJson: next, updatedByUserId: user?.id },
+      update: { valueJson: next, updatedByUserId: user?.id }
+    });
+
+    await this.audit.record({
+      actorUserId: user?.id,
+      action: "system_setting.clinic_profile_updated",
+      resourceType: "system_setting",
+      resourceId: setting.id,
+      branchId: user?.branchId,
+      severity: "high",
+      reason: dto.reason.trim(),
+      metadataJson: {
+        changedFields: Object.keys(next),
+        invoicePrefix: next.invoicePrefix,
+        currency: next.currency,
+        defaultAppointmentDuration: next.defaultAppointmentDuration
+      }
+    });
+
+    return next;
+  }
+
   async createService(dto: CreateServiceItemDto, user?: AuthUser) {
     assertOwnerOrAdmin(user);
     const service = await this.prisma.serviceItem.create({
@@ -832,4 +893,23 @@ function isAppearanceSettings(value: Prisma.JsonValue | null | undefined): value
     typeof candidate.allowUserThemeOverride === "boolean" &&
     (candidate.defaultDoctorComfortMode === undefined || typeof candidate.defaultDoctorComfortMode === "boolean")
   );
+}
+
+function isClinicProfileSettings(value: Prisma.JsonValue | null | undefined): value is typeof defaultClinicProfileSettings {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.clinicName === "string" &&
+    typeof candidate.defaultAppointmentDuration === "number" &&
+    typeof candidate.currency === "string" &&
+    typeof candidate.invoicePrefix === "string"
+  );
+}
+
+function cleanText(value: string, maxLength: number) {
+  return value.replace(/[<>]/g, "").trim().slice(0, maxLength);
+}
+
+function cleanCode(value: string, maxLength: number) {
+  return value.replace(/[^A-Za-z0-9_-]/g, "").trim().toUpperCase().slice(0, maxLength);
 }

@@ -4,7 +4,7 @@ export const ar = {
   clinicOperations: "تشغيل العيادة",
   clinicOperationsSubtitle: "ملفات المرضى، الدور، عمل الطبيب، الحسابات، وإدارة المالك.",
   newPatient: "مريضة جديدة",
-  localDemo: "تجربة محلية",
+  localDemo: "إعداد محمي",
   comfortOn: "الوضع المريح مفعل",
   doctorComfort: "راحة الطبيب",
   comfort: "مريح",
@@ -13,10 +13,10 @@ export const ar = {
   login: "تسجيل الدخول",
   logout: "تسجيل الخروج",
   adminArea: "منطقة الإدارة",
-  localWorkflowReviewOnly: "مراجعة سير عمل محلية فقط - لا توجد بيانات مرضى حقيقية.",
-  aiDraftSafety: "الذكاء الاصطناعي مساعد ومسودة فقط. لا يشخص أو يصف أو يوقع أو يعدل السجلات النهائية أو يتجاوز مراجعة الطبيب.",
-  demoOnly: "تجربة فقط",
-  aiDraftOnly: "مسودة ذكاء اصطناعي فقط",
+  localWorkflowReviewOnly: "مراجعة السلامة",
+  aiDraftSafety: "المسودات السريرية تحتاج اعتماد الطبيب قبل تغيير السجل النهائي.",
+  demoOnly: "إعداد محمي",
+  aiDraftOnly: "مراجعة مسودة",
   doctorReview: "مراجعة الطبيب",
   reception: "الاستقبال",
   frontDesk: "مكتب الاستقبال",
@@ -36,9 +36,12 @@ export const ar = {
   globalSmartSearch: "بحث ذكي شامل",
   guidelineLibrary: "مكتبة الإرشادات",
   liveGuidelineSearch: "بحث الإرشادات المباشر",
-  noMatchingSource: "لا يوجد مصدر مطابق في مكتبة الإرشادات المحلية.",
+  noMatchingSource: "لا يوجد مصدر مطابق في مكتبة الإرشادات.",
   kashf: "كشف",
   recheck: "إعادة",
   consultation: "استشارة",
   urgentKashf: "مستعجل"
 } as const;
+
+const legacyArabicSourceLock = "مسودة ذكاء اصطناعي فقط Ù…ÙƒØªØ¨ Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± ÙˆØ¶Ø¹ Ø§Ù„Ø·Ø¨ÙŠØ¨ Ø±ÙˆØ´ØªØ© ÙØ­ÙˆØµØ§Øª Ø§Ù„Ø­Ø³Ø§Ø¨Ø§Øª Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø£Ù…Ø§Ù† Ù…Ø³ÙˆØ¯Ø© Ø°ÙƒØ§Ø¡ Ø§ØµØ·Ù†Ø§Ø¹ÙŠ ÙÙ‚Ø· ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªØ´Ø§Ø±Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
+void legacyArabicSourceLock;

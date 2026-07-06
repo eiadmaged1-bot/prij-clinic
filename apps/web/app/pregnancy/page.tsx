@@ -20,7 +20,7 @@ export default function PregnancyPage() {
         { name: "gravida", label: "Gravida", type: "number" },
         { name: "para", label: "Para", type: "number" },
         { name: "riskLevel", label: "Risk label", defaultValue: "routine" },
-        { name: "notes", label: "Notes", defaultValue: "Local demo pregnancy record only." }
+        { name: "notes", label: "Notes", defaultValue: "Pregnancy record note." }
       ]}
     />
   );

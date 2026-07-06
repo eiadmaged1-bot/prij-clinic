@@ -203,9 +203,9 @@ export default function AccountsPage() {
               <h1>Accounts</h1>
             </div>
           </div>
-          <span className="badge warning">Protected local demo</span>
+          <span className="badge warning">Protected accounts</span>
         </div>
-        <p className="muted">Create local demo staff accounts, set role and Permission presets, and review access toggles. System Owner access is reserved for Eyad.</p>
+        <p className="muted">Create staff accounts, set role and permission presets, and review access toggles. System Owner access is reserved.</p>
       </section>
 
       <SafetyAlert />
@@ -245,10 +245,10 @@ export default function AccountsPage() {
             </label>
             <label className="toggle-row">
               <input checked={showDemoAccounts} onChange={(event) => setShowDemoAccounts(event.target.checked)} type="checkbox" />
-              Show demo/test accounts
+              Show test accounts
             </label>
           </div>
-          {!showDemoAccounts ? <p className="badge compact-safety-badge">Demo/test accounts hidden</p> : null}
+          {!showDemoAccounts ? <p className="badge compact-safety-badge">Test accounts hidden</p> : null}
           <div className="data-list">
             {filteredAccounts.map((account) => (
               <button className={`account-row ${selected?.id === account.id ? "active" : ""}`} key={account.id} onClick={() => setSelectedId(account.id)} type="button">
@@ -268,7 +268,7 @@ export default function AccountsPage() {
           <div className="section-heading">
             <div>
               <h2>Create account</h2>
-              <p className="muted">Local demo only. Do not use production credentials or real staff passwords.</p>
+              <p className="muted">Use strong temporary passwords and share them outside the app.</p>
             </div>
           </div>
           <form className="form-grid" onSubmit={createAccount} noValidate>
@@ -300,7 +300,7 @@ export default function AccountsPage() {
               Temporary password
               <input onChange={(event) => setCreateForm((current) => ({ ...current, temporaryPassword: event.target.value }))} required type="password" value={createForm.temporaryPassword} />
             </label>
-            {createForm.temporaryPassword && createForm.temporaryPassword.length < 8 ? <p className="notice wide">Weak local demo password. Use strong password before production.</p> : null}
+            {createForm.temporaryPassword && createForm.temporaryPassword.length < 8 ? <p className="notice wide">Weak temporary password.</p> : null}
             <label className="wide">
               Reason
               <input onChange={(event) => setCreateForm((current) => ({ ...current, reason: event.target.value }))} required value={createForm.reason} />

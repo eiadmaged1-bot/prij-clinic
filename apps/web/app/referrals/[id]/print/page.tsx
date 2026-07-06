@@ -21,7 +21,7 @@ export default function ReferralPrintPage() {
     <main className="print-page">
       <button className="button no-print" type="button" onClick={() => window.print()}>Print referral</button>
       <h1>Referral Letter</h1>
-      <p>Print-friendly local demo letter. No external sending integration.</p>
+      <p>Print-friendly referral letter. No external sending integration.</p>
       {referral ? (
         <section>
           <h2>{String(referral.referralType ?? "Referral")}</h2>

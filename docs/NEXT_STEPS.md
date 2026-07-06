@@ -1,6 +1,11 @@
 # Next Steps
 
-- Run full local and Tailscale browser QA with Owner, Doctor, Receptionist, and Accountant accounts.
-- Decide whether to split Trusted Doctor from Standard Doctor into separate role presets.
-- Add richer patient-linked chat shortcuts from queue cards after clinic workflow validation.
-- Add optional group/channel seen-list expansion after direct chat is accepted by staff.
+Recommended next QA:
+- Manual role-by-role navigation review on desktop and mobile.
+- Browser check for English and Arabic layout stability.
+- Owner/Admin edit-save-cancel review for Clinic Settings.
+- Receptionist queue workflow regression.
+- Doctor visit signature, case library, and staff chat regression.
+- Same-PC and Tailscale smoke test.
+
+Do not continue into unrelated feature work until v1.3.1 QA blockers are resolved.

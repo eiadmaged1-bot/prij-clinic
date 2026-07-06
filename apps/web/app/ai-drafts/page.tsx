@@ -34,7 +34,7 @@ export default function AiDraftsPage() {
             <h1>Draft review workspace</h1>
           </div>
           <div className="topbar-actions">
-            <span className="badge warning">AI disabled / draft-only</span>
+            <span className="badge warning">Draft review</span>
             <span className="badge">Doctor review</span>
           </div>
         </div>

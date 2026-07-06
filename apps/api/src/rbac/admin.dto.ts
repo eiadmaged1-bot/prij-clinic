@@ -201,6 +201,54 @@ export class UpdateAccountPermissionsDto {
   reason!: string;
 }
 
+export class ClinicProfileSettingsDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  clinicName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  workingHours?: string;
+
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 0 })
+  @Min(5)
+  defaultAppointmentDuration!: number;
+
+  @IsString()
+  @IsIn(["EGP", "USD", "EUR", "SAR", "AED"])
+  currency!: string;
+
+  @IsString()
+  @MaxLength(12)
+  invoicePrefix!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  receiptFooterNote?: string;
+
+  @IsString()
+  @IsIn(["comfortable", "large", "compact"])
+  densityMode!: string;
+
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}
+
 export class UpdateDoctorProfileDto {
   @IsString()
   @MaxLength(7)

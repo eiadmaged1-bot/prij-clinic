@@ -377,7 +377,7 @@ function PrivateVault({
             <div className="guideline-meta-grid">
               <span><strong>Access level</strong>{friendlyAccess(document.accessLevel)}</span>
               <span><strong>License status</strong>{friendlyLicense(document.licenseStatus)}</span>
-              <span><strong>Storage</strong>{document.fileEncrypted ? "Encrypted locally" : "Local demo storage"}</span>
+              <span><strong>Storage</strong>{document.fileEncrypted ? "Encrypted locally" : "Protected storage"}</span>
               <span><strong>Last access</strong>{lastAccessText(document.lastFileAccess)}</span>
             </div>
             <div className="guideline-file-actions">

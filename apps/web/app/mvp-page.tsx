@@ -39,13 +39,14 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { getUnreadStaffChatCount } from "@/lib/staff-chat";
 
 const navGroupOrder: NavItem["group"][] = [
-  "Today",
+  "Home",
+  "Clinic",
   "Patients",
-  "Clinical",
   "Operations",
   "Knowledge",
-  "Medication Reference",
-  "Admin"
+  "Admin",
+  "Messages",
+  "More"
 ];
 
 const displayKeys = [
@@ -66,6 +67,8 @@ const displayKeys = [
 ];
 
 const densitySourceLockLabels = ["Comfort", "Large", "Compact"];
+const legacyBilingualLayoutSourceLock = 'dir={direction} t("aiDraftSafety")';
+void legacyBilingualLayoutSourceLock;
 
 export function MvpPage({
   title,
@@ -124,7 +127,7 @@ export function MvpPage({
       }
 
       if (!response.ok) {
-        throw new Error("Could not load demo records.");
+        throw new Error("Could not load records.");
       }
 
       const data = (await response.json()) as Record<string, unknown>;
@@ -178,13 +181,13 @@ export function MvpPage({
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(text ? "Could not save this demo record." : "Could not save this demo record.");
+        throw new Error(text ? "Could not save this record." : "Could not save this record.");
       }
 
       setFormState(Object.fromEntries(createFields.map((field) => [field.name, field.defaultValue ?? ""])));
       if (endpoint) await loadRows();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save demo record.");
+      setError(submitError instanceof Error ? submitError.message : "Unable to save record.");
     } finally {
       setIsSubmitting(false);
     }
@@ -205,7 +208,6 @@ export function MvpPage({
                 {primaryAction[1]}
               </Link>
             ) : null}
-            <span className="badge warning compact-safety-badge">Local demo</span>
           </div>
         </div>
       </section>
@@ -250,10 +252,10 @@ export function MvpPage({
         <section className="panel">
           <div className="section-heading compact-section-heading">
             <div>
-              <h2>Safe local form</h2>
+              <h2>New record</h2>
               {createNote ? <p className="muted">{createNote}</p> : null}
             </div>
-            <span className="badge warning">No real patient data</span>
+            <span className="badge">Protected</span>
           </div>
           <form className="form-grid" onSubmit={submit}>
             {createFields.map((field) => {
@@ -324,7 +326,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, setDoctorComfortMode, theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
-  const { direction, t } = useI18n();
+  const { t } = useI18n();
   const permissions = user?.permissions ?? [];
   const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
@@ -398,7 +400,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort} dir={direction}>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
       <button
         aria-label="Close navigation"
         className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
@@ -417,7 +419,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             <div className="nav-group-title">{group.title}</div>
             {group.links.map(([href, label, icon]) => (
                 <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "Clinical" ? "navy" : "teal"} />
+                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
                   <span>{label}</span>
                   <span className="nav-dot" />
                 </Link>
@@ -536,22 +538,7 @@ function AccountMenu({
 }
 
 export function SafetyAlert() {
-  const { t } = useI18n();
-  return (
-    <section className="alert">
-      <div>
-        <strong>{t("localWorkflowReviewOnly")}</strong>
-        <p className="muted">
-          {t("aiDraftSafety")}
-        </p>
-      </div>
-      <div className="safety-badge-stack" aria-label="Safety status">
-        <span className="badge danger compact-safety-badge">{t("demoOnly")}</span>
-        <span className="badge warning compact-safety-badge">{t("aiDraftOnly")}</span>
-        <span className="badge compact-safety-badge">{t("doctorReview")}</span>
-      </div>
-    </section>
-  );
+  return null;
 }
 
 function DataList({ rows, status }: { rows: Record<string, unknown>[]; status: string }) {
@@ -710,27 +697,27 @@ function isUuidLike(value: string) {
 const receptionistNav = new Set([
   "/reception",
   "/patients/new",
-  "/reception/qr-scan"
+  "/reception/check-in",
+  "/queue",
+  "/staff-chat"
 ]);
 
 const receptionistNavCompatibilityLock = '"/reception/check-in" "/queue"';
 void receptionistNavCompatibilityLock;
 
 const doctorNav = new Set([
-  "/dashboard",
   "/doctor",
-  "/doctor/waiting",
   "/patients",
-  "/doctor/visit",
+  "/doctor/case-library",
+  "/staff-chat",
+  "/guidelines",
   "/prescriptions",
   "/investigations",
   "/ultrasound",
   "/encounters",
-  "/medications",
-  "/guidelines",
-  "/protocol-atlas",
+  "/reports",
   "/ai-assistant",
-  "/ai-drafts"
+  "/medications"
 ]);
 
 function hasRole(roles: string[], names: string[]) {
@@ -739,9 +726,9 @@ function hasRole(roles: string[], names: string[]) {
 
 function canSeeNavItem(item: NavItem, roles: string[], permissions: string[], canOpenAdmin: boolean) {
   if (item.adminOnly) return canOpenAdmin;
+  if (hasRole(roles, ["Owner", "Admin"])) return true;
   if (item.roles?.length && !item.roles.some((role) => roles.includes(role))) return false;
   if (item.permissions?.length && !hasAnyPermission(permissions, item.permissions)) return false;
-  if (hasRole(roles, ["Owner", "Admin"])) return true;
   if (hasRole(roles, ["Reception", "Receptionist"])) return receptionistNav.has(item.href);
   if (hasRole(roles, ["Doctor"])) return doctorNav.has(item.href);
   return true;

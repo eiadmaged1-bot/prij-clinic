@@ -14,7 +14,7 @@ export default function AiAssistantPage() {
           </div>
           <div className="topbar-actions">
             <span className="badge warning">Draft - doctor review required</span>
-            <span className="badge">External AI disabled</span>
+            <span className="badge">Draft support</span>
           </div>
         </div>
         <p className="muted">Generate local draft summaries, missing-field checklists, follow-up reminder drafts, and patient-file search results without external AI calls.</p>

@@ -6,7 +6,7 @@ import { ThemeProvider } from "./theme";
 
 export const metadata: Metadata = {
   title: "Prij Clinic V0.1",
-  description: "Prij Clinic controlled local demo"
+  description: "Prij Clinic management system"
 };
 
 export default function RootLayout({

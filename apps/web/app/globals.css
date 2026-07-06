@@ -4690,3 +4690,138 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* v1.3.1 premium minimal cleanup */
+.premium-root-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(20, 128, 122, 0.12), transparent 34rem),
+    linear-gradient(135deg, #f7fbfa 0%, #ffffff 48%, #f4f7f7 100%);
+}
+
+.premium-root-card {
+  width: min(520px, 100%);
+  padding: clamp(28px, 5vw, 48px);
+  border: 1px solid rgba(20, 38, 43, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+
+.premium-root-card h1 {
+  margin: 8px 0;
+  font-size: clamp(2.2rem, 6vw, 4.6rem);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.premium-root-card .actions {
+  margin-top: 28px;
+}
+
+.summary-grid,
+.owner-stats,
+.doctor-today-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  min-height: 104px;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.07);
+}
+
+.metric-card > span {
+  font-size: 0.78rem;
+}
+
+.metric-card strong {
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1;
+}
+
+.metric-card .muted {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+}
+
+.quick-grid,
+.module-grid,
+.owner-card-grid {
+  gap: 12px;
+}
+
+.quick-card,
+.module-card,
+.owner-module-card,
+.portal-card {
+  min-height: 112px;
+  padding: 14px;
+  border-radius: 8px;
+}
+
+.settings-form {
+  display: grid;
+  gap: 14px;
+}
+
+.compact-page-header {
+  margin-bottom: 14px;
+}
+
+.sticky-form-actions {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  width: fit-content;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.app-shell,
+.topbar,
+.sidebar,
+.nav-group,
+.nav-item,
+.login-panel,
+.premium-root-card {
+  direction: ltr;
+}
+
+html[lang="ar"] .nav-item span,
+html[lang="ar"] .topbar-title p,
+html[lang="ar"] .login-panel label,
+html[lang="ar"] .premium-root-card p,
+html[lang="ar"] .panel p,
+html[lang="ar"] .panel label {
+  unicode-bidi: plaintext;
+}
+
+@media (max-width: 900px) {
+  .summary-grid,
+  .owner-stats,
+  .doctor-today-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .summary-grid,
+  .owner-stats,
+  .doctor-today-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-card {
+    min-height: 96px;
+  }
+}

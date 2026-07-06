@@ -1,14 +1,14 @@
 # Current Status
 
-v1.3.0 adds doctor visit signatures, Doctor Case Library, and internal staff chat on top of the v1.2.1 responsive reception cleanup lock.
+v1.3.1 premium UI and navigation QA cleanup is implemented.
 
-Implemented:
+Completed:
+- Arabic switch is text-only and does not rearrange layout/icons.
+- Landing page is premium and minimal.
+- Demo/local/not-real wording is removed from normal UI surfaces touched by this sprint.
+- Dashboard/admin cards are compact.
+- Clinic Settings is editable for Owner/Admin.
+- Navigation is simplified by role.
+- Local same-PC and Tailscale compatibility checks were added.
 
-- Start Visit stamps the authenticated doctor on the encounter.
-- Patient timeline and case feed show doctor name plus color.
-- Doctor Case Library route and API are RBAC protected.
-- Trusted doctor access supports colleague cases.
-- Internal staff chat stores conversations, messages, participants, and per-recipient receipts.
-- Unread badge is available in the shared top bar.
-
-External AI remains disabled by default and clinical AI output remains draft-only.
+Safety remains unchanged: external AI is disabled by default, AI is draft-only, and there is no autonomous diagnosis, prescribing, dosing, or treatment ranking.

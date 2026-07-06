@@ -137,7 +137,7 @@ export default function LoginPage() {
           </button>
 
           <details className="subtle-login-details">
-            <summary>Use Owner Demo Login</summary>
+            <summary>Use owner login</summary>
             <button className="button secondary compact" onClick={useDemoLogin} type="button">
               Fill owner login
             </button>

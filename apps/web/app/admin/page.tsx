@@ -269,7 +269,7 @@ export default function AdminPage() {
             <p className="eyebrow">Owner tools</p>
             <h1>Owner Control Center</h1>
           </div>
-          <span className="badge warning">Local demo only</span>
+          <span className="badge warning">Protected admin</span>
         </div>
         <p className="muted">Manage demo settings, staff visibility, service prices, themes, safety controls, and audit review from the app.</p>
       </section>
@@ -491,9 +491,9 @@ export default function AdminPage() {
           </label>
           <label className="toggle-row">
             <input checked={showDemoUsers} onChange={(event) => setShowDemoUsers(event.target.checked)} type="checkbox" />
-            Show demo/test accounts
+            Show test accounts
           </label>
-          {!showDemoUsers ? <p className="badge compact-safety-badge">Demo/test accounts hidden</p> : null}
+          {!showDemoUsers ? <p className="badge compact-safety-badge">Test accounts hidden</p> : null}
           <div className="data-list">
             {filteredUsers.slice(0, 8).map((user) => (
               <article className="data-row" key={user.id}>
@@ -554,7 +554,7 @@ function Metric({ label, value }: { label: string; value: string | number }) {
     <article className="metric-card">
       <span>{label}</span>
       <strong>{value}</strong>
-      <p className="muted">Local demo setting</p>
+      <p className="muted">Shared setting</p>
     </article>
   );
 }

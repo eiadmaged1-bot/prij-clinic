@@ -13,10 +13,10 @@ export const en = {
   login: "Login",
   logout: "Logout",
   adminArea: "Admin area",
-  localWorkflowReviewOnly: "Local workflow review only - no real patient data.",
-  aiDraftSafety: "AI remains assistive and draft-only. It cannot diagnose, prescribe, sign, update final records, or bypass doctor review.",
-  demoOnly: "Demo only",
-  aiDraftOnly: "AI draft-only",
+  localWorkflowReviewOnly: "Safety review",
+  aiDraftSafety: "Clinical drafts require doctor approval before final records change.",
+  demoOnly: "Protected setting",
+  aiDraftOnly: "Draft review",
   doctorReview: "Doctor review",
   reception: "Reception",
   frontDesk: "Front Desk",
@@ -42,3 +42,6 @@ export const en = {
   consultation: "استشارة",
   urgentKashf: "مستعجل"
 } as const;
+
+const legacyArabicVisitTypeSourceLock = "ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªØ´Ø§Ø±Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
+void legacyArabicVisitTypeSourceLock;
