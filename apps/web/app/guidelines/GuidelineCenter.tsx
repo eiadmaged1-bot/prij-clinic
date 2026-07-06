@@ -57,6 +57,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const canReview = Boolean(user?.permissions.includes("guidelines.review"));
   const canManageSources = Boolean(user?.permissions.includes("guidelines.manage_sources"));
   const canManagePrivate = Boolean(user?.roles.includes("Owner") || user?.permissions.includes("guidelines.manage_private"));
+  const isOwnerAdmin = Boolean(user?.roles.includes("Owner") || user?.roles.includes("Admin"));
   const [sources, setSources] = useState<Source[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [query, setQuery] = useState("");
@@ -185,7 +186,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
               </div>
             </section>
             <section className="guideline-actions">
-              {cards(canUpload, canImport, canReview).map((card) => (
+              {cards({ canUpload, canImport, canReview, isOwnerAdmin }).map((card) => (
                 <Link className="guideline-card" href={card.href} key={card.href}>
                   <ThreeDMedicalIcon name={card.icon} size="md" tone="navy" />
                   <strong>{card.title}</strong>
@@ -193,7 +194,11 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
                 </Link>
               ))}
             </section>
-            {documents.length ? <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed documents" /> : null}
+            {documents.length ? (
+              <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed documents" />
+            ) : (
+              <Empty text="No guidelines imported yet. Owner/Admin can import official sources." />
+            )}
           </>
         ) : null}
         {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} /> : null}
@@ -415,8 +420,28 @@ function Empty({ text }: { text: string }) {
   return <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>{text}</span></p>;
 }
 
-function cards(canUpload: boolean, canImport: boolean, canReview: boolean) {
+function cards({
+  canUpload,
+  canImport,
+  canReview,
+  isOwnerAdmin
+}: {
+  canUpload: boolean;
+  canImport: boolean;
+  canReview: boolean;
+  isOwnerAdmin: boolean;
+}) {
+  if (!isOwnerAdmin) {
+    return [
+      { href: "/guidelines", title: "Guidelines", copy: "Recent indexed evidence-library documents.", icon: "reports" as const },
+      { href: "/guidelines/search", title: "Search", copy: "Find indexed sections with citations.", icon: "search" as const },
+      { href: "/guidelines/search", title: "Browse", copy: "Browse local evidence-library content.", icon: "files" as const },
+      { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
+      { href: "/guidelines", title: "Recent", copy: "Recently indexed guideline documents.", icon: "timeline" as const }
+    ];
+  }
   return [
+    { href: "/guidelines/imports", title: "Import official guidelines", copy: canImport ? "Run the built-in official source pack from the server CLI." : "Restricted import area.", icon: "reports" as const },
     { href: "/guidelines/search", title: "Search All Guidelines", copy: "Find indexed sections with citations.", icon: "search" as const },
     { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
     { href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },

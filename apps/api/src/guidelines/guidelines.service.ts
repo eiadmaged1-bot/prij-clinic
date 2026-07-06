@@ -299,7 +299,26 @@ export class GuidelinesService {
       const contentType = response.headers.get("content-type") ?? "";
       const buffer = Buffer.from(await response.arrayBuffer());
       const hash = sha256(buffer);
-      const text = contentType.includes("application/pdf")
+      const duplicate = await this.prisma.guidelineDocument.findFirst({
+        where: {
+          OR: [
+            { originalUrl: url.toString() },
+            { fileSha256: hash }
+          ]
+        },
+        include: { source: true, _count: { select: { chunks: true, sections: true } } }
+      });
+      if (duplicate) {
+        await this.finishJob(job.id, "SUCCEEDED", {
+          documentId: duplicate.id,
+          chunkCount: duplicate._count.chunks,
+          skippedExisting: true
+        });
+        return { document: safeDocument(duplicate), importJobId: job.id, skippedExisting: true };
+      }
+      const isPdf = contentType.includes("application/pdf") || url.pathname.toLowerCase().endsWith(".pdf") || buffer.subarray(0, 4).toString("utf8") === "%PDF";
+      const localFile = isPdf ? await this.storeOpenImportFile(buffer, hash, ".pdf") : null;
+      const text = isPdf
         ? await extractText(buffer, "application/pdf")
         : htmlToText(buffer.toString("utf8"));
       const document = await this.createIndexedDocument({
@@ -311,7 +330,14 @@ export class GuidelinesService {
         licenseStatus: source.sourceType === "OPEN_PUBLIC" ? "OPEN" : "CHECK_REQUIRED",
         accessLevel: dto.accessLevel ?? source.defaultAccessLevel,
         originalUrl: url.toString(),
+        localFilePath: localFile?.localFilePath,
+        fileName: localFile?.fileName,
+        fileMimeType: localFile?.fileMimeType,
         fileSha256: hash,
+        fileEncrypted: localFile?.fileEncrypted,
+        fileEncryptionKeyId: localFile?.fileEncryptionKeyId,
+        fileEncryptionIv: localFile?.fileEncryptionIv,
+        fileEncryptionTag: localFile?.fileEncryptionTag,
         importedByUserId: user.id,
         text
       });
@@ -448,6 +474,13 @@ export class GuidelinesService {
     const terms = keywords(q);
     const chunks = await this.prisma.guidelineChunk.findMany({
       where: {
+        ...(terms.length
+          ? {
+              AND: terms.map((term) => ({
+                normalizedText: { contains: term, mode: "insensitive" as const }
+              }))
+            }
+          : {}),
         document: {
           ...this.documentAccessWhere(user),
           ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
@@ -457,7 +490,7 @@ export class GuidelinesService {
         }
       },
       include: { section: true, document: { include: { source: true } } },
-      take: 200,
+      take: 500,
       orderBy: { createdAt: "desc" }
     });
     const ranked = chunks
@@ -676,6 +709,24 @@ export class GuidelinesService {
         notes: "Local private licensed upload source. Do not commit uploaded files."
       }
     });
+  }
+
+  private async storeOpenImportFile(buffer: Buffer, hash: string, extension: string) {
+    const storageRoot = join(process.cwd(), "storage", "guidelines", "private");
+    await mkdir(storageRoot, { recursive: true });
+    const fileName = `${hash}${extension}`;
+    const localFilePath = join(storageRoot, fileName);
+    const storedFile = encryptForVault(buffer);
+    await writeFile(localFilePath, storedFile.buffer);
+    return {
+      localFilePath,
+      fileName,
+      fileMimeType: extension === ".pdf" ? "application/pdf" : "text/plain",
+      fileEncrypted: storedFile.encrypted,
+      fileEncryptionKeyId: storedFile.encryptionKeyId,
+      fileEncryptionIv: storedFile.encryptionIv,
+      fileEncryptionTag: storedFile.encryptionTag
+    };
   }
 
   private async createJob(
@@ -1026,10 +1077,27 @@ async function extractText(buffer: Buffer, mimeType: string) {
   if (mimeType === "text/plain") return buffer.toString("utf8");
   const pdfModule = (await import("pdf-parse")) as unknown as {
     default?: (input: Buffer) => Promise<{ text: string }>;
-  } & ((input: Buffer) => Promise<{ text: string }>);
-  const pdfParse = pdfModule.default ?? pdfModule;
-  const parsed = await pdfParse(buffer);
-  return parsed.text;
+    PDFParse?: new (input: { data: Buffer }) => { getText: () => Promise<{ text: string }>; destroy?: () => Promise<void> | void };
+    legacyParser?: (input: Buffer) => Promise<{ text: string }>;
+  };
+  if (typeof pdfModule.default === "function") {
+    const parsed = await pdfModule.default(buffer);
+    return parsed.text;
+  }
+  if (typeof pdfModule.legacyParser === "function") {
+    const parsed = await pdfModule.legacyParser(buffer);
+    return parsed.text;
+  }
+  if (typeof pdfModule.PDFParse === "function") {
+    const parser = new pdfModule.PDFParse({ data: buffer });
+    try {
+      const parsed = await parser.getText();
+      return parsed.text;
+    } finally {
+      await parser.destroy?.();
+    }
+  }
+  throw new ServiceUnavailableException("PDF text extraction is not available.");
 }
 
 function htmlToText(value: string) {
