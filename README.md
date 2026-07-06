@@ -1,5 +1,31 @@
 # Prij Clinic
 
+## v1.3.3 Workflow Compression + Guideline Import Fix
+
+v1.3.3 fixes workflow compression and Guideline Library actual import after v1.3.2 real-device QA.
+
+- `npm run guidelines:import:official` uses a built-in official/open source pack and reports imported PDFs, indexed documents, indexed chunks, link-only, failed, and skipped existing counts.
+- Guideline PDFs are stored only in gitignored private storage. There is no paywall bypass, login-only scraping, or committed imported PDFs.
+- Mobile navigation is grouped and compressed by role, with logout still visible.
+- Receptionist remains cockpit-only.
+- Patient File uses a clean header, primary actions, tabs, and contextual drawers/pages.
+- Today's Desk and Queue Board are compact boards.
+- External AI remains disabled by default. The system does not autonomously diagnose, prescribe, dose, rank treatment, or finalize clinical records.
+
+Verification:
+
+```powershell
+npm run test:v133:guideline-official-import
+npm run test:v133:mobile-navigation-compressed
+npm run test:v133:global-ui-overlays
+npm run test:v133:reception-loop-cleanup
+npm run test:v133:queue-board-cleanup
+npm run test:v133:patient-file-redesign
+npm run test:v133:todays-desk-compact
+npm run test:v133:no-demo-ui-pass
+npm run test:v133:workflow-wording-status
+```
+
 ## v1.3.2 Real Device Workflow Cleanup
 
 v1.3.2 is a real-device QA cleanup for local same-PC and Tailscale phone/tablet testing.

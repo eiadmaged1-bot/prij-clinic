@@ -15,3 +15,5 @@ npm run start:web
 ```
 
 Use this build/start path for mobile screenshots when the Next.js development issue overlay would otherwise appear. The dev overlay belongs to the development server, not the Prij Clinic application UI.
+
+v1.3.3 keeps local same-PC and Tailscale phone/tablet access working from the same running app while preserving visible logout, role-based navigation, RBAC, audit expectations, and AI safety limits.
