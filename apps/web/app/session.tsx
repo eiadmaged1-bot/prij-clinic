@@ -1,13 +1,29 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { apiUnreachableMessage, apiUnreachableMessageAr, getApiBaseUrl } from "@/lib/api-base-url";
+import { apiUnreachableMessage, sameOriginApiProxyPath } from "@/lib/api-base-url";
 
 const tokenKey = "prijClinicToken";
 const sessionMessageKey = "prijClinicSessionMessage";
 
 function connectionProblemMessage() {
-  return localStorage.getItem("prijClinicLanguage") === "ar" ? apiUnreachableMessageAr : apiUnreachableMessage;
+  return localStorage.getItem("prijClinicLanguage") === "ar"
+    ? "توجد مشكلة في الاتصال. تأكد أن سيرفر العيادة يعمل ثم حاول مرة أخرى."
+    : apiUnreachableMessage;
+}
+
+function sessionEndedMessage() {
+  return localStorage.getItem("prijClinicLanguage") === "ar"
+    ? "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
+    : "Your session ended. Please sign in again.";
+}
+
+function invalidLoginMessage() {
+  return localStorage.getItem("prijClinicLanguage") === "ar" ? "بيانات الدخول غير صحيحة." : "Invalid login ID or password.";
+}
+
+function sessionStartMessage() {
+  return localStorage.getItem("prijClinicLanguage") === "ar" ? "تعذر بدء الجلسة." : "Could not start your session.";
 }
 
 export type SessionUser = {
@@ -68,13 +84,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionStorage.setItem(tokenKey, storedToken);
     }
 
-    const response = await fetch(`${getApiBaseUrl()}/auth/me`, {
+    const response = await fetch(`${sameOriginApiProxyPath}/auth/me`, {
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
     }).catch(() => null);
 
     if (!response || response.status === 401) {
-      clearSession(response ? "Your session ended. Please sign in again." : undefined);
+      clearSession(response ? sessionEndedMessage() : undefined);
       return;
     }
 
@@ -86,7 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const data = (await response.json()) as { user?: SessionUser };
     if (!data.user) {
-      clearSession("Your session ended. Please sign in again.");
+      clearSession(sessionEndedMessage());
       return;
     }
 
@@ -100,7 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
+    const response = await fetch(`${sameOriginApiProxyPath}/auth/login`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json" },
@@ -112,7 +128,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (response.status === 401) {
-      throw new Error("Invalid login ID or password.");
+      throw new Error(invalidLoginMessage());
     }
 
     if (!response.ok) {
@@ -121,7 +137,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const data = (await response.json()) as { token?: string; user?: SessionUser };
     if (!data.token || !data.user) {
-      throw new Error("Could not start your session.");
+      throw new Error(sessionStartMessage());
     }
 
     localStorage.setItem(tokenKey, data.token);
@@ -135,7 +151,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const storedToken = token ?? localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
-    await fetch(`${getApiBaseUrl()}/auth/logout`, {
+    await fetch(`${sameOriginApiProxyPath}/auth/logout`, {
       method: "POST",
       credentials: "include",
       headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined

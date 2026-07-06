@@ -16,6 +16,7 @@ assert(apiBase.includes('sameOriginApiProxyPath = "/api/backend"'), "browser API
 assert(apiBase.includes("return sameOriginApiProxyPath"), "browser API base must default to the same-origin proxy path");
 assert(!apiBase.includes("LAN API fallback is disabled"), "normal API base resolver must not throw LAN fallback errors");
 assert(!apiBase.includes("return `http://${hostname}:${defaultLanApiPort}`"), "normal browser path must not derive direct port 3001 URLs");
-assert(session.includes("getApiBaseUrl()}/auth/login"), "session login must continue using centralized API base");
+assert(session.includes("sameOriginApiProxyPath") && session.includes("sameOriginApiProxyPath}/auth/login"), "session login must use fixed same-origin proxy path");
+assert(!session.includes("getApiBaseUrl()}/auth/login"), "session login must not use configurable browser API origins");
 
 console.log("V134 single-origin API proxy PASS");
