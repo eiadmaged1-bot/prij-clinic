@@ -15,6 +15,11 @@ export class CheckInDto {
 
   @IsEnum(VisitType)
   visitType!: VisitType;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  checkInMethod?: string;
 }
 
 export class QueueCancelDto {

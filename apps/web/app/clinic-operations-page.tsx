@@ -33,7 +33,6 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const [orders, setOrders] = useState<InvestigationOrder[]>([]);
   const [dashboard, setDashboard] = useState<DashboardSummary>({});
   const [status, setStatus] = useState("Loading");
-  const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
@@ -58,9 +57,8 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
 
   const completed = queue.filter((ticket) => ticket.status === "completed");
   const pendingRequests = orders.filter((order) => !["reviewed", "cancelled"].includes(order.status));
-  const visibleAppointments = showTrainingRecords ? appointments : appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
-  const visibleQueue = showTrainingRecords ? queue : queue.filter((ticket) => !isTrainingPatient(ticket.patient));
-  const hiddenTrainingCount = appointments.length + queue.length - visibleAppointments.length - visibleQueue.length;
+  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
+  const visibleQueue = queue.filter((ticket) => !isTrainingPatient(ticket.patient));
 
   return (
     <AppShell>
@@ -71,18 +69,16 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
             <h1>{title}</h1>
           </div>
           <div className="topbar-actions">
-            <button className={`button secondary compact ${showTrainingRecords ? "active" : ""}`} type="button" onClick={() => setShowTrainingRecords((value) => !value)}>
-              {showTrainingRecords ? "Hide training records" : "Show training records"}
-            </button>
+            <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
+            {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
             <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />Reception</Link>
             <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor list</Link>
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>
           </div>
         </div>
-        <p className="muted">{description}</p>
+        {mode !== "reports" ? <p className="muted">{description}</p> : null}
       </section>
       <SafetyAlert />
-      {!showTrainingRecords && hiddenTrainingCount > 0 ? <p className="badge compact-safety-badge">Training records hidden: {hiddenTrainingCount}</p> : null}
       <section className="compact-metric-grid">
         <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
         <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
@@ -94,7 +90,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
       {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
-      {mode === "reports" ? <DailyReports appointments={appointments} queue={queue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
+      {mode === "reports" ? <DailyReports appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
     </AppShell>
   );
 }

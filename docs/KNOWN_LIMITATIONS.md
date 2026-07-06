@@ -1,10 +1,11 @@
 # Known Limitations
 
-v1.3.1 is a UI/navigation QA cleanup, not a production readiness claim.
+External AI remains disabled by default.
 
-Known limitations:
-- External AI remains disabled by default.
-- AI clinical output is draft-only and must be reviewed and approved by a doctor.
-- The system does not autonomously diagnose, prescribe, dose, or rank treatment.
-- Deployment-specific privacy, legal, backup, and operational signoff are still required before real patient data.
-- Tailscale support is for private local QA only, not public exposure.
+AI cannot autonomously diagnose, prescribe, dose, rank treatments, or update final clinical records without doctor approval.
+
+Guideline PDFs require licensed runtime import and are not committed.
+
+Libya medication rows remain hidden/import-pending until an official source is uploaded or imported and reviewed.
+
+Medication interaction checks are assistive. Unknown means no verified source record is loaded, not that a pair is safe.

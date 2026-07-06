@@ -1,5 +1,34 @@
 # Prij Clinic
 
+## v1.3.2 Real Device Workflow Cleanup
+
+v1.3.2 is a real-device QA cleanup for local same-PC and Tailscale phone/tablet testing.
+
+- Tailscale no longer requires manual LAN API env for basic QA.
+- Logout is visible for every role through the top-right account menu; drawer roles also get sticky drawer logout.
+- Receptionist has no menu/sidebar and uses the cockpit only.
+- Demo/test/training records are hidden from normal UI and `npm run db:cleanup:demo` quarantines known old local markers.
+- Receptionist check-in signature is operational and separate from doctor signature.
+- Clinical modules use patient context, not raw IDs.
+- Pharmacology workspace supports generic/brand/class/function search and assistive safety checks.
+- Guideline PDFs are stored in gitignored private storage only. No paywall bypass.
+- External AI remains disabled by default. No autonomous diagnosis, prescribing, dosing, or treatment ranking.
+
+Verification:
+
+```powershell
+npm run test:v132:tailscale-runtime
+npm run test:v132:logout-visibility
+npm run test:v132:navigation-final
+npm run test:v132:reception-workflow-cleanup
+npm run test:v132:receptionist-signature
+npm run test:v132:clinical-module-cleanup
+npm run test:v132:ai-reports-cleanup
+npm run test:v132:guideline-import-foundation
+npm run test:v132:pharmacology-safety
+npm run test:v132:no-demo-normal-ui
+```
+
 ## v1.3.1 Premium UI + Navigation QA Cleanup
 
 v1.3.1 fixes the first manual QA issues after v1.3.0.

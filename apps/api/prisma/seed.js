@@ -561,6 +561,8 @@ const rolePermissionKeys = {
     "queue.read",
     "queue.manage",
     "queue.status_update",
+    "staff_chat.read",
+    "staff_chat.write",
     "patient_intake.read",
     "patient_intake.write",
     "patient_intake.submit",

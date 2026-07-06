@@ -83,7 +83,7 @@ export class PatientsService {
 
   async list(user: AuthUser) {
     const patients = await this.prisma.patient.findMany({
-      where: branchScope(user),
+      where: { ...branchScope(user), NOT: demoPatientWhere() },
       orderBy: [{ createdAt: "desc" }],
       take: 100
     });
@@ -247,7 +247,15 @@ export class PatientsService {
     const items = [
       timelineItem(patient.createdAt, "patient", "Patient file created", patient.status, `MRN ${patient.medicalRecordNumber}`, patient.createdByUserId ? "Staff member" : undefined, `/patients/${patient.id}`),
       ...appointments.map((item) => timelineItem(item.startAt, "appointment", "Appointment booked", item.status, item.appointmentType ?? "Clinic appointment", item.doctor?.displayName, "/appointments")),
-      ...queueTickets.map((item) => timelineItem(item.checkedInAt, "queue", "Checked in to queue", item.status, `Queue ${item.queueNumber}`, undefined, "/queue")),
+      ...queueTickets.map((item) => timelineItem(
+        item.checkedInAt,
+        "queue",
+        "Checked in to queue",
+        item.status,
+        `Added by: ${item.receptionistDisplayNameSnapshot ?? "Reception"} · ${visitTypeDisplay(item.visitType)} · ${formatTime(item.checkedInAt)}`,
+        item.receptionistDisplayNameSnapshot ?? undefined,
+        "/queue"
+      )),
       ...encounters.map((item) => timelineItem(
         item.startedAt ?? item.createdAt,
         "encounter",
@@ -500,14 +508,42 @@ export class PatientsService {
     }
     const checkedInAt = new Date();
     const queueDate = toUtcDateOnly(checkedInAt);
+    const activeTicket = await this.prisma.queueTicket.findFirst({
+      where: { branchId, patientId: id, queueDate, status: { in: ["waiting", "called"] } },
+      orderBy: { queueNumber: "asc" },
+      include: { patient: true, appointment: true }
+    });
+    if (activeTicket) {
+      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : `Already in queue · Position ${activeTicket.queueNumber}`);
+    }
     const ticket = await this.createQueueTicketWithRetry({
       branchId,
       patientId: id,
       appointmentId: dto.appointmentId ?? null,
+      receptionistUserId: user.id,
+      receptionistDisplayNameSnapshot: user.displayName || user.loginId || user.email || "Reception",
+      checkInMethod: dto.checkInMethod?.trim() || "Manual",
       checkedInAt,
       queueDate
     });
-    await this.audit.record({ actorUserId: user.id, action: "queue.checked_in", resourceType: "queue_ticket", resourceId: ticket.id, branchId, severity: "medium", metadataJson: { patientId: id, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10), source: "patient_file" } });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "queue.checked_in",
+      resourceType: "queue_ticket",
+      resourceId: ticket.id,
+      branchId,
+      severity: "medium",
+      metadataJson: {
+        patientId: id,
+        queueNumber: ticket.queueNumber,
+        queueDate: ticket.queueDate.toISOString().slice(0, 10),
+        source: "patient_file",
+        visitType: ticket.visitType,
+        checkInMethod: ticket.checkInMethod,
+        receptionistUserId: ticket.receptionistUserId,
+        receptionistDisplayNameSnapshot: ticket.receptionistDisplayNameSnapshot
+      }
+    });
     return ticket;
   }
 
@@ -725,6 +761,9 @@ export class PatientsService {
     branchId: string;
     patientId: string;
     appointmentId: string | null;
+    receptionistUserId: string;
+    receptionistDisplayNameSnapshot: string;
+    checkInMethod: string;
     checkedInAt: Date;
     queueDate: Date;
   }) {
@@ -741,7 +780,10 @@ export class PatientsService {
               queueNumber,
               queueDate: input.queueDate,
               checkedInAt: input.checkedInAt,
-              visitType: "kashf"
+              visitType: "kashf",
+              receptionistUserId: input.receptionistUserId,
+              receptionistDisplayNameSnapshot: input.receptionistDisplayNameSnapshot,
+              checkInMethod: input.checkInMethod
             },
             include: { patient: true, appointment: true }
           });
@@ -1047,4 +1089,30 @@ function toDateTime(value?: string) {
 
 function isUniqueViolation(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function visitTypeDisplay(value: string) {
+  const labels: Record<string, string> = {
+    kashf: "كشف",
+    recheck: "إعادة",
+    consultation: "استشارة",
+    urgent_kashf: "مستعجل"
+  };
+  return labels[value] ?? value;
+}
+
+function formatTime(value: Date) {
+  return value.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function demoPatientWhere(): Prisma.PatientWhereInput[] {
+  return [
+    { firstName: { startsWith: "Demo", mode: "insensitive" } },
+    { lastName: { startsWith: "Demo", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
+    { notes: { contains: "training", mode: "insensitive" } },
+    { notes: { contains: "local demo", mode: "insensitive" } }
+  ];
 }

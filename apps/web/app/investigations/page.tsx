@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { PatientPicker, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { AppShell, SafetyAlert } from "../mvp-page";
@@ -19,6 +19,7 @@ export default function InvestigationsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState("");
   const [requestNote, setRequestNote] = useState("");
+  const [category, setCategory] = useState("");
   const [status, setStatus] = useState("Ready");
 
   useEffect(() => {
@@ -28,16 +29,23 @@ export default function InvestigationsPage() {
     void loadRequests();
     void loadPatients();
   }, []);
+  const searchCatalog = useCallback(async (value: string) => {
+    const expanded = expandSearchShortcut(value);
+    if (!expanded.trim() && !category) {
+      setCatalog([]);
+      return;
+    }
+    const params = new URLSearchParams();
+    if (expanded.trim()) params.set("q", expanded);
+    if (category) params.set("category", category);
+    const data = await apiGet(`/investigations/catalog?${params.toString()}`);
+    setCatalog((data.investigationCatalog ?? []) as CatalogItem[]);
+  }, [category]);
+
   useEffect(() => {
     const timeout = window.setTimeout(() => { void searchCatalog(query); }, 220);
     return () => window.clearTimeout(timeout);
-  }, [query]);
-
-  async function searchCatalog(value: string) {
-    const expanded = expandSearchShortcut(value);
-    const data = await apiGet(`/investigations/catalog${expanded.trim() ? `?q=${encodeURIComponent(expanded)}` : ""}`);
-    setCatalog((data.investigationCatalog ?? []) as CatalogItem[]);
-  }
+  }, [query, category, searchCatalog]);
 
   async function loadRequests() {
     const data = await apiGet("/clinical-requests");
@@ -82,12 +90,11 @@ export default function InvestigationsPage() {
             <p className="eyebrow">Clinical Requests</p>
             <h1>Requested Investigations</h1>
           </div>
-          <button className="button secondary compact" type="button" onClick={() => window.print()}>
+          <button className="button secondary compact" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
-            Print request
+            Print
           </button>
         </div>
-        <p className="muted">Create lab, imaging, pathology, cytology, tumor marker, specialist report, and external procedure requests. Follow-up stays active until results or reports are received and reviewed.</p>
       </section>
       <SafetyAlert />
       <section className="content-grid">
@@ -98,12 +105,18 @@ export default function InvestigationsPage() {
               <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient file before saving this request." />
             </div>
             <label>Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, ferritin, CA-125, X-ray, 4D ultrasound, vascular report" /></label>
+            <div className="visit-type-counts wide" aria-label="Category filters">
+              {["Lab", "Radiology", "Ultrasound", "Cytology", "Pathology", "Specialist report"].map((item) => (
+                <button className={category === item ? "active" : ""} key={item} type="button" onClick={() => setCategory((current) => current === item ? "" : item)}>{item}</button>
+              ))}
+            </div>
             <div className="data-list">
               {catalog.slice(0, 10).map((item) => (
                 <button className="data-row" key={item.id} type="button" onClick={() => setSelected((current) => current.some((selectedItem) => selectedItem.id === item.id) ? current : [...current, item])}>
                   <div className="data-row-header"><strong>{item.name}</strong><span className="badge">{item.modality ?? item.category}</span></div>
                 </button>
               ))}
+              {!query.trim() && !category ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
             </div>
             <div className="selected-request-chips wide" data-selected-request-chips>
               {selected.length ? selected.map((item) => (
@@ -115,7 +128,8 @@ export default function InvestigationsPage() {
               )) : <span className="empty-state compact smart-empty-state">No requests selected</span>}
             </div>
             <label>Clinical note per request<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
-            <button className="button" type="submit">Attach to patient</button>
+            <button className="button" type="submit" disabled={!patientId || selected.length === 0}>Attach to patient</button>
+            <button className="button secondary" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>Print</button>
           </form>
         </article>
         <article className="panel">

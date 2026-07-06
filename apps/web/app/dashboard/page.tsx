@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
@@ -38,16 +37,12 @@ type DashboardSummary = {
   };
 };
 
-const workflow = ["Reception", "Appointment", "Queue", "Doctor", "Orders", "Reports", "Finance", "Owner review"];
-
 const quickActions: Array<[string, string, string, IconName]> = [
   ["/reception", "Reception", "Open the front desk workflow.", "reception"],
   ["/patients/new", "New Patient", "Create a patient file.", "patients"],
-  ["/appointments", "Appointment", "Schedule a visit.", "calendar"],
   ["/queue", "Waiting Line", "Manage arrivals.", "queue"],
   ["/doctor", "Doctor", "Open the clinical workspace.", "doctor"],
   ["/billing", "Create Invoice", "Record manual clinic charges without a gateway.", "billing"],
-  ["/medications", "Medication Reference", "Search reference metadata.", "prescription"],
   ["/admin", "Admin", "Settings, users, services, and audit.", "admin"]
 ];
 
@@ -68,7 +63,6 @@ const portalModules: Array<[string, string, string, string, string]> = [
 ];
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { theme } = useTheme();
   const [user, setUser] = useState<SafeUser | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -102,19 +96,6 @@ export default function DashboardPage() {
       })
       .catch(() => setError("Please sign in to continue."));
   }, []);
-
-  async function logout() {
-    const token = sessionStorage.getItem("prijClinicToken");
-
-    await fetch(`${getApiBaseUrl()}/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: token ? { authorization: `Bearer ${token}` } : undefined
-    });
-
-    sessionStorage.removeItem("prijClinicToken");
-    router.push("/login");
-  }
 
   if (error) {
     return (
@@ -321,19 +302,13 @@ export default function DashboardPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">Premium clinic OS</p>
+            <p className="eyebrow">Prij Clinic</p>
             <h1 data-testid="page-heading">Clinic Home</h1>
           </div>
           <div className="topbar-actions">
-            <button className="button secondary compact" onClick={logout} type="button">
-              Logout
-            </button>
             <span className="badge accent">{user?.roles.join(", ") || "Staff"}</span>
           </div>
         </div>
-        <p className="muted">
-          A visible home for today&apos;s clinic flow: reception, queue, doctor workspace, orders, finance, medications, and owner controls.
-        </p>
       </section>
 
       <section className="summary-grid" aria-label="Operational summary">
@@ -360,58 +335,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="panel">
-          <div className="section-heading">
-            <h2>Session</h2>
-            <span className="badge">{user?.status ?? "Loading"}</span>
-          </div>
-          {user ? (
-            <dl className="profile-grid">
-              <div>
-                <dt>Name</dt>
-                <dd>{user.displayName}</dd>
-              </div>
-              <div>
-                <dt>Email</dt>
-                <dd>{user.email}</dd>
-              </div>
-              <div>
-                <dt>Roles</dt>
-                <dd>{user.roles.join(", ") || "None"}</dd>
-              </div>
-              <div>
-                <dt>Branch</dt>
-                <dd>{user.branchId ?? "Primary clinic"}</dd>
-              </div>
-              <div className="wide">
-                <dt>Access</dt>
-                <dd>{user.permissions.length > 0 ? "Clinic access enabled for this role" : "No extra access shown"}</dd>
-              </div>
-            </dl>
-          ) : (
-            <div className="skeleton" />
-          )}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="section-heading">
-          <h2>Clinic workflow</h2>
-          <span className="badge accent">Daily flow</span>
-        </div>
-        <div className="workflow-band">
-          {workflow.map((step) => (
-            <span key={step}>{step}</span>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <div className="section-heading">
-          <h2>Medication reference status</h2>
-          <Link className="button secondary compact" href="/medications">Open reference</Link>
-        </div>
-        <p className="empty-state">Medication reference rows are loaded only from official or owner-approved imports. If no reference data is available, prescription selection must stay manual and doctor-controlled.</p>
       </section>
     </AppShell>
   );

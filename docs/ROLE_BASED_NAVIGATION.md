@@ -1,32 +1,7 @@
-# Role Based Navigation
+# Role-Based Navigation
 
-Navigation is workflow-first and role-scoped.
+Logout is visible from the top-right account menu for every role and sticky at the bottom of drawer navigation when a drawer exists.
 
-Receptionist sees:
-- Home
-- New Patient
-- Returning Patient
-- Waiting Line
-- Messages
-- Account and logout from the topbar
+Receptionist has no menu/sidebar. Doctor navigation keeps Today/Waiting, Patients, Case Library, Messages, Guidelines, and a collapsed More group for clinical tools. Owner/Admin navigation uses grouped sections.
 
-Doctor sees:
-- Today / Waiting
-- Patients
-- Case Library
-- Messages
-- Guidelines
-- More
-
-Doctor More contains clinical tools such as prescriptions, investigations, ultrasound, encounters, reports where allowed, AI Tools where allowed, and Medication Reference.
-
-Owner/Admin sees grouped system navigation:
-- Dashboard
-- Clinic
-- Patients
-- Operations
-- Knowledge
-- Admin
-- Messages
-
-Accountant remains outside clinical library and doctor-only pages.
+Only one route appears active at a time.

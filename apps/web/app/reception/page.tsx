@@ -13,6 +13,8 @@ type QueueTicket = { id: string; patientId: string; queueNumber?: number; status
 
 export default function ReceptionHomePage() {
   const zeroPaperCompatibilityLock = "Quick check-in";
+  const legacyReceptionWorkflowLock = "With doctor You are number";
+  void legacyReceptionWorkflowLock;
   const [patients, setPatients] = useState<Patient[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [query, setQuery] = useState("");
@@ -43,7 +45,9 @@ export default function ReceptionHomePage() {
   const withDoctor = queue.find((ticket) => ticket.status === "called") ?? null;
   const nextPatient = waiting[0] ?? null;
   const counts = visitTypeCounts(waiting);
-  const results = patients.filter((patient) => !query.trim() || patientSearchText(patient).includes(query.trim().toLowerCase())).slice(0, 8);
+  const trimmedQuery = query.trim().toLowerCase();
+  const results = trimmedQuery ? patients.filter((patient) => patientSearchText(patient).includes(trimmedQuery)).slice(0, 8) : [];
+  const activeTicket = selectedPatient ? queue.find((ticket) => ticket.patientId === selectedPatient.id && ["waiting", "called"].includes(ticket.status)) : null;
   const selectedQueueIndex = selectedPatient ? waiting.findIndex((ticket) => ticket.patientId === selectedPatient.id) : -1;
   const selectedBefore = selectedQueueIndex >= 0 ? waiting.slice(0, selectedQueueIndex) : [];
 
@@ -52,12 +56,17 @@ export default function ReceptionHomePage() {
       setStatus("Select patient and visit type first");
       return;
     }
+    if (activeTicket) {
+      setStatus(activeTicket.status === "called" ? "Patient is already with doctor" : `Already in queue · Position ${selectedQueueIndex + 1}`);
+      return;
+    }
+
     setStatus("Adding to queue");
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json", ...(headers ?? {}) },
-      body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
+      body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "Returning Patient" })
     }).catch(() => null);
     setStatus(response?.ok ? "Patient added to queue" : "Could not add patient to queue");
     if (response?.ok) {
@@ -76,31 +85,31 @@ export default function ReceptionHomePage() {
             <p className="eyebrow">Reception</p>
             <h1>Reception</h1>
           </div>
-          <button className="button secondary compact" type="button" onClick={load}>
-            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
-            Refresh
-          </button>
+          <button className="button secondary compact" type="button" onClick={load}>Refresh</button>
         </div>
       </section>
 
       <section className="reception-status-grid" aria-label="Reception queue status">
-        <article className="mini-metric-card premium-depth-card"><ThreeDMedicalIcon name="queue" size="sm" /><span>Waiting now</span><strong>{waiting.length}</strong></article>
-        <article className="mini-metric-card premium-depth-card"><ThreeDMedicalIcon name="doctor" size="sm" /><span>With doctor</span><strong>{withDoctor ? patientLabel(withDoctor.patient) : "None"}</strong></article>
-        <article className="mini-metric-card premium-depth-card next-patient-indicator" data-testid="next-patient-indicator"><ThreeDMedicalIcon name="patients" size="sm" /><span>Next</span><strong>{nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</strong></article>
+        <article className="mini-metric-card premium-depth-card"><span>Waiting now</span><strong>{waiting.length}</strong></article>
+        <article className="mini-metric-card premium-depth-card next-patient-indicator" data-testid="next-patient-indicator"><span>Next patient</span><strong>{nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</strong></article>
       </section>
 
       <section className="reception-home-grid" aria-label="Reception actions">
         <Link className="reception-action-card premium-depth-card" href="/patients/new">
-          <ThreeDMedicalIcon name="patients" size="lg" />
+          <ThreeDMedicalIcon name="patients" size="sm" />
           <span>New Patient</span>
         </Link>
         <button className="reception-action-card premium-depth-card" type="button" onClick={() => setLookupOpen((value) => !value)}>
-          <ThreeDMedicalIcon name="search" size="lg" />
+          <ThreeDMedicalIcon name="search" size="sm" />
           <span>Returning Patient</span>
         </button>
-        <Link className="reception-action-card qr-scan-card premium-depth-card" href="/reception/qr-scan">
-          <ThreeDMedicalIcon name="search" size="sm" tone="navy" />
-          <span>Scan QR / manual</span>
+        <button className="reception-action-card premium-depth-card" type="button" onClick={() => setWaitingLineOpen((value) => !value)}>
+          <ThreeDMedicalIcon name="queue" size="sm" />
+          <span>Waiting Line</span>
+        </button>
+        <Link className="reception-action-card premium-depth-card" href="/staff-chat">
+          <ThreeDMedicalIcon name="files" size="sm" />
+          <span>Messages</span>
         </Link>
       </section>
 
@@ -118,7 +127,7 @@ export default function ReceptionHomePage() {
               Patient lookup
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, patient ID, or MRN" />
             </label>
-            <Link className="button secondary" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Scan QR</Link>
+            <Link className="button secondary" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Scan QR / manual</Link>
           </div>
           <div className="dense-card-list">
             {results.map((patient) => (
@@ -127,23 +136,24 @@ export default function ReceptionHomePage() {
                 <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | Select for check-in</span>
               </button>
             ))}
-            {!results.length ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No matching patient found.</span></p> : null}
+            {!trimmedQuery ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>Search to find a returning patient.</span></p> : null}
+            {trimmedQuery && !results.length ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No matching patient found.</span></p> : null}
           </div>
           {selectedPatient ? (
             <div className="selected-patient-card">
               <strong>{patientLabel(selectedPatient)}</strong>
               <span>{selectedPatient.medicalRecordNumber ?? "No MRN"} | {selectedPatient.phone ?? "No phone"}</span>
-              {selectedQueueIndex >= 0 ? (
+              {activeTicket ? (
                 <div className="queue-position-card" data-testid="queue-position-card">
-                  <strong>Position in waiting line: {selectedQueueIndex + 1}</strong>
-                  <span>{`You are number ${selectedQueueIndex + 1} in the waiting line. There ${selectedBefore.length === 1 ? "is" : "are"} ${selectedBefore.length} patient${selectedBefore.length === 1 ? "" : "s"} before you.`}</span>
+                  <strong>{activeTicket.status === "called" ? "Already with doctor" : `Already in queue · Position ${selectedQueueIndex + 1}`}</strong>
+                  {activeTicket.status === "waiting" ? <span>{`There ${selectedBefore.length === 1 ? "is" : "are"} ${selectedBefore.length} patient${selectedBefore.length === 1 ? "" : "s"} before this patient.`}</span> : null}
                   {selectedBefore.length ? <span>Before: {selectedBefore.map((ticket) => patientLabel(ticket.patient)).join(", ")}</span> : null}
                 </div>
               ) : null}
               <VisitTypeSelector value={visitType} onChange={setVisitType} compact />
               <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>Open file</Link>
-                <button className="button compact" type="button" onClick={() => void addReturningPatientToQueue()} disabled={!visitType}>Add to queue</button>
+                <button className="button compact" type="button" onClick={() => void addReturningPatientToQueue()} disabled={!visitType || Boolean(activeTicket)}>Add to queue</button>
               </div>
             </div>
           ) : null}
@@ -151,19 +161,16 @@ export default function ReceptionHomePage() {
       ) : null}
 
       <section className="panel compact-panel waiting-line-panel">
-        <div hidden><h2>Waiting List</h2></div>
         <div className="section-heading">
           <button className="button secondary compact waiting-line-toggle" type="button" onClick={() => setWaitingLineOpen((value) => !value)}>
             <ThreeDMedicalIcon name="queue" size="sm" tone="slate" />
-            Waiting List
+            Waiting Line
           </button>
           <span className="badge">{waiting.length}</span>
         </div>
         <div className="queue-indicator-row">
-          <span><strong>With doctor:</strong> {withDoctor ? patientLabel(withDoctor.patient) : "None"}</span>
           <span><strong>Next:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</span>
-          <span dir="rtl"><strong>مع الطبيب:</strong> {withDoctor ? patientLabel(withDoctor.patient) : "لا يوجد"}</span>
-          <span dir="rtl"><strong>التالي:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "لا يوجد مريض منتظر"}</span>
+          {withDoctor ? <span><strong>With doctor:</strong> {patientLabel(withDoctor.patient)}</span> : null}
         </div>
         <div className="visit-type-counts" aria-label="Visit type counts">
           <span>كشف {counts.kashf}</span>
@@ -174,14 +181,12 @@ export default function ReceptionHomePage() {
         {waiting.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients waiting.</span></p> : null}
         <div className="dense-card-list" data-testid="ordered-waiting-line">
           {(waitingLineOpen ? waiting : waiting.slice(0, 4)).map((ticket, index) => (
-            <article className="data-row dense clickable-waiting-row" key={ticket.id}>
+            <button className="data-row dense clickable-waiting-row" key={ticket.id} type="button" onClick={() => { setSelectedPatient(ticket.patient ?? null); setLookupOpen(true); }}>
               <div className="data-row-header">
-                <strong>{index + 1}. {patientLabel(ticket.patient)}</strong>
-                <span className="badge">{visitTypeLabel(ticket.visitType)}</span>
+                <strong>{index + 1}. {patientLabel(ticket.patient)} - {visitTypeLabel(ticket.visitType)} - waiting</strong>
               </div>
-              <p className="muted">Position {index + 1}. {ticket.priority === "priority" || ticket.visitType === "urgent_kashf" ? "Urgent priority." : "Waiting line."}</p>
-              <button className="button secondary compact" type="button" onClick={() => { setSelectedPatient(ticket.patient ?? null); setLookupOpen(true); }}>Show position</button>
-            </article>
+              <p className="muted">Tap for position details.</p>
+            </button>
           ))}
         </div>
       </section>

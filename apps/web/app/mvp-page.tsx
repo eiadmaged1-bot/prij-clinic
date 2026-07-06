@@ -332,6 +332,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const canOpenAdmin = isAdmin;
   const canUseDoctorComfort = hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const canUseStaffChat = permissions.includes("staff_chat.read");
+  const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const [staffChatUnread, setStaffChatUnread] = useState(0);
   const visibleNavGroups = navGroupOrder
     .map((group) => ({
@@ -341,6 +342,10 @@ function AppShellChrome({ children }: { children: ReactNode }) {
         .map((item) => [item.href, item.label, item.icon] as [string, string, IconName])
     }))
     .filter((group) => group.links.length > 0);
+  const activeNavHref = visibleNavGroups
+    .flatMap((group) => group.links.map(([href]) => href))
+    .filter((href) => isActive(pathname, href))
+    .sort((left, right) => right.length - left.length)[0];
 
   useEffect(() => {
     setComfort(localStorage.getItem("prijDensityMode") ?? localStorage.getItem("prijComfortMode") ?? "comfortable");
@@ -400,48 +405,60 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
-      <button
-        aria-label="Close navigation"
-        className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
-        onClick={() => setMobileNavOpen(false)}
-        type="button"
-      />
-      <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
-        <Link className="brand" href="/dashboard">
-          <span className="brand-mark">P</span>
-        <strong>{t("appName")}</strong>
-          <span>{t("appSubtitle")}</span>
-        </Link>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
+      {!isReceptionistOnly ? (
+        <>
+          <button
+            aria-label="Close navigation"
+            className={`mobile-nav-backdrop ${mobileNavOpen ? "open" : ""}`}
+            onClick={() => setMobileNavOpen(false)}
+            type="button"
+          />
+          <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
+            <Link className="brand" href="/dashboard">
+              <span className="brand-mark">P</span>
+              <strong>{t("appName")}</strong>
+              <span>{t("appSubtitle")}</span>
+            </Link>
 
-        {visibleNavGroups.map((group) => (
-          <nav className="nav-group" key={group.title} aria-label={group.title}>
-            <div className="nav-group-title">{group.title}</div>
-            {group.links.map(([href, label, icon]) => (
-                <Link className={`nav-item ${isActive(pathname, href) ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
-                  <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
-                  <span>{label}</span>
-                  <span className="nav-dot" />
-                </Link>
+            {visibleNavGroups.map((group) => (
+              <nav className="nav-group" key={group.title} aria-label={group.title}>
+                <div className="nav-group-title">{group.title}</div>
+                {group.links.map(([href, label, icon]) => (
+                  <Link className={`nav-item ${activeNavHref === href ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
+                    <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
+                    <span>{label}</span>
+                    <span className="nav-dot" />
+                  </Link>
+                ))}
+              </nav>
             ))}
-          </nav>
-        ))}
-      </aside>
+            {user ? (
+              <button className="button secondary compact sidebar-logout-button" onClick={() => void signOut()} type="button">
+                <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+                {t("logout")}
+              </button>
+            ) : null}
+          </aside>
+        </>
+      ) : null}
 
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-title">
-            <button
-              aria-controls="clinic-mobile-navigation"
-              aria-expanded={mobileNavOpen || !sidebarCollapsed}
-              aria-label={sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
-              className={`button secondary compact app-menu-button ${mobileNavOpen ? "active" : ""}`}
-              onClick={toggleNavigation}
-              type="button"
-            >
-              <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-              <span>Menu</span>
-            </button>
+            {!isReceptionistOnly ? (
+              <button
+                aria-controls="clinic-mobile-navigation"
+                aria-expanded={mobileNavOpen || !sidebarCollapsed}
+                aria-label={sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
+                className={`button secondary compact app-menu-button ${mobileNavOpen ? "active" : ""}`}
+                onClick={toggleNavigation}
+                type="button"
+              >
+                <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
+                <span>Menu</span>
+              </button>
+            ) : null}
             <strong className="mobile-topbar-brand">Prij Clinic</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
@@ -450,10 +467,10 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           </div>
           <UniversalSearchBox />
           <div className="topbar-actions">
-            <Link className="button compact" href="/patients/new">
+            {!isReceptionistOnly ? <Link className="button compact" href="/patients/new">
               <ThreeDMedicalIcon name="patients" size="sm" />
               {t("newPatient")}
-            </Link>
+            </Link> : null}
             <LanguageSwitcher />
             {canUseStaffChat ? (
               <Link className="button secondary compact chat-topbar-button" href="/staff-chat" aria-label="Staff messages">

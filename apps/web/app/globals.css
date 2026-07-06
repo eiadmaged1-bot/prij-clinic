@@ -513,6 +513,10 @@ select:focus {
   grid-template-columns: 5.35rem minmax(0, 1fr);
 }
 
+.app-shell.no-sidebar {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 body {
   overflow-x: hidden;
 }
@@ -676,6 +680,14 @@ body {
 
 .nav-item.active .nav-dot {
   opacity: 1;
+}
+
+.sidebar-logout-button {
+  margin-top: auto;
+  position: sticky;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  justify-content: center;
+  width: 100%;
 }
 
 .sidebar-collapsed .sidebar {

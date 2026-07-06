@@ -331,6 +331,11 @@ model QueueTicket {
   priority      QueuePriority     @default(routine)
   visitType     VisitType
   checkedInAt   DateTime          @default(now()) @db.Timestamptz(3)
+  receptionistUserId String?      @db.Uuid
+  receptionistDisplayNameSnapshot String?
+  checkInMethod String?
+  visitTypeChangedByUserId String? @db.Uuid
+  visitTypeChangeReason String?
   calledAt      DateTime?         @db.Timestamptz(3)
   completedAt   DateTime?         @db.Timestamptz(3)
   cancelledAt   DateTime?         @db.Timestamptz(3)

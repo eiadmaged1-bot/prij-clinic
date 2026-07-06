@@ -1,18 +1,7 @@
-# Local Same-PC and Tailscale QA
+# Local + Tailscale QA
 
-Local same-PC and Tailscale QA are mandatory for v1.3.1 changes.
+Use `npm run dev:lan` for same-PC and phone/tablet QA. The web app listens on port 3000 and the API listens on port 3001.
 
-Requirements:
-- Changed screens must use dynamic API base resolution, not hardcoded localhost-only fetches.
-- Same-PC testing uses the normal local web/API ports.
-- Tailscale testing uses `npm run dev:tailscale` and private tailnet access only.
-- Do not use Tailscale Funnel or public exposure.
-- CORS/auth/session expectations must not be weakened.
-- Mobile, tablet, laptop, and desktop layouts must remain usable.
+When opened from `localhost`, the frontend uses `http://localhost:3001`. When opened from a LAN or Tailscale hostname/IP, it derives `http://<same-hostname>:3001` unless `NEXT_PUBLIC_API_ORIGIN` or `NEXT_PUBLIC_LAN_API_ORIGIN` explicitly overrides it.
 
-Verification:
-```powershell
-npm run test:v131:local-tailscale-qa
-npm run test:web:api-base
-npm run test:security:cors
-```
+Basic Tailscale QA no longer requires manual `NEXT_PUBLIC_LAN_API_ORIGIN`.

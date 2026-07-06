@@ -152,6 +152,11 @@ export class PatientContextQueueDto {
   @IsOptional()
   @IsUUID()
   appointmentId?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  checkInMethod?: string;
 }
 
 export class PatientContextEncounterDto {

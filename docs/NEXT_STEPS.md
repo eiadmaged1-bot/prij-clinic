@@ -1,11 +1,9 @@
 # Next Steps
 
-Recommended next QA:
-- Manual role-by-role navigation review on desktop and mobile.
-- Browser check for English and Arabic layout stability.
-- Owner/Admin edit-save-cancel review for Clinic Settings.
-- Receptionist queue workflow regression.
-- Doctor visit signature, case library, and staff chat regression.
-- Same-PC and Tailscale smoke test.
+Run real device QA on same-PC localhost and a Tailscale phone/tablet.
 
-Do not continue into unrelated feature work until v1.3.1 QA blockers are resolved.
+Import only licensed guideline PDFs at runtime into private gitignored storage.
+
+Load verified medication interaction sources before relying on source-specific interaction citations.
+
+Continue manual QA for receptionist queue flow, doctor visit flow, RBAC, audit logs, and AI draft approval.

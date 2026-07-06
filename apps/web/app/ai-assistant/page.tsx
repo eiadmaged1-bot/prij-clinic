@@ -13,11 +13,9 @@ export default function AiAssistantPage() {
             <h1>Assistant draft workspace</h1>
           </div>
           <div className="topbar-actions">
-            <span className="badge warning">Draft - doctor review required</span>
-            <span className="badge">Draft support</span>
+            <span className="badge warning">Draft only · Doctor approval required · Local/private</span>
           </div>
         </div>
-        <p className="muted">Generate local draft summaries, missing-field checklists, follow-up reminder drafts, and patient-file search results without external AI calls.</p>
       </section>
       <SafetyAlert />
       <SafeAiAssistantPanel />

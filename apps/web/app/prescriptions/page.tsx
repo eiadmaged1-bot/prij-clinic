@@ -103,7 +103,7 @@ export default function PrescriptionsPage() {
             Print
           </button>
         </div>
-        <p className="muted">Templates and saved medications are draft aids only. The doctor must manually review and edit every patient instruction before saving or signing.</p>
+        <p className="muted">Doctor manual review required. No auto-prescribing or automatic dosing.</p>
       </section>
       <SafetyAlert />
       <section className="patient-tabs simple">
@@ -120,7 +120,7 @@ export default function PrescriptionsPage() {
           <div className="section-heading">
             <div>
               <h2>Prescription Builder</h2>
-              <p className="muted">Attach to the selected patient file, or open from a patient profile to fill the patient automatically.</p>
+              <p className="muted">Search medication first, then attach to the selected patient file or open from patient profile.</p>
             </div>
             <span className="badge">{status}</span>
           </div>
@@ -141,8 +141,9 @@ export default function PrescriptionsPage() {
             <label>Prescription notes<input value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <div className="form-actions">
               <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add medication</button>
+              <button className="button secondary" type="button" onClick={() => setStatus("Safety check is assistive. Doctor review required.")}>Run safety check</button>
               <button className="button" type="submit">Save draft</button>
-              <button className="button secondary" type="button" onClick={() => void savePrescription("printed")}>Save print snapshot</button>
+              <button className="button secondary" type="button" onClick={() => { void savePrescription("printed"); window.print(); }}>Print</button>
             </div>
           </form>
         </section>

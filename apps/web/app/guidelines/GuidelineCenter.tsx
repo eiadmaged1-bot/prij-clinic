@@ -64,7 +64,6 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [answer, setAnswer] = useState("");
   const [citations, setCitations] = useState<Array<{ citationLabel: string; title: string }>>([]);
   const [message, setMessage] = useState("Ready");
-  const [showTrainingDocuments, setShowTrainingDocuments] = useState(false);
 
   useEffect(() => {
     if (!token || !canRead) return;
@@ -167,13 +166,23 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
       <GuidelineShell title={titleFor(view)} message={message}>
         {view === "home" ? (
           <>
-            <section className="guideline-hero">
-              <div>
-                <p className="eyebrow">Private clinical evidence library</p>
-                <h1>Guideline Library + Live Guideline Search</h1>
-                <p>Browse Guidelines, Search All Guidelines, and Ask Evidence Library. Evidence library only. Doctor review required.</p>
+            <section className="panel">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Guidelines</p>
+                  <h2>Search Guidelines</h2>
+                </div>
+                <span className="badge warning">Evidence only</span>
               </div>
-              <ThreeDMedicalIcon name="files" size="lg" tone="teal" />
+              <form className="guideline-search" onSubmit={submitSearch}>
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search guidelines..." />
+                <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
+              </form>
+              <div className="form-actions">
+                <Link className="button secondary compact" href="/guidelines/search">Browse</Link>
+                <Link className="button secondary compact" href="/guidelines/ask">Ask Evidence Library</Link>
+                <Link className="button secondary compact" href="/guidelines">Recent</Link>
+              </div>
             </section>
             <section className="guideline-actions">
               {cards(canUpload, canImport, canReview).map((card) => (
@@ -184,7 +193,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
                 </Link>
               ))}
             </section>
-            <DocumentList documents={filterTrainingDocuments(documents, showTrainingDocuments).slice(0, 6)} title="Recently indexed documents" showTrainingDocuments={showTrainingDocuments} setShowTrainingDocuments={setShowTrainingDocuments} />
+            {documents.length ? <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed documents" /> : null}
           </>
         ) : null}
         {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} /> : null}
@@ -192,7 +201,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
         {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
         {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
         {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
-        {view === "review" ? <DocumentList documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"), showTrainingDocuments)} title="Documents needing review" showTrainingDocuments={showTrainingDocuments} setShowTrainingDocuments={setShowTrainingDocuments} /> : null}
+        {view === "review" ? <DocumentList documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"))} title="Documents needing review" /> : null}
         {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
         {view === "private" ? (
           <PrivateVault
@@ -218,7 +227,7 @@ function GuidelineShell({ title, message, children }: { title: string; message?:
           </div>
           <span className="badge warning">Evidence summary only</span>
         </div>
-        <p className="muted">{message ?? "Owner/Admin manage sources. Doctors browse and search. Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
+        <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
       </section>
       {children}
     </>
@@ -310,22 +319,13 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
   );
 }
 
-function DocumentList({ documents, title, showTrainingDocuments, setShowTrainingDocuments }: { documents: Document[]; title: string; showTrainingDocuments?: boolean; setShowTrainingDocuments?: (value: boolean) => void }) {
+function DocumentList({ documents, title }: { documents: Document[]; title: string }) {
   return (
     <section className="panel">
       <div className="section-heading">
         <h2>{title}</h2>
-        <div className="form-actions">
-          <span className="badge">{documents.length}</span>
-          {setShowTrainingDocuments ? (
-            <label className="toggle-row">
-              <input checked={Boolean(showTrainingDocuments)} onChange={(event) => setShowTrainingDocuments(event.target.checked)} type="checkbox" />
-              Show training documents
-            </label>
-          ) : null}
-        </div>
+        <span className="badge">{documents.length}</span>
       </div>
-      {!showTrainingDocuments && setShowTrainingDocuments ? <p className="badge compact-safety-badge">Training documents hidden</p> : null}
       <div className="dense-card-list">
         {documents.map((document) => (
           <article className="data-row dense" key={document.id}>
@@ -340,8 +340,8 @@ function DocumentList({ documents, title, showTrainingDocuments, setShowTraining
   );
 }
 
-function filterTrainingDocuments(documents: Document[], showTrainingDocuments: boolean) {
-  return showTrainingDocuments ? documents : documents.filter((document) => !isTrainingDocument(document));
+function filterTrainingDocuments(documents: Document[]) {
+  return documents.filter((document) => !isTrainingDocument(document));
 }
 
 function isTrainingDocument(document: Document) {

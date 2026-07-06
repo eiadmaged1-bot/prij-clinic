@@ -1,7 +1,5 @@
 # Receptionist Cockpit
 
-Reception home focuses on waiting list, new patient, returning patient, QR scan, and quick check-in.
+Receptionist has no menu or sidebar. The cockpit is one screen: Reception, Waiting now, Next patient, New Patient, Returning Patient, Waiting Line, Messages, and Account/Logout.
 
-It avoids owner analytics, yesterday/today totals, weekly visit totals, and financial totals. Returning patient lookup supports name, phone, patient ID, and MRN, then requires visit type before queue check-in.
-
-New patient registration shows a duplicate warning by phone, name, or MRN where possible.
+The top bar keeps Prij Clinic, messages badge, language, and account/logout. With-doctor status is not a main receptionist card.

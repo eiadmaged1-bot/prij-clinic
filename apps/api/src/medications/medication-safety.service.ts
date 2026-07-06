@@ -69,10 +69,10 @@ export class MedicationSafetyService {
 
     if (alerts.length === 0) {
       alerts.push({
-        severity: "info",
+        severity: "unknown",
         alertType: "review",
-        title: "Safety review completed",
-        message: "No seeded demo safety rule matched. This is not a final clinical decision."
+        title: "No verified interaction record loaded",
+        message: "No verified interaction records loaded for this pair. Doctor review required."
       });
     }
 

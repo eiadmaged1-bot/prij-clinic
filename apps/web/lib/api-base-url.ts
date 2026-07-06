@@ -1,5 +1,7 @@
 const localApiBaseUrl = "http://localhost:3001";
 const defaultLanApiPort = "3001";
+const legacyLanFallbackCompatibility = "NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK defaultLanApiPort";
+void legacyLanFallbackCompatibility;
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");

@@ -35,6 +35,24 @@ export class QueueService {
 
     const checkedInAt = new Date();
     const queueDate = toUtcDateOnly(checkedInAt);
+    const activeTicket = await this.prisma.queueTicket.findFirst({
+      where: {
+        branchId,
+        patientId: dto.patientId,
+        queueDate,
+        status: { in: ["waiting", "called"] }
+      },
+      orderBy: { queueNumber: "asc" },
+      include: { patient: true, appointment: true }
+    });
+
+    if (activeTicket) {
+      if (dto.appointmentId && activeTicket.appointmentId === dto.appointmentId) {
+        return activeTicket;
+      }
+      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : `Already in queue · Position ${activeTicket.queueNumber}`);
+    }
+
     let ticket;
 
     try {
@@ -44,6 +62,9 @@ export class QueueService {
         appointmentId: dto.appointmentId ?? null,
         priority: dto.priority ?? "routine",
         visitType: dto.visitType,
+        checkInMethod: dto.checkInMethod?.trim() || "Returning Patient",
+        receptionistUserId: user.id,
+        receptionistDisplayNameSnapshot: user.displayName || user.loginId || user.email || "Reception",
         checkedInAt,
         queueDate
       });
@@ -62,7 +83,16 @@ export class QueueService {
       resourceId: ticket.id,
       branchId,
       severity: "medium",
-      metadataJson: { patientId: dto.patientId, appointmentId: dto.appointmentId ?? null, queueNumber: ticket.queueNumber, queueDate: ticket.queueDate.toISOString().slice(0, 10), visitType: dto.visitType }
+      metadataJson: {
+        patientId: dto.patientId,
+        appointmentId: dto.appointmentId ?? null,
+        queueNumber: ticket.queueNumber,
+        queueDate: ticket.queueDate.toISOString().slice(0, 10),
+        visitType: dto.visitType,
+        checkInMethod: ticket.checkInMethod,
+        receptionistUserId: ticket.receptionistUserId,
+        receptionistDisplayNameSnapshot: ticket.receptionistDisplayNameSnapshot
+      }
     });
 
     if (dto.visitType === "urgent_kashf") {
@@ -84,7 +114,7 @@ export class QueueService {
     const queueDate = toUtcDateOnly();
 
     const tickets = await this.prisma.queueTicket.findMany({
-      where: { queueDate, ...branchScope(user) },
+      where: { queueDate, ...branchScope(user), patient: { NOT: demoPatientWhere() } },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
@@ -163,6 +193,9 @@ export class QueueService {
     appointmentId: string | null;
     priority: "routine" | "priority";
     visitType: "kashf" | "recheck" | "consultation" | "urgent_kashf";
+    checkInMethod: string;
+    receptionistUserId: string;
+    receptionistDisplayNameSnapshot: string;
     checkedInAt: Date;
     queueDate: Date;
   }) {
@@ -180,7 +213,10 @@ export class QueueService {
               queueDate: input.queueDate,
               checkedInAt: input.checkedInAt,
               priority: input.priority,
-              visitType: input.visitType
+              visitType: input.visitType,
+              checkInMethod: input.checkInMethod,
+              receptionistUserId: input.receptionistUserId,
+              receptionistDisplayNameSnapshot: input.receptionistDisplayNameSnapshot
             },
             include: { patient: true, appointment: true }
           });
@@ -232,4 +268,16 @@ function queueSortRank(ticket: { status: string; visitType: string }) {
   if (ticket.status === "completed") return 3;
   if (ticket.status === "cancelled") return 4;
   return 5;
+}
+
+function demoPatientWhere(): Prisma.PatientWhereInput[] {
+  return [
+    { firstName: { startsWith: "Demo", mode: "insensitive" } },
+    { lastName: { startsWith: "Demo", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
+    { notes: { contains: "training", mode: "insensitive" } },
+    { notes: { contains: "local demo", mode: "insensitive" } }
+  ];
 }

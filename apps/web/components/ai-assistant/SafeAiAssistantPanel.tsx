@@ -32,6 +32,7 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<AiSearchResult[]>([]);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectingDraftId, setRejectingDraftId] = useState("");
   const [status, setStatus] = useState("Ready");
 
   useEffect(() => {
@@ -84,6 +85,8 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
     try {
       const updated = await reviewAiDraft(draft.id, nextStatus, nextStatus === "rejected" ? rejectionReason : "Doctor reviewed draft.");
       setDrafts((current) => current.map((item) => item.id === updated.id ? updated : item));
+      setRejectingDraftId("");
+      setRejectionReason("");
       setStatus(nextStatus === "approved" ? "Draft approved only; no final record was changed" : "Draft rejected");
     } catch {
       setStatus("Could not save the draft review.");
@@ -114,9 +117,9 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
       <div className="section-heading">
         <div>
           <h2>Safe AI Assistant</h2>
-          <p className="muted">Draft - doctor review required. External AI is disabled.</p>
+          <p className="muted">Draft only · Doctor approval required · Local/private</p>
         </div>
-        <span className="badge warning">Assistive only</span>
+        {!fixedPatientId ? <Link className="button secondary compact" href="/ai-drafts">Open draft review list</Link> : null}
       </div>
 
       {!fixedPatientId ? (
@@ -134,9 +137,8 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
       ) : null}
 
       <div className="compact-metric-grid">
-        <Metric label="AI safety status" value={safety?.externalAiEnabled ? "External enabled" : "External disabled"} />
-        <Metric label="Clinical mode" value={safety?.clinicalOutputMode?.replaceAll("_", " ") ?? "draft only"} />
-        <Metric label="Doctor review" value={safety?.doctorReviewRequired ? "Required" : "Missing"} />
+        <Metric label="Safety" value={safety?.externalAiEnabled ? "External enabled" : "External disabled"} />
+        <Metric label="Review" value={safety?.doctorReviewRequired ? "Required" : "Required"} />
         <Metric label="Status" value={status} />
       </div>
 
@@ -156,11 +158,9 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
           </div>
         </article>
 
-        <article className="panel compact-panel">
-          <div className="section-heading">
-            <h3>Missing field checklist</h3>
-            <span className="badge">Checklist only</span>
-          </div>
+        <details className="panel compact-panel">
+          <summary>Missing field checklist</summary>
+          <p className="muted">Missing: chief complaint, exam, follow-up · Recorded: pregnancy episode, investigations</p>
           <div className="data-list">
             {checklist.map((item) => (
               <div className="data-row dense" key={item.key}>
@@ -170,7 +170,7 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
             ))}
             {checklist.length === 0 ? <p className="empty-state">Select a patient file to load the deterministic checklist.</p> : null}
           </div>
-        </article>
+        </details>
       </div>
 
       <article className="panel compact-panel">
@@ -200,15 +200,15 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
           <h3>Doctor approval workflow</h3>
           <span className="badge danger">No automatic final save</span>
         </div>
-        <label>Rejection reason<input value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Required when rejecting a draft" /></label>
         <div className="data-list">
           {drafts.map((draft) => (
             <article className="data-row" key={draft.id}>
               <div className="data-row-header"><strong>{draft.draftType.replaceAll("_", " ")}</strong><span className="badge">{draft.status.replaceAll("_", " ")}</span></div>
               <pre className="draft-preview">{draft.generatedText}</pre>
               <p className="muted">{draft.inputSourceSummary}</p>
+              {rejectingDraftId === draft.id ? <label>Rejection reason<input value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Required when rejecting a draft" /></label> : null}
               <div className="topbar-actions">
-                <button className="button secondary compact" type="button" onClick={() => review(draft, "rejected")}>Reject</button>
+                <button className="button secondary compact" type="button" onClick={() => rejectingDraftId === draft.id ? review(draft, "rejected") : setRejectingDraftId(draft.id)}>Reject</button>
                 <button className="button compact" type="button" onClick={() => review(draft, "approved")}>Approve draft only</button>
               </div>
             </article>
@@ -217,10 +217,6 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
         </div>
       </article>
 
-      <p className="muted">
-        Prompt-injection protection: document text, OCR, patient-entered content, and copied text are treated as untrusted content, not instructions. System and provider configuration are not shown here.
-      </p>
-      {!fixedPatientId ? <Link className="button secondary compact" href="/ai-drafts">Open draft review list</Link> : null}
     </section>
   );
 }
