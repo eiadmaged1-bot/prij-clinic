@@ -635,6 +635,16 @@ body {
   gap: 0.35rem;
 }
 
+.nav-subitems {
+  display: none;
+  gap: 0.35rem;
+  padding-left: 0.45rem;
+}
+
+.nav-group.open .nav-subitems {
+  display: grid;
+}
+
 .nav-group-title {
   color: #89a7b4;
   font-size: 0.72rem;
@@ -682,6 +692,54 @@ body {
   opacity: 1;
 }
 
+.nav-group-toggle,
+.sidebar-close-button {
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--density-control-height);
+  border-radius: var(--radius-sm);
+  color: #dcebf0;
+  font-size: 0.95rem;
+  font-weight: 760;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.nav-group-toggle:hover,
+.nav-group.open .nav-group-toggle {
+  border-color: rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 7%);
+  color: #ffffff;
+}
+
+.nav-parent-link {
+  font-weight: 780;
+}
+
+.sidebar-close-button {
+  display: none;
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  width: 2.1rem;
+  height: 2.1rem;
+  place-items: center;
+  border-color: rgb(255 255 255 / 16%);
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 8%);
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
 .sidebar-logout-button {
   margin-top: auto;
   position: sticky;
@@ -704,7 +762,8 @@ body {
 .sidebar-collapsed .brand strong,
 .sidebar-collapsed .brand span,
 .sidebar-collapsed .nav-group-title,
-.sidebar-collapsed .nav-item span:not(.nav-dot) {
+.sidebar-collapsed .nav-item span:not(.nav-dot),
+.sidebar-collapsed .nav-group-toggle span {
   display: none;
 }
 
@@ -713,6 +772,11 @@ body {
 }
 
 .sidebar-collapsed .nav-item {
+  justify-content: center;
+  padding-inline: 0.55rem;
+}
+
+.sidebar-collapsed .nav-group-toggle {
   justify-content: center;
   padding-inline: 0.55rem;
 }
@@ -730,6 +794,8 @@ body {
 }
 
 .topbar {
+  position: relative;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -737,6 +803,7 @@ body {
   margin-bottom: 1rem;
   min-width: 0;
   max-width: 100%;
+  overflow: visible;
 }
 
 .topbar-title {
@@ -1650,12 +1717,7 @@ details.form-fieldset summary {
 .theme-preview::before,
 .patient-action::before,
 .visit-progress button::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  content: "";
-  background: linear-gradient(135deg, rgb(255 255 255 / 42%), transparent 45%);
-  opacity: 0.55;
+  content: none;
 }
 
 .quick-card > *,
@@ -3307,6 +3369,10 @@ button.obgyn-template-card {
     box-shadow: var(--shadow-md);
   }
 
+  .sidebar-close-button {
+    display: grid;
+  }
+
   .sidebar-collapsed .sidebar {
     align-items: stretch;
     padding: 1.25rem 1.25rem max(1.75rem, env(safe-area-inset-bottom));
@@ -3319,11 +3385,17 @@ button.obgyn-template-card {
   .sidebar-collapsed .brand strong,
   .sidebar-collapsed .brand span,
   .sidebar-collapsed .nav-group-title,
-  .sidebar-collapsed .nav-item span:not(.nav-dot) {
+  .sidebar-collapsed .nav-item span:not(.nav-dot),
+  .sidebar-collapsed .nav-group-toggle span {
     display: initial;
   }
 
   .sidebar-collapsed .nav-item {
+    justify-content: space-between;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .sidebar-collapsed .nav-group-toggle {
     justify-content: space-between;
     padding: 0.65rem 0.75rem;
   }
@@ -3368,7 +3440,7 @@ button.obgyn-template-card {
     flex-wrap: nowrap;
     min-height: 4rem;
     margin-bottom: 0.7rem;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .topbar-title {

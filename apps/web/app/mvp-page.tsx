@@ -66,6 +66,13 @@ const displayKeys = [
   "reviewStatus"
 ];
 
+type ShellNavGroup = {
+  title: string;
+  href?: string;
+  icon: IconName;
+  links?: Array<[string, string, IconName]>;
+};
+
 const densitySourceLockLabels = ["Comfort", "Large", "Compact"];
 const legacyBilingualLayoutSourceLock = 'dir={direction} t("aiDraftSafety")';
 void legacyBilingualLayoutSourceLock;
@@ -333,19 +340,17 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const canUseDoctorComfort = hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const canUseStaffChat = permissions.includes("staff_chat.read");
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
+  const isOwnerAdmin = hasRole(roles, ["Owner", "Admin"]);
+  const isDoctorOnly = hasRole(roles, ["Doctor"]) && !isOwnerAdmin;
   const [staffChatUnread, setStaffChatUnread] = useState(0);
-  const visibleNavGroups = navGroupOrder
-    .map((group) => ({
-      title: group,
-      links: navigationRegistry
-        .filter((item) => item.group === group && canSeeNavItem(item, roles, permissions, canOpenAdmin))
-        .map((item) => [item.href, item.label, item.icon] as [string, string, IconName])
-    }))
-    .filter((group) => group.links.length > 0);
-  const activeNavHref = visibleNavGroups
-    .flatMap((group) => group.links.map(([href]) => href))
+  const shellNavGroups = buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly });
+  const activeNavHref = shellNavGroups
+    .flatMap((group) => (group.links ?? []).map(([href]) => href))
+    .concat(shellNavGroups.flatMap((group) => group.href ? [group.href] : []))
     .filter((href) => isActive(pathname, href))
     .sort((left, right) => right.length - left.length)[0];
+  const routeGroupTitle = shellNavGroups.find((group) => (group.links ?? []).some(([href]) => activeNavHref === href))?.title ?? null;
+  const [openNavGroup, setOpenNavGroup] = useState<string | null>(routeGroupTitle);
 
   useEffect(() => {
     setComfort(localStorage.getItem("prijDensityMode") ?? localStorage.getItem("prijComfortMode") ?? "comfortable");
@@ -381,6 +386,19 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     setMobileNavOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    setOpenNavGroup(routeGroupTitle);
+  }, [routeGroupTitle]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileNavOpen]);
+
   function setComfortMode(next: string) {
     setComfort(next);
     localStorage.setItem("prijDensityMode", next);
@@ -415,22 +433,46 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             type="button"
           />
           <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
+            <button className="sidebar-close-button" type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">
+              ×
+            </button>
             <Link className="brand" href="/dashboard">
               <span className="brand-mark">P</span>
               <strong>{t("appName")}</strong>
               <span>{t("appSubtitle")}</span>
             </Link>
 
-            {visibleNavGroups.map((group) => (
-              <nav className="nav-group" key={group.title} aria-label={group.title}>
-                <div className="nav-group-title">{group.title}</div>
-                {group.links.map(([href, label, icon]) => (
-                  <Link className={`nav-item ${activeNavHref === href ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
-                    <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
-                    <span>{label}</span>
+            {shellNavGroups.map((group) => (
+              <nav className={`nav-group ${openNavGroup === group.title ? "open" : ""}`} key={group.title} aria-label={group.title}>
+                {group.href ? (
+                  <Link className={`nav-item nav-parent-link ${activeNavHref === group.href ? "active" : ""}`} href={group.href} onClick={() => setMobileNavOpen(false)}>
+                    <ThreeDMedicalIcon name={group.icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
+                    <span>{group.title}</span>
                     <span className="nav-dot" />
                   </Link>
-                ))}
+                ) : (
+                  <>
+                    <button
+                      className="nav-group-toggle"
+                      type="button"
+                      aria-expanded={openNavGroup === group.title}
+                      onClick={() => setOpenNavGroup((current) => (current === group.title ? null : group.title))}
+                    >
+                      <ThreeDMedicalIcon name={group.icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
+                      <span>{group.title}</span>
+                      <span aria-hidden="true">{openNavGroup === group.title ? "-" : "+"}</span>
+                    </button>
+                    <div className="nav-subitems">
+                      {(group.links ?? []).map(([href, label, icon]) => (
+                        <Link className={`nav-item ${activeNavHref === href ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
+                          <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
+                          <span>{label}</span>
+                          <span className="nav-dot" />
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
               </nav>
             ))}
             {user ? (
@@ -736,6 +778,53 @@ const doctorNav = new Set([
   "/ai-assistant",
   "/medications"
 ]);
+
+function buildShellNavGroups(input: {
+  roles: string[];
+  permissions: string[];
+  canOpenAdmin: boolean;
+  canUseStaffChat: boolean;
+  isOwnerAdmin: boolean;
+  isDoctorOnly: boolean;
+}): ShellNavGroup[] {
+  const { roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly } = input;
+  const canSee = (href: string) => navigationRegistry.some((item) => item.href === href && canSeeNavItem(item, roles, permissions, canOpenAdmin));
+  const link = (href: string, label: string, icon: IconName): [string, string, IconName] | null => (canSee(href) ? [href, label, icon] : null);
+  const compact = (items: Array<[string, string, IconName] | null>) => items.filter(Boolean) as Array<[string, string, IconName]>;
+
+  if (isOwnerAdmin) {
+    return [
+      { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
+      { title: "Clinic", icon: "reception", links: compact([link("/reception", "Reception", "reception"), link("/queue", "Queue", "queue"), link("/calendar", "Calendar", "calendar"), link("/doctor/waiting", "Doctor Waiting", "doctor")]) },
+      { title: "Patients", icon: "patients", links: compact([link("/patients", "Patient Files", "patients"), link("/patients/new", "New Patient", "patients"), link("/doctor/case-library", "Case Library", "timeline")]) },
+      { title: "Clinical Work", icon: "encounter", links: compact([link("/encounters", "Encounters", "encounter"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/reports", "Reports", "reports")]) },
+      { title: "Knowledge", icon: "reports", links: compact([link("/guidelines", "Guidelines", "reports"), link("/protocol-atlas", "Protocol Atlas", "ai"), link("/medications", "Pharmacology / Medication Reference", "prescription"), link("/ai-assistant", "AI Tools", "ai")]) },
+      { title: "Admin", icon: "admin", links: compact([link("/admin/accounts", "Users & Roles", "reception"), link("/admin/services", "Services", "billing"), link("/admin/settings", "Clinic Settings", "settings"), link("/admin/security-readiness", "Security", "settings"), link("/admin/appearance", "Appearance", "settings"), link("/admin/audit", "Audit", "timeline")]) },
+      ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : [])
+    ];
+  }
+
+  if (isDoctorOnly) {
+    return [
+      { title: "Today / Waiting", href: "/doctor", icon: "doctor" },
+      { title: "Patients", href: "/patients", icon: "patients" },
+      { title: "Case Library", href: "/doctor/case-library", icon: "timeline" },
+      ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : []),
+      { title: "Guidelines", href: "/guidelines", icon: "reports" },
+      { title: "More", icon: "settings", links: compact([link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription")]) }
+    ];
+  }
+
+  return navGroupOrder
+    .map((group) => ({
+      title: group,
+      icon: "dashboard" as IconName,
+      links: navigationRegistry
+        .filter((item) => item.group === group && canSeeNavItem(item, roles, permissions, canOpenAdmin))
+        .map((item) => [item.href, item.label, item.icon] as [string, string, IconName])
+    }))
+    .filter((group) => group.links.length > 0);
+}
 
 function hasRole(roles: string[], names: string[]) {
   return roles.some((role) => names.includes(role));
