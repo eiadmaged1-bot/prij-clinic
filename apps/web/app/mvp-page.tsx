@@ -307,7 +307,7 @@ export function MvpPage({
             })}
             <button className="button" disabled={isSubmitting} type="submit">
               <ThreeDMedicalIcon name="files" size="sm" />
-              {isSubmitting ? "Saving record" : "Create record"}
+              {isSubmitting ? "Saving" : submitLabelFor(createEndpoint)}
             </button>
           </form>
         </section>
@@ -733,6 +733,13 @@ function formatRecordValue(key: string, value: unknown) {
     if (!Number.isNaN(amount)) return amount.toFixed(2);
   }
   return text.replaceAll("_", " ");
+}
+
+function submitLabelFor(createEndpoint?: string) {
+  if (createEndpoint?.includes("ob-ultrasounds")) return "Save scan";
+  if (createEndpoint?.includes("investigations")) return "Save request";
+  if (createEndpoint?.includes("encounters")) return "Save visit";
+  return "Save";
 }
 
 function appointmentRowLabel(row: Record<string, unknown>) {

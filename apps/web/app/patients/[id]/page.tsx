@@ -1278,7 +1278,7 @@ const gynecologyTemplateFields: Record<string, Array<[string, string, "text" | "
   contraception: [
     ["currentMethod", "Current method", "text"],
     ["previousMethods", "Previous methods", "textarea"],
-    ["contraindicationChecklist", "Contraindication checklist placeholder", "textarea"],
+    ["contraindicationChecklist", "Contraindication checklist", "textarea"],
     ["counselingNotes", "Counseling notes", "textarea"],
     ["chosenMethod", "Chosen method", "text"],
     ["followUpPlan", "Follow-up plan", "textarea"]
@@ -1982,7 +1982,7 @@ function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patient: Pat
           </div>
         </fieldset>
         <fieldset className="obgyn-fieldset wide">
-          <legend>Doppler note placeholder</legend>
+          <legend>Doppler note</legend>
           <label>Doppler note<textarea name="dopplerNote" placeholder="Optional clinician note" /></label>
         </fieldset>
         <fieldset className="obgyn-fieldset wide">
@@ -2012,7 +2012,7 @@ function DoctorTemplateCards() {
     ["Ultrasound visit", "ultrasound", "Record scan type, indication, measurements, and doctor-written impression."],
     ["Gynecology visit", "doctor", "Use the guided visit flow for complaint, history, examination, impression, and plan."],
     ["Follow-up visit", "timeline", "Review timeline, prior orders, reports, prescriptions, and follow-up plan."],
-    ["Procedure visit placeholder", "reports", "Prepare a clinician-authored note without automatic recommendations."]
+    ["Procedure visit", "reports", "Prepare a clinician-authored note without automatic recommendations."]
   ];
 
   return (
@@ -2214,7 +2214,7 @@ function PatientActionPanel({
     ["appointment", "Appointment", "calendar"],
     ["queue", "Check In", "queue"],
     ["prescription", "Prescription", "prescription"],
-    ["request", "Clinical Request", "investigations"],
+    ["request", "Request investigations", "investigations"],
     ["report", "Report", "reports"],
     ["ultrasound", "Ultrasound", "ultrasound"],
     ["invoice", "Invoice", "billing"],
@@ -2755,7 +2755,7 @@ function templateSummary(value: string) {
   if (value === "pelvic_pain") return "Onset, site, relation to cycle, urinary or bowel symptoms, and doctor impression.";
   if (value === "pcos") return "Cycle pattern, acne or hirsutism note, ultrasound note, labs note, and doctor impression.";
   if (value === "fibroid_ovarian_cyst") return "Finding source, size or location note, symptoms, follow-up plan, and impression.";
-  if (value === "contraception") return "Current method, previous methods, checklist placeholder, counseling notes, chosen method.";
+  if (value === "contraception") return "Current method, previous methods, checklist, counseling notes, chosen method.";
   return "General gynecology visit recording.";
 }
 

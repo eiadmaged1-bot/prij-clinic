@@ -72,7 +72,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
             <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
             {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
             <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />Reception</Link>
-            <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor list</Link>
+            <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link>
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>
           </div>
         </div>
@@ -171,7 +171,7 @@ function FlowPanel({ appointments, queue }: { appointments: Appointment[]; queue
     ["With doctor", queue.filter((ticket) => ticket.status === "called").length],
     ["Completed", queue.filter((ticket) => ticket.status === "completed").length]
   ] as const;
-  return <article className="panel compact-panel"><div className="section-heading"><h2>Daily operations loop</h2><span className="badge">Compact pipeline</span></div><div className="operation-pipeline">{stages.map(([label, count]) => <button className="pipeline-stage" key={label} type="button"><span>{label}</span><strong>{count}</strong></button>)}</div></article>;
+  return <article className="panel compact-panel"><div className="section-heading"><h2>Workflow status</h2><span className="badge">Today</span></div><div className="operation-pipeline">{stages.map(([label, count]) => <button className="pipeline-stage" key={label} type="button"><span>{label}</span><strong>{count}</strong></button>)}</div></article>;
 }
 
 function DailyList({ title, rows, actionLabel = "Open patient", doctorSelect = false, currentPatientCompact = false, previewMode = false }: { title: string; actionLabel?: string; doctorSelect?: boolean; currentPatientCompact?: boolean; previewMode?: boolean; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {

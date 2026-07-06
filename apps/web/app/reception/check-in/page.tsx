@@ -17,7 +17,6 @@ export default function ReceptionCheckInPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [appointmentQuery, setAppointmentQuery] = useState("");
-  const [showTrainingRecords, setShowTrainingRecords] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [priority, setPriority] = useState("routine");
@@ -39,10 +38,8 @@ export default function ReceptionCheckInPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const visiblePatients = showTrainingRecords ? patients : patients.filter((patient) => !isTrainingPatient(patient));
-  const visibleAppointments = showTrainingRecords ? appointments : appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
-  const hiddenTrainingCount =
-    patients.filter(isTrainingPatient).length + appointments.filter((appointment) => isTrainingPatient(appointment.patient)).length;
+  const visiblePatients = patients.filter((patient) => !isTrainingPatient(patient));
+  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
 
   const appointmentMatches = visibleAppointments
     .filter((appointment) => !selectedPatient || appointment.patientId === selectedPatient.id)
@@ -91,13 +88,6 @@ export default function ReceptionCheckInPage() {
       <SafetyAlert />
       <section className="panel compact-panel check-in-wizard">
         <div className="section-heading"><h2>Check in or walk in</h2><span className="badge">{status}</span></div>
-        <div className="toolbar compact-toolbar">
-          <label className="toggle-row">
-            <input checked={showTrainingRecords} onChange={(event) => setShowTrainingRecords(event.target.checked)} type="checkbox" />
-            Show training records
-          </label>
-          {!showTrainingRecords && hiddenTrainingCount > 0 ? <span className="badge compact-safety-badge">Training records hidden</span> : null}
-        </div>
         <div className="wizard-steps">
           <article className="compact-panel">
             <span className="badge">Step 1</span>
