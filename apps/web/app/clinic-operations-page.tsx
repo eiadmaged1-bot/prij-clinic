@@ -8,7 +8,7 @@ import { AppShell, SafetyAlert } from "./mvp-page";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; source?: string | null; notes?: string | null; cancellationReason?: string | null; noShowReason?: string | null; patient?: Patient };
-type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string; patient?: Patient; appointment?: Appointment | null; cancellationReason?: string | null };
+type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string; visitType?: string | null; checkedInAt?: string | null; receptionistDisplayNameSnapshot?: string | null; patient?: Patient; appointment?: Appointment | null; cancellationReason?: string | null };
 type Invoice = { id: string; patientId: string; invoiceNumber?: string; status?: string; balanceAmount?: string | number };
 type InvestigationOrder = { id: string; patientId: string; status: string; priority?: string; notes?: string | null; items?: Array<{ testName?: string; category?: string; status?: string }>; patient?: Patient };
 type DashboardSummary = {
@@ -76,17 +76,18 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>
           </div>
         </div>
-        {mode !== "reports" ? <p className="muted">{description}</p> : null}
+        {mode !== "reports" && mode !== "queue" ? <p className="muted">{description}</p> : null}
       </section>
       <SafetyAlert />
-      <section className="compact-metric-grid">
-        <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
-        <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
-        <Metric icon="doctor" label="Completed visits" value={completed.length} />
-        <Metric icon="investigations" label="Follow-up" value={pendingRequests.length} />
-      </section>
+      {mode === "queue" ? <QueueBoard queue={visibleQueue} today={today} /> : (
+        <section className="compact-metric-grid">
+          <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
+          <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
+          <Metric icon="doctor" label="Completed visits" value={completed.length} />
+          <Metric icon="investigations" label="Follow-up" value={pendingRequests.length} />
+        </section>
+      )}
       {mode === "doctor" ? <DoctorHandoff queue={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status))} orders={orders} invoices={invoices} /> : null}
-      {mode === "queue" ? <QueueLoop queue={visibleQueue} invoices={invoices} /> : null}
       {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
@@ -103,8 +104,44 @@ function CalendarLoop({ appointments, queue, invoices }: { appointments: Appoint
   return <section className="content-grid"><DailyList title="Today schedule" rows={appointments.map((appointment) => row(appointment.id, appointment.patientId, patient(appointment.patient), appointment.status, [time(appointment.startAt), appointment.appointmentType, paymentBadge(invoices, appointment.patientId)].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={appointments} queue={queue} /></section>;
 }
 
-function QueueLoop({ queue, invoices }: { queue: QueueTicket[]; invoices: Invoice[] }) {
-  return <section className="content-grid"><DailyList title="Queue status" rows={queue.map((ticket) => row(ticket.id, ticket.patientId, patient(ticket.patient), ticket.status, [`Queue ${ticket.queueNumber ?? ""}`, ticket.priority, ticket.appointment?.appointmentType].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={[]} queue={queue} /></section>;
+function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
+  const waiting = queue.filter((ticket) => ticket.status === "waiting");
+  const next = queue.filter((ticket) => ticket.status === "next" || ticket.status === "called").slice(0, 1);
+  const nextTicket = next[0];
+  const urgent = queue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
+  const completed = queue.filter((ticket) => ticket.status === "completed");
+  const rows = queue.filter((ticket) => !["cancelled"].includes(ticket.status));
+  return (
+    <section className="queue-board-compact">
+      <div className="toolbar compact-toolbar">
+        <label>Date<input type="date" defaultValue={today} /></label>
+        <div className="segmented-control" role="tablist" aria-label="Queue view">
+          <button className="active" type="button">Reception</button>
+          <button type="button">Doctor</button>
+        </div>
+      </div>
+      <section className="compact-metric-grid">
+        <Metric icon="queue" label="Waiting" value={waiting.length} />
+        <Metric icon="doctor" label="Next" value={nextTicket ? patient(nextTicket.patient) : "None"} />
+        <Metric icon="queue" label="Urgent" value={urgent.length} />
+        <Metric icon="reports" label="Completed" value={completed.length} />
+      </section>
+      <article className="panel compact-panel">
+        <div className="section-heading"><h2>Queue list</h2><span className="badge">{rows.length}</span></div>
+        {rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients in the queue.</span></p> : null}
+        <div className="dense-card-list">
+          {rows.map((ticket, index) => (
+            <article className="data-row dense" key={ticket.id}>
+              <div className="data-row-header">
+                <strong>{index + 1}. {patient(ticket.patient)} · {visitTypeLabelLocal(ticket.visitType)} · {friendly(ticket.status)} · added by {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} · {ticket.checkedInAt ? time(ticket.checkedInAt) : "today"}</strong>
+                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open</Link>
+              </div>
+            </article>
+          ))}
+        </div>
+      </article>
+    </section>
+  );
 }
 
 function DoctorHandoff({ queue, orders, invoices }: { queue: QueueTicket[]; orders: InvestigationOrder[]; invoices: Invoice[] }) {
@@ -160,7 +197,17 @@ function time(value: string) {
 }
 
 function friendly(value: string) {
+  if (value === "called") return "with doctor";
+  if (value === "checked_in") return "checked-in";
+  if (value === "follow_up_due") return "follow-up due";
   return value.replaceAll("_", " ");
+}
+
+function visitTypeLabelLocal(value?: string | null) {
+  if (value === "recheck") return "إعادة";
+  if (value === "consultation") return "استشارة";
+  if (value === "urgent_kashf") return "مستعجل";
+  return "كشف";
 }
 
 function paymentBadge(invoices: Invoice[], patientId: string) {

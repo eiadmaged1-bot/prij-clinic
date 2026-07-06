@@ -85,7 +85,9 @@ export default function ReceptionHomePage() {
             <p className="eyebrow">Reception</p>
             <h1>Reception</h1>
           </div>
-          <button className="button secondary compact" type="button" onClick={load}>Refresh</button>
+          <button className="button secondary compact icon-only-button" type="button" onClick={load} aria-label="Refresh reception">
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+          </button>
         </div>
       </section>
 
@@ -170,7 +172,7 @@ export default function ReceptionHomePage() {
         </div>
         <div className="queue-indicator-row">
           <span><strong>Next:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</span>
-          {withDoctor ? <span><strong>With doctor:</strong> {patientLabel(withDoctor.patient)}</span> : null}
+          <span><strong>Status:</strong> {withDoctor ? "Doctor view updated" : "Reception queue"}</span>
         </div>
         <div className="visit-type-counts" aria-label="Visit type counts">
           <span>كشف {counts.kashf}</span>

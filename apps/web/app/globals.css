@@ -826,6 +826,17 @@ body {
   justify-content: flex-end;
 }
 
+.icon-only-button {
+  width: var(--density-control-height);
+  min-width: var(--density-control-height);
+  padding-inline: 0;
+  justify-content: center;
+}
+
+.icon-only-button span:not(.medical-icon-depth):not(.medical-icon-shine) {
+  display: none;
+}
+
 .account-menu {
   position: relative;
   flex: 0 0 auto;
@@ -1718,6 +1729,51 @@ details.form-fieldset summary {
 .patient-action::before,
 .visit-progress button::before {
   content: none;
+}
+
+.segmented-control {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.25rem;
+}
+
+.segmented-control button {
+  min-height: 2.25rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0.35rem 0.65rem;
+}
+
+.segmented-control button.active {
+  border-color: var(--border);
+  background: #ffffff;
+  color: var(--foreground);
+  box-shadow: var(--shadow-sm);
+}
+
+.queue-board-compact,
+.today-desk-board {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.compact-tabs {
+  width: 100%;
+}
+
+.compact-desk-row {
+  grid-template-columns: minmax(4rem, 0.45fr) minmax(9rem, 1fr) minmax(5rem, 0.65fr) auto auto;
+  align-items: center;
 }
 
 .quick-card > *,
@@ -3504,6 +3560,10 @@ button.obgyn-template-card {
   .visit-type-grid,
   .visit-type-grid.compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compact-desk-row {
+    grid-template-columns: 1fr;
   }
 
   .urgent-visit-type-card {
