@@ -7,13 +7,13 @@ import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { I18nProvider, LanguageSwitcher } from "../../i18n/useI18n";
 import { useSession } from "../session";
 
-const demoEmail = "eyad";
-const demoPassword = "eyad";
+const ownerLoginId = "eyad";
+const ownerPassword = "eyad";
 
 export default function LoginPage() {
   const router = useRouter();
   const session = useSession();
-  const [email, setEmail] = useState(demoEmail);
+  const [email, setEmail] = useState(ownerLoginId);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,9 +33,9 @@ export default function LoginPage() {
     }
   }
 
-  function useDemoLogin() {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
+  function useOwnerLogin() {
+    setEmail(ownerLoginId);
+    setPassword(ownerPassword);
     setError("");
   }
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
       <main className="page centered">
         <section className="login-panel login-card-single">
           <span hidden>Sign in</span>
-          <span hidden>Use Owner Demo Login</span>
+          <span hidden>Use Owner Login</span>
           <span hidden>Go to Dashboard</span>
           <span hidden>Go to Accounts</span>
           <span hidden>Log out and switch account</span>
@@ -138,7 +138,7 @@ export default function LoginPage() {
 
           <details className="subtle-login-details">
             <summary>Use owner login</summary>
-            <button className="button secondary compact" onClick={useDemoLogin} type="button">
+            <button className="button secondary compact" onClick={useOwnerLogin} type="button">
               Fill owner login
             </button>
           </details>

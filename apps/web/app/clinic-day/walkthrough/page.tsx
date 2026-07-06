@@ -27,7 +27,7 @@ const steps: WalkthroughStep[] = [
     status: "Locked",
     href: "/patients/new",
     action: "Create patient",
-    description: "Register a local training patient, then continue directly into the patient profile.",
+    description: "Register a patient, then continue directly into the patient profile.",
     icon: "patients",
     detectable: "Saves and opens patient file"
   },
@@ -99,7 +99,7 @@ const steps: WalkthroughStep[] = [
     status: "Ready",
     href: "/patients",
     action: "Print patient packet",
-    description: "Open a patient profile and use the print packet action or route after selecting the training patient.",
+    description: "Open a patient profile and use the print packet action after selecting the patient.",
     icon: "reports",
     detectable: "/patients/[id]/print/packet source exists"
   }
@@ -121,7 +121,7 @@ export default function ClinicDayWalkthroughPage() {
           </div>
         </div>
         <p className="muted">
-          One connected daily clinic path for local training: owner setup, reception, queue, doctor visit, drafts, requests, follow-up, and packet print.
+          One connected daily clinic path: owner setup, reception, queue, doctor visit, drafts, requests, follow-up, and packet print.
         </p>
       </section>
 
@@ -155,7 +155,7 @@ export default function ClinicDayWalkthroughPage() {
       <section className="panel compact-panel">
         <div className="section-heading">
           <h2>Safety boundaries</h2>
-          <span className="badge warning">Training only</span>
+          <span className="badge warning">Review only</span>
         </div>
         <ul className="feature-list">
           <li>No external AI calls, WhatsApp, DICOM/PACS, payment gateway, or readiness claim is made here.</li>

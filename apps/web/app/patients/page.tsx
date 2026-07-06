@@ -198,13 +198,13 @@ export default function PatientsPage() {
 function patientDisplayName(patient: Patient) {
   const name = `${patient.firstName} ${patient.lastName}`.trim();
   if (isSeededTrainingRecord(patient) || /^demo\b/i.test(name)) {
-    return "Local training record";
+    return "Filtered record";
   }
   return name || "Patient file";
 }
 
 function patientFileNumber(patient: Patient) {
-  return isSeededTrainingRecord(patient) ? "Local training file" : patient.medicalRecordNumber;
+  return isSeededTrainingRecord(patient) ? "Filtered file" : patient.medicalRecordNumber;
 }
 
 function matchesPatientDate(value: string | null | undefined, mode: string, exactDate: string, rangeStart: string, rangeEnd: string, today: string) {

@@ -110,7 +110,7 @@ export function MedicationSafetyPanel({ patientId }: { patientId?: string }) {
   const [status, setStatus] = useState("No check run");
   async function runCheck() {
     try {
-      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Demo herbal supplement", family: "herbal/supplement" }] }) as { alerts?: Array<{ severity: string }> };
+      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Herbal supplement review item", family: "herbal/supplement" }] }) as { alerts?: Array<{ severity: string }> };
       setStatus(`Draft safety review created with ${result.alerts?.length ?? 0} alert(s)`);
     } catch {
       setStatus("Safety review requires Doctor, Admin, or Owner access");
@@ -130,7 +130,7 @@ export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
   const [status, setStatus] = useState("No prescription check run");
   async function runCheck() {
     try {
-      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Demo prescription item", family: "prescription draft" }] }) as { alerts?: Array<{ severity: string }> };
+      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Prescription review item", family: "prescription draft" }] }) as { alerts?: Array<{ severity: string }> };
       setStatus(`Draft prescription safety review created with ${result.alerts?.length ?? 0} alert(s)`);
     } catch {
       setStatus("Prescription safety review requires clinical access");
@@ -207,7 +207,7 @@ export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }
     <article className="data-row dense">
       <div className="data-row-header">
         <strong>{product.tradeName}</strong>
-        <span>{product.isDemo ? <span className="badge warning">Demo</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Official source verified" : "Clinical review required"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
+        <span>{product.isDemo ? <span className="badge warning">Excluded local row</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Official source verified" : "Clinical review required"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
@@ -231,7 +231,7 @@ export function MarketVariantTable({ variants }: { variants: Array<Record<string
       {variants.map((variant) => (
         <article className="data-row" key={String(variant.id)}>
           <div className="data-row-header">
-            <span>{variant.isDemo ? <span className="badge warning">Demo</span> : <span className="badge accent">Source-tracked</span>} <CountryBadge label={String(variant.countryCode ?? "Unknown")} /></span>
+            <span>{variant.isDemo ? <span className="badge warning">Excluded local row</span> : <span className="badge accent">Source-tracked</span>} <CountryBadge label={String(variant.countryCode ?? "Unknown")} /></span>
             <span className={variant.verificationStatus === "verified" ? "badge accent" : "badge warning"}>{variant.verificationStatus === "verified" ? "Verified" : "Needs review"}</span>
           </div>
           <strong>{String(variant.countryCode)} · {String(variant.strengthText ?? "variant")}</strong>
@@ -314,7 +314,7 @@ export function DrugMarketImportPanel() {
         </article>
         <article className="data-row">
           <strong>Blocked fallback</strong>
-          <p className="muted">No placeholder fallback rows are created when a public source fails or requires approval. Egypt remains official upload plus targeted lookup only; UAE remains approved integration or official upload only.</p>
+          <p className="muted">No fallback rows are created when a public source fails or requires approval. Egypt remains official upload plus targeted lookup only; UAE remains approved integration or official upload only.</p>
         </article>
       </div>
     </section>
@@ -367,7 +367,7 @@ export function DrugMarketCoverageDashboard() {
               <div><dt>Review queue</dt><dd>{String(row.reviewItemCount ?? row.reviewItems ?? 0)}</dd></div>
               <div><dt>Verified</dt><dd>{String(row.rowsVerified ?? 0)}</dd></div>
               <div><dt>Rejected/retired</dt><dd>{String(row.rowsRejected ?? 0)} / {String(row.rowsRetired ?? 0)}</dd></div>
-              <div><dt>Placeholder rows excluded</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
+              <div><dt>Excluded local rows</dt><dd>{String(row.demoRowsExcluded ?? 0)}</dd></div>
               <div><dt>Freshness</dt><dd>{String(row.sourceFreshnessStatus ?? "unknown")}</dd></div>
               <div><dt>Trust level</dt><dd>{confidenceBucket(row.parserConfidenceAverage)}</dd></div>
               <div><dt>Review mix</dt><dd>{formatConfidenceBuckets(row.parserConfidenceDistribution)}</dd></div>

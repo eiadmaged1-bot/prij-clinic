@@ -38,7 +38,7 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
     setCitations(result.citations);
   }
 
-  async function importDemo(event: FormEvent<HTMLFormElement>) {
+  async function importReviewText(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     await uploadDemoGuidelineText({
@@ -47,12 +47,12 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
       text: String(form.get("text") ?? ""),
       citationLabel: String(form.get("citationLabel") ?? "")
     });
-    setStatus("Demo text imported for governance review.");
+    setStatus("Text imported for governance review.");
     setDocuments(await listGuidelineDocuments());
   }
 
   async function markReview(documentId: string) {
-    await reviewGuidelineDocument(documentId, "APPROVED", "Demo governance review action only.");
+    await reviewGuidelineDocument(documentId, "APPROVED", "Governance review action only.");
     setStatus("Review decision saved.");
     setDocuments(await listGuidelineDocuments());
   }
@@ -123,7 +123,7 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
               <div className="data-row" key={document.id}>
                 <strong>{document.title}</strong>
                 <span className="badge">{document.reviewStatus}</span>
-                <button className="button secondary compact" onClick={() => markReview(document.id)} type="button">Mark demo reviewed</button>
+                <button className="button secondary compact" onClick={() => markReview(document.id)} type="button">Mark reviewed</button>
               </div>
             ))}
           </div>
@@ -133,13 +133,13 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
       {mode === "vault" ? (
         <section className="panel">
           <h2>Private vault</h2>
-          <p className="notice">Real PDF extraction is deferred. Use demo text import only. Do not upload licensed files or patient data.</p>
-          <form className="form-grid" onSubmit={importDemo}>
+          <p className="notice">Use licensed upload or approved open imports only. Do not upload patient data.</p>
+          <form className="form-grid" onSubmit={importReviewText}>
             <label>Source<input name="sourceName" defaultValue="Local Clinic Protocol" /></label>
             <label>Title<input name="title" required /></label>
             <label>Citation label<input name="citationLabel" /></label>
-            <label className="wide">Demo text<textarea name="text" required /></label>
-            <button className="button" type="submit">Import demo text</button>
+            <label className="wide">Review text<textarea name="text" required /></label>
+            <button className="button" type="submit">Import text</button>
           </form>
         </section>
       ) : null}

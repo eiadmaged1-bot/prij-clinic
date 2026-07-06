@@ -13,7 +13,7 @@ export default function PregnancyPage() {
       endpoint="/pregnancies"
       collectionKey="pregnancies"
       createEndpoint="/pregnancies"
-      createNote="Use local training patient IDs only. This foundation does not provide clinical risk scoring or diagnostic logic."
+      createNote="Use patient IDs only. This foundation does not provide clinical risk scoring or diagnostic logic."
       createFields={[
         { name: "patientId", label: "Patient ID", required: true },
         { name: "status", label: "Status", defaultValue: "active" },

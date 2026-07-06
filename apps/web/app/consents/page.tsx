@@ -8,11 +8,11 @@ export default function ConsentsPage() {
       items={[
         "Template list and patient consent records are visible for workflow review.",
         "Statuses are draft, signed, and voided; void actions require a reason where supported.",
-        "Signature and print-friendly legal templates are placeholders until approved by the clinic."
+        "Signature and print-friendly legal templates require clinic approval before use."
       ]}
       collectionKey="consentRecords"
       createEndpoint="/consents"
-      createNote="Use a local training patient file only. Do not enter real legal text, signatures, or patient notes."
+      createNote="Use patient file context only. Do not enter real legal text, signatures, or patient secrets."
       createFields={[
         { name: "patientId", label: "Patient file", required: true },
         { name: "consentType", label: "Consent type", required: true, defaultValue: "treatment" },

@@ -13,7 +13,7 @@ export default function AppointmentsPage() {
       endpoint="/appointments"
       collectionKey="appointments"
       createEndpoint="/appointments"
-      createNote="Use a local training patient file from Patients. The calendar and queue show the handoff after check-in."
+      createNote="Use a patient file from Patients. The calendar and queue show the handoff after check-in."
       createFields={[
         { name: "patientId", label: "Patient file", required: true },
         { name: "startAt", label: "Start", type: "datetime-local", required: true },

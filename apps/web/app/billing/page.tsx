@@ -279,7 +279,7 @@ export default function BillingPage() {
           <ReportGrid data={closing?.summary} />
           <p className="empty-state">
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
-            <span>{closing?.print?.exportPlaceholder ?? "Export placeholder only. Use print for pilot review."}</span>
+            <span>{closing?.print?.exportPlaceholder ?? "Use print for review."}</span>
           </p>
         </article>
 
@@ -309,7 +309,7 @@ export default function BillingPage() {
           <ReportGrid data={reports?.paymentsByMethod} />
           <p className="empty-state">
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
-            <span>{reports?.print?.exportPlaceholder ?? "Export placeholder only."}</span>
+            <span>{reports?.print?.exportPlaceholder ?? "Use print for review."}</span>
           </p>
         </article>
         <article className="panel">

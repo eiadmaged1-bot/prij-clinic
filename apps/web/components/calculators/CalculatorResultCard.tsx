@@ -6,7 +6,7 @@ export function CalculatorResultCard({ result }: { result: CalculatorResult | nu
     return (
       <article className="panel">
         <h2>Result</h2>
-        <p className="empty-state">Choose a verified formula and enter safe demo inputs.</p>
+        <p className="empty-state">Choose a verified formula and enter safe sample inputs.</p>
       </article>
     );
   }

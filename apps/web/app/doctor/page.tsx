@@ -241,7 +241,7 @@ export default function DoctorModePage() {
             ["Ultrasound visit", "Measurements and doctor-written impression", "ultrasound"],
             ["Gynecology visit", "Complaint, history, examination, impression", "doctor"],
             ["Follow-up visit", "Timeline, reports, orders, and next step", "timeline"],
-            ["Procedure visit placeholder", "Clinician-authored procedure note", "reports"]
+            ["Procedure visit", "Clinician-authored procedure note", "reports"]
           ].map(([title, text, icon]) => (
             <Link className="obgyn-template-card" href="/patients" key={title}>
               <ThreeDMedicalIcon name={icon as IconName} size="sm" />
