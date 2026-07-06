@@ -81,6 +81,7 @@ function LoginContent() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    session.clearMessage();
     setError("");
     setIsSubmitting(true);
 

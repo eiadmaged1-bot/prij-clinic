@@ -23,11 +23,9 @@ function sessionEndedMessage() {
 }
 
 function invalidLoginMessage() {
-  return localStorage.getItem("prijClinicLanguage") === "ar" ? "بيانات الدخول غير صحيحة." : "Invalid login ID or password.";
-}
-
-function sessionStartMessage() {
-  return localStorage.getItem("prijClinicLanguage") === "ar" ? "تعذر بدء الجلسة." : "Could not start your session.";
+  return localStorage.getItem("prijClinicLanguage") === "ar"
+    ? "بيانات الموظف أو كلمة المرور غير صحيحة."
+    : "Invalid staff ID/email or password.";
 }
 
 function authRequestFailed(response: Response) {
@@ -120,7 +118,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUser(null);
       setStatus("unauthenticated");
-      setMessage(connectionProblemMessage());
+      setMessage(storedToken ? connectionProblemMessage() : "");
       return;
     }
 
@@ -145,6 +143,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     setUser(data.user);
     setStatus("authenticated");
+    sessionStorage.removeItem(sessionMessageKey);
+    setMessage("");
   }, [clearSession]);
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const data = (await response.json().catch(() => null)) as { token?: string; user?: SessionUser } | null;
     if (!data?.token || !data.user) {
-      throw new Error(sessionStartMessage());
+      throw new Error(connectionProblemMessage());
     }
 
     localStorage.setItem(tokenKey, data.token);
