@@ -1,5 +1,39 @@
 # Prij Clinic
 
+## v1.3.7 Public Login Real Device Hotfix
+
+v1.3.7 fixes public login through one ngrok tunnel to the web app.
+
+- Public mobile QA uses one tunnel only: `ngrok http 3000`.
+- Never tunnel port 3001 for this app.
+- Browser login/session calls use `/api/backend/auth/login`, `/api/backend/auth/me`, and `/api/backend/auth/logout`.
+- The web route-handler proxy forwards internally to `http://localhost:3001` by default or `PRIJ_API_INTERNAL_ORIGIN` when set.
+- Public browser `Origin` is not forwarded to the internal API, so ngrok, LAN, and Tailscale-like web hosts do not break same-origin auth.
+- Invalid credentials show a credential message; network, timeout, malformed auth success, and 5xx show the friendly connection message.
+
+Public QA:
+
+```powershell
+npm run dev:stop
+docker compose up -d postgres
+npm run prisma:repair
+npm run prisma:seed
+npm run dev
+ngrok http 3000
+```
+
+Open `https://<public-ngrok-url>/login`, check `https://<public-ngrok-url>/api/backend/health`, then login with local QA credentials only.
+
+Public tunnels are QA/testing only until deployment/security signoff. Do not use real patient data through a public tunnel. External AI remains disabled by default, and there is no autonomous diagnosis, prescribing, dosing, treatment ranking, or automatic clinical finalization.
+
+Verification:
+
+```powershell
+npm run test:v137:public-login-proxy-real
+npm run test:v137:auth-status-classification
+npm run test:v137:single-tunnel-login-contract
+```
+
 ## v1.3.5 Public Login + Language Lock
 
 v1.3.5 fixes public login through one web URL and locks the login language behavior.
