@@ -1,10 +1,14 @@
 "use client";
 
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { apiUnreachableMessage, getApiBaseUrl } from "@/lib/api-base-url";
+import { apiUnreachableMessage, apiUnreachableMessageAr, getApiBaseUrl } from "@/lib/api-base-url";
 
 const tokenKey = "prijClinicToken";
 const sessionMessageKey = "prijClinicSessionMessage";
+
+function connectionProblemMessage() {
+  return localStorage.getItem("prijClinicLanguage") === "ar" ? apiUnreachableMessageAr : apiUnreachableMessage;
+}
 
 export type SessionUser = {
   id: string;
@@ -104,7 +108,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }).catch(() => null);
 
     if (!response) {
-      throw new Error(apiUnreachableMessage);
+      throw new Error(connectionProblemMessage());
     }
 
     if (response.status === 401) {
@@ -112,7 +116,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (!response.ok) {
-      throw new Error(apiUnreachableMessage);
+      throw new Error(connectionProblemMessage());
     }
 
     const data = (await response.json()) as { token?: string; user?: SessionUser };
