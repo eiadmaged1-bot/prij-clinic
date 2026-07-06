@@ -182,6 +182,8 @@ export default function PatientFilePage() {
   void ProtocolAtlasPanel;
   void CalculatorsPanel;
   void PrintPacketPanel;
+  void PatientQuickActions;
+  void PatientActionPanel;
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const patientId = params.id;
@@ -192,7 +194,6 @@ export default function PatientFilePage() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
-  const [services, setServices] = useState<ServiceItem[]>([]);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
@@ -241,20 +242,6 @@ export default function PatientFilePage() {
         setRoles([]);
       });
   }, [patientId]);
-
-  useEffect(() => {
-    const token = sessionStorage.getItem("prijClinicToken");
-    fetch(`${getApiBaseUrl()}/billing/services`, {
-      credentials: "include",
-      headers: token ? { authorization: `Bearer ${token}` } : undefined
-    })
-      .then(async (response) => {
-        if (!response.ok) return;
-        const data = await response.json() as { services?: ServiceItem[] };
-        setServices(data.services ?? []);
-      })
-      .catch(() => setServices([]));
-  }, []);
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");

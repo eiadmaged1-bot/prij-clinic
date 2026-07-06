@@ -14,10 +14,10 @@ async function main() {
   record.pass("theme registry includes required appearances");
 
   const loginSource = await readFile("apps/web/app/login/page.tsx", "utf8");
-  if (!loginSource.includes('demoEmail = "eyad"') || !loginSource.includes('demoPassword = "eyad"') || !loginSource.includes("Use Owner Demo Login")) {
-    throw new Error("Login page does not expose local demo admin credentials.");
+  if (!loginSource.includes('ownerLoginId = "eyad"') || !loginSource.includes('ownerPassword = "eyad"') || !loginSource.includes("Use Owner Login")) {
+    throw new Error("Login page does not expose local owner login shortcut.");
   }
-  record.pass("login page renders local demo admin credentials");
+  record.pass("login page renders local owner login shortcut");
 
   const dashboardSource = await readFile("apps/web/app/dashboard/page.tsx", "utf8");
   for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "AI Draft Review", "Owner portal", "Clinic Command"]) {

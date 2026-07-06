@@ -43,7 +43,7 @@ async function main() {
     "Scan details",
     "Pregnancy and fetus context",
     "Biometry recording",
-    "Doppler note placeholder",
+    "Doppler note",
     "Measurements are recorded for clinician review. Interpretation must be completed by the doctor.",
     "Doctor Templates",
     "Print patient summary",
@@ -95,8 +95,8 @@ async function main() {
   record.pass("admin tools remain protected from non-admin users");
 
   const patient = await apiJson("POST", "/patients", admin, {
-    medicalRecordNumber: `DEMO-UX-${Date.now()}`,
-    firstName: "Demo",
+    medicalRecordNumber: `UX-${Date.now()}`,
+    firstName: "Review",
     lastName: "DoctorUX",
     notes: "Doctor-friendly UI test patient only."
   });

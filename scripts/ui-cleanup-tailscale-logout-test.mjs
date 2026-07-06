@@ -24,10 +24,11 @@ assert(cors.includes("allowTailscaleDevOrigins") && cors.includes("isTailscaleMa
 assert(dev.includes("--tailscale") && dev.includes("API_HOST") && dev.includes("0.0.0.0"), "dev:tailscale binds API/web for tailnet access");
 assert(pkg.includes("\"dev:tailscale\""), "package script dev:tailscale exists");
 
-assert(patients.includes("Training records are hidden") && patients.includes("Show training records"), "patient files empty state explains hidden training data");
+assert(patients.includes("Patient registry") && patients.includes("Find or create a patient file"), "patient files page keeps a clean registry empty/loading context");
+assert(!patients.includes("Training records are hidden") && !patients.includes("Show training records"), "patient files normal UI avoids training-record wording");
 assert(patients.includes("New Patient File"), "patient files page keeps new patient action visible");
 assert(shell.includes("appointmentRowLabel") && shell.includes("isUuidLike"), "appointment rows avoid raw UUID primary titles");
-assert(checkIn.includes("showTrainingRecords") && checkIn.includes("visiblePatients") && checkIn.includes("visibleAppointments"), "check-in hides noisy training data by default");
+assert(!checkIn.includes("showTrainingRecords") && checkIn.includes("visiblePatients") && checkIn.includes("visibleAppointments"), "check-in filters noisy internal records without exposing a normal UI toggle");
 assert(newPatient.includes("<details") && newPatient.includes("Sensitive details") && newPatient.includes("Unknown / not asked"), "sensitive intake is optional and collapsed by default");
 
 for (const [label, source] of [
