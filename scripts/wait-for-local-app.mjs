@@ -11,6 +11,12 @@ const checks = [
     accept: (response) => response.status < 500
   },
   {
+    label: "same-origin API proxy health",
+    url: `${WEB_URL}/api/backend/health`,
+    required: true,
+    accept: (response, body) => response.ok && /"ok"|ok/i.test(body)
+  },
+  {
     label: "API health",
     url: `${API_URL}/health`,
     required: true,

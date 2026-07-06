@@ -5,6 +5,7 @@ const isWindows = process.platform === "win32";
 const isLanMode = process.argv.includes("--lan");
 const isTailscaleMode = process.argv.includes("--tailscale");
 const isPublicMode = process.argv.includes("--public");
+printDefaultProfile();
 if (isPublicMode) {
   preparePublicProfile();
 }
@@ -102,6 +103,12 @@ function printLanProfile() {
   if (tailscale) console.log(`[dev:lan] Tailscale device URL: http://${tailscale}:3000`);
   if (lan) console.log(`[dev:lan] LAN device URL: http://${lan}:3000`);
   if (!tailscale) console.log("[dev:lan] Tailscale IPv4 not detected. Start Tailscale, then rerun this command if phone QA needs it.");
+}
+
+function printDefaultProfile() {
+  console.log("[dev] API running on http://localhost:3001.");
+  console.log("[dev] Web running on http://localhost:3000.");
+  console.log("[dev] Browser API base is same-origin /api/backend.");
 }
 
 function runNpmScript(script) {
