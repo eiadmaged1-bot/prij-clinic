@@ -8,7 +8,7 @@ const checks = {
   "tailscale-runtime"() {
     const api = read("apps/web/lib/api-base-url.ts");
     const dev = read("scripts/dev.mjs");
-    assert(api.includes("isTailscaleOrCgnatIpv4(hostname)") && api.includes("return `http://${hostname}:${defaultLanApiPort}`"), "same-host Tailscale API fallback missing");
+    assert(api.includes("isTailscaleOrCgnatIpv4") && api.includes('sameOriginApiProxyPath = "/api/backend"'), "same-origin Tailscale API proxy support missing");
     assert(!api.includes("isAllowedLanFallback"), "manual LAN fallback gate should not be required");
     assert(dev.includes("[dev:lan] Tailscale device URL"), "dev:lan should print Tailscale URL when available");
   },

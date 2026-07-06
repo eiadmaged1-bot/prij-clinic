@@ -19,7 +19,7 @@ assert(css.includes(".account-menu") && css.includes("@media (max-width: 1199px)
 assert(!/\.topbar > \.account-menu\s*\{\s*display:\s*none/i.test(css), "account menu is not hidden at mobile widths");
 
 assert(apiBase.includes("isTailscaleOrCgnatIpv4") && apiBase.includes("isTailscaleMagicDnsHost"), "browser API base supports Tailscale IP and MagicDNS");
-assert(apiBase.includes("NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK") && apiBase.includes("defaultLanApiPort"), "browser API base can derive same-host dev API port");
+assert(apiBase.includes('sameOriginApiProxyPath = "/api/backend"') && apiBase.includes("return sameOriginApiProxyPath"), "browser API base defaults to same-origin proxy");
 assert(cors.includes("allowTailscaleDevOrigins") && cors.includes("isTailscaleMagicDnsHost"), "backend CORS supports dev-only Tailscale origins");
 assert(dev.includes("--tailscale") && dev.includes("API_HOST") && dev.includes("0.0.0.0"), "dev:tailscale binds API/web for tailnet access");
 assert(pkg.includes("\"dev:tailscale\""), "package script dev:tailscale exists");

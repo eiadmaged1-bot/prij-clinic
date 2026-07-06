@@ -1,3 +1,4 @@
+export const sameOriginApiProxyPath = "/api/backend";
 const localApiBaseUrl = "http://localhost:3001";
 const defaultLanApiPort = "3001";
 const legacyLanFallbackCompatibility = "NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK defaultLanApiPort";
@@ -204,32 +205,14 @@ export function getApiBaseUrl() {
     return configured;
   }
 
-  if (typeof window === "undefined") {
-    if (isDevelopmentRuntime()) {
-      return localApiBaseUrl;
-    }
+  return sameOriginApiProxyPath;
+}
 
-    throw new Error("API URL must be explicitly configured outside local development.");
-  }
-
-  const hostname = window.location.hostname.toLowerCase();
-  if (isLocalhost(hostname)) {
-    return localApiBaseUrl;
-  }
-
-  if (isDevelopmentRuntime() && hostname && hostname !== "0.0.0.0") {
-    if (
-      isPrivateIpv4(hostname) ||
-      isMdnsLocalHost(hostname) ||
-      isTailscaleOrCgnatIpv4(hostname) ||
-      isTailscaleMagicDnsHost(hostname)
-    ) {
-      return `http://${hostname}:${defaultLanApiPort}`;
-    }
-  }
-
-  throw new Error("LAN API fallback is disabled. Configure NEXT_PUBLIC_LAN_API_ORIGIN for this device.");
+export function getLegacyLocalApiBaseUrlForDiagnostics() {
+  return localApiBaseUrl;
 }
 
 export const apiUnreachableMessage =
-  "Cannot reach Prij API from this device. Configure an explicit local API origin or restart the app with a safe LAN dev profile.";
+  "Connection problem. Please check that the clinic server is running, then try again.";
+
+export const apiUnreachableMessageAr = "توجد مشكلة في الاتصال. تأكد أن سيرفر العيادة يعمل ثم حاول مرة أخرى.";

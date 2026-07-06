@@ -23,16 +23,37 @@ function loadApiBaseUrl(env = {}, location) {
   return module.exports;
 }
 
-function assertThrowsMessage(fn, messagePart) {
-  assert.throws(fn, (error) => error?.message?.includes(messagePart));
+{
+  const { getApiBaseUrl, sameOriginApiProxyPath } = loadApiBaseUrl(
+    { NODE_ENV: "development" },
+    { hostname: "localhost", protocol: "http:" }
+  );
+  assert.equal(sameOriginApiProxyPath, "/api/backend", "same-origin proxy path is exported");
+  assert.equal(getApiBaseUrl(), "/api/backend", "localhost browser defaults to same-origin proxy");
 }
 
 {
   const { getApiBaseUrl } = loadApiBaseUrl(
     { NODE_ENV: "development" },
-    { hostname: "localhost", protocol: "http:" }
+    { hostname: "192.168.1.50", protocol: "http:" }
   );
-  assert.equal(getApiBaseUrl(), "http://localhost:3001", "localhost browser falls back to local API");
+  assert.equal(getApiBaseUrl(), "/api/backend", "private LAN browser defaults to same-origin proxy");
+}
+
+{
+  const { getApiBaseUrl } = loadApiBaseUrl(
+    { NODE_ENV: "development" },
+    { hostname: "100.127.4.46", protocol: "http:" }
+  );
+  assert.equal(getApiBaseUrl(), "/api/backend", "Tailscale browser defaults to same-origin proxy");
+}
+
+{
+  const { getApiBaseUrl } = loadApiBaseUrl(
+    { NODE_ENV: "production", NEXT_PUBLIC_APP_ENV: "production" },
+    { hostname: "clinic-public.ngrok-free.app", protocol: "https:" }
+  );
+  assert.equal(getApiBaseUrl(), "/api/backend", "public/tunnel browser defaults to same-origin proxy");
 }
 
 {
@@ -40,7 +61,7 @@ function assertThrowsMessage(fn, messagePart) {
     { NODE_ENV: "development", NEXT_PUBLIC_LAN_API_ORIGIN: "http://192.168.1.50:3001" },
     { hostname: "192.168.1.20", protocol: "http:" }
   );
-  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "explicit LAN API origin wins");
+  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "explicit LAN API origin still wins");
 }
 
 {
@@ -48,7 +69,7 @@ function assertThrowsMessage(fn, messagePart) {
     { NODE_ENV: "development", NEXT_PUBLIC_LAN_API_ORIGIN: "http://100.127.4.46:3001" },
     { hostname: "100.127.4.46", protocol: "http:" }
   );
-  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "explicit Tailscale API origin wins");
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "explicit Tailscale API origin still wins");
 }
 
 {
@@ -60,7 +81,7 @@ function assertThrowsMessage(fn, messagePart) {
   });
   assert.equal(isTailscaleOrCgnatIpv4("100.127.4.46"), true, "Tailscale/CGNAT host is recognized");
   assert.equal(resolveConfiguredLanApiOrigin(), "http://100.127.4.46:3001", "configured Tailscale host resolves");
-  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "configured Tailscale host is used");
+  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "configured Tailscale host is still an explicit override");
 }
 
 {
@@ -70,47 +91,6 @@ function assertThrowsMessage(fn, messagePart) {
   });
   assert.equal(resolveConfiguredLanApiOrigin(), "http://prij-clinic.local:3001", ".local explicit origin is accepted");
   assert.equal(isSafeDevApiOrigin("http://prij-clinic.local:3001"), true, ".local is a safe dev API origin");
-}
-
-{
-  const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development" },
-    { hostname: "192.168.1.50", protocol: "http:" }
-  );
-  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "private IPv4 fallback is accepted in dev without manual LAN env");
-}
-
-{
-  const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development" },
-    { hostname: "100.127.4.46", protocol: "http:" }
-  );
-  assert.equal(getApiBaseUrl(), "http://100.127.4.46:3001", "Tailscale IPv4 same-host fallback is accepted in dev without manual LAN env");
-}
-
-{
-  const { getApiBaseUrl, isTailscaleMagicDnsHost } = loadApiBaseUrl(
-    { NODE_ENV: "development" },
-    { hostname: "prij-clinic.tailnet-name.ts.net", protocol: "http:" }
-  );
-  assert.equal(isTailscaleMagicDnsHost("prij-clinic.tailnet-name.ts.net"), true, "Tailscale MagicDNS host is recognized");
-  assert.equal(getApiBaseUrl(), "http://prij-clinic.tailnet-name.ts.net:3001", "Tailscale MagicDNS same-host fallback is accepted in dev without manual LAN env");
-}
-
-{
-  const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
-    { hostname: "8.8.8.8", protocol: "http:" }
-  );
-  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
-}
-
-{
-  const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "production", NEXT_PUBLIC_APP_ENV: "staging", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "true" },
-    { hostname: "192.168.1.50", protocol: "https:" }
-  );
-  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
 }
 
 {
@@ -124,7 +104,7 @@ function assertThrowsMessage(fn, messagePart) {
     { hostname: "100.127.4.46", protocol: "https:" }
   );
   assert.equal(resolveConfiguredLanApiOrigin(), undefined, "production ignores explicit HTTP LAN API origin");
-  assertThrowsMessage(getApiBaseUrl, "LAN API fallback is disabled");
+  assert.equal(getApiBaseUrl(), "/api/backend", "production falls back to same-origin proxy instead of throwing");
 }
 
 {
@@ -146,12 +126,7 @@ function assertThrowsMessage(fn, messagePart) {
   assert.equal(resolveConfiguredLanApiOrigin(), undefined, "malformed configured LAN origin is ignored");
 }
 
-{
-  const { getApiBaseUrl } = loadApiBaseUrl(
-    { NODE_ENV: "development", NEXT_PUBLIC_ALLOW_LAN_API_FALLBACK: "false" },
-    { hostname: "192.168.1.50", protocol: "http:" }
-  );
-  assert.equal(getApiBaseUrl(), "http://192.168.1.50:3001", "same-host dev LAN fallback is not disabled by missing manual env");
-}
+assert(!source.includes("LAN API fallback is disabled"), "normal API base resolver must not throw LAN fallback errors");
+assert(!source.includes("Cannot reach Prij API from this device"), "normal UI connection copy must not be technical");
 
-console.log("PASS api-base-url LAN resolution hardening tests");
+console.log("PASS api-base-url same-origin proxy tests");
