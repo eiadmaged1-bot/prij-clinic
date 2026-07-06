@@ -136,7 +136,7 @@ type ServiceItem = {
 };
 
 const tabs: TabConfig[] = [
-  { key: "overview", label: "Summary", icon: "patients", empty: "Start with the patient summary and next best action." },
+  { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "case-feed", label: "Case Feed", icon: "timeline", empty: "No case feed items yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "case-boards", label: "Case Boards", icon: "queue", empty: "No case boards yet.", permissions: ["patient.read"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "timeline", label: "Timeline", icon: "timeline", empty: "The patient story appears here as records are created." },
@@ -145,13 +145,14 @@ const tabs: TabConfig[] = [
   { key: "doctor-note", label: "Doctor Clinical Note", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No doctor clinical note yet.", permissions: ["encounter.read"] },
   { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation or clinical request yet.", permissions: ["clinical_requests.read", "investigation.read"] },
+  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation yet.", permissions: ["clinical_requests.read", "investigation.read"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "mother-baby", label: "Mother-Baby", icon: "pregnancy", empty: "No mother-baby workspace yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
-  { key: "documents", label: "Files / Gallery", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No archived document metadata yet.", permissions: ["patient_document.read"] },
-  { key: "billing", label: "Billing", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet. Create one only with demo payment details.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
+  { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No document metadata yet.", permissions: ["patient_document.read"] },
+  { key: "billing", label: "Invoices", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
+  { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents?patientId=:patientId", collectionKey: "consentRecords", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage", "consent_template.read"] },
   { key: "follow-up-hints", label: "Follow-up", icon: "timeline", endpoint: "/patients/:patientId/follow-up-hints", collectionKey: "hints", empty: "No active follow-up hints.", permissions: ["follow_up_hints.read"] },
   { key: "medications", label: "Medications", icon: "prescription", empty: "No active medication list entry yet.", permissions: ["patient_medications.read", "medications.search"] },
   { key: "allergies", label: "Allergies", icon: "consent", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
@@ -173,6 +174,8 @@ const relatedLoaders: TabConfig[] = [
   { key: "tasks", label: "Tasks", icon: "queue", endpoint: "/patients/:patientId/tasks", collectionKey: "patientTasks", empty: "No open patient tasks.", permissions: ["patient_task.read"] },
   { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] }
 ];
+
+const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "ultrasound", "documents", "billing", "consents"]);
 
 export default function PatientFilePage() {
   void ClinicalPanel;
@@ -197,6 +200,7 @@ export default function PatientFilePage() {
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const visibleTabs = useMemo(
     () => tabs.filter((tab) => {
+      if (!patientWorkspaceTabs.has(tab.key)) return false;
       if (tab.roles?.length && !tab.roles.some((role) => roles.includes(role))) return false;
       if (tab.permissions?.length && !tab.permissions.some((permission) => permissions.includes(permission))) return false;
       return true;
@@ -333,6 +337,8 @@ export default function PatientFilePage() {
             {unpaidInvoiceCount ? <span>Unpaid / balance</span> : null}
             <span>Allergy review</span>
             <span>Current medications</span>
+            <span>Last visit: {timelineItems[0]?.dateTime ? formatDateTime(timelineItems[0].dateTime) : "Not recorded"}</span>
+            <span>Next appointment: {String((related.appointments ?? [])[0]?.startAt ? formatDateTime(String((related.appointments ?? [])[0]?.startAt)) : "Not booked")}</span>
           </div>
         </div>
         <div className="patient-primary-actions">
@@ -340,21 +346,24 @@ export default function PatientFilePage() {
             <ThreeDMedicalIcon name="encounter" size="sm" />
             New Encounter
           </button>
+          <button className="button secondary large" type="button" onClick={() => setActiveTab("prescriptions")} disabled={!patient}>
+            <ThreeDMedicalIcon name="prescription" size="sm" tone="slate" />
+            Prescription
+          </button>
+          <button className="button secondary large" type="button" onClick={() => setActiveTab("investigations")} disabled={!patient}>
+            <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
+            Request Investigation
+          </button>
           <Link className="button secondary large" href="/calendar">
             <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
-            New Appointment
+            Book Follow-up
           </Link>
-          <Link className="button secondary large" href="/investigations">
-            <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
-            New Request
-          </Link>
-          <Link className="button secondary large" href="/billing">
-            <ThreeDMedicalIcon name="billing" size="sm" tone="slate" />
-            New Invoice
-          </Link>
-          <button className="button secondary large" type="button" onClick={() => setQrOpen(true)} disabled={!patient}>
+          <button className="button secondary large" type="button" onClick={() => setActiveTab("more")} disabled={!patient}>
+            <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+            More
+          </button>
+          <button className="button secondary compact icon-only-button" type="button" onClick={() => setQrOpen(true)} disabled={!patient} aria-label="Show patient QR">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
-            Patient QR
           </button>
         </div>
       </section>
@@ -388,8 +397,6 @@ export default function PatientFilePage() {
         <>
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
           <ImportantPatientBanner patient={patient} related={related} />
-          <PatientQuickActions patient={patient} setActiveTab={setActiveTab} onShowQr={() => setQrOpen(true)} />
-          <PatientActionPanel patient={patient} onSubmit={submitPatientAction} status={actionStatus} related={related} services={services} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
@@ -457,11 +464,11 @@ function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patient: Pat
     { label: "Add prescription", tab: "prescriptions", icon: "prescription" },
     { label: "Request investigation", tab: "investigations", icon: "investigations" },
     { label: "Add payment", tab: "billing", icon: "billing" },
-    { label: "Upload document placeholder", tab: "documents", icon: "files" },
+    { label: "Upload document", tab: "documents", icon: "files" },
     { label: "Print packet", href: `/patients/${patient.id}/print/packet`, icon: "reports" },
     { label: "Book follow-up", href: "/calendar", icon: "calendar" },
     { label: "Show QR", onClick: onShowQr, icon: "search" },
-    { label: "Add consent placeholder", tab: "documents", icon: "consent" }
+    { label: "Add consent", tab: "documents", icon: "consent" }
   ];
 
   return (
@@ -735,7 +742,7 @@ function Overview({ patient, related, timelineItems }: { patient: Patient; relat
           <div><dt>File number</dt><dd>{patient.medicalRecordNumber}</dd></div>
           <div><dt>Contact</dt><dd>{patient.phone || patient.email || "Not saved"}</dd></div>
           <div><dt>Status</dt><dd>{patient.status}</dd></div>
-          <div className="wide"><dt>Notes</dt><dd>{patient.notes || "No note saved yet."}</dd></div>
+          <div className="wide"><dt>Notes</dt><dd>{patient.notes || "No notes recorded."}</dd></div>
         </dl>
       </article>
       <article className="panel compact-panel">
@@ -862,28 +869,9 @@ function InvestigationsPanel({ related }: { related: Record<string, Record<strin
 }
 
 function DocumentsPanel({ related }: { related: Record<string, Record<string, unknown>[]> }) {
-  const documentPlaceholders = ["old report", "lab result", "ultrasound report", "consent form", "referral letter", "operation report", "previous prescription"];
-  const consentPlaceholders = ["general clinic consent", "procedure consent", "ultrasound/media consent", "data/privacy consent", "future AI-assistance consent placeholder"];
-
   return (
     <section className="dashboard-grid">
-      <article className="panel compact-panel">
-        <div className="section-heading">
-          <h2>Document placeholders</h2>
-          <span className="badge">Metadata only</span>
-        </div>
-        <p className="muted">Use these placeholders to plan paperless intake. Do not upload real PHI in this sprint.</p>
-        <div className="tag-list">{documentPlaceholders.map((item) => <span className="badge" key={item}>{item}</span>)}</div>
-      </article>
-      <article className="panel compact-panel">
-        <div className="section-heading">
-          <h2>Consent placeholders</h2>
-          <span className="badge warning">Doctor review</span>
-        </div>
-        <p className="muted">Consent records stay placeholders until approved legal text and clinic signoff exist.</p>
-        <div className="tag-list">{consentPlaceholders.map((item) => <span className="badge" key={item}>{item}</span>)}</div>
-      </article>
-      <RelatedPanel config={{ key: "documents", label: "Documents", icon: "files", empty: "No archived document metadata yet." }} rows={related.documents ?? []} />
+      <RelatedPanel config={{ key: "documents", label: "Documents", icon: "files", empty: "No document metadata yet." }} rows={related.documents ?? []} />
       <RelatedPanel config={{ key: "files", label: "Reports", icon: "reports", empty: "No report record yet. Add report metadata only after doctor review." }} rows={related.files ?? []} />
       <RelatedPanel config={{ key: "consents", label: "Consents", icon: "consent", empty: "No consent record yet." }} rows={related.consents ?? []} />
     </section>
