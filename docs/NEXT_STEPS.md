@@ -2,7 +2,9 @@
 
 Run real device QA on same-PC localhost, LAN, Tailscale, and one temporary public tunnel to port 3000.
 
-For public QA, use `npm run dev:public`, then run `ngrok http 3000` or `cloudflared tunnel --url http://localhost:3000`. Do not expose API port 3001 publicly.
+For public QA, use `npm run dev`, then run `ngrok http 3000` or `cloudflared tunnel --url http://localhost:3000`. Do not expose API port 3001 publicly.
+
+Confirm `http://localhost:3000/api/backend/health` before opening the public URL on a phone.
 
 Use `npm run guidelines:import:official` to import the built-in official/open guideline source pack, then confirm recent indexed documents and search results. Imported PDFs must stay in private gitignored storage.
 

@@ -1,5 +1,40 @@
 # Prij Clinic
 
+## v1.3.5 Public Login + Language Lock
+
+v1.3.5 fixes public login through one web URL and locks the login language behavior.
+
+- Public mobile QA uses one tunnel only: `ngrok http 3000`.
+- API remains internal on port 3001.
+- Browser login/session calls use `/api/backend`.
+- The web server proxies API requests internally to `http://localhost:3001` by default.
+- Override the internal API target server-side with `PRIJ_API_INTERNAL_ORIGIN` when needed.
+- `NEXT_PUBLIC_LAN_API_ORIGIN` is not required for normal public tunnel login.
+- Arabic/English login labels and messages are locked to the selected language without a layout flip.
+
+Public QA:
+
+```powershell
+npm run dev
+ngrok http 3000
+```
+
+Health check:
+
+```powershell
+http://localhost:3000/api/backend/health
+```
+
+Public tunnels are QA/testing only until deployment/security signoff. Do not use real patient data through a public tunnel. External AI remains disabled by default, and there is no autonomous diagnosis, prescribing, dosing, treatment ranking, or automatic clinical finalization.
+
+Verification:
+
+```powershell
+npm run test:v135:public-login-proxy
+npm run test:v135:login-i18n-lock
+npm run test:v135:public-qa-startup
+```
+
 ## v1.3.4 Public Mobile Single-Origin Access
 
 v1.3.4 enables public mobile QA through one public web URL.

@@ -14,4 +14,6 @@ The Next.js development issue overlay can appear only on the dev server. Use the
 
 Public tunnel workflows are QA/testing only. Do not use real patient data through ngrok, Cloudflare Quick Tunnel, or any public URL until deployment, privacy, backup, access-control, and security signoff is complete.
 
+Public login depends on the local dev stack running: web on port 3000, API internal on port 3001, and `/api/backend/health` returning healthy through the web origin.
+
 Cloudflare Quick Tunnel URLs are temporary random `trycloudflare.com` subdomains. A stable public route requires an owned domain added to Cloudflare or an equivalent deployment setup.
