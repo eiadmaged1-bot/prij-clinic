@@ -52,6 +52,8 @@ model User {
   branchId         String?   @db.Uuid
   permissionPreset String    @default("advanced")
   protectedAccount Boolean   @default(false)
+  doctorColor      String?
+  doctorShortLabel String?
   createdByUserId  String?   @db.Uuid
   lastLoginAt      DateTime? @db.Timestamptz(3)
   failedLoginCount Int       @default(0)
@@ -72,6 +74,7 @@ model User {
   doctorAppointments                 Appointment[]               @relation("AppointmentsDoctor")
   createdAppointments                Appointment[]               @relation("AppointmentsCreatedBy")
   doctorEncounters                   Encounter[]                 @relation("EncountersDoctor")
+  startedEncounters                  Encounter[]                 @relation("EncountersStartedBy")
   signedEncounters                   Encounter[]                 @relation("EncountersSignedBy")
   voidedEncounters                   Encounter[]                 @relation("EncountersVoidedBy")
   doctorPrescriptions                Prescription[]              @relation("PrescriptionsDoctor")
@@ -111,6 +114,9 @@ model User {
   reviewedMedicationSafetyProfiles   MedicationSafetyProfile[]   @relation("MedicationSafetyProfilesReviewedBy")
   decidedCareAssistFindings          CareAssistFinding[]         @relation("CareAssistFindingsDecidedBy")
   careAssistDecisions                CareAssistDecision[]        @relation("CareAssistDecisionsDecidedBy")
+  staffConversationParticipants      StaffConversationParticipant[]
+  sentStaffMessages                  StaffMessage[]              @relation("StaffMessagesSender")
+  staffMessageReceipts               StaffMessageReceipt[]
 
   @@index([branchId])
   @@index([createdByUserId])
@@ -233,6 +239,8 @@ model Patient {
   calculations              PatientCalculation[]
   datingAssessments         PregnancyDatingAssessment[]
   careAssistFindings        CareAssistFinding[]
+  staffConversations        StaffConversation[]
+  staffMessages             StaffMessage[]
 
   @@index([branchId])
   @@index([status])
@@ -334,6 +342,8 @@ model QueueTicket {
   patient     Patient      @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   invoices    Invoice[]
+  staffConversations StaffConversation[]
+  staffMessages      StaffMessage[]
 
   @@unique([branchId, queueDate, queueNumber])
   @@index([branchId, checkedInAt])
@@ -441,6 +451,10 @@ model Encounter {
   patientId      String          @db.Uuid
   appointmentId  String?         @db.Uuid
   doctorId       String          @db.Uuid
+  startedByUserId String?        @db.Uuid
+  doctorDisplayNameSnapshot String?
+  doctorColorSnapshot String?
+  startedAt      DateTime?       @db.Timestamptz(3)
   status         EncounterStatus @default(draft)
   chiefComplaint String?
   historyText    String?
@@ -467,6 +481,7 @@ model Encounter {
   patient               Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointment           Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   doctor                User                   @relation("EncountersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  startedByUser         User?                  @relation("EncountersStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
   signedByUser          User?                  @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
   voidedByUser          User?                  @relation("EncountersVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
   prescriptions         Prescription[]
@@ -479,12 +494,91 @@ model Encounter {
   aiManagementSnapshots AIManagementSnapshot[]
   careAssistFindings    CareAssistFinding[]
   invoices              Invoice[]
+  staffConversations    StaffConversation[]
+  staffMessages         StaffMessage[]
 
   @@index([branchId])
   @@index([patientId, createdAt])
   @@index([doctorId, createdAt])
+  @@index([startedByUserId, startedAt])
   @@index([appointmentId])
   @@index([status])
+}
+
+model StaffConversation {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String?
+  kind        String    @default("direct")
+  patientId   String?   @db.Uuid
+  queueTicketId String? @db.Uuid
+  encounterId String?   @db.Uuid
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+
+  patient     Patient?     @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  queueTicket QueueTicket? @relation(fields: [queueTicketId], references: [id], onDelete: SetNull)
+  encounter   Encounter?   @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  participants StaffConversationParticipant[]
+  messages     StaffMessage[]
+
+  @@index([kind, updatedAt])
+  @@index([patientId])
+  @@index([queueTicketId])
+  @@index([encounterId])
+}
+
+model StaffConversationParticipant {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @db.Uuid
+  userId         String   @db.Uuid
+  roleSnapshot   String?
+  joinedAt       DateTime @default(now()) @db.Timestamptz(3)
+
+  conversation StaffConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model StaffMessage {
+  id             String    @id @default(uuid()) @db.Uuid
+  conversationId String    @db.Uuid
+  senderUserId   String    @db.Uuid
+  body           String
+  messageType    String    @default("text")
+  patientId      String?   @db.Uuid
+  queueTicketId  String?   @db.Uuid
+  encounterId    String?   @db.Uuid
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  editedAt       DateTime? @db.Timestamptz(3)
+  deletedAt      DateTime? @db.Timestamptz(3)
+
+  conversation StaffConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User              @relation("StaffMessagesSender", fields: [senderUserId], references: [id], onDelete: Restrict)
+  patient      Patient?          @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  queueTicket  QueueTicket?      @relation(fields: [queueTicketId], references: [id], onDelete: SetNull)
+  encounter    Encounter?        @relation(fields: [encounterId], references: [id], onDelete: SetNull)
+  receipts     StaffMessageReceipt[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderUserId, createdAt])
+  @@index([patientId])
+}
+
+model StaffMessageReceipt {
+  id        String    @id @default(uuid()) @db.Uuid
+  messageId String    @db.Uuid
+  userId    String    @db.Uuid
+  deliveredAt DateTime? @db.Timestamptz(3)
+  seenAt    DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  message StaffMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, seenAt])
 }
 
 model Prescription {

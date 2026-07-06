@@ -36,6 +36,7 @@ type MvpPageProps = {
 };
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { getUnreadStaffChatCount } from "@/lib/staff-chat";
 
 const navGroupOrder: NavItem["group"][] = [
   "Today",
@@ -328,6 +329,8 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
   const canUseDoctorComfort = hasRole(roles, ["Owner", "Admin", "Doctor"]);
+  const canUseStaffChat = permissions.includes("staff_chat.read");
+  const [staffChatUnread, setStaffChatUnread] = useState(0);
   const visibleNavGroups = navGroupOrder
     .map((group) => ({
       title: group,
@@ -347,6 +350,25 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       router.replace("/login");
     }
   }, [router, status]);
+
+  useEffect(() => {
+    if (!canUseStaffChat) return;
+    let active = true;
+    async function loadUnread() {
+      try {
+        const result = await getUnreadStaffChatCount();
+        if (active) setStaffChatUnread(result.unreadCount);
+      } catch {
+        if (active) setStaffChatUnread(0);
+      }
+    }
+    void loadUnread();
+    const timer = window.setInterval(loadUnread, 45000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [canUseStaffChat]);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -431,6 +453,13 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               {t("newPatient")}
             </Link>
             <LanguageSwitcher />
+            {canUseStaffChat ? (
+              <Link className="button secondary compact chat-topbar-button" href="/staff-chat" aria-label="Staff messages">
+                <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
+                Messages
+                {staffChatUnread > 0 ? <span className="unread-badge">{staffChatUnread}</span> : null}
+              </Link>
+            ) : null}
             {canUseDoctorComfort ? (
               <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
                 <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />

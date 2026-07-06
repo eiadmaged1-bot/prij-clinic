@@ -14,6 +14,7 @@ import {
   CreateServiceItemDto,
   ResetAccountPasswordDto,
   UpdateAccountDto,
+  UpdateDoctorProfileDto,
   UpdateAccountPermissionsDto,
   UpdateServiceItemDto
 } from "./admin.dto";
@@ -70,6 +71,12 @@ export class AdminController {
   @Permissions("user.manage")
   updateAccount(@Param("id") id: string, @Body() dto: UpdateAccountDto, @CurrentUser() user: AuthUser) {
     return this.rbac.updateAccount(id, dto, user);
+  }
+
+  @Patch("accounts/:id/doctor-profile")
+  @Permissions("user.manage")
+  updateDoctorProfile(@Param("id") id: string, @Body() dto: UpdateDoctorProfileDto, @CurrentUser() user: AuthUser) {
+    return this.rbac.updateDoctorProfile(id, dto, user);
   }
 
   @Post("accounts/:id/reset-password")

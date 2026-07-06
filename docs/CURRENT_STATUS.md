@@ -1,14 +1,14 @@
 # Current Status
 
-v1.2.1 responsive reception cleanup is implemented in source:
-- Premium clean login page.
-- Simplified New Patient form.
-- Referral/source removed from patient creation.
-- Normal seed no longer creates demo staff accounts by default.
-- Receptionist single-screen workflow.
-- Next-patient and queue-position views.
-- `مستعجل` urgent queue priority.
-- Doctor queue preview mode.
-- Responsive and premium card/button source guards.
+v1.3.0 adds doctor visit signatures, Doctor Case Library, and internal staff chat on top of the v1.2.1 responsive reception cleanup lock.
 
-Real patient data remains blocked until final signoff. External AI remains disabled by default.
+Implemented:
+
+- Start Visit stamps the authenticated doctor on the encounter.
+- Patient timeline and case feed show doctor name plus color.
+- Doctor Case Library route and API are RBAC protected.
+- Trusted doctor access supports colleague cases.
+- Internal staff chat stores conversations, messages, participants, and per-recipient receipts.
+- Unread badge is available in the shared top bar.
+
+External AI remains disabled by default and clinical AI output remains draft-only.

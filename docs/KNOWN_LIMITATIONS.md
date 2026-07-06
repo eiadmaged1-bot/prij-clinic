@@ -1,7 +1,7 @@
 # Known Limitations
 
-- Real patient data is still blocked until final signoff.
-- External AI remains disabled by default.
-- The app must not provide autonomous diagnosis, prescribing, dosing, or treatment ranking.
-- Clinical outputs remain draft-only until reviewed and approved by a doctor.
-- Final production readiness still depends on deployment, backup, consent, RBAC, audit, and security signoff.
+- Staff chat uses REST refresh/polling instead of WebSockets.
+- Patient-linked staff messages are operational and are not inserted into encounter notes.
+- Doctor reassignment after start is not exposed as a normal workflow; future reassignment must require Owner/Admin permission and audit reason.
+- Trusted-doctor access currently follows the Doctor role permissions configured for this two-doctor clinic.
+- No external AI, WhatsApp, SMS, or automatic clinical decisioning is enabled.

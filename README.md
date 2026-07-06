@@ -1,5 +1,28 @@
 # Prij Clinic
 
+## v1.3.0 Doctor Signature + Case Library + Internal Staff Chat
+
+v1.3.0 adds doctor visit signatures, a Doctor Case Library, and internal staff chat.
+
+- The doctor who clicks Start Visit is stamped on the encounter.
+- Patient timeline and case feed show doctor name plus color.
+- Doctors can browse own cases.
+- Trusted doctors can browse colleague cases for the configured two-doctor clinic workflow.
+- Receptionist and Accountant cannot browse the clinical case library.
+- Internal staff chat supports per-recipient seen/read status and an unread badge.
+- Staff chat is not a formal clinical note; patient-linked staff messages are operational.
+- Local same-PC and Tailscale testing are mandatory.
+- External AI remains disabled by default, with no autonomous diagnosis, prescribing, dosing, or treatment ranking.
+
+Verification:
+
+```powershell
+npm run test:v130:doctor-signature
+npm run test:v130:case-library
+npm run test:v130:staff-chat
+npm run test:v130:local-tailscale-workflow
+```
+
 ## v1.2.0 Mouse-First Productivity Pack
 
 v1.2.0 adds a mouse-first doctor workflow, patient case feed, smart clinical tags, case boards, Mother-Baby pregnancy workspace, OB history tags, conception method tags, results review inbox, doctor favorites, auto-save, continue-last-work, clinic open/close checklists, waiting alerts, print helpers, guided staff help, and copyable message templates.

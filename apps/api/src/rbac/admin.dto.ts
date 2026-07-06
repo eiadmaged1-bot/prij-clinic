@@ -200,3 +200,18 @@ export class UpdateAccountPermissionsDto {
   @MaxLength(500)
   reason!: string;
 }
+
+export class UpdateDoctorProfileDto {
+  @IsString()
+  @MaxLength(7)
+  doctorColor!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  doctorShortLabel?: string;
+
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+}

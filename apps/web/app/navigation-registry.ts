@@ -24,6 +24,8 @@ export const navigationRegistry: NavItem[] = [
   { href: "/doctor", label: "Doctor Workspace", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
   { href: "/doctor/waiting", label: "Doctor Waiting", icon: "doctor", group: "Clinical", permissions: ["encounter.read", "queue.read"] },
   { href: "/doctor/visit", label: "Doctor Visit", icon: "encounter", group: "Clinical", permissions: ["encounter.create", "encounter.read"] },
+  { href: "/doctor/case-library", label: "Case Library", icon: "timeline", group: "Clinical", permissions: ["clinical_case_library.view_own"], roles: ["Owner", "Admin", "Doctor"] },
+  { href: "/staff-chat", label: "Staff Messages", icon: "files", group: "Operations", permissions: ["staff_chat.read"] },
   { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Clinical", permissions: ["prescription.read"] },
   { href: "/care-assist", label: "Care Assist", icon: "ai", group: "Clinical", permissions: ["care_assist.read", "care_assist.evaluate"] },
   { href: "/orders", label: "Orders", icon: "investigations", group: "Clinical", permissions: ["investigation.read"] },

@@ -12,6 +12,7 @@ import {
   CreateServiceItemDto,
   ResetAccountPasswordDto,
   UpdateAccountDto,
+  UpdateDoctorProfileDto,
   UpdateAccountPermissionsDto,
   UpdateServiceItemDto
 } from "./admin.dto";
@@ -215,6 +216,39 @@ export class RbacService {
       severity: role || dto.permissionPreset ? "high" : "medium",
       reason: dto.reason?.trim(),
       metadataJson: { changedFields: Object.keys(dto).filter((key) => key !== "reason"), role: dto.role, permissionPreset: updated.permissionPreset }
+    });
+
+    return { account: toAccountSummary(updated) };
+  }
+
+  async updateDoctorProfile(id: string, dto: UpdateDoctorProfileDto, actor?: AuthUser) {
+    assertCanManageAccounts(actor);
+    assertReasonForSensitiveChange(dto.reason);
+    if (!/^#[0-9A-Fa-f]{6}$/.test(dto.doctorColor)) {
+      throw new BadRequestException("Doctor color must be a hex color.");
+    }
+    const existing = await this.requireAccount(id);
+    const isDoctor = existing.userRoles.some((userRole) => ["Owner", "Admin", "Doctor"].includes(userRole.role.name));
+    if (!isDoctor) throw new BadRequestException("Doctor color can only be set for clinical staff.");
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: {
+        doctorColor: dto.doctorColor.toUpperCase(),
+        doctorShortLabel: dto.doctorShortLabel?.trim() || null
+      },
+      include: accountInclude
+    });
+
+    await this.audit.record({
+      actorUserId: actor?.id,
+      action: "doctor_profile.color_updated",
+      resourceType: "user",
+      resourceId: id,
+      branchId: updated.branchId,
+      severity: "high",
+      reason: dto.reason.trim(),
+      metadataJson: { doctorColor: updated.doctorColor, doctorShortLabel: updated.doctorShortLabel }
     });
 
     return { account: toAccountSummary(updated) };
@@ -749,6 +783,8 @@ function toAccountSummary(account: AccountWithRelations) {
     email: account.email,
     loginId: account.loginId,
     displayName: account.displayName,
+    doctorColor: account.doctorColor,
+    doctorShortLabel: account.doctorShortLabel,
     status: account.status,
     branchId: account.branchId,
     branchName: account.branch?.name ?? null,

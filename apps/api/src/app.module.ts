@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { BillingModule } from "./billing/billing.module";
 import { CalculatorsModule } from "./calculators/calculators.module";
 import { CareAssistModule } from "./care-assist/care-assist.module";
+import { CaseLibraryModule } from "./case-library/case-library.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { ConsentTemplatesModule } from "./consent-templates/consent-templates.module";
 import { ClinicDirectoryModule } from "./clinic-directory/clinic-directory.module";
@@ -35,6 +36,7 @@ import { ReportsModule } from "./reports/reports.module";
 import { ReferralsModule } from "./referrals/referrals.module";
 import { ReferenceModule } from "./reference/reference.module";
 import { SearchModule } from "./search/search.module";
+import { StaffChatModule } from "./staff-chat/staff-chat.module";
 import { UsersModule } from "./users/users.module";
 
 @Module({
@@ -69,13 +71,15 @@ import { UsersModule } from "./users/users.module";
     BillingModule,
     CalculatorsModule,
     CareAssistModule,
+    CaseLibraryModule,
     DoctorVisitModule,
     DashboardModule,
     MedicationsModule,
     DrugMarketModule,
     AiDraftsModule,
     ProtocolAtlasModule,
-    AiManagementModule
+    AiManagementModule,
+    StaffChatModule
   ]
 })
 export class AppModule {}

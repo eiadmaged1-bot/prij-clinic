@@ -1,7 +1,6 @@
 # Next Steps
 
-- Run the full v1.2.1 and protected regression suite.
-- Complete any manual responsive browser QA findings.
-- Keep real staff creation under Owner/Admin control.
-- Keep clinical AI draft-only and disabled externally by default.
-- Tag v1.2.1 only after final checks pass.
+- Run full local and Tailscale browser QA with Owner, Doctor, Receptionist, and Accountant accounts.
+- Decide whether to split Trusted Doctor from Standard Doctor into separate role presets.
+- Add richer patient-linked chat shortcuts from queue cards after clinic workflow validation.
+- Add optional group/channel seen-list expansion after direct chat is accepted by staff.

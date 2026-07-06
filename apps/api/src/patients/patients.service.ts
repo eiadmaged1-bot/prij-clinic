@@ -248,7 +248,16 @@ export class PatientsService {
       timelineItem(patient.createdAt, "patient", "Patient file created", patient.status, `MRN ${patient.medicalRecordNumber}`, patient.createdByUserId ? "Staff member" : undefined, `/patients/${patient.id}`),
       ...appointments.map((item) => timelineItem(item.startAt, "appointment", "Appointment booked", item.status, item.appointmentType ?? "Clinic appointment", item.doctor?.displayName, "/appointments")),
       ...queueTickets.map((item) => timelineItem(item.checkedInAt, "queue", "Checked in to queue", item.status, `Queue ${item.queueNumber}`, undefined, "/queue")),
-      ...encounters.map((item) => timelineItem(item.createdAt, "encounter", item.status === "signed" ? "Visit note signed" : "Visit note started", item.status, item.chiefComplaint ?? "Doctor visit note", item.doctor.displayName, "/encounters")),
+      ...encounters.map((item) => timelineItem(
+        item.startedAt ?? item.createdAt,
+        "encounter",
+        item.status === "signed" ? "Visit note signed" : "Visit note started",
+        item.status,
+        item.chiefComplaint ?? "Doctor visit note",
+        item.doctorDisplayNameSnapshot ?? item.doctor.displayName,
+        "/encounters",
+        doctorSignature(item)
+      )),
       ...prescriptions.map((item) => timelineItem(item.createdAt, "prescription", "Prescription created", item.status, `${item.items.length} medicine item(s)`, item.doctor.displayName, "/prescriptions")),
       ...investigationOrders.map((item) => timelineItem(item.createdAt, "investigation", "Investigation ordered", item.status, item.items.map((orderItem) => orderItem.testName).join(", ") || "Investigation order", item.doctor.displayName, "/investigations")),
       ...reports.map((item) => timelineItem(item.createdAt, "report", "Report created", item.status, item.title, item.uploadedByUser?.displayName, "/reports")),
@@ -783,8 +792,35 @@ export class PatientsService {
   }
 }
 
-function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string) {
-  return { dateTime: dateTime.toISOString(), type, title, status, description, actor, href };
+function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string, doctorSignature?: Record<string, unknown>) {
+  return { dateTime: dateTime.toISOString(), type, title, status, description, actor, href, doctorSignature };
+}
+
+function doctorSignature(item: {
+  doctorId: string;
+  startedByUserId: string | null;
+  doctorDisplayNameSnapshot: string | null;
+  doctorColorSnapshot: string | null;
+  startedAt: Date | null;
+  createdAt: Date;
+  doctor: { displayName: string; doctorColor: string | null; doctorShortLabel: string | null };
+}) {
+  const color = normalizeDoctorColor(item.doctorColorSnapshot ?? item.doctor.doctorColor, item.doctorId);
+  return {
+    doctorId: item.doctorId,
+    startedByUserId: item.startedByUserId,
+    doctorName: item.doctorDisplayNameSnapshot ?? item.doctor.displayName,
+    doctorShortLabel: item.doctor.doctorShortLabel,
+    doctorColor: color,
+    startedAt: (item.startedAt ?? item.createdAt).toISOString()
+  };
+}
+
+function normalizeDoctorColor(color: string | null | undefined, userId: string) {
+  if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) return color.toUpperCase();
+  const palette = ["#0F766E", "#2563EB", "#7C3AED", "#C2410C", "#BE123C", "#047857", "#4338CA", "#A16207"];
+  const code = [...userId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[code % palette.length];
 }
 
 function internalNoteVisibilityWhere(user: AuthUser): Prisma.PatientInternalNoteWhereInput {

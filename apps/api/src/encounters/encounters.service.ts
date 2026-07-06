@@ -74,7 +74,7 @@ export class EncountersService {
       where: { ...patientBranchScope(user), ...doctorScope(user) },
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { patient: true, appointment: true }
+      include: { patient: true, appointment: true, doctor: true }
     });
 
     await this.audit.record({
@@ -86,13 +86,13 @@ export class EncountersService {
       metadataJson: { count: encounters.length }
     });
 
-    return encounters;
+    return encounters.map(withSignature);
   }
 
   async get(id: string, user: AuthUser) {
     const encounter = await this.prisma.encounter.findFirst({
       where: { id, ...patientBranchScope(user), ...doctorScope(user) },
-      include: { patient: true, appointment: true }
+      include: { patient: true, appointment: true, doctor: true }
     });
 
     if (!encounter) {
@@ -108,7 +108,7 @@ export class EncountersService {
       severity: "medium"
     });
 
-    return encounter;
+    return withSignature(encounter);
   }
 
   async update(id: string, dto: UpdateEncounterDto, user: AuthUser) {
@@ -253,4 +253,26 @@ function clean(value?: string) {
 
 function jsonOrNull(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
   return value === undefined || value === null ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
+}
+
+function withSignature<T extends { doctorId: string; startedByUserId: string | null; doctorDisplayNameSnapshot: string | null; doctorColorSnapshot: string | null; startedAt: Date | null; createdAt: Date; doctor?: { displayName: string; doctorColor: string | null; doctorShortLabel: string | null } }>(encounter: T) {
+  const color = normalizeDoctorColor(encounter.doctorColorSnapshot ?? encounter.doctor?.doctorColor, encounter.doctorId);
+  return {
+    ...encounter,
+    doctorSignature: {
+      doctorId: encounter.doctorId,
+      startedByUserId: encounter.startedByUserId,
+      doctorName: encounter.doctorDisplayNameSnapshot ?? encounter.doctor?.displayName ?? "Doctor",
+      doctorShortLabel: encounter.doctor?.doctorShortLabel ?? null,
+      doctorColor: color,
+      startedAt: encounter.startedAt?.toISOString() ?? encounter.createdAt.toISOString()
+    }
+  };
+}
+
+function normalizeDoctorColor(color: string | null | undefined, userId: string) {
+  if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) return color.toUpperCase();
+  const palette = ["#0F766E", "#2563EB", "#7C3AED", "#C2410C", "#BE123C", "#047857", "#4338CA", "#A16207"];
+  const code = [...userId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[code % palette.length];
 }

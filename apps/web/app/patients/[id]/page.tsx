@@ -108,6 +108,12 @@ type TimelineItem = {
   description: string;
   actor?: string;
   href?: string;
+  doctorSignature?: {
+    doctorName?: string;
+    doctorColor?: string;
+    doctorShortLabel?: string | null;
+    startedAt?: string;
+  };
 };
 
 type ReferenceResult = {
@@ -509,8 +515,8 @@ function ImportantPatientBanner({ patient, related }: { patient: Patient; relate
 function PatientCaseFeed({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
   const pregnancies = related.pregnancy ?? [];
   const currentPregnancy = pregnancies.find((row) => String(row.status ?? "").toLowerCase() === "active");
-  const rows = [
-    ...timelineItems.slice(0, 8).map((item) => ({ title: item.title, status: item.status, text: item.description, type: item.type })),
+  const rows: Array<{ title: string; status: string; text: string; type: string; doctorSignature?: TimelineItem["doctorSignature"] }> = [
+    ...timelineItems.slice(0, 8).map((item) => ({ title: item.title, status: item.status, text: item.description, type: item.type, doctorSignature: item.doctorSignature })),
     ...feedItemTypes.map((type) => ({ title: type, status: "Available type", text: "Patient-linked internal feed item. Role-based access applies.", type }))
   ].slice(0, 16);
 
@@ -548,6 +554,7 @@ function PatientCaseFeed({ patient, related, timelineItems }: { patient: Patient
                 <span className="badge">{row.status}</span>
               </div>
               <p className="muted">{row.text}</p>
+              {row.doctorSignature?.doctorName ? <DoctorSignatureBadge signature={row.doctorSignature} /> : null}
               <p className="muted">Visit item can show visit number, date, visit type, pregnancy week, mother summary, Baby A/B summary, attachments, prescription, investigations, and follow-up.</p>
             </div>
           </article>
@@ -1003,6 +1010,8 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
     setStatus("Visit packet refreshed.");
   }
 
+  const visitSignature = visit?.encounter?.doctorSignature as TimelineItem["doctorSignature"] | undefined;
+
   return (
     <section className="panel doctor-visit-flow">
       <div className="section-heading">
@@ -1020,6 +1029,7 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         ))}
       </div>
       {encounterId ? <p className="notice">Active visit banner: draft visit is open for this patient.</p> : null}
+      {visitSignature?.doctorName ? <DoctorSignatureBadge signature={visitSignature} /> : null}
       <p className="muted">{status}</p>
       {!encounterId ? <p className="warning-text">Start a visit before adding encounter, prescription, investigation, or follow-up items.</p> : null}
 
@@ -2646,6 +2656,7 @@ function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] 
                 <span className="badge">{item.status}</span>
               </div>
               <p className="muted">{formatDateTime(item.dateTime)} | {item.actor || "Clinic team"}</p>
+              {item.doctorSignature?.doctorName ? <DoctorSignatureBadge signature={item.doctorSignature} /> : null}
               <p>{item.description}</p>
               {item.href ? <Link className="button compact secondary" href={item.href}>Open details</Link> : null}
             </div>
@@ -2669,6 +2680,16 @@ function timelineMatchesFilter(item: TimelineItem, filter: string) {
     "Queue/appointments": ["queue", "appointment"]
   };
   return (map[filter] ?? []).some((keyword) => text.includes(keyword));
+}
+
+function DoctorSignatureBadge({ signature }: { signature: NonNullable<TimelineItem["doctorSignature"]> }) {
+  const color = signature.doctorColor ?? "#64748B";
+  return (
+    <p className="doctor-signature-badge">
+      <span style={{ background: color }} />
+      Seen by {signature.doctorName}
+    </p>
+  );
 }
 
 function PrintPacketPanel({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {

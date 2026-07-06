@@ -18,6 +18,12 @@ export class DoctorVisitService {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
     if (!patient.branchId) throw new BadRequestException("Patient branch is required to start a doctor visit.");
     const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId, requireDoctorScope: true });
+    const doctorProfile = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true }
+    });
+    if (!doctorProfile) throw new BadRequestException("Doctor profile is required to start a visit.");
+    const doctorColor = normalizeDoctorColor(doctorProfile.doctorColor, user.id);
     const existing = await this.prisma.encounter.findFirst({
       where: { patientId, status: "draft", ...doctorScope(user), ...patientBranchScope(user) },
       orderBy: { createdAt: "desc" }
@@ -28,21 +34,48 @@ export class DoctorVisitService {
         patientId,
         branchId: patient.branchId,
         appointmentId: appointment?.id ?? null,
-        doctorId: user.id
+        doctorId: user.id,
+        startedByUserId: user.id,
+        doctorDisplayNameSnapshot: doctorProfile.displayName,
+        doctorColorSnapshot: doctorColor,
+        startedAt: new Date()
       }
     });
 
+    const stampedEncounter = existing && (!existing.startedByUserId || !existing.doctorDisplayNameSnapshot || !existing.doctorColorSnapshot || !existing.startedAt)
+      ? await this.prisma.encounter.update({
+          where: { id: existing.id },
+          data: {
+            startedByUserId: existing.startedByUserId ?? user.id,
+            doctorDisplayNameSnapshot: existing.doctorDisplayNameSnapshot ?? doctorProfile.displayName,
+            doctorColorSnapshot: existing.doctorColorSnapshot ?? doctorColor,
+            startedAt: existing.startedAt ?? new Date()
+          }
+        })
+      : encounter;
+
+    if (!doctorProfile.doctorColor) {
+      await this.prisma.user.update({ where: { id: user.id }, data: { doctorColor } });
+    }
+
     await this.audit.record({
       actorUserId: user.id,
-      action: "doctor_visit.started",
+      action: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED",
       resourceType: "encounter",
-      resourceId: encounter.id,
+      resourceId: stampedEncounter.id,
       branchId: patient.branchId,
       severity: "high",
-      metadataJson: { patientId, reusedDraft: Boolean(existing), appointmentId: appointment?.id ?? null }
+      metadataJson: {
+        patientId,
+        reusedDraft: Boolean(existing),
+        appointmentId: appointment?.id ?? null,
+        startedByUserId: stampedEncounter.startedByUserId,
+        doctorDisplayNameSnapshot: stampedEncounter.doctorDisplayNameSnapshot,
+        doctorColorSnapshot: stampedEncounter.doctorColorSnapshot
+      }
     });
 
-    return this.visitState(patientId, encounter.id, user);
+    return this.visitState(patientId, stampedEncounter.id, user);
   }
 
   async current(patientId: string, user: AuthUser) {
@@ -130,7 +163,10 @@ export class DoctorVisitService {
   private async visitState(patientId: string, encounterId: string, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
     const [encounter, historySheet, careAssistFindings, prescriptions, investigationOrders, followUps] = await Promise.all([
-      this.prisma.encounter.findFirst({ where: { id: encounterId, patientId, ...doctorScope(user), ...patientBranchScope(user) } }),
+      this.prisma.encounter.findFirst({
+        where: { id: encounterId, patientId, ...doctorScope(user), ...patientBranchScope(user) },
+        include: { doctor: { select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true } } }
+      }),
       this.prisma.patientHistorySheet.findFirst({ where: { patientId }, orderBy: { updatedAt: "desc" }, include: { medicationHistoryItems: true, investigationHistoryItems: true, operationHistoryItems: true } }),
       this.prisma.careAssistFinding.findMany({ where: { patientId, encounterId }, orderBy: [{ status: "asc" }, { severity: "desc" }, { createdAt: "desc" }], take: 50 }),
       this.prisma.prescription.findMany({
@@ -145,7 +181,7 @@ export class DoctorVisitService {
     return {
       workflow: visitWorkflow(),
       patient: patientSummary(patient),
-      encounter,
+      encounter: withDoctorSignature(encounter),
       historySheet,
       careAssistFindings,
       prescriptions: prescriptions.map((prescription) => ({
@@ -212,4 +248,27 @@ function safetySummary(profile: {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+export function normalizeDoctorColor(color: string | null | undefined, userId: string) {
+  if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) return color.toUpperCase();
+  const palette = ["#0F766E", "#2563EB", "#7C3AED", "#C2410C", "#BE123C", "#047857", "#4338CA", "#A16207"];
+  const code = [...userId].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return palette[code % palette.length];
+}
+
+function withDoctorSignature(encounter: (Prisma.EncounterGetPayload<{ include: { doctor: { select: { id: true; displayName: true; doctorColor: true; doctorShortLabel: true } } } }>) | null) {
+  if (!encounter) return encounter;
+  const color = normalizeDoctorColor(encounter.doctorColorSnapshot ?? encounter.doctor.doctorColor, encounter.doctorId);
+  return {
+    ...encounter,
+    doctorSignature: {
+      doctorId: encounter.doctorId,
+      startedByUserId: encounter.startedByUserId,
+      doctorName: encounter.doctorDisplayNameSnapshot ?? encounter.doctor.displayName,
+      doctorShortLabel: encounter.doctor.doctorShortLabel,
+      doctorColor: color,
+      startedAt: encounter.startedAt?.toISOString() ?? encounter.createdAt.toISOString()
+    }
+  };
 }
