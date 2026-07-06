@@ -37,6 +37,7 @@ export default function NewPatientPage() {
   const [form, setForm] = useState<FormState>(initialState);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [createdPatientId, setCreatedPatientId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
@@ -111,7 +112,8 @@ export default function NewPatientPage() {
       }
 
       const patient = (await response.json()) as { id: string };
-      await fetch(`${getApiBaseUrl()}/queue/check-in`, {
+      setCreatedPatientId(patient.id);
+      const queueResponse = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -120,6 +122,7 @@ export default function NewPatientPage() {
         },
         body: JSON.stringify({ patientId: patient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
       }).catch(() => undefined);
+      const queueTicket = queueResponse?.ok ? await queueResponse.json().catch(() => null) as { queueNumber?: number; visitType?: string } | null : null;
       await fetch(`${getApiBaseUrl()}/patient-intake`, {
         method: "POST",
         credentials: "include",
@@ -142,8 +145,8 @@ export default function NewPatientPage() {
           }
         })
       }).catch(() => undefined);
-      setSuccess("Patient file created and added to the queue. Opening the patient workspace.");
-      router.push(`/patients/${patient.id}`);
+      setSuccess(`Added to queue · Position ${queueTicket?.queueNumber ?? "new"} · Visit type: ${visitType === "urgent_kashf" ? "مستعجل" : "كشف"}`);
+      window.setTimeout(() => router.push("/reception"), 900);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to create patient file.");
     } finally {
@@ -163,9 +166,9 @@ export default function NewPatientPage() {
             <p className="eyebrow">Registration</p>
             <h1>New patient file</h1>
           </div>
-          <Link className="button secondary compact" href="/patients">
+          <Link className="button secondary compact" href="/reception">
             <ThreeDMedicalIcon name="patients" size="sm" tone="slate" />
-            Back to patients
+            Back to Reception
           </Link>
         </div>
         <p className="muted">Create the file and add the patient to today&apos;s queue.</p>
@@ -188,9 +191,8 @@ export default function NewPatientPage() {
                 required
                 value={form.medicalRecordNumber}
               />
-              <button className="button secondary compact" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">
+              <button className="button secondary compact icon-only-button" aria-label="Regenerate file number" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">
                 <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
-                Generate
               </button>
             </div>
           </label>
@@ -249,11 +251,12 @@ export default function NewPatientPage() {
           <div className="form-actions wide">
             <button className="button" disabled={isSubmitting} type="submit">
               <ThreeDMedicalIcon name="patients" size="sm" />
-              {isSubmitting ? "Creating patient file" : "Save and open patient file"}
+              {isSubmitting ? "Adding to waiting line" : "Save and add to waiting line"}
             </button>
-            <Link className="button secondary" href="/patients">
+            {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>Open patient file</Link> : null}
+            <Link className="button secondary" href="/reception">
               <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
-              Cancel
+              Back to Reception
             </Link>
           </div>
         </form>

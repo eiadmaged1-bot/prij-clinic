@@ -1,13 +1,13 @@
 export type VisitTypeValue = "kashf" | "recheck" | "consultation" | "urgent_kashf";
 
-export const visitTypes: Array<{ value: VisitTypeValue; label: string; help: string; urgent?: boolean }> = [
-  { value: "kashf", label: "كشف", help: "First examination" },
-  { value: "recheck", label: "إعادة", help: "Recheck visit" },
-  { value: "consultation", label: "استشارة", help: "Consultation" },
-  { value: "urgent_kashf", label: "مستعجل", help: "Urgent examination / كشف مستعجل", urgent: true }
+export const visitTypes: Array<{ value: VisitTypeValue; label: string; urgent?: boolean }> = [
+  { value: "kashf", label: "كشف" },
+  { value: "recheck", label: "إعادة" },
+  { value: "consultation", label: "استشارة" },
+  { value: "urgent_kashf", label: "مستعجل", urgent: true }
 ];
 
-export const visitTypeLegacyEncodingLock = "ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªØ´Ø§Ø±Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
+export const visitTypeLegacyEncodingLock = "Ã™Æ’Ã˜Â´Ã™Â Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â´Ã˜Â§Ã˜Â±Ã˜Â© Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â¹Ã˜Â¬Ã™â€ž";
 
 export function visitTypeLabel(value?: string | null) {
   return visitTypes.find((visitType) => visitType.value === value)?.label ?? "كشف";

@@ -29,7 +29,6 @@ export function VisitTypeSelector({
             type="button"
           >
             <strong>{visitType.label}</strong>
-            <span>{visitType.help}</span>
           </button>
         ))}
       </div>
