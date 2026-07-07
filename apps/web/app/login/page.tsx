@@ -9,6 +9,7 @@ import { useSession } from "../session";
 
 const ownerLoginId = "eyad";
 const ownerPassword = "eyad";
+
 const loginText = {
   en: {
     welcomeBack: "Welcome back",
@@ -18,7 +19,6 @@ const loginText = {
     signingIn: "Signing in",
     useOwnerLogin: "Use owner login",
     fillOwnerLogin: "Fill owner login",
-    sessionEnded: "Your session ended. Please sign in again.",
     connectionProblem: "Connection problem. Please check that the clinic server is running, then try again.",
     currentSession: "Current session",
     alreadyLoggedInAs: "Already logged in as",
@@ -28,14 +28,13 @@ const loginText = {
     checkingSession: "Checking session"
   },
   ar: {
-    welcomeBack: "أهلاً بعودتك",
+    welcomeBack: "أهلا بعودتك",
     staffIdOrEmail: "رقم الموظف أو البريد الإلكتروني",
     password: "كلمة المرور",
     signIn: "تسجيل الدخول",
     signingIn: "جار تسجيل الدخول",
     useOwnerLogin: "استخدام دخول المالك",
     fillOwnerLogin: "ملء بيانات المالك",
-    sessionEnded: "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.",
     connectionProblem: "توجد مشكلة في الاتصال. تأكد أن سيرفر العيادة يعمل ثم حاول مرة أخرى.",
     currentSession: "الجلسة الحالية",
     alreadyLoggedInAs: "تم تسجيل الدخول باسم",
@@ -51,12 +50,8 @@ function LoginLanguageSwitcher() {
 
   return (
     <div className="language-switcher" aria-label="Language switcher">
-      <button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>
-        EN
-      </button>
-      <button className={language === "ar" ? "active" : ""} type="button" onClick={() => setLanguage("ar")}>
-        عربي
-      </button>
+      <button className={language === "ar" ? "active" : ""} type="button" onClick={() => setLanguage("ar")}>عربي</button>
+      <button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>EN</button>
     </div>
   );
 }
@@ -88,8 +83,8 @@ function LoginContent() {
     try {
       await session.login({ identifier: email, password });
       router.push("/dashboard");
-    } catch (error) {
-      setError(error instanceof Error ? error.message : text.connectionProblem);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : text.connectionProblem);
     } finally {
       setIsSubmitting(false);
     }
@@ -158,57 +153,43 @@ function LoginContent() {
   }
 
   return (
-      <main className="page centered premium-login-page">
-        <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
-          <span hidden>Use Owner Demo Login</span>
-          <div className="login-language-row">
-            <span className="eyebrow">Prij Clinic</span>
-            <LoginLanguageSwitcher />
-          </div>
-          <div className="login-heading">
-            <h1>Prij Clinic</h1>
-            <h2 dir={textDirection}>{text.welcomeBack}</h2>
-          </div>
+    <main className="page centered premium-login-page">
+      <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
+        <span hidden>Use Owner Demo Login</span>
+        <div className="login-language-row">
+          <span className="eyebrow">Prij Clinic</span>
+          <LoginLanguageSwitcher />
+        </div>
+        <div className="login-heading">
+          <h1>Prij Clinic</h1>
+          <h2 dir={textDirection}>{text.welcomeBack}</h2>
+        </div>
 
-          {session.message ? <p className="notice" dir={textDirection}>{session.message}</p> : null}
+        {session.message ? <p className="notice" dir={textDirection}>{session.message}</p> : null}
 
-          <label dir={textDirection}>
-            {text.staffIdOrEmail}
-            <input
-              autoComplete="username"
-              name="email"
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              type="text"
-              value={email}
-            />
-          </label>
+        <label dir={textDirection}>
+          {text.staffIdOrEmail}
+          <input autoComplete="username" name="email" onChange={(event) => setEmail(event.target.value)} required type="text" value={email} />
+        </label>
 
-          <label dir={textDirection}>
-            {text.password}
-            <input
-              autoComplete="current-password"
-              name="password"
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              type="password"
-              value={password}
-            />
-          </label>
+        <label dir={textDirection}>
+          {text.password}
+          <input autoComplete="current-password" name="password" onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+        </label>
 
-          {error ? <p className="form-error" dir={textDirection}>{error}</p> : null}
+        {error ? <p className="form-error" dir={textDirection}>{error}</p> : null}
 
-          <button className="button premium-login-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? text.signingIn : text.signIn}
+        <button className="button premium-login-button" disabled={isSubmitting} type="submit">
+          {isSubmitting ? text.signingIn : text.signIn}
+        </button>
+
+        <details className="subtle-login-details">
+          <summary dir={textDirection}>{text.useOwnerLogin}</summary>
+          <button className="button secondary compact" onClick={useOwnerLogin} type="button">
+            {text.fillOwnerLogin}
           </button>
-
-          <details className="subtle-login-details">
-            <summary dir={textDirection}>{text.useOwnerLogin}</summary>
-            <button className="button secondary compact" onClick={useOwnerLogin} type="button">
-              {text.fillOwnerLogin}
-            </button>
-          </details>
-        </form>
-      </main>
+        </details>
+      </form>
+    </main>
   );
 }

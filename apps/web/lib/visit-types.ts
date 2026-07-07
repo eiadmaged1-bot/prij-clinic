@@ -7,7 +7,7 @@ export const visitTypes: Array<{ value: VisitTypeValue; label: string; urgent?: 
   { value: "urgent_kashf", label: "مستعجل", urgent: true }
 ];
 
-export const visitTypeLegacyEncodingLock = "Ã™Æ’Ã˜Â´Ã™Â Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â´Ã˜Â§Ã˜Â±Ã˜Â© Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â¹Ã˜Â¬Ã™â€ž";
+export const visitTypeLegacyEncodingLock = "كشف إعادة استشارة مستعجل";
 
 export function visitTypeLabel(value?: string | null) {
   return visitTypes.find((visitType) => visitType.value === value)?.label ?? "كشف";

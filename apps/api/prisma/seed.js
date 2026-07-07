@@ -266,6 +266,16 @@ const workflowSpinePermissions = [
 
 permissions.push(...workflowSpinePermissions);
 
+const v139ClinicalWorkflowPermissions = [
+  "clinical_tags.read",
+  "clinical_tags.search",
+  "clinical_tags.manage",
+  "external_intake.read",
+  "external_intake.review"
+];
+
+permissions.push(...v139ClinicalWorkflowPermissions);
+
 const reservedSystemOwnerPermissions = ["system_owner.manage", "developer_owner.manage"];
 const guidelineSourceRegistry = ["WHO", "NICE", "RCOG", "ACOG", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "FSRH", "Local Clinic Protocol"];
 
@@ -365,6 +375,11 @@ const rolePermissionKeys = {
     "search.clinical",
     "follow_up_hints.read",
     "follow_up_hints.decide",
+    "clinical_tags.read",
+    "clinical_tags.search",
+    "clinical_tags.manage",
+    "external_intake.read",
+    "external_intake.review",
     "patient_medications.read",
     "patient_medications.write",
     "patient_allergies.read",
@@ -496,6 +511,11 @@ const rolePermissionKeys = {
     "search.clinical",
     "follow_up_hints.read",
     "follow_up_hints.decide",
+    "clinical_tags.read",
+    "clinical_tags.search",
+    "clinical_tags.manage",
+    "external_intake.read",
+    "external_intake.review",
     "patient_medications.read",
     "patient_medications.write",
     "patient_allergies.read",
@@ -1680,6 +1700,49 @@ async function seedMedicationIntelligence(prisma) {
   });
 }
 
+async function seedClinicalTagDefinitions(prisma) {
+  const definitions = [
+    ["mastectomy", "Mastectomy", ["breast removal"], "surgical_history"],
+    ["dilation_and_curettage", "D&C / Dilation and Curettage", ["D&C", "DNC", "Dilation and Curettage"], "surgical_history"],
+    ["cesarean_section", "Cesarean section", ["CS", "C-section"], "delivery_mode"],
+    ["previous_cesarean_section", "Previous cesarean section", ["Previous CS", "Previous C-section"], "obstetric_history"],
+    ["normal_vaginal_delivery", "Normal vaginal delivery", ["NVD", "vaginal delivery"], "delivery_mode"],
+    ["instrumental_delivery", "Instrumental delivery", ["forceps", "vacuum"], "delivery_mode"],
+    ["miscarriage_abortion", "Miscarriage / abortion", ["miscarriage", "abortion"], "obstetric_history"],
+    ["ectopic_pregnancy", "Ectopic pregnancy", ["ectopic"], "obstetric_history"],
+    ["molar_pregnancy", "Molar pregnancy", ["molar"], "obstetric_history"],
+    ["iufd_stillbirth", "IUFD / stillbirth", ["IUFD", "stillbirth"], "obstetric_history"],
+    ["myomectomy", "Myomectomy", [], "surgical_history"],
+    ["hysteroscopy", "Hysteroscopy", [], "surgical_history"],
+    ["laparoscopy", "Laparoscopy", [], "surgical_history"],
+    ["ovarian_cystectomy", "Ovarian cystectomy", [], "surgical_history"],
+    ["hysterectomy", "Hysterectomy", [], "surgical_history"],
+    ["cervical_cerclage", "Cervical cerclage", ["cerclage"], "surgical_history"],
+    ["appendectomy", "Appendectomy", ["appendicectomy"], "surgical_history"],
+    ["cholecystectomy", "Cholecystectomy", ["gallbladder removal"], "surgical_history"],
+    ["bariatric_surgery", "Bariatric surgery", ["weight loss surgery"], "surgical_history"],
+    ["diabetes", "Diabetes", ["DM"], "medical_history"],
+    ["hypertension", "Hypertension", ["HTN"], "medical_history"],
+    ["thyroid_disease", "Thyroid disease", ["thyroid"], "medical_history"],
+    ["asthma", "Asthma", [], "medical_history"],
+    ["anemia", "Anemia", ["anaemia"], "medical_history"],
+    ["pcos", "PCOS", ["polycystic ovary syndrome"], "infertility"],
+    ["endometriosis", "Endometriosis", [], "infertility"],
+    ["recurrent_abortion", "Recurrent abortion", ["recurrent miscarriage"], "obstetric_history"],
+    ["icsi", "ICSI", ["intracytoplasmic sperm injection"], "infertility"],
+    ["iui", "IUI", ["intrauterine insemination"], "infertility"],
+    ["ovulation_induction", "Ovulation induction", ["induction of ovulation"], "infertility"]
+  ];
+
+  for (const [code, label, aliasesJson, category] of definitions) {
+    await prisma.clinicalTagDefinition.upsert({
+      where: { code },
+      update: { label, aliasesJson, category, active: true },
+      create: { code, label, aliasesJson, category, active: true }
+    });
+  }
+}
+
 async function recomputeDemoAvailability(prisma, productId) {
   const variants = await prisma.drugMarketVariant.groupBy({
     by: ["countryCode"],
@@ -2009,6 +2072,7 @@ async function main() {
   await seedGuidelineCenter(prisma, demoOwner);
   await seedInvestigationCatalog(prisma);
   await seedMedicationIntelligence(prisma);
+  await seedClinicalTagDefinitions(prisma);
 
   if (!seedDemoData) {
     return;

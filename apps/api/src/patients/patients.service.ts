@@ -12,6 +12,7 @@ import {
   assertCanReferenceUserInBranch
 } from "../auth/reference-scope";
 import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
+import { ClinicalTagsService } from "../clinical-tags/clinical-tags.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { toUtcDateOnly } from "../queue/queue-date";
 import {
@@ -44,7 +45,8 @@ import {
 export class PatientsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly clinicalTags: ClinicalTagsService
   ) {}
 
   async create(dto: CreatePatientDto, user: AuthUser) {
@@ -311,6 +313,10 @@ export class PatientsService {
       }
     });
     await this.audit.record({ actorUserId: user.id, action: "infertility_episode.created", resourceType: "infertility_episode", resourceId: episode.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, phaseId: dto.phaseId ?? null } });
+    if (episode.hadIUI) await this.clinicalTags.createFromSource({ patientId: id, tagCode: "iui", sourceType: "infertility_episode", sourceId: episode.id, createdByUserId: user.id });
+    if (episode.hadICSI) await this.clinicalTags.createFromSource({ patientId: id, tagCode: "icsi", sourceType: "infertility_episode", sourceId: episode.id, createdByUserId: user.id });
+    if (episode.knownFactor === "pcos") await this.clinicalTags.createFromSource({ patientId: id, tagCode: "pcos", sourceType: "infertility_episode", sourceId: episode.id, createdByUserId: user.id });
+    if (episode.knownFactor === "endometriosis") await this.clinicalTags.createFromSource({ patientId: id, tagCode: "endometriosis", sourceType: "infertility_episode", sourceId: episode.id, createdByUserId: user.id });
     return episode;
   }
 
@@ -335,6 +341,7 @@ export class PatientsService {
       }
     });
     await this.audit.record({ actorUserId: user.id, action: "ovulation_induction_cycle.created", resourceType: "ovulation_induction_cycle", resourceId: cycle.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, infertilityEpisodeId: episode.id, manualMedicationOnly: true } });
+    await this.clinicalTags.createFromSource({ patientId: id, tagCode: "ovulation_induction", sourceType: "induction_cycle", sourceId: cycle.id, createdByUserId: user.id });
     return cycle;
   }
 
@@ -559,6 +566,9 @@ export class PatientsService {
       include: { operationHistoryItems: true, medicationHistoryItems: true, investigationHistoryItems: true }
     });
     await this.audit.record({ actorUserId: user.id, action: "patient_history_sheet.created", resourceType: "patient_history_sheet", resourceId: sheet.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, changedFields: Object.keys(dto) } });
+    for (const tagCode of historySheetTagCodes(dto)) {
+      await this.clinicalTags.createFromSource({ patientId: id, tagCode, sourceType: "history_sheet", sourceId: sheet.id, createdByUserId: user.id });
+    }
     return sheet;
   }
 
@@ -587,6 +597,9 @@ export class PatientsService {
       include: { operationHistoryItems: true, medicationHistoryItems: true, investigationHistoryItems: true }
     });
     await this.audit.record({ actorUserId: user.id, action: "patient_history_sheet.updated", resourceType: "patient_history_sheet", resourceId: sheet.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, changedFields: Object.keys(dto) } });
+    for (const tagCode of historySheetTagCodes(dto)) {
+      await this.clinicalTags.createFromSource({ patientId: id, tagCode, sourceType: "history_sheet", sourceId: sheet.id, createdByUserId: user.id });
+    }
     return sheet;
   }
 
@@ -607,6 +620,8 @@ export class PatientsService {
       }
     });
     await this.audit.record({ actorUserId: user.id, action: "patient_operation_history.created", resourceType: "patient_operation_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(catalog) } });
+    const operationTag = operationTagCode(item.operationNameSnapshot);
+    if (operationTag) await this.clinicalTags.createFromSource({ patientId: id, tagCode: operationTag, sourceType: "operation_history", sourceId: item.id, createdByUserId: user.id });
     return item;
   }
 
@@ -1342,4 +1357,44 @@ function demoPatientWhere(): Prisma.PatientWhereInput[] {
     { notes: { contains: "training", mode: "insensitive" } },
     { notes: { contains: "local demo", mode: "insensitive" } }
   ];
+}
+
+function historySheetTagCodes(dto: PatientHistorySheetDto) {
+  const text = [
+    dto.pastMedicalHistory,
+    dto.obstetricHistory,
+    dto.gynecologicalHistory,
+    dto.infertilityHistory,
+    dto.notes
+  ].map((value) => typeof value === "string" ? value : JSON.stringify(value ?? {})).join(" ").toLowerCase();
+  return [
+    ["diabetes", /diabetes|\bdm\b/],
+    ["hypertension", /hypertension|\bhtn\b/],
+    ["thyroid_disease", /thyroid/],
+    ["asthma", /asthma/],
+    ["anemia", /anemia|anaemia/],
+    ["pcos", /\bpcos\b|polycystic/],
+    ["endometriosis", /endometriosis/],
+    ["recurrent_abortion", /recurrent abortion|recurrent miscarriage/],
+    ["dilation_and_curettage", /dilation and curettage|dilatation and curettage|\bd&c\b|\bdnc\b/],
+    ["mastectomy", /mastectomy/],
+    ["previous_cesarean_section", /previous cs|previous cesarean|previous caesarean/]
+  ].filter(([, pattern]) => (pattern as RegExp).test(text)).map(([code]) => code as string);
+}
+
+function operationTagCode(value: string) {
+  const text = value.toLowerCase();
+  if (/mastectomy/.test(text)) return "mastectomy";
+  if (/dilation and curettage|dilatation and curettage|\bd&c\b|\bdnc\b/.test(text)) return "dilation_and_curettage";
+  if (/cesarean|caesarean|\bcs\b|c-section/.test(text)) return "cesarean_section";
+  if (/myomectomy/.test(text)) return "myomectomy";
+  if (/hysteroscopy/.test(text)) return "hysteroscopy";
+  if (/laparoscopy/.test(text)) return "laparoscopy";
+  if (/ovarian cystectomy/.test(text)) return "ovarian_cystectomy";
+  if (/hysterectomy/.test(text)) return "hysterectomy";
+  if (/cerclage/.test(text)) return "cervical_cerclage";
+  if (/appendectomy|appendicectomy/.test(text)) return "appendectomy";
+  if (/cholecystectomy/.test(text)) return "cholecystectomy";
+  if (/bariatric/.test(text)) return "bariatric_surgery";
+  return null;
 }

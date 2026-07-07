@@ -1,5 +1,13 @@
 # Known Limitations
 
+## v1.3.9 Known Limitations
+
+- Smart tags are searchable data, not clinical diagnoses.
+- External intake creates or attaches patients only after review, but field-level merge tooling is intentionally conservative.
+- CRL/raw biometry can be recorded, but no unvalidated CRL dating equation is invented.
+- EDD Calendar shows locked or reviewed EDD only; unreviewed candidates are not presented as final.
+- Queue counts are live today-only counts when the selected schedule date is today.
+
 External AI remains disabled by default.
 
 AI cannot autonomously diagnose, prescribe, dose, rank treatments, or update final clinical records without doctor approval.

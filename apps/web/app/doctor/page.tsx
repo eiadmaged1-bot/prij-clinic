@@ -5,15 +5,7 @@ import { useEffect, useState } from "react";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
-
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import {
-  closeDayChecklist,
-  copyableMessageTemplates,
-  guidedStaffHelpItems,
-  openDayChecklist,
-  waitingTimeAlert
-} from "@/lib/v1200-productivity";
 
 type QueueTicket = {
   id: string;
@@ -33,7 +25,6 @@ type Appointment = {
 };
 
 export default function DoctorModePage() {
-  const visitTypeLegacyEncodingLock = "ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªØ´Ø§Ø±Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState("Loading");
@@ -55,12 +46,12 @@ export default function DoctorModePage() {
       })
       .catch(() => setStatus("Could not load today's work"));
   }, []);
+
   const current = queue.find((ticket) => ticket.status === "called");
   const counts = visitTypeCounts(queue);
 
   return (
     <AppShell>
-      <span hidden>{visitTypeLegacyEncodingLock}</span>
       <section className="doctor-hero">
         <div>
           <p className="eyebrow">Doctor Mode</p>
@@ -68,45 +59,17 @@ export default function DoctorModePage() {
           <p className="muted">Open patient, start visit, write note, prescribe, order tests, finish, next patient.</p>
         </div>
         <div className="doctor-hero-actions">
-          <Link className="button large" href="/patients">
-            <ThreeDMedicalIcon name="patients" size="sm" />
-            Open Patient
-          </Link>
-          <Link className="button secondary large" href="/doctor/visit">
-            <ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />
-            Start Visit
-          </Link>
-          <Link className="button secondary large" href="/clinic-day/walkthrough">
-            <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
-            Clinic walkthrough
-          </Link>
+          <Link className="button large" href="/patients"><ThreeDMedicalIcon name="patients" size="sm" />Open Patient</Link>
+          <Link className="button secondary large" href="/doctor/visit"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Start Visit</Link>
         </div>
       </section>
 
       <SafetyAlert />
 
       <section className="doctor-today-grid">
-        <article className="doctor-focus-card">
-          <ThreeDMedicalIcon name="queue" size="lg" />
-          <span className="eyebrow">Waiting patients</span>
-          <strong>{queue.length}</strong>
-          <p className="muted">Patients waiting or moving through the clinic flow.</p>
-          <Link className="button compact" href="/doctor/waiting">Open waiting list</Link>
-        </article>
-        <article className="doctor-focus-card">
-          <ThreeDMedicalIcon name="calendar" size="lg" tone="navy" />
-          <span className="eyebrow">Today&apos;s patients</span>
-          <strong>{appointments.length}</strong>
-          <p className="muted">Scheduled visits for today&apos;s clinical work.</p>
-          <Link className="button compact secondary" href="/calendar">Open calendar</Link>
-        </article>
-        <article className="doctor-focus-card">
-          <ThreeDMedicalIcon name="prescription" size="lg" tone="violet" />
-          <span className="eyebrow">Next action</span>
-          <strong>Write note</strong>
-          <p className="muted">Use the guided visit flow for large, readable steps.</p>
-          <Link className="button compact secondary" href="/doctor/visit">Guided visit</Link>
-        </article>
+        <FocusCard icon="queue" eyebrow="Waiting patients" value={queue.length} text="Patients waiting or moving through the clinic flow." href="/doctor/waiting" action="Open waiting list" />
+        <FocusCard icon="calendar" eyebrow="Today&apos;s patients" value={appointments.length} text="Scheduled visits for today&apos;s clinical work." href="/calendar" action="Open calendar" />
+        <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow for large, readable steps." href="/doctor/visit" action="Open visit" />
       </section>
 
       <section className="panel compact-panel">
@@ -149,10 +112,7 @@ export default function DoctorModePage() {
         </div>
         <div className="doctor-list">
           {queue.length === 0 ? (
-            <p className="empty-state">
-              <ThreeDMedicalIcon name="queue" size="sm" tone="slate" />
-              <span>No waiting patient is loaded. Open Patients to start a visit.</span>
-            </p>
+            <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No waiting patient is loaded. Open Patients to start a visit.</span></p>
           ) : null}
           {queue.map((ticket) => (
             <Link className="doctor-row" href={ticket.patientId ? `/patients/${ticket.patientId}` : "/queue"} key={ticket.id}>
@@ -161,10 +121,7 @@ export default function DoctorModePage() {
                 <strong>Queue {ticket.queueNumber ?? "patient"}</strong>
                 <span>{ticket.status ?? "Waiting"} - {visitTypeLabel(ticket.visitType)} - Start or resume visit</span>
               </div>
-              <span className="button compact secondary">
-                <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
-                Open
-              </span>
+              <span className="button compact secondary"><ThreeDMedicalIcon name="files" size="sm" tone="slate" />Open</span>
             </Link>
           ))}
         </div>
@@ -174,55 +131,6 @@ export default function DoctorModePage() {
         {["Open patient", "Start visit", "Write note", "Prescribe", "Order tests", "Finish", "Next patient"].map((step, index) => (
           <span key={step}><b>{index + 1}</b>{step}</span>
         ))}
-      </section>
-
-      <section className="doctor-productivity-grid" aria-label="Clinic productivity workflow features">
-        <ChecklistPanel title="Open Day Checklist" items={openDayChecklist} />
-        <ChecklistPanel title="Close Day Checklist" items={closeDayChecklist} />
-        <section className="panel compact-panel">
-          <div className="section-heading">
-            <h2>Waiting-time alerts</h2>
-            <span className="badge warning">{waitingTimeAlert(40)}</span>
-          </div>
-          <p className="muted">Alerts surface when a patient has waited 20+ minutes or 40+ minutes.</p>
-          <div className="workflow-band compact">
-            <span>{waitingTimeAlert(20)}</span>
-            <span>{waitingTimeAlert(40)}</span>
-          </div>
-        </section>
-        <section className="panel compact-panel queue-print-source">
-          <div className="section-heading">
-            <h2>Queue ticket / QR card print</h2>
-            <span className="badge">Browser print</span>
-          </div>
-          <div className="print-ticket-preview">
-            <strong>Queue number</strong>
-            <span>Patient name</span>
-            <span>Visit type: كشف / إعادة / استشارة / مستعجل</span>
-            <span>Doctor</span>
-            <span>Time</span>
-          </div>
-          <div className="form-actions">
-            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print queue ticket</button>
-            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print patient QR card</button>
-            <button className="button secondary compact" type="button" onClick={() => window.print()}>Print patient sticker / file label / investigation request label</button>
-          </div>
-        </section>
-        <ChecklistPanel title="Guided staff help" items={guidedStaffHelpItems} />
-        <section className="panel compact-panel">
-          <div className="section-heading">
-            <h2>Copyable message templates</h2>
-            <span className="badge warning">Copy text only</span>
-          </div>
-          <div className="dense-card-list">
-            {copyableMessageTemplates.map((template) => (
-              <button className="picker-row" key={template} type="button" onClick={() => void navigator.clipboard?.writeText(template)}>
-                <strong>{template}</strong>
-                <span>No WhatsApp sending or automatic communication</span>
-              </button>
-            ))}
-          </div>
-        </section>
       </section>
 
       <section className="panel">
@@ -255,21 +163,14 @@ export default function DoctorModePage() {
   );
 }
 
-function ChecklistPanel({ title, items }: { title: string; items: string[] }) {
+function FocusCard({ icon, eyebrow, value, text, href, action }: { icon: IconName; eyebrow: string; value: string | number; text: string; href: string; action: string }) {
   return (
-    <section className="panel compact-panel">
-      <div className="section-heading">
-        <h2>{title}</h2>
-        <span className="badge">Manual checklist</span>
-      </div>
-      <div className="dense-card-list">
-        {items.map((item) => (
-          <label className="picker-row checklist-row" key={item}>
-            <input type="checkbox" />
-            <strong>{item}</strong>
-          </label>
-        ))}
-      </div>
-    </section>
+    <article className="doctor-focus-card">
+      <ThreeDMedicalIcon name={icon} size="lg" />
+      <span className="eyebrow">{eyebrow}</span>
+      <strong>{value}</strong>
+      <p className="muted">{text}</p>
+      <Link className="button compact secondary" href={href}>{action}</Link>
+    </article>
   );
 }

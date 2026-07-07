@@ -247,6 +247,7 @@
     "test:v137:auth-status-classification": "node scripts/v137-auth-status-classification-test.mjs",
     "test:v137:single-tunnel-login-contract": "node scripts/v137-single-tunnel-login-contract-test.mjs",
     "test:v138:workflow-regression": "node scripts/v138-workflow-regression-test.mjs",
+    "test:v139:clinical-tags-edd-intake": "node scripts/v139-clinical-tags-edd-intake-test.mjs",
     "test:ui-cleanup-tailscale": "node scripts/ui-cleanup-tailscale-logout-test.mjs",
     "test:web:hydration-root": "node scripts/test-next-hydration-root.mjs",
     "test:v114:responsive-shell": "playwright test tests/v114/real-app-responsive-shell.spec.ts --config=playwright.config.ts",

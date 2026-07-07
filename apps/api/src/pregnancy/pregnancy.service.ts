@@ -4,6 +4,7 @@ import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceEncounter, assertCanReferencePatient, assertCanReferencePregnancy } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
+import { ClinicalTagsService } from "../clinical-tags/clinical-tags.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   CreateAntenatalVisitDto,
@@ -19,7 +20,8 @@ import {
 export class PregnancyService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly clinicalTags: ClinicalTagsService
   ) {}
 
   async createPregnancy(dto: CreatePregnancyDto, user: AuthUser) {
@@ -153,8 +155,14 @@ export class PregnancyService {
         year: dto.year,
         outcomeDate: parseDate(dto.outcomeDate, "outcomeDate"),
         outcome,
+        outcomeType: clean(dto.outcomeType),
         gestationalAgeAtOutcome: clean(dto.gestationalAgeAtOutcome),
         modeOfDelivery: clean(dto.modeOfDelivery),
+        babyOutcome: clean(dto.babyOutcome),
+        livingChild: dto.livingChild ?? null,
+        previousCesareanCount: dto.previousCesareanCount ?? null,
+        cesareanIndication: clean(dto.cesareanIndication),
+        cesareanComplications: clean(dto.cesareanComplications),
         birthWeightGrams: dto.birthWeightGrams,
         sex: clean(dto.sex),
         complications: clean(dto.complications),
@@ -173,6 +181,17 @@ export class PregnancyService {
       severity: "high",
       metadataJson: { patientId: history.patientId, pregnancyId: history.pregnancyId, safety: "history_recording_only" }
     });
+
+    for (const tagCode of previousPregnancyTagCodes(history)) {
+      await this.clinicalTags.createFromSource({
+        patientId: history.patientId,
+        tagCode,
+        sourceType: "previous_pregnancy",
+        sourceId: history.id,
+        tagDate: history.outcomeDate,
+        createdByUserId: user.id
+      });
+    }
 
     return history;
   }
@@ -590,4 +609,17 @@ function toDateTime(value?: string) {
 
 function decimalOrNull(value: number | undefined) {
   return value === undefined ? null : new Prisma.Decimal(value).toDecimalPlaces(2);
+}
+
+function previousPregnancyTagCodes(history: { outcome: string; outcomeType?: string | null; modeOfDelivery?: string | null }) {
+  const text = `${history.outcome} ${history.outcomeType ?? ""} ${history.modeOfDelivery ?? ""}`.toLowerCase();
+  const tags = new Set<string>();
+  if (/cesarean|caesarean|\bcs\b|c-section/.test(text)) tags.add("previous_cesarean_section");
+  if (/normal vaginal|nvd|vaginal delivery/.test(text)) tags.add("normal_vaginal_delivery");
+  if (/instrumental|forceps|vacuum/.test(text)) tags.add("instrumental_delivery");
+  if (/miscarriage|abortion/.test(text)) tags.add("miscarriage_abortion");
+  if (/ectopic/.test(text)) tags.add("ectopic_pregnancy");
+  if (/molar/.test(text)) tags.add("molar_pregnancy");
+  if (/stillbirth|iufd/.test(text)) tags.add("iufd_stillbirth");
+  return [...tags];
 }

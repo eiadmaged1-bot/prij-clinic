@@ -37,6 +37,8 @@ export const navigationRegistry: NavItem[] = [
   { href: "/patients", label: "Patient Files", icon: "patients", group: "Patients", adminOnly: true },
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Patients", adminOnly: true },
   { href: "/doctor/case-library", label: "Case Library", icon: "timeline", group: "Patients", adminOnly: true },
+  { href: "/clinical-tags", label: "Smart Clinical Search", icon: "search", group: "Patients", roles: ["Owner", "Admin", "Doctor"], permissions: ["clinical_tags.search"] },
+  { href: "/external-intake", label: "External Intake Inbox", icon: "files", group: "Patients", roles: ["Owner", "Admin", "Doctor"], permissions: ["external_intake.read"] },
   { href: "/encounters", label: "Encounters", icon: "encounter", group: "Operations", adminOnly: true },
   { href: "/prescriptions", label: "Prescriptions", icon: "prescription", group: "Operations", adminOnly: true },
   { href: "/investigations", label: "Investigations", icon: "investigations", group: "Operations", adminOnly: true },

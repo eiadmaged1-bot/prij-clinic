@@ -195,32 +195,7 @@ export const continueLastWorkItems = {
   receptionist: ["Continue last check-in", "Continue patient registration"]
 };
 
-export const openDayChecklist = ["Confirm doctors", "Confirm rooms", "Confirm service prices", "Check backup status", "Check today appointments"];
-export const closeDayChecklist = ["Patients completed", "Unpaid invoices", "Cash collected", "Pending results", "Follow-ups booked", "Backup done"];
-
 export const importantPatientBannerItems = ["Allergy", "Pregnant", "High-risk pregnancy", "Outstanding payment", "Needs consent", "Pending result"];
-
-export const guidedStaffHelpItems = [
-  "How to add new patient",
-  "How to check in returning patient",
-  "How to scan QR",
-  "How to start doctor visit",
-  "How to print packet"
-];
-
-export const copyableMessageTemplates = [
-  "Appointment reminder",
-  "Follow-up reminder",
-  "Investigation result ready",
-  "Please bring old reports",
-  "Payment reminder"
-];
-
-export function waitingTimeAlert(waitingMinutes: number) {
-  if (waitingMinutes >= 40) return "Patient waiting 40+ minutes";
-  if (waitingMinutes >= 20) return "Patient waiting 20+ minutes";
-  return "Waiting time normal";
-}
 
 export function buildMouseFirstDraftNote(selected: ClinicalChip[], freeText: string) {
   const lines = mouseFirstSections

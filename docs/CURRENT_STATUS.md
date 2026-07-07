@@ -1,5 +1,13 @@
 # Current Status
 
+## v1.3.9 Current Status
+
+v1.3.9 implements clinical tag search, EDD month calendar, reviewed Google Form intake, and workflow cleanup.
+
+Implemented: Open/Close Day Checklist deletion, waiting-time alert deletion, temporary Queue Ticket QR deletion, Patient QR preservation, guided staff help deletion, copyable message template deletion, improved Arabic/English shell labels, G/P/A/L steppers, structured previous delivery mode history, smart history option chips, seeded clinical tag definitions, Owner/Admin/Doctor cohort search, reviewed/locked EDD workflow, EDD Clinical Calendar, token-protected Google Form webhook, and External Intake Inbox.
+
+Safety remains unchanged: Google Form submissions are pending/untrusted until review; no external submission directly mutates final patient records; no external AI calls were added; clinical outputs remain draft/review-only.
+
 v1.3.7 public login real-device hotfix is implemented on the feature branch.
 
 The browser calls the same-origin `/api/backend` path for login/session and normal API calls. The route-handler proxy forwards those requests internally to the API service on port 3001, using `PRIJ_API_INTERNAL_ORIGIN` when set and `http://localhost:3001` by default. The public browser `Origin` is not forwarded into the internal API request, so ngrok and other public web hosts do not trip the API CORS guard.
