@@ -24,7 +24,7 @@ async function main() {
   includesAll(css, ["--pc-ink: #16302c", "--pc-paper: #faf7f2", "--pc-teal: #2f6f62", "--pc-terracotta: #c6714b", "--font-display", "--font-sans", "--font-mono", ".theme-prij-heritage .sidebar"], "heritage CSS");
   record.pass("Prij Heritage tokens and shell styles load");
 
-  includesAll(shell, ["Patient search", "New Patient", "Prij Clinic OS", "Women&apos;s health"], "app shell");
+  includesAll(shell, ["Patient search", "New Patient", "Dr Maged Attia Clinics OS", "Women&apos;s health"], "app shell");
   includesAll(registry, ["Dashboard", "Patients", "Doctor workflow", "Reception queue", "Calendar", "Finance", "Orders", "Medications", "Admin / Owner Control"], "navigation registry");
   record.pass("sidebar and topbar use Prij Heritage clinic OS labels");
 

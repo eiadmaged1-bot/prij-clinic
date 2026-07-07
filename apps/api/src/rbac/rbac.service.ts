@@ -25,7 +25,7 @@ const defaultAppearanceSettings = {
 };
 
 const defaultClinicProfileSettings = {
-  clinicName: "Prij Clinic",
+  clinicName: "Dr Maged Attia Clinics",
   phone: "",
   address: "",
   workingHours: "09:00-17:00",

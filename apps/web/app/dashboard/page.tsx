@@ -7,6 +7,7 @@ import { useTheme } from "../theme";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 
 type SafeUser = {
   id: string;
@@ -207,7 +208,7 @@ export default function DashboardPage() {
       <AppShell>
         <section className="portal-header">
           <div>
-            <p className="eyebrow">Prij Clinic</p>
+            <p className="eyebrow">{OFFICIAL_CLINIC_NAME}</p>
             <h1 data-testid="page-heading">Clinic Apps</h1>
             <p className="muted">Choose a workflow. Each tile opens one focused clinic area.</p>
           </div>
@@ -302,7 +303,7 @@ export default function DashboardPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">Prij Clinic</p>
+            <p className="eyebrow">{OFFICIAL_CLINIC_NAME}</p>
             <h1 data-testid="page-heading">Clinic Home</h1>
           </div>
           <div className="topbar-actions">

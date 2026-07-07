@@ -52,7 +52,7 @@ export default function AppearancePage() {
       return;
     }
     if (response.status === 401) {
-      setError("Sign in with the local admin demo account to change appearance.");
+      setError("Sign in with an Owner account to change appearance.");
       return;
     }
     if (response.status === 403) {
@@ -139,7 +139,7 @@ export default function AppearancePage() {
           </div>
           <span className="badge warning">Protected setting</span>
         </div>
-        <p className="muted">Choose the visual style for the demo workspace. Changes to the default are protected and audited.</p>
+        <p className="muted">Choose the visual style for the clinic workspace. Changes to the default are protected and audited.</p>
       </section>
 
       <SafetyAlert />

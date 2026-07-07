@@ -1,4 +1,4 @@
-# Prij Clinic Static HTML Theme Lab v0.11.0
+# Dr Maged Attia Clinics Static HTML Theme Lab v0.11.0
 
 This folder is a static design handoff only. Open `index.html` directly for a quick desktop check, or use `npm run design:serve-html` from the repo root for phone testing.
 

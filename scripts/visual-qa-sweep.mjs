@@ -43,7 +43,7 @@ const blockedWords = [
 ];
 
 const requiredText = {
-  "/login": ["Prij Clinic", "Sign in", "Use Owner Demo Login"],
+  "/login": ["Dr Maged Attia Clinics", "Sign in", "Use Owner Login"],
   "/dashboard": ["Clinic Home", "Quick actions"],
   "/doctor": ["Doctor Mode", "Open Patient", "Start Visit", "Waiting patients"],
   "/doctor/visit": ["Guided Visit", "Save Draft"],
@@ -101,7 +101,7 @@ async function main() {
 
   const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
   const adminToken = adminLogin.token;
-  if (!adminToken) throw new Error("Local admin demo login did not return a token.");
+  if (!adminToken) throw new Error("Local owner login did not return a token.");
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");
@@ -109,15 +109,15 @@ async function main() {
   record.pass("appearance and accounts settings remain protected from non-admin staff");
 
   const patient = await apiJson("POST", "/patients", adminToken, {
-    medicalRecordNumber: `DEMO-VISUAL-${Date.now()}`,
-    firstName: "Demo",
+    medicalRecordNumber: `QA-VISUAL-${Date.now()}`,
+    firstName: "QA",
     lastName: "VisualQA",
-    notes: "Visual QA demo patient only."
+    notes: "Visual QA patient only."
   });
 
   const createdFromPage = await apiJson("POST", "/patients", adminToken, {
-    medicalRecordNumber: `DEMO-CREATE-${Date.now()}`,
-    firstName: "Demo",
+    medicalRecordNumber: `QA-CREATE-${Date.now()}`,
+    firstName: "QA",
     lastName: "CreatedFromWorkflow",
     notes: "Patient creation workflow test only."
   });

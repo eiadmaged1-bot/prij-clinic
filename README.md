@@ -1,4 +1,4 @@
-# Prij Clinic
+# Dr Maged Attia Clinics
 
 ## v1.3.8 Infertility + Organized Investigations + Mobile Workflow Fixes
 
@@ -241,7 +241,7 @@ npm run test:v101:pilot-signoff-qr
 
 ## UI Cleanup + Tailscale Mobile Access + Universal Logout
 
-This sprint keeps Prij Clinic local/private and demo-only while improving compact clinic screens, making logout visible from the top account menu for every signed-in role, and adding tailnet-only mobile development access.
+This sprint keeps Dr Maged Attia Clinics local/private and demo-only while improving compact clinic screens, making logout visible from the top account menu for every signed-in role, and adding tailnet-only mobile development access.
 
 Tailscale local dev:
 
@@ -405,7 +405,7 @@ Primary v0.16.1 docs:
 
 ## v0.16.0 Security + Real Patient Data Readiness
 
-v0.16.0 prepares Prij Clinic for real patient data readiness review. It does not claim full legal, compliance, operational, or production readiness, and it does not authorize real patient data entry yet.
+v0.16.0 prepares Dr Maged Attia Clinics for real patient data readiness review. It does not claim full legal, compliance, operational, or production readiness, and it does not authorize real patient data entry yet.
 
 Added readiness scope:
 
@@ -1419,7 +1419,7 @@ Stop immediately if Prisma asks to reset the database or if a command would dele
 - `docs/DEPLOYMENT_READINESS.md`
 - `docs/ENVIRONMENT_STRATEGY.md`
 - `docs/VPS_STAGING_DEPLOYMENT_TRIAL.md`
-# Prij Clinic
+# Dr Maged Attia Clinics
 
 Clinic Management System for OB/GYN and women’s health.
 
@@ -1454,7 +1454,7 @@ Primary docs:
 - `docs/PATIENT_STATEMENT.md`
 - `docs/DAILY_REPORTS.md`
 - `docs/CLINIC_SETTINGS.md`
-# Prij Clinic v1.1.0
+# Dr Maged Attia Clinics v1.1.0
 
 v1.1.0 adds the zero-paper clinic workflow foundation, bilingual `EN / عربي` UI switching, required Arabic visit type selection, pending work inbox, global smart search, paperless document/consent placeholders, and Guideline Library + Live Guideline Search foundation.
 

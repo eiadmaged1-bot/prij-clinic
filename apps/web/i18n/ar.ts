@@ -1,5 +1,5 @@
 export const ar = {
-  appName: "عيادة بريج",
+  appName: "Dr Maged Attia Clinics",
   appSubtitle: "صحة المرأة",
   clinicOperations: "تشغيل العيادة",
   clinicOperationsSubtitle: "ملفات المرضى، الدور، عمل الطبيب، الحسابات، وإدارة المالك.",

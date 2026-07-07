@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 
 type ClinicSettings = {
   clinicName: string;
@@ -18,7 +19,7 @@ type ClinicSettings = {
 };
 
 const fallbackSettings: ClinicSettings = {
-  clinicName: "Prij Clinic",
+  clinicName: OFFICIAL_CLINIC_NAME,
   phone: "",
   address: "",
   workingHours: "09:00-17:00",

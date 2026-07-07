@@ -12,7 +12,7 @@ const newPatient = read("apps/web/app/patients/new/page.tsx");
 const seed = read("apps/api/prisma/seed.js");
 const css = read("apps/web/app/globals.css");
 
-assert(login.includes("premium-login-card") && login.includes("Prij Clinic") && login.includes("Welcome back"), "login has minimal premium structure");
+assert(login.includes("premium-login-card") && login.includes("Dr Maged Attia Clinics") && login.includes("Welcome back"), "login has minimal premium structure");
 assert(login.includes("Staff ID or email") && login.includes("Password") && login.includes("Sign in"), "login keeps required fields and action");
 assert(login.includes("LanguageSwitcher") && login.includes("subtle-login-details"), "login has compact language switcher and collapsed helper");
 for (const phrase of ["Use demo data only", "Local Demo", "not a production clinic login", "no real patient data"]) {

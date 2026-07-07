@@ -1,7 +1,7 @@
-# Prij Clinic Product Requirements
+# Dr Maged Attia Clinics Product Requirements
 
 ## Purpose
-Prij Clinic is a clinic management system for OB/GYN and women's health clinics. The first version must support safe daily clinic operations before any AI-assisted clinical drafting is introduced.
+Dr Maged Attia Clinics is a clinic management system for OB/GYN and women's health clinics. The first version must support safe daily clinic operations before any AI-assisted clinical drafting is introduced.
 
 The product must help clinic staff manage appointments, queue flow, patient profiles, encounters, prescriptions, investigations, reports, billing, payments, roles, permissions, audit logs, backups, and security.
 

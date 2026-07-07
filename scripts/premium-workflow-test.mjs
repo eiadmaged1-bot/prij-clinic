@@ -19,13 +19,13 @@ async function main() {
   await waitForApi();
 
   const shell = await readFile("apps/web/app/mvp-page.tsx", "utf8");
-  includesAll(shell, ["Dashboard", "Doctor workflow", "Medications", "Admin / Owner Control", "Local Demo", "New Patient", "Patient search"], "premium shell");
+  includesAll(shell, ["Dashboard", "Clinical Work", "Pharmacology / Medication Reference", "Admin", "New Patient", "UniversalSearchBox"], "premium shell");
   excludesAll(shell, ["Prisma", "JWT", "RBAC", "raw JSON", "stack trace"], "premium shell");
   record.pass("premium shell and navigation wording are visible");
 
   const login = await readFile("apps/web/app/login/page.tsx", "utf8");
-  includesAll(login, ["Prij Clinic", "Use Owner Demo Login", "Local demo only", 'demoEmail = "eyad"'], "login page");
-  record.pass("premium login and owner demo shortcut are visible");
+  includesAll(login, ["Dr Maged Attia Clinics", "Use Owner Login", "Welcome back", 'ownerLoginId = "eyad"'], "login page");
+  record.pass("premium login and owner shortcut are visible");
 
   const dashboard = await readFile("apps/web/app/dashboard/page.tsx", "utf8");
   includesAll(dashboard, ["Clinic Home", "Front desk home", "Daily finance", "Official rows", "8,269", "1,200", "7,069", "Restore drill"], "dashboard");

@@ -17,14 +17,15 @@ const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
 const appEnv = process.env.APP_ENV || (process.env.NODE_ENV === "production" ? "production" : "local");
 const isProduction = appEnv === "production";
-const seedDemoData = !isProduction && process.env.SEED_DEMO_DATA === "true" && process.env.ALLOW_DEMO_DATA_SEED === "true";
+const seedDemoData = !isProduction && process.env.PRIJ_ENABLE_DEMO_DATA === "true";
+const officialClinicName = "Dr Maged Attia Clinics";
 
 function toUtcDateOnly(input = new Date()) {
   return new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
 }
 
-if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true")) {
-  throw new Error("Production seed refuses demo data. Set SEED_DEMO_DATA=false and SEED_DEMO_OWNER=false.");
+if (isProduction && (process.env.SEED_DEMO_DATA === "true" || process.env.SEED_DEMO_OWNER === "true" || process.env.PRIJ_ENABLE_DEMO_DATA === "true")) {
+  throw new Error("Production seed refuses demo data. Set PRIJ_ENABLE_DEMO_DATA=false, SEED_DEMO_DATA=false, and SEED_DEMO_OWNER=false.");
 }
 
 for (const [name, value] of Object.entries({
@@ -1708,15 +1709,59 @@ async function recomputeDemoAvailability(prisma, productId) {
   }
 }
 
+async function seedCleanServiceCatalog(prisma) {
+  const services = [
+    ["SVC-CONSULTATION", "Consultation", "Consultation"],
+    ["SVC-FOLLOW-UP-VISIT", "Follow-up visit", "Consultation"],
+    ["SVC-GYNECOLOGY-CONSULTATION", "Gynecology consultation", "Consultation"],
+    ["SVC-INFERTILITY-CONSULTATION", "Infertility consultation", "Consultation"],
+    ["SVC-ANTENATAL-CARE-VISIT", "Antenatal care visit", "OB/GYN"],
+    ["SVC-OB-ULTRASOUND", "OB ultrasound", "Ultrasound"],
+    ["SVC-TRANSVAGINAL-ULTRASOUND", "Transvaginal ultrasound", "Ultrasound"],
+    ["SVC-FOLLICULOMETRY", "Folliculometry", "Ultrasound"],
+    ["SVC-PAP-SMEAR-COLLECTION", "Pap smear collection", "Procedure"],
+    ["SVC-IUD-INSERTION", "IUD insertion", "Procedure"],
+    ["SVC-IUD-REMOVAL", "IUD removal", "Procedure"],
+    ["SVC-HYSTEROSCOPY", "Hysteroscopy", "Procedure"],
+    ["SVC-LAPAROSCOPY", "Laparoscopy", "Procedure"],
+    ["SVC-MINOR-PROCEDURE", "Minor procedure", "Procedure"]
+  ];
+
+  for (const [code, name, category] of services) {
+    await prisma.serviceItem.upsert({
+      where: { code },
+      update: {
+        name,
+        category,
+        price: null,
+        currency: "EGP",
+        active: true,
+        sourceType: "curated_reference",
+        reviewStatus: "price_review_required"
+      },
+      create: {
+        code,
+        name,
+        category,
+        price: null,
+        currency: "EGP",
+        active: true,
+        sourceType: "curated_reference",
+        reviewStatus: "price_review_required"
+      }
+    });
+  }
+}
+
 async function main() {
   const mainBranch = await prisma.branch.upsert({
     where: { code: "main" },
     update: {
-      name: "Prij Clinic Main",
+      name: officialClinicName,
       status: "active"
     },
     create: {
-      name: "Prij Clinic Main",
+      name: officialClinicName,
       code: "main",
       status: "active"
     }
@@ -1725,13 +1770,13 @@ async function main() {
   const branchB = await prisma.branch.upsert({
     where: { code: "demo-b" },
     update: {
-      name: "Prij Clinic Secondary",
-      status: "active"
+      name: `${officialClinicName} Secondary`,
+      status: seedDemoData ? "active" : "inactive"
     },
     create: {
-      name: "Prij Clinic Secondary",
+      name: `${officialClinicName} Secondary`,
       code: "demo-b",
-      status: "active"
+      status: seedDemoData ? "active" : "inactive"
     }
   });
 
@@ -1981,6 +2026,24 @@ async function main() {
   }
 
   await prisma.systemSetting.upsert({
+    where: { key: "clinic_profile" },
+    update: {
+      valueJson: {
+        clinicName: officialClinicName,
+        displayName: officialClinicName
+      }
+    },
+    create: {
+      key: "clinic_profile",
+      valueJson: {
+        clinicName: officialClinicName,
+        displayName: officialClinicName
+      },
+      updatedByUserId: demoOwner?.id
+    }
+  });
+
+  await prisma.systemSetting.upsert({
     where: { key: "appearance" },
     update: {
       valueJson: {
@@ -2009,6 +2072,7 @@ async function main() {
   await seedGuidelineCenter(prisma, demoOwner);
   await seedInvestigationCatalog(prisma);
   await seedMedicationIntelligence(prisma);
+  await seedCleanServiceCatalog(prisma);
 
   if (!seedDemoData) {
     return;

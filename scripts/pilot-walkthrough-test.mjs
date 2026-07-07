@@ -49,7 +49,7 @@ async function assertPages(paths) {
   for (const path of paths) {
     const html = await fetchPage(path);
     const text = textOnly(html);
-    if (!/Prij Clinic|Dashboard|Doctor Mode|Patient files|Billing|Protocol Atlas|Guideline Center/.test(text)) {
+    if (!/Dr Maged Attia Clinics|Dashboard|Doctor Mode|Patient files|Billing|Protocol Atlas|Guideline Center/.test(text)) {
       throw new Error(`${path} did not render a recognizable pilot page`);
     }
   }

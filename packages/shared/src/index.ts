@@ -1,1 +1,1 @@
-export const appName = "Prij Clinic";
+export const appName = "Dr Maged Attia Clinics";

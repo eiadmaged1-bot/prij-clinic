@@ -11,7 +11,7 @@ async function main() {
 
   const service = await apiJson("POST", "/admin/services", owner, {
     code: `FIN-${runId}`,
-    name: "Demo finance consultation",
+    name: "QA finance consultation",
     category: "Consultation",
     price: 150,
     currency: "EGP",
@@ -29,8 +29,8 @@ async function main() {
   record.pass("service catalog edit deactivate and non-admin price denial");
 
   const activeService = await apiJson("POST", "/admin/services", owner, {
-    code: `FIN-ACT-${runId}`,
-    name: "Demo active finance service",
+    code: `FIN-QA-ACT-${runId}`,
+    name: "QA active finance service",
     category: "Consultation",
     price: 200,
     currency: "EGP",
@@ -43,16 +43,16 @@ async function main() {
 
   const patient = await apiJson("POST", "/patients", owner, {
     medicalRecordNumber: `FIN-${runId}`,
-    firstName: "Demo",
+    firstName: "QA",
     lastName: "Finance",
-    notes: "Fake finance regression patient only."
+    notes: "Local finance regression patient only."
   });
 
   const invoice = await apiJson("POST", "/billing/invoices", owner, {
     patientId: patient.id,
     invoiceNumber: `FIN-INV-${runId}`,
     discountAmount: 20,
-    discountReason: "Local demo courtesy discount.",
+    discountReason: "Local QA courtesy discount.",
     items: [{ serviceItemId: activeService.id, quantity: 1 }]
   });
   if (String(invoice.subtotalAmount) !== "200" || String(invoice.discountAmount) !== "20" || String(invoice.totalAmount) !== "180") {
@@ -72,7 +72,7 @@ async function main() {
     invoiceId: invoice.id,
     method: "cash",
     amount: 50,
-    referenceNote: "Demo partial cash payment only."
+    referenceNote: "QA partial cash payment only."
   });
   const partialInvoice = await apiJson("GET", `/billing/invoices/${invoice.id}`, owner);
   if (partialInvoice.status !== "partially_paid" || String(partialInvoice.balanceAmount) !== "130") {
@@ -81,12 +81,12 @@ async function main() {
   record.pass("payment recording creates partial payment status");
 
   assertStatus(await apiStatus("POST", `/billing/payments/${payment.id}/refund`, owner, {}), 400, "refund missing reason");
-  const refunded = await apiJson("POST", `/billing/payments/${payment.id}/refund`, owner, { reason: "Local demo refund correction." });
+  const refunded = await apiJson("POST", `/billing/payments/${payment.id}/refund`, owner, { reason: "Local QA refund correction." });
   if (refunded.status !== "reversed") throw new Error("refund did not mark payment as non-active.");
   record.pass("refund requires reason and updates payment");
 
   assertStatus(await apiStatus("POST", `/billing/invoices/${invoice.id}/void`, owner, {}), 400, "void missing reason");
-  const voided = await apiJson("POST", `/billing/invoices/${invoice.id}/void`, owner, { reason: "Local demo invoice void correction." });
+  const voided = await apiJson("POST", `/billing/invoices/${invoice.id}/void`, owner, { reason: "Local QA invoice void correction." });
   if (voided.status !== "voided") throw new Error("invoice void did not persist.");
   record.pass("invoice void requires reason");
 

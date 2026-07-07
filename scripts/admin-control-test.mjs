@@ -35,8 +35,8 @@ async function main() {
   record.pass("admin can update audited appearance settings");
 
   const service = await apiJson("POST", "/admin/services", admin, {
-    code: `DEMO-SVC-${Date.now()}`,
-    name: "Demo admin service",
+    code: `QA-SVC-${Date.now()}`,
+    name: "QA admin service",
     category: "Consultation",
     price: 111,
     currency: "EGP"
@@ -45,29 +45,29 @@ async function main() {
   const updatedService = await apiJson("PATCH", `/admin/services/${service.id}`, admin, {
     price: 222,
     active: false,
-    reason: "Local demo service pricing correction from admin control test."
+    reason: "Local QA service pricing correction from admin control test."
   });
   if (String(updatedService.price) !== "222") throw new Error("service price update did not persist.");
   if (updatedService.active !== false) throw new Error("service deactivate did not persist.");
   record.pass("admin can add and update service pricing with reason");
 
   const patient = await apiJson("POST", "/patients", admin, {
-    medicalRecordNumber: `DEMO-ADMIN-${Date.now()}`,
-    firstName: "Demo",
+    medicalRecordNumber: `QA-ADMIN-${Date.now()}`,
+    firstName: "QA",
     lastName: "AdminControl",
-    notes: "Fake local admin control test patient only."
+    notes: "Local admin control test patient only."
   });
   const invoice = await apiJson("POST", "/billing/invoices", admin, {
     patientId: patient.id,
-    invoiceNumber: `DEMO-ADMIN-INV-${Date.now()}`,
-    items: [{ description: "Demo admin override service", quantity: 1, unitAmount: 50 }]
+    invoiceNumber: `QA-ADMIN-INV-${Date.now()}`,
+    items: [{ description: "QA admin override service", quantity: 1, unitAmount: 50 }]
   });
 
   assertStatus(await apiStatus("POST", `/admin/overrides/invoices/${invoice.id}/void`, admin, { confirmation: "CONFIRM" }), 400, "invoice override without reason");
   record.pass("admin override requires reason");
 
   const voided = await apiJson("POST", `/admin/overrides/invoices/${invoice.id}/void`, admin, {
-    reason: "Local demo correction from admin control test.",
+    reason: "Local QA correction from admin control test.",
     confirmation: "CONFIRM"
   });
   if (voided.status !== "voided") throw new Error("invoice was not voided by admin override.");

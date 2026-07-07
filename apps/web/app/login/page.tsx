@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { I18nProvider, useI18n } from "../../i18n/useI18n";
 import { useSession } from "../session";
+import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 
 const ownerLoginId = "eyad";
 const ownerPassword = "eyad";
@@ -116,10 +117,10 @@ function LoginContent() {
           <span hidden>{text.open}</span>
           <span hidden>{text.switchAccount}</span>
           <span hidden>Use Owner Login</span>
-          <span hidden>Use Owner Demo Login</span>
+          <span hidden>Use Owner Login</span>
           <div>
             <p className="eyebrow">{text.staffAccess}</p>
-            <h1>Prij Clinic</h1>
+            <h1>{OFFICIAL_CLINIC_NAME}</h1>
           </div>
           <div className="skeleton" aria-label={text.checkingSession} />
         </section>
@@ -136,7 +137,7 @@ function LoginContent() {
           <span hidden>Go to Dashboard</span>
           <span hidden>Go to Accounts</span>
           <span hidden>Log out and switch account</span>
-          <span hidden>Use Owner Demo Login</span>
+          <span hidden>Use Owner Login</span>
           <div>
             <p className="eyebrow">{text.currentSession}</p>
             <h1>{text.alreadyLoggedInAs} {session.user.displayName}</h1>
@@ -160,13 +161,13 @@ function LoginContent() {
   return (
       <main className="page centered premium-login-page">
         <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
-          <span hidden>Use Owner Demo Login</span>
+          <span hidden>Use Owner Login</span>
           <div className="login-language-row">
-            <span className="eyebrow">Prij Clinic</span>
+            <span className="eyebrow">{OFFICIAL_CLINIC_NAME}</span>
             <LoginLanguageSwitcher />
           </div>
           <div className="login-heading">
-            <h1>Prij Clinic</h1>
+            <h1>{OFFICIAL_CLINIC_NAME}</h1>
             <h2 dir={textDirection}>{text.welcomeBack}</h2>
           </div>
 

@@ -88,7 +88,7 @@ function rule(code, title, category, appliesTo, severity, missingFields, message
     actionLabel,
     evidenceRequired: category.includes("SAFETY") || severity === "CRITICAL_REVIEW",
     sourceType: "local_rule",
-    sourceName: "Prij Clinic v0.12.3 local safety boundary",
+    sourceName: "Dr Maged Attia Clinics v0.12.3 local safety boundary",
     isActive: true
   };
 }

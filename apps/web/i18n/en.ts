@@ -1,5 +1,5 @@
 export const en = {
-  appName: "Prij Clinic",
+  appName: "Dr Maged Attia Clinics",
   appSubtitle: "Women's health",
   clinicOperations: "Clinic operations",
   clinicOperationsSubtitle: "Patient files, queue, doctor workflow, finance, and owner controls.",

@@ -1,6 +1,6 @@
-# Prij Clinic Local HTML Design Lab
+# Dr Maged Attia Clinics Local HTML Design Lab
 
-The design lab exports static, standalone HTML previews of the Prij Clinic UI direction. The files are visual prototypes only and are not the production app.
+The design lab exports static, standalone HTML previews of the Dr Maged Attia Clinics UI direction. The files are visual prototypes only and are not the production app.
 
 ## Files
 

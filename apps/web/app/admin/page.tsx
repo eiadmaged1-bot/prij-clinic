@@ -118,7 +118,7 @@ export default function AdminPage() {
       ]);
 
       if ([summaryResponse, servicesResponse, usersResponse, rolesResponse].some((response) => response.status === 401)) {
-        throw new Error("Sign in with the local admin demo account to open Admin.");
+        throw new Error("Sign in with an Owner account to open Admin.");
       }
       if ([summaryResponse, servicesResponse, usersResponse, rolesResponse].some((response) => response.status === 403)) {
         throw new Error("Admin access is required.");
@@ -271,7 +271,7 @@ export default function AdminPage() {
           </div>
           <span className="badge warning">Protected admin</span>
         </div>
-        <p className="muted">Manage demo settings, staff visibility, service prices, themes, safety controls, and audit review from the app.</p>
+        <p className="muted">Manage clinic settings, staff visibility, service prices, themes, safety controls, and audit review from the app.</p>
       </section>
 
       <SafetyAlert />
@@ -303,7 +303,6 @@ export default function AdminPage() {
 
       <section className="module-grid">
         {[
-          { href: "/clinic-day/walkthrough", label: "Clinic walkthrough", description: "Run the connected local training clinic day from owner setup through print packet." },
           { href: "/admin/accounts", label: "Staff and permissions", description: "Create staff, review roles, and keep owner access protected." },
           { href: "/admin/services", label: "Services and prices", description: "Adjust service catalog controls with reason-required audit." },
           { href: "/admin/security-readiness", label: "Security readiness", description: "Review real patient data readiness gates, blockers, and safety posture." },
@@ -326,7 +325,6 @@ export default function AdminPage() {
           ["Billing Settings", "Service prices, cost placeholders, and doctor share placeholders are active now. Taxes and gateways remain future work."],
           ["Medication Data Operations", medicationReadiness ? `${medicationReadiness.officialRows} official rows, ${medicationReadiness.verifiedRows} verified rows. ${medicationReadiness.warning ?? "Rows remain review-gated."}` : "Medication readiness is reported from the reference API when available."],
           ["Backup and Export Status", "The official medication export and isolated restore drill passed in v0.8.6. Local export files remain ignored."],
-          ["Demo Data Tools", "Local reset tools remain guarded scripts. No automatic reset runs from this screen."],
           ["Feature Flags", "AI stays disabled and draft-only. Future flags must remain audited and owner-controlled."],
           ["Safe Force Actions", "Force actions require a reason and audit entry. Signed clinical records are not silently hard-deleted."],
           ["Safety Settings", "Audit logs cannot be deleted from normal UI and clinical changes remain auditable."]
@@ -411,16 +409,19 @@ export default function AdminPage() {
                 <div className="data-row-header">
                   <div>
                     <strong>{service.name}</strong>
-                    <p className="muted">{service.category} - {service.code}</p>
+                    <p className="muted">{service.category}</p>
+                    <details className="subtle-login-details">
+                      <summary>Advanced details</summary>
+                      <p className="muted">Internal code: {service.code}</p>
+                    </details>
                   </div>
-                  <span className={`badge ${service.active ? "accent" : "warning"}`}>{service.active ? "Active" : "Inactive"}</span>
+                  <span className={`badge ${service.active && service.price !== null ? "accent" : "warning"}`}>{service.price === null ? "Needs price review" : service.active ? "Active" : "Inactive"}</span>
                 </div>
                 <div className="form-actions">
                   <label>
                     Price
                     <input
                       defaultValue={service.price === null ? "" : String(service.price)}
-                      placeholder={service.price === null ? "Review required" : undefined}
                       onBlur={(event) => {
                         if (event.target.value !== String(service.price ?? "")) {
                           void updateService(service, { price: event.target.value });

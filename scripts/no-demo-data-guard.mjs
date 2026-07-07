@@ -1,0 +1,103 @@
+import { readFileSync } from "node:fs";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+const forbiddenUi = ["Prij Clinic"];
+const uiFiles = [
+  "apps/web/app/login/page.tsx",
+  "apps/web/app/mvp-page.tsx",
+  "apps/web/app/dashboard/page.tsx",
+  "apps/web/app/page.tsx",
+  "apps/web/app/admin/page.tsx",
+  "apps/web/app/admin/settings/page.tsx",
+  "apps/web/app/layout.tsx"
+];
+
+const failures = [];
+
+for (const file of uiFiles) {
+  const text = readFileSync(file, "utf8");
+  for (const term of forbiddenUi) {
+    if (text.includes(term)) failures.push(`${file} contains visible old branding: ${term}`);
+  }
+}
+
+const [
+  forbiddenServices,
+  forbiddenUsers,
+  forbiddenPatients,
+  forbiddenIntakes,
+  cleanServices,
+  totalCleanServices
+] = await Promise.all([
+  prisma.serviceItem.findMany({
+    where: {
+      OR: [
+        { name: { in: ["Demo active finance service", "Demo admin service", "Demo finance consultation"], mode: "insensitive" } },
+        { code: { startsWith: "DEMO-SVC-", mode: "insensitive" } },
+        { code: { startsWith: "FIN-ACT-", mode: "insensitive" } },
+        { code: { equals: "LAB-PANEL-DEMO", mode: "insensitive" } }
+      ],
+      active: true
+    },
+    select: { code: true, name: true }
+  }),
+  prisma.user.findMany({
+    where: {
+      OR: [
+        { displayName: { in: ["Runtime Doctor", "Runtime Nurse", "Runtime Receptionist", "Runtime Accountant"], mode: "insensitive" } },
+        { displayName: { startsWith: "Demo ", mode: "insensitive" } },
+        { displayName: { startsWith: "Test ", mode: "insensitive" } }
+      ],
+      status: "active"
+    },
+    select: { email: true, displayName: true }
+  }),
+  prisma.patient.findMany({
+    where: {
+      status: "active",
+      OR: [
+        { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
+        { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
+        { medicalRecordNumber: { startsWith: "LOCAL-PAT-", mode: "insensitive" } },
+        { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
+        { firstName: { startsWith: "Test Intake", mode: "insensitive" } }
+      ]
+    },
+    select: { medicalRecordNumber: true, firstName: true, lastName: true }
+  }),
+  prisma.patientIntake.count({
+    where: {
+      OR: [
+        { patientReportedJson: { path: ["title"], string_contains: "Test Intake" } },
+        { administrativeJson: { path: ["title"], string_contains: "Test Intake" } }
+      ]
+    }
+  }),
+  prisma.serviceItem.findMany({
+    where: {
+      code: { startsWith: "SVC-" },
+      active: true,
+      sourceType: "curated_reference",
+      reviewStatus: "price_review_required"
+    },
+    select: { code: true, name: true, price: true }
+  }),
+  prisma.serviceItem.count({ where: { code: { startsWith: "SVC-" } } })
+]);
+
+if (forbiddenServices.length) failures.push(`Forbidden active services: ${JSON.stringify(forbiddenServices)}`);
+if (forbiddenUsers.length) failures.push(`Forbidden active users: ${JSON.stringify(forbiddenUsers)}`);
+if (forbiddenPatients.length) failures.push(`Forbidden active patients: ${JSON.stringify(forbiddenPatients)}`);
+if (forbiddenIntakes) failures.push(`Forbidden intake submissions: ${forbiddenIntakes}`);
+if (cleanServices.length !== 14 || totalCleanServices !== 14) failures.push(`Clean service catalog expected 14 stable SVC rows, got active=${cleanServices.length} total=${totalCleanServices}`);
+if (cleanServices.some((service) => service.price !== null)) failures.push("Clean service catalog must be unpriced by default.");
+
+await prisma.$disconnect();
+
+if (failures.length) {
+  console.error(failures.join("\n"));
+  process.exit(1);
+}
+
+console.log("NO-DEMO-DATA-GUARD PASS");

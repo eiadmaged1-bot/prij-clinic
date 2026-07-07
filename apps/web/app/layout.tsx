@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme";
+import { OFFICIAL_APP_DESCRIPTION, OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Prij Clinic V0.1",
-  description: "Prij Clinic management system"
+  title: OFFICIAL_CLINIC_NAME,
+  description: OFFICIAL_APP_DESCRIPTION
 };
 
 export default function RootLayout({

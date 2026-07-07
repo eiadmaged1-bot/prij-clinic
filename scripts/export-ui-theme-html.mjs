@@ -100,7 +100,7 @@ const sections = [
       <section class="login-preview-panel">
         <div class="login-brand">
           <p class="eyebrow">Visual preview</p>
-          <h1>Prij Clinic</h1>
+          <h1>Dr Maged Attia Clinics</h1>
           <p>Standalone design lab for OB/GYN and women's health clinic workflows.</p>
           <div class="chip-row">${badge("No real auth")}${badge("No session")}${badge("No API")}</div>
         </div>
@@ -596,7 +596,7 @@ function htmlDocument(title) {
     <aside class="sidebar" data-drawer>
       <div class="brand">
         <span class="brand-mark">P</span>
-        <span class="brand-text"><strong>Prij Clinic</strong><span>Static HTML Lab</span></span>
+        <span class="brand-text"><strong>Dr Maged Attia Clinics</strong><span>Static HTML Lab</span></span>
       </div>
       <nav class="nav-group" aria-label="Main sections">
         ${navGroups.map((group) => `
@@ -610,7 +610,7 @@ function htmlDocument(title) {
         <button class="button secondary mobile-menu-button" type="button" aria-expanded="false" data-menu-button>Menu</button>
         <div class="brand">
           <span class="brand-mark">P</span>
-          <span class="brand-text"><strong>Prij Clinic</strong><span>UI Lab</span></span>
+          <span class="brand-text"><strong>Dr Maged Attia Clinics</strong><span>UI Lab</span></span>
         </div>
         <span class="mobile-topbar-spacer" aria-hidden="true"></span>
       </header>
@@ -624,7 +624,7 @@ function htmlDocument(title) {
 }
 
 function writeDocs() {
-  const handoff = `# Prij Clinic Static HTML Theme Lab v0.11.0
+  const handoff = `# Dr Maged Attia Clinics Static HTML Theme Lab v0.11.0
 
 This folder is a static design handoff only. Open \`index.html\` directly for a quick desktop check, or use \`npm run design:serve-html\` from the repo root for phone testing.
 
@@ -745,13 +745,13 @@ mkdirSync(resolve(exportDir, "assets"), { recursive: true });
 mkdirSync(designDir, { recursive: true });
 mkdirSync(dirname(zipPath), { recursive: true });
 
-writeFileSync(resolve(exportDir, "index.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
+writeFileSync(resolve(exportDir, "index.html"), cleanText(htmlDocument("Dr Maged Attia Clinics Static HTML Theme Lab")), "utf8");
 writeFileSync(resolve(exportDir, "assets", "styles.css"), cleanText(css), "utf8");
 writeFileSync(resolve(exportDir, "assets", "app.js"), cleanText(js), "utf8");
 writeDocs();
 
-writeFileSync(resolve(designDir, "prij-ui-theme-lab.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
-writeFileSync(resolve(designDir, "prij-mobile-ui-lab.html"), cleanText(htmlDocument("Prij Clinic Static HTML Theme Lab")), "utf8");
+writeFileSync(resolve(designDir, "prij-ui-theme-lab.html"), cleanText(htmlDocument("Dr Maged Attia Clinics Static HTML Theme Lab")), "utf8");
+writeFileSync(resolve(designDir, "prij-mobile-ui-lab.html"), cleanText(htmlDocument("Dr Maged Attia Clinics Static HTML Theme Lab")), "utf8");
 
 console.log("Generated static HTML theme lab:");
 console.log(`- ${resolve(exportDir, "index.html")}`);

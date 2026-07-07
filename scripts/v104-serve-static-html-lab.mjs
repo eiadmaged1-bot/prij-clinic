@@ -78,7 +78,7 @@ if (!existsSync(resolve(exportDir, "index.html"))) {
 }
 
 const { port } = await listenOnAvailablePort(preferredPort);
-console.log("Prij Clinic static HTML lab server");
+console.log("Dr Maged Attia Clinics static HTML lab server");
 console.log(`Local: http://localhost:${port}`);
 for (const url of lanUrls(port)) console.log(`LAN:   ${url}`);
 console.log("Serving only: ui-export");

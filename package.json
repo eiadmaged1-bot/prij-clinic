@@ -2,7 +2,7 @@
   "name": "prij-clinic",
   "version": "0.1.0",
   "private": true,
-  "description": "Prij Clinic MVP monorepo scaffold.",
+  "description": "Dr Maged Attia Clinics clinic management monorepo scaffold.",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -130,6 +130,9 @@
     "db:v121:baseline:dry-run": "node scripts/v121-prepare-clean-reference-baseline.mjs --dry-run",
     "db:v121:baseline:apply": "node scripts/v121-prepare-clean-reference-baseline.mjs --apply",
     "db:cleanup:demo": "node scripts/v132-clean-demo-records.mjs --apply",
+    "db:clean-demo-data:dry-run": "node apps/api/scripts/cleanup-demo-data.mjs",
+    "db:clean-demo-data": "node apps/api/scripts/cleanup-demo-data.mjs --apply",
+    "test:no-demo-data": "node scripts/no-demo-data-guard.mjs",
     "db:v122:seed:medications-generic": "node scripts/v122-seed-medication-generic-foundation.mjs",
     "db:v122:seed:investigations-expanded": "node scripts/v122-seed-investigation-expanded-catalog.mjs",
     "db:v122:seed:operation-history": "node scripts/v122-seed-operation-history-catalog.mjs",

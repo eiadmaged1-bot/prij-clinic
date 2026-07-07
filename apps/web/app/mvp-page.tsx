@@ -36,6 +36,7 @@ type MvpPageProps = {
 };
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { getUnreadStaffChatCount } from "@/lib/staff-chat";
 
 const navGroupOrder: NavItem["group"][] = [
@@ -502,7 +503,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 <span>Menu</span>
               </button>
             ) : null}
-            <strong className="mobile-topbar-brand">Prij Clinic</strong>
+            <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
