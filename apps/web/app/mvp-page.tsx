@@ -424,7 +424,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   return (
     <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
-      {!isReceptionistOnly ? (
+      {user ? (
         <>
           <button
             aria-label="Close navigation"
@@ -475,12 +475,13 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 )}
               </nav>
             ))}
-            {user ? (
+            <div className="sidebar-footer">
+              <LanguageSwitcher />
               <button className="button secondary compact sidebar-logout-button" onClick={() => void signOut()} type="button">
                 <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
                 {t("logout")}
               </button>
-            ) : null}
+            </div>
           </aside>
         </>
       ) : null}
@@ -488,7 +489,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-title">
-            {!isReceptionistOnly ? (
+            {user ? (
               <button
                 aria-controls="clinic-mobile-navigation"
                 aria-expanded={mobileNavOpen || !sidebarCollapsed}

@@ -6,6 +6,11 @@ import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import {
   CreatePatientDto,
+  CreateClinicalPhaseDto,
+  CreateEstradiolResultDto,
+  CreateFollicularMonitoringVisitDto,
+  CreateInfertilityEpisodeDto,
+  CreateOvulationInductionCycleDto,
   PatientContextAppointmentDto,
   PatientContextConsentDto,
   PatientContextEncounterDto,
@@ -20,6 +25,8 @@ import {
   PatientInvestigationHistoryDto,
   PatientMedicationHistoryDto,
   PatientOperationHistoryDto,
+  UpdateCycleAmhDto,
+  UpdateClinicalPhaseDto,
   UpdatePatientDto
 } from "./dto";
 import { PatientsService } from "./patients.service";
@@ -63,6 +70,60 @@ export class PatientsController {
   @Permissions("follow_up_hints.read")
   followUpHints(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.patients.followUpHints(id, user);
+  }
+
+  @Get(":id/phases")
+  @Permissions("patient.read")
+  phases(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.listPhases(id, user);
+  }
+
+  @Post(":id/phases")
+  @Permissions("encounter.create")
+  createPhase(@Param("id") id: string, @Body() dto: CreateClinicalPhaseDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createPhase(id, dto, user);
+  }
+
+  @Patch(":id/phases/:phaseId")
+  @Permissions("encounter.create")
+  updatePhase(@Param("id") id: string, @Param("phaseId") phaseId: string, @Body() dto: UpdateClinicalPhaseDto, @CurrentUser() user: AuthUser) {
+    return this.patients.updatePhase(id, phaseId, dto, user);
+  }
+
+  @Get(":id/infertility")
+  @Permissions("encounter.read")
+  infertility(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.infertilityWorkspace(id, user);
+  }
+
+  @Post(":id/infertility/episodes")
+  @Permissions("encounter.create")
+  createInfertilityEpisode(@Param("id") id: string, @Body() dto: CreateInfertilityEpisodeDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createInfertilityEpisode(id, dto, user);
+  }
+
+  @Post(":id/infertility/cycles")
+  @Permissions("encounter.create")
+  createOvulationCycle(@Param("id") id: string, @Body() dto: CreateOvulationInductionCycleDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createOvulationCycle(id, dto, user);
+  }
+
+  @Patch(":id/infertility/cycles/:cycleId/amh")
+  @Permissions("encounter.create")
+  updateCycleAmh(@Param("id") id: string, @Param("cycleId") cycleId: string, @Body() dto: UpdateCycleAmhDto, @CurrentUser() user: AuthUser) {
+    return this.patients.updateCycleAmh(id, cycleId, dto, user);
+  }
+
+  @Post(":id/infertility/monitoring-visits")
+  @Permissions("encounter.create")
+  createMonitoringVisit(@Param("id") id: string, @Body() dto: CreateFollicularMonitoringVisitDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createMonitoringVisit(id, dto, user);
+  }
+
+  @Post(":id/infertility/e2-results")
+  @Permissions("encounter.create")
+  createEstradiolResult(@Param("id") id: string, @Body() dto: CreateEstradiolResultDto, @CurrentUser() user: AuthUser) {
+    return this.patients.createEstradiolResult(id, dto, user);
   }
 
   @Get(":id/history-sheets")

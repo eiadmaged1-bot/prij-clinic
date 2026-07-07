@@ -12,7 +12,7 @@ import {
 } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VoidInvoiceDto } from "./dto";
+import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VisitPriceAuditReportQueryDto, VisitPriceAuditSettingsDto, VoidInvoiceDto } from "./dto";
 
 @Injectable()
 export class BillingService {
@@ -421,6 +421,78 @@ export class BillingService {
     };
   }
 
+  async ownerVisitPriceSettings(user: AuthUser) {
+    assertOwnerOnly(user);
+    const setting = await this.activeVisitPriceSetting();
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "billing.owner_visit_price_settings_read",
+      resourceType: "visit_price_audit_setting",
+      resourceId: setting?.id,
+      branchId: user.branchId,
+      severity: "high"
+    });
+    return { setting };
+  }
+
+  async updateOwnerVisitPriceSettings(dto: VisitPriceAuditSettingsDto, user: AuthUser) {
+    assertOwnerOnly(user);
+    await this.prisma.visitPriceAuditSetting.updateMany({ where: { active: true }, data: { active: false } });
+    const setting = await this.prisma.visitPriceAuditSetting.create({
+      data: {
+        baseVisitPriceX: dto.baseVisitPriceX,
+        kashfMultiplier: dto.kashfMultiplier ?? 1,
+        recheckMultiplier: dto.recheckMultiplier ?? 0.5,
+        consultationMultiplier: dto.consultationMultiplier ?? 0.75,
+        urgentMultiplier: dto.urgentMultiplier ?? 2,
+        updatedByUserId: user.id
+      }
+    });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "billing.owner_visit_price_settings_updated",
+      resourceType: "visit_price_audit_setting",
+      resourceId: setting.id,
+      branchId: user.branchId,
+      severity: "high",
+      metadataJson: { changedFormula: true }
+    });
+    return { setting };
+  }
+
+  async ownerVisitPriceReport(query: VisitPriceAuditReportQueryDto, user: AuthUser) {
+    assertOwnerOnly(user);
+    const setting = await this.activeVisitPriceSetting();
+    if (!setting) throw new BadRequestException("Owner visit price audit settings are not configured.");
+    const from = query.from ? new Date(`${query.from.slice(0, 10)}T00:00:00.000Z`) : startOfTodayUtc();
+    const to = query.to ? new Date(`${query.to.slice(0, 10)}T23:59:59.999Z`) : endOfTodayUtc();
+    const [tickets, payments] = await Promise.all([
+      this.prisma.queueTicket.findMany({ where: { ...branchScope(user), checkedInAt: { gte: from, lte: to }, status: { not: "cancelled" } } }),
+      this.prisma.payment.findMany({ where: { ...branchScope(user), paidAt: { gte: from, lte: to }, status: "recorded" } })
+    ]);
+    const counts = visitTypeCounts(tickets);
+    const expectedTotal = new Prisma.Decimal(counts.kashf).mul(setting.baseVisitPriceX).mul(setting.kashfMultiplier)
+      .add(new Prisma.Decimal(counts.recheck).mul(setting.baseVisitPriceX).mul(setting.recheckMultiplier))
+      .add(new Prisma.Decimal(counts.consultation).mul(setting.baseVisitPriceX).mul(setting.consultationMultiplier))
+      .add(new Prisma.Decimal(counts.urgent_kashf).mul(setting.baseVisitPriceX).mul(setting.urgentMultiplier));
+    const actualCollectedTotal = payments.reduce((sum, payment) => sum.add(payment.amount), new Prisma.Decimal(0));
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "billing.owner_visit_price_audit_report_read",
+      resourceType: "visit_price_audit_report",
+      branchId: user.branchId,
+      severity: "high",
+      metadataJson: { from: from.toISOString(), to: to.toISOString(), visitCount: tickets.length }
+    });
+    return {
+      period: { from: from.toISOString(), to: to.toISOString() },
+      counts,
+      expectedTotal: expectedTotal.toFixed(2),
+      actualCollectedTotal: actualCollectedTotal.toFixed(2),
+      variance: actualCollectedTotal.sub(expectedTotal).toFixed(2)
+    };
+  }
+
   private async reverseOrRefundPayment(id: string, dto: ReversePaymentDto, user: AuthUser, action: "payment.reversed" | "payment.refunded") {
     const existing = await assertCanReferencePayment(this.prisma, id, user);
     if (existing.status !== "recorded") {
@@ -469,6 +541,10 @@ export class BillingService {
   private async nextInvoiceNumber() {
     const count = await this.prisma.invoice.count();
     return `DEMO-INV-${String(count + 1).padStart(4, "0")}`;
+  }
+
+  private activeVisitPriceSetting() {
+    return this.prisma.visitPriceAuditSetting.findFirst({ where: { active: true }, orderBy: { createdAt: "desc" } });
   }
 
   private handlePrismaReferenceError(error: unknown): never {
@@ -709,6 +785,30 @@ function sumDecimal(values: Prisma.Decimal[]) {
 function startOfToday() {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function startOfTodayUtc() {
+  return startOfToday();
+}
+
+function endOfTodayUtc() {
+  const start = startOfToday();
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+}
+
+function assertOwnerOnly(user: AuthUser) {
+  if (!user.roles.includes("Owner")) {
+    throw new ForbiddenException("Owner-only visit price audit is not available for this role.");
+  }
+}
+
+function visitTypeCounts(tickets: Array<{ visitType: string }>) {
+  return {
+    kashf: tickets.filter((ticket) => ticket.visitType === "kashf").length,
+    recheck: tickets.filter((ticket) => ticket.visitType === "recheck").length,
+    consultation: tickets.filter((ticket) => ticket.visitType === "consultation").length,
+    urgent_kashf: tickets.filter((ticket) => ticket.visitType === "urgent_kashf").length
+  };
 }
 
 function clean(value?: string) {

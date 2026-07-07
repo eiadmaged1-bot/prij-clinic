@@ -637,6 +637,14 @@ body {
   gap: 0.35rem;
 }
 
+.sidebar-footer {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgb(255 255 255 / 12%);
+}
+
 .nav-subitems {
   display: none;
   gap: 0.35rem;
@@ -743,9 +751,6 @@ body {
 }
 
 .sidebar-logout-button {
-  margin-top: auto;
-  position: sticky;
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
   justify-content: center;
   width: 100%;
 }
@@ -3421,8 +3426,8 @@ button.obgyn-template-card {
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 40;
-    width: min(20rem, calc(100vw - 3rem));
-    max-width: calc(100vw - 3rem);
+    width: min(22rem, 92vw);
+    max-width: 92vw;
     height: 100dvh;
     max-height: none;
     overflow-y: auto;
@@ -3486,6 +3491,13 @@ button.obgyn-template-card {
 
   .mobile-nav-backdrop.open {
     display: block;
+  }
+
+  .sidebar-footer {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(180deg, rgb(12 44 57 / 92%), var(--navy-soft));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
   }
 
   .app-main {
@@ -4201,6 +4213,79 @@ body {
   font-size: 1.02rem;
 }
 
+@media (max-width: 640px) {
+  .visit-type-grid,
+  .visit-type-grid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .visit-type-card,
+  .urgent-visit-type-card {
+    min-height: 3.25rem;
+    max-width: none;
+    padding: 0.55rem;
+  }
+
+  .visit-type-card strong,
+  .urgent-visit-type-card strong {
+    font-size: 1.05rem;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}
+
+.age-chip {
+  align-self: end;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fbfc;
+  color: var(--foreground);
+  font-weight: 760;
+  padding: 0.85rem 1rem;
+}
+
+.inline-edit-control {
+  display: inline-grid;
+  gap: 0.25rem;
+  max-width: 14rem;
+  margin-top: 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 760;
+}
+
+.investigation-category-sidebar,
+.template-list,
+.investigation-quick-sections {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.investigation-category-sidebar {
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+}
+
+.investigation-category-sidebar button {
+  min-height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 720;
+}
+
+.investigation-category-sidebar button.active {
+  border-color: var(--accent);
+  background: #edf8f8;
+}
+
+.investigation-quick-sections {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.infertility-workspace .panel {
+  align-self: start;
+}
+
 .doctor-comfort-mode .topbar {
   min-height: 3.65rem;
   max-height: 4.5rem;
@@ -4507,11 +4592,16 @@ body {
   gap: 0.35rem;
   text-align: center;
   cursor: pointer;
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .visit-type-card strong {
   font-size: 1.4rem;
   line-height: 1.1;
+  white-space: nowrap;
+  word-break: keep-all;
 }
 
 .visit-type-card span {

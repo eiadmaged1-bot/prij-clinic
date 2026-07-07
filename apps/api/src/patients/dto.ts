@@ -20,14 +20,326 @@ import {
 import {
   ConsentStatus,
   ConsentType,
+  ClinicalPhaseStatus,
+  ClinicalPhaseType,
+  EstradiolRequiredStatus,
+  InfertilityKnownFactor,
+  InfertilityType,
   InvestigationCategory,
+  InvestigationRequestedStatus,
   InvestigationPriority,
+  OvulationInductionMethod,
+  OvulationInductionOutcome,
   PaymentMethod,
   PatientStatus,
   PatientType,
   ReportCategory,
   SexualActivityStatus
 } from "@prisma/client";
+
+export class CreateClinicalPhaseDto {
+  @IsEnum(ClinicalPhaseType)
+  phaseType!: ClinicalPhaseType;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(160)
+  title!: string;
+
+  @IsOptional()
+  @IsEnum(ClinicalPhaseStatus)
+  status?: ClinicalPhaseStatus;
+
+  @IsDateString()
+  startDate!: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  outcome?: string;
+
+  @IsOptional()
+  @IsUUID()
+  linkedPregnancyId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  linkedInfertilityEpisodeId?: string;
+
+  @IsOptional()
+  @IsObject()
+  summaryJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class UpdateClinicalPhaseDto {
+  @IsOptional()
+  @IsEnum(ClinicalPhaseStatus)
+  status?: ClinicalPhaseStatus;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  outcome?: string;
+
+  @IsOptional()
+  @IsObject()
+  summaryJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class CreateInfertilityEpisodeDto {
+  @IsOptional()
+  @IsUUID()
+  phaseId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(80)
+  infertilityDurationYears?: number;
+
+  @IsOptional()
+  @IsEnum(InfertilityType)
+  infertilityType?: InfertilityType;
+
+  @IsOptional()
+  @IsEnum(InfertilityKnownFactor)
+  knownFactor?: InfertilityKnownFactor;
+
+  @IsOptional()
+  @IsObject()
+  previousInvestigationsJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsObject()
+  previousTreatmentJson?: Record<string, unknown>;
+
+  @IsOptional()
+  hadIUI?: boolean;
+
+  @IsOptional()
+  hadICSI?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(50)
+  icsiAttemptsCount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class CreateOvulationInductionCycleDto {
+  @IsUUID()
+  infertilityEpisodeId!: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  cycleNumber!: number;
+
+  @IsOptional()
+  @IsDateString()
+  lmpDate?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(80)
+  cycleDay?: number;
+
+  @IsOptional()
+  @IsDateString()
+  inductionStartDate?: string;
+
+  @IsOptional()
+  @IsEnum(OvulationInductionMethod)
+  inductionMethod?: OvulationInductionMethod;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  medicationNotes?: string;
+
+  @IsOptional()
+  @IsEnum(OvulationInductionOutcome)
+  outcome?: OvulationInductionOutcome;
+
+  @IsOptional()
+  @IsDateString()
+  followUpDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  notes?: string;
+}
+
+export class UpdateCycleAmhDto {
+  @IsOptional()
+  @IsEnum(InvestigationRequestedStatus)
+  requestedStatus?: InvestigationRequestedStatus;
+
+  @IsOptional()
+  @IsDateString()
+  requestDate?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  resultValue?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  unit?: string;
+
+  @IsOptional()
+  @IsDateString()
+  resultDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+}
+
+export class CreateFollicularMonitoringVisitDto {
+  @IsUUID()
+  cycleId!: string;
+
+  @IsDateString()
+  monitoringDate!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(80)
+  cycleDay?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  endometrialThicknessMm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  rightOvaryFollicleCount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  rightOvaryMeanSizeMm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  rightOvaryLargestSizeMm?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  rightOvaryNotes?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  leftOvaryFollicleCount?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  leftOvaryMeanSizeMm?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  leftOvaryLargestSizeMm?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  leftOvaryNotes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  plan?: string;
+
+  @IsOptional()
+  @IsDateString()
+  nextVisitDate?: string;
+}
+
+export class CreateEstradiolResultDto {
+  @IsUUID()
+  cycleId!: string;
+
+  @IsOptional()
+  @IsEnum(EstradiolRequiredStatus)
+  requiredStatus?: EstradiolRequiredStatus;
+
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  value!: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  unit?: string;
+
+  @IsDateString()
+  resultDate!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(80)
+  cycleDay?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
+}
 
 export class CreatePatientDto {
   @IsString()

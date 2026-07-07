@@ -8,11 +8,13 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { patientTypeOptions } from "@/lib/patient-labels";
 import type { VisitTypeValue } from "@/lib/visit-types";
 
 type FormState = {
   medicalRecordNumber: string;
   fullName: string;
+  patientType: string;
   sexualActivityStatus: string;
   yearOfBirth: string;
   phone: string;
@@ -25,6 +27,7 @@ type ExistingPatient = { id: string; medicalRecordNumber?: string | null; firstN
 const initialState: FormState = {
   medicalRecordNumber: makeMrn(),
   fullName: "",
+  patientType: "WOMEN_HEALTH",
   sexualActivityStatus: "unknown",
   yearOfBirth: "",
   phone: "",
@@ -85,7 +88,7 @@ export default function NewPatientPage() {
           firstName,
           lastName,
           sex: "female",
-          patientType: "WOMEN_HEALTH",
+          patientType: form.patientType || "WOMEN_HEALTH",
           sexualActivityStatus: form.sexualActivityStatus,
           dateOfBirth: form.yearOfBirth ? `${form.yearOfBirth}-01-01` : "",
           phone: form.phone,
@@ -145,8 +148,8 @@ export default function NewPatientPage() {
           }
         })
       }).catch(() => undefined);
-      setSuccess(`Added to queue · Position ${queueTicket?.queueNumber ?? "new"} · Visit type: ${visitType === "urgent_kashf" ? "مستعجل" : "كشف"}`);
-      window.setTimeout(() => router.push("/reception"), 900);
+      setSuccess(`Added to queue - Position ${queueTicket?.queueNumber ?? "new"}.`);
+      router.push(`/patients/${patient.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to create patient file.");
     } finally {
@@ -195,6 +198,7 @@ export default function NewPatientPage() {
                 <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
               </button>
             </div>
+            <button className="button secondary compact" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">Generate another file number</button>
           </label>
           <label>
             Full name
@@ -205,13 +209,16 @@ export default function NewPatientPage() {
             <input autoComplete="tel" inputMode="tel" onChange={(event) => update("phone", event.target.value)} placeholder="Optional contact number" value={form.phone} />
           </label>
           <label>
+            Patient type
+            <select onChange={(event) => update("patientType", event.target.value)} value={form.patientType}>
+              {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
             Year of birth
             <input inputMode="numeric" max={new Date().getFullYear()} min="1900" onChange={(event) => update("yearOfBirth", event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="YYYY" value={form.yearOfBirth} />
           </label>
-          <label>
-            Auto-calculated age
-            <input readOnly value={calculatedAge} />
-          </label>
+          <div className="age-chip" aria-label="Auto-calculated age">Age: {calculatedAge}</div>
           <label>
             Area/address
             <input onChange={(event) => update("address", event.target.value)} placeholder="Optional short area or address" value={form.address} />
@@ -239,9 +246,8 @@ export default function NewPatientPage() {
 
           {duplicateWarnings.length ? (
             <div className="alert warning wide" data-testid="duplicate-patient-warning">
-              <strong>Possible duplicate patient</strong>
+              <strong>Possible match found. Open existing file to review.</strong>
               <p className="muted">{duplicateWarnings.join(" ")}</p>
-              <p className="muted">Review the existing file before continuing. Reception or admin may continue when appropriate.</p>
             </div>
           ) : null}
 
@@ -251,13 +257,9 @@ export default function NewPatientPage() {
           <div className="form-actions wide">
             <button className="button" disabled={isSubmitting} type="submit">
               <ThreeDMedicalIcon name="patients" size="sm" />
-              {isSubmitting ? "Adding to waiting line" : "Save and add to waiting line"}
+              {isSubmitting ? "Adding to waiting line" : "Save and open patient file"}
             </button>
             {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>Open patient file</Link> : null}
-            <Link className="button secondary" href="/reception">
-              <ThreeDMedicalIcon name="timeline" size="sm" tone="slate" />
-              Back to Reception
-            </Link>
           </div>
         </form>
       </section>
@@ -285,9 +287,9 @@ function possibleDuplicateWarnings(form: FormState, patients: ExistingPatient[])
 
   for (const patient of patients) {
     const patientName = normalize(`${patient.firstName ?? ""} ${patient.lastName ?? ""}`);
-    if (phone && normalize(patient.phone) === phone) warnings.push(`Phone matches ${patientName || "an existing patient"}.`);
-    if (mrn && normalize(patient.medicalRecordNumber) === mrn) warnings.push(`MRN matches ${patientName || "an existing patient"}.`);
-    if (fullName && patientName && patientName === fullName) warnings.push(`Name matches existing file ${patient.medicalRecordNumber ?? ""}.`);
+    if (phone && normalize(patient.phone) === phone) warnings.push("Phone matches an existing file.");
+    if (mrn && normalize(patient.medicalRecordNumber) === mrn) warnings.push("File number matches an existing file.");
+    if (fullName && patientName && patientName === fullName) warnings.push("Name may match an existing file.");
   }
 
   return Array.from(new Set(warnings)).slice(0, 3);

@@ -13,8 +13,9 @@ export class CheckInDto {
   @IsEnum(QueuePriority)
   priority?: QueuePriority;
 
+  @IsOptional()
   @IsEnum(VisitType)
-  visitType!: VisitType;
+  visitType?: VisitType;
 
   @IsOptional()
   @IsString()

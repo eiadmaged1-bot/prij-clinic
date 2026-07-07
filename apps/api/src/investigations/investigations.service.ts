@@ -49,19 +49,37 @@ export class InvestigationsService {
     }
   }
 
-  listCatalog() {
-    return this.prisma.investigationCatalogItem.findMany({
-      where: { active: true },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-      select: { id: true, code: true, name: true, normalizedName: true, category: true, discipline: true, modality: true, aliasesJson: true, tagsJson: true }
-    });
+  async catalogWorkspace(user: AuthUser, q = "", category = "") {
+    const [items, favorites, highPriority] = await Promise.all([
+      this.searchCatalog(q, category),
+      this.prisma.investigationFavorite.findMany({
+        where: { userId: user.id },
+        include: { investigationCatalogItem: true },
+        orderBy: { createdAt: "desc" },
+        take: 100
+      }),
+      this.prisma.investigationCatalogItem.findMany({
+        where: { active: true, OR: [{ isHighPriority: true }, { priorityLevel: { lte: 2 } }] },
+        orderBy: [{ priorityLevel: "asc" }, { category: "asc" }, { name: "asc" }],
+        take: 50
+      })
+    ]);
+    const favoriteIds = new Set(favorites.map((favorite) => favorite.investigationCatalogItemId));
+    return {
+      investigationCatalog: items.map((item) => ({ ...item, favorite: favoriteIds.has(item.id) })),
+      categories: investigationCategories,
+      favorites: favorites.map((favorite) => ({ ...favorite.investigationCatalogItem, favorite: true })),
+      highPriority,
+      templates: investigationTemplates
+    };
   }
 
-  searchCatalog(q = "") {
+  searchCatalog(q = "", category = "") {
     const query = q.trim();
     return this.prisma.investigationCatalogItem.findMany({
       where: {
         active: true,
+        ...(category ? { category } : {}),
         ...(query
           ? {
               OR: [
@@ -69,14 +87,33 @@ export class InvestigationsService {
                 { code: { contains: query, mode: "insensitive" } },
                 { normalizedName: { contains: normalize(query), mode: "insensitive" } },
                 { category: { contains: query, mode: "insensitive" } },
+                { subcategory: { contains: query, mode: "insensitive" } },
+                { clinicalGroup: { contains: query, mode: "insensitive" } },
+                { specialty: { contains: query, mode: "insensitive" } },
                 { modality: { contains: query, mode: "insensitive" } }
               ]
             }
           : {})
       },
       orderBy: [{ category: "asc" }, { name: "asc" }],
-      take: 25
+      take: query || category ? 75 : 150
     });
+  }
+
+  async favoriteCatalogItem(id: string, user: AuthUser) {
+    const item = await this.prisma.investigationCatalogItem.findFirst({ where: { id, active: true } });
+    if (!item) throw new NotFoundException("Investigation catalog item not found.");
+    const favorite = await this.prisma.investigationFavorite.upsert({
+      where: { userId_investigationCatalogItemId: { userId: user.id, investigationCatalogItemId: id } },
+      update: {},
+      create: { userId: user.id, investigationCatalogItemId: id }
+    });
+    return { favorite, item };
+  }
+
+  async unfavoriteCatalogItem(id: string, user: AuthUser) {
+    await this.prisma.investigationFavorite.deleteMany({ where: { userId: user.id, investigationCatalogItemId: id } });
+    return { ok: true };
   }
 
   listOrders(user: AuthUser) {
@@ -269,3 +306,27 @@ function clinicalStatus(status: string) {
   if (status === "voided") return "cancelled";
   return status;
 }
+
+const investigationCategories = [
+  "Routine Labs",
+  "Obstetric Investigations",
+  "Gynecology Investigations",
+  "Infertility Investigations",
+  "Recurrent Abortion / RPL",
+  "Tumor Markers / Gyn Oncology",
+  "Cervix / Pap / HPV / Colposcopy",
+  "Endometrial pathology",
+  "Ovarian tumors",
+  "Imaging / Radiology",
+  "Ultrasound-related requests",
+  "Pathology / Cytology / Histopathology"
+];
+
+const investigationTemplates = [
+  { name: "RPL Basic Workup", category: "Recurrent Abortion / RPL", items: ["CBC", "TSH", "HbA1c", "Antiphospholipid antibodies", "Pelvic ultrasound"] },
+  { name: "Infertility Initial Workup", category: "Infertility Investigations", items: ["AMH", "TSH", "Prolactin", "Day 2 FSH", "Day 2 LH", "Estradiol"] },
+  { name: "PCOS Workup", category: "Gynecology Investigations", items: ["TSH", "Prolactin", "Total testosterone", "HbA1c", "Pelvic ultrasound"] },
+  { name: "AUB Workup", category: "Gynecology Investigations", items: ["CBC", "TSH", "Pregnancy test", "Pelvic ultrasound"] },
+  { name: "Ovarian Tumor Marker Workup", category: "Tumor Markers / Gyn Oncology", subcategory: "Ovarian tumors", items: ["CA-125", "CEA", "CA 19-9", "AFP", "Beta-hCG", "LDH"] },
+  { name: "Antenatal Routine Labs", category: "Obstetric Investigations", items: ["CBC", "Blood group and Rh", "Urine analysis", "Fasting blood glucose", "HBsAg", "HCV antibody"] }
+];

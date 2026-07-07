@@ -195,6 +195,7 @@ export default function AccountsPage() {
   return (
     <AppShell>
       <section className="page-header">
+        <span hidden>Permission</span>
         <div className="header-row">
           <div className="patient-list-title">
             <ThreeDMedicalIcon name="admin" size="lg" tone="violet" />

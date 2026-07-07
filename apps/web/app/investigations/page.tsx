@@ -7,13 +7,18 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
-type CatalogItem = { id: string; name: string; category: string; modality?: string | null };
+type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean; isHighPriority?: boolean };
+type InvestigationTemplate = { name: string; category: string; subcategory?: string; items: string[] };
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
 type Patient = PatientPickerPatient;
 
 export default function InvestigationsPage() {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<CatalogItem[]>([]);
+  const [highPriority, setHighPriority] = useState<CatalogItem[]>([]);
+  const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
   const [selected, setSelected] = useState<CatalogItem[]>([]);
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -40,6 +45,10 @@ export default function InvestigationsPage() {
     if (category) params.set("category", category);
     const data = await apiGet(`/investigations/catalog?${params.toString()}`);
     setCatalog((data.investigationCatalog ?? []) as CatalogItem[]);
+    setCategories((data.categories ?? []) as string[]);
+    setFavorites((data.favorites ?? []) as CatalogItem[]);
+    setHighPriority((data.highPriority ?? []) as CatalogItem[]);
+    setTemplates((data.templates ?? []) as InvestigationTemplate[]);
   }, [category]);
 
   useEffect(() => {
@@ -66,7 +75,7 @@ export default function InvestigationsPage() {
     const response = await apiPost("/clinical-requests", {
       patientId: patientId.trim(),
       requestNote,
-      items: selected.map((item) => ({ title: item.name, catalogItemId: item.id, requestType: item.category, requestNote }))
+      items: selected.map((item) => ({ title: item.name, catalogItemId: item.id.startsWith("template-") ? undefined : item.id, requestType: item.category, requestNote }))
     });
     setStatus(response.ok ? "Clinical request saved with follow-up hint." : "Could not save clinical request.");
     if (response.ok) {
@@ -80,6 +89,16 @@ export default function InvestigationsPage() {
     const response = await apiPost(`/clinical-requests/${id}/${endpoint}`, {});
     setStatus(response.ok ? "Result follow-up updated." : "Could not update result follow-up.");
     if (response.ok) void loadRequests();
+  }
+
+  async function star(item: CatalogItem) {
+    const response = await apiPost(`/investigations/catalog/${item.id}/${item.favorite ? "unfavorite" : "favorite"}`, {});
+    if (response.ok) void searchCatalog(query);
+  }
+
+  function addTemplate(template: InvestigationTemplate) {
+    const additions = template.items.map((name) => ({ id: `template-${template.name}-${name}`, name, category: template.category, subcategory: template.subcategory }));
+    setSelected((current) => [...current, ...additions.filter((item) => !current.some((existing) => existing.name === item.name))]);
   }
 
   return (
@@ -97,24 +116,34 @@ export default function InvestigationsPage() {
         </div>
       </section>
       <SafetyAlert />
-      <section className="content-grid">
+      <section className="content-grid investigation-catalog-layout">
         <article className="panel">
           <div className="section-heading"><h2>Request Builder</h2><span className="badge">{status}</span></div>
           <form className="form-grid" onSubmit={submit}>
             <div className="wide">
               <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient file before saving this request." />
             </div>
-            <label>Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, ferritin, CA-125, X-ray, 4D ultrasound, vascular report" /></label>
-            <div className="visit-type-counts wide" aria-label="Category filters">
-              {["Lab", "Radiology", "Ultrasound", "Cytology", "Pathology", "Specialist report"].map((item) => (
+            <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound, histopathology" /></label>
+            <div className="investigation-category-sidebar wide" aria-label="Investigation category filters">
+              {categories.map((item) => (
                 <button className={category === item ? "active" : ""} key={item} type="button" onClick={() => setCategory((current) => current === item ? "" : item)}>{item}</button>
               ))}
             </div>
+            <div className="wide investigation-quick-sections">
+              <QuickCatalogSection title="Favorites" items={favorites} onAdd={setSelected} onStar={star} />
+              <QuickCatalogSection title="High Priority / Common" items={highPriority} onAdd={setSelected} onStar={star} />
+            </div>
+            <div className="wide template-list">
+              {templates.map((template) => <button className="picker-row" key={template.name} type="button" onClick={() => addTemplate(template)}><strong>{template.name}</strong><span>{template.category}</span></button>)}
+            </div>
             <div className="data-list">
               {catalog.slice(0, 10).map((item) => (
-                <button className="data-row" key={item.id} type="button" onClick={() => setSelected((current) => current.some((selectedItem) => selectedItem.id === item.id) ? current : [...current, item])}>
-                  <div className="data-row-header"><strong>{item.name}</strong><span className="badge">{item.modality ?? item.category}</span></div>
-                </button>
+                <div className="data-row" key={item.id}>
+                  <button className="picker-row" type="button" onClick={() => setSelected((current) => current.some((selectedItem) => selectedItem.id === item.id) ? current : [...current, item])}>
+                    <strong>{item.name}</strong><span>{[item.category, item.subcategory, item.modality].filter(Boolean).join(" / ")}</span>
+                  </button>
+                  <button className="button secondary compact" type="button" onClick={() => void star(item)}>{item.favorite ? "Starred" : "Star"}</button>
+                </div>
               ))}
               {!query.trim() && !category ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
             </div>
@@ -155,6 +184,34 @@ export default function InvestigationsPage() {
 
 function friendly(value: string) {
   return value.replaceAll("_", " ");
+}
+
+function QuickCatalogSection({
+  title,
+  items,
+  onAdd,
+  onStar
+}: {
+  title: string;
+  items: CatalogItem[];
+  onAdd: (updater: (current: CatalogItem[]) => CatalogItem[]) => void;
+  onStar: (item: CatalogItem) => Promise<void>;
+}) {
+  return (
+    <section className="compact-panel">
+      <div className="section-heading compact-section-heading"><h3>{title}</h3><span className="badge">{items.length}</span></div>
+      <div className="dense-card-list">
+        {items.slice(0, 6).map((item) => (
+          <button className="picker-row" key={`${title}-${item.id}`} type="button" onClick={() => onAdd((current) => current.some((selected) => selected.id === item.id) ? current : [...current, item])}>
+            <strong>{item.name}</strong>
+            <span>{item.category}</span>
+            <span onClick={(event) => { event.stopPropagation(); void onStar(item); }}>{item.favorite ? "Starred" : "Star"}</span>
+          </button>
+        ))}
+        {items.length === 0 ? <p className="muted">No items yet.</p> : null}
+      </div>
+    </section>
+  );
 }
 
 async function apiGet(endpoint: string) {

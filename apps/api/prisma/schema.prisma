@@ -117,6 +117,13 @@ model User {
   staffConversationParticipants      StaffConversationParticipant[]
   sentStaffMessages                  StaffMessage[]              @relation("StaffMessagesSender")
   staffMessageReceipts               StaffMessageReceipt[]
+  createdClinicalPhases              PatientClinicalPhase[]      @relation("ClinicalPhasesCreatedBy")
+  createdInfertilityEpisodes         InfertilityEpisode[]        @relation("InfertilityEpisodesCreatedBy")
+  createdOvulationCycles             OvulationInductionCycle[]   @relation("OvulationCyclesCreatedBy")
+  createdFollicularMonitoringVisits  FollicularMonitoringVisit[] @relation("FollicularMonitoringCreatedBy")
+  createdEstradiolResults            EstradiolResult[]           @relation("EstradiolResultsCreatedBy")
+  investigationFavorites             InvestigationFavorite[]
+  updatedVisitPriceSettings          VisitPriceAuditSetting[]    @relation("VisitPriceSettingsUpdatedBy")
 
   @@index([branchId])
   @@index([createdByUserId])
@@ -148,8 +155,78 @@ enum PatientStatus {
 enum PatientType {
   OB
   GYN
+  INFERTILITY
   WOMEN_HEALTH
   GENERAL
+}
+
+enum ClinicalPhaseType {
+  infertility
+  pregnancy
+  gynecology
+  postpartum
+  general
+  other
+}
+
+enum ClinicalPhaseStatus {
+  active
+  completed
+  archived
+}
+
+enum InfertilityType {
+  primary
+  secondary
+  unknown
+}
+
+enum InfertilityKnownFactor {
+  ovulatory
+  tubal
+  male_factor
+  unexplained
+  endometriosis
+  pcos
+  mixed
+  unknown
+}
+
+enum InfertilityEpisodeStatus {
+  active
+  completed
+  archived
+}
+
+enum OvulationInductionMethod {
+  tablets
+  injections
+  combined
+  other
+}
+
+enum OvulationInductionOutcome {
+  ongoing
+  ovulation_confirmed
+  no_response
+  cancelled
+  pregnancy
+  failed
+  unknown
+}
+
+enum InvestigationRequestedStatus {
+  requested
+  not_requested
+  not_yet
+  unknown
+}
+
+enum EstradiolRequiredStatus {
+  required
+  not_required
+  not_yet
+  unknown
 }
 
 enum SexualActivityStatus {
@@ -238,6 +315,11 @@ model Patient {
   medicationSafetyChecks    MedicationSafetyCheck[]
   calculations              PatientCalculation[]
   datingAssessments         PregnancyDatingAssessment[]
+  clinicalPhases            PatientClinicalPhase[]
+  infertilityEpisodes       InfertilityEpisode[]
+  ovulationInductionCycles  OvulationInductionCycle[]
+  follicularMonitoringVisits FollicularMonitoringVisit[]
+  estradiolResults          EstradiolResult[]
   careAssistFindings        CareAssistFinding[]
   staffConversations        StaffConversation[]
   staffMessages             StaffMessage[]
@@ -642,6 +724,151 @@ model PatientIntake {
   @@index([intakeType])
   @@index([enteredByUserId])
   @@index([reviewedByDoctorId])
+}
+
+model PatientClinicalPhase {
+  id                         String              @id @default(uuid()) @db.Uuid
+  patientId                  String              @db.Uuid
+  phaseType                  ClinicalPhaseType
+  title                      String
+  status                     ClinicalPhaseStatus @default(active)
+  startDate                  DateTime            @db.Date
+  endDate                    DateTime?           @db.Date
+  outcome                    String?
+  linkedPregnancyId          String?             @db.Uuid
+  linkedInfertilityEpisodeId String?             @db.Uuid
+  summaryJson                Json?
+  notes                      String?
+  createdByUserId            String              @db.Uuid
+  createdAt                  DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime            @updatedAt @db.Timestamptz(3)
+
+  patient                   Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  createdByUser             User                @relation("ClinicalPhasesCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  linkedInfertilityEpisode  InfertilityEpisode? @relation("ClinicalPhaseLinkedInfertility", fields: [linkedInfertilityEpisodeId], references: [id], onDelete: SetNull)
+  infertilityEpisodes       InfertilityEpisode[]
+
+  @@index([patientId, status, startDate])
+  @@index([phaseType])
+  @@index([createdByUserId])
+  @@index([linkedPregnancyId])
+  @@index([linkedInfertilityEpisodeId])
+}
+
+model InfertilityEpisode {
+  id                         String                    @id @default(uuid()) @db.Uuid
+  patientId                  String                    @db.Uuid
+  phaseId                    String?                   @db.Uuid
+  infertilityDurationYears   Decimal?                  @db.Decimal(5, 2)
+  infertilityType            InfertilityType           @default(unknown)
+  knownFactor                InfertilityKnownFactor    @default(unknown)
+  previousInvestigationsJson Json?
+  previousTreatmentJson      Json?
+  hadIUI                     Boolean?
+  hadICSI                    Boolean?
+  icsiAttemptsCount          Int?
+  notes                      String?
+  status                     InfertilityEpisodeStatus  @default(active)
+  createdByUserId            String                    @db.Uuid
+  createdAt                  DateTime                  @default(now()) @db.Timestamptz(3)
+  updatedAt                  DateTime                  @updatedAt @db.Timestamptz(3)
+
+  patient       Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  phase         PatientClinicalPhase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  createdByUser User                    @relation("InfertilityEpisodesCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  cycles        OvulationInductionCycle[]
+  linkedPhases  PatientClinicalPhase[]   @relation("ClinicalPhaseLinkedInfertility")
+
+  @@index([patientId, status])
+  @@index([phaseId])
+  @@index([createdByUserId])
+}
+
+model OvulationInductionCycle {
+  id                    String                     @id @default(uuid()) @db.Uuid
+  patientId             String                     @db.Uuid
+  infertilityEpisodeId  String                     @db.Uuid
+  cycleNumber           Int
+  lmpDate               DateTime?                  @db.Date
+  cycleDay              Int?
+  inductionStartDate    DateTime?                  @db.Date
+  inductionMethod       OvulationInductionMethod   @default(other)
+  medicationNotes       String?
+  outcome               OvulationInductionOutcome  @default(ongoing)
+  followUpDate          DateTime?                  @db.Date
+  notes                 String?
+  amhRequestedStatus    InvestigationRequestedStatus @default(unknown)
+  amhRequestDate        DateTime?                  @db.Date
+  amhResultValue        Decimal?                   @db.Decimal(12, 4)
+  amhUnit               String?
+  amhResultDate         DateTime?                  @db.Date
+  amhNotes              String?
+  e2RequiredStatus      EstradiolRequiredStatus    @default(unknown)
+  createdByUserId       String                     @db.Uuid
+  createdAt             DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                   @updatedAt @db.Timestamptz(3)
+
+  patient             Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  infertilityEpisode  InfertilityEpisode          @relation(fields: [infertilityEpisodeId], references: [id], onDelete: Restrict)
+  createdByUser       User                        @relation("OvulationCyclesCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  monitoringVisits    FollicularMonitoringVisit[]
+  estradiolResults    EstradiolResult[]
+
+  @@unique([infertilityEpisodeId, cycleNumber])
+  @@index([patientId, createdAt])
+  @@index([createdByUserId])
+}
+
+model FollicularMonitoringVisit {
+  id                            String   @id @default(uuid()) @db.Uuid
+  patientId                     String   @db.Uuid
+  cycleId                       String   @db.Uuid
+  monitoringDate                DateTime @db.Date
+  cycleDay                      Int?
+  endometrialThicknessMm        Decimal? @db.Decimal(6, 2)
+  rightOvaryFollicleCount       Int?
+  rightOvaryMeanSizeMm          Decimal? @db.Decimal(6, 2)
+  rightOvaryLargestSizeMm       Decimal? @db.Decimal(6, 2)
+  rightOvaryNotes               String?
+  leftOvaryFollicleCount        Int?
+  leftOvaryMeanSizeMm           Decimal? @db.Decimal(6, 2)
+  leftOvaryLargestSizeMm        Decimal? @db.Decimal(6, 2)
+  leftOvaryNotes                String?
+  plan                          String?
+  nextVisitDate                 DateTime? @db.Date
+  createdByUserId               String   @db.Uuid
+  createdAt                     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt                     DateTime @updatedAt @db.Timestamptz(3)
+
+  patient       Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  cycle         OvulationInductionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  createdByUser User                    @relation("FollicularMonitoringCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, monitoringDate])
+  @@index([cycleId, monitoringDate])
+  @@index([createdByUserId])
+}
+
+model EstradiolResult {
+  id              String   @id @default(uuid()) @db.Uuid
+  patientId       String   @db.Uuid
+  cycleId         String   @db.Uuid
+  value           Decimal  @db.Decimal(12, 4)
+  unit            String   @default("pg/mL")
+  resultDate      DateTime @db.Date
+  cycleDay        Int?
+  notes           String?
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  patient       Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  cycle         OvulationInductionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  createdByUser User                    @relation("EstradiolResultsCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, resultDate])
+  @@index([cycleId, resultDate])
+  @@index([createdByUserId])
 }
 
 model PrescriptionTemplate {
@@ -1397,6 +1624,12 @@ model InvestigationCatalogItem {
   name       String
   normalizedName String?
   category   String
+  subcategory String?
+  clinicalGroup String?
+  priorityLevel Int?
+  isHighPriority Boolean @default(false)
+  keywordsJson Json?
+  specialty String?
   aliasesJson Json?
   tagsJson    Json?
   discipline String
@@ -1408,11 +1641,29 @@ model InvestigationCatalogItem {
   updatedAt  DateTime @updatedAt @db.Timestamptz(3)
 
   patientInvestigationHistory PatientInvestigationHistoryItem[]
+  favorites InvestigationFavorite[]
 
   @@index([category])
+  @@index([subcategory])
+  @@index([clinicalGroup])
+  @@index([isHighPriority])
+  @@index([specialty])
   @@index([discipline])
   @@index([active])
   @@index([sortOrder])
+}
+
+model InvestigationFavorite {
+  id                         String   @id @default(uuid()) @db.Uuid
+  userId                     String   @db.Uuid
+  investigationCatalogItemId String   @db.Uuid
+  createdAt                  DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investigationCatalogItem InvestigationCatalogItem @relation(fields: [investigationCatalogItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, investigationCatalogItemId])
+  @@index([investigationCatalogItemId])
 }
 
 model OperationCatalogItem {
@@ -2554,6 +2805,24 @@ model SystemSetting {
 
   updatedBy User? @relation("SystemSettingsUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
+  @@index([updatedByUserId])
+}
+
+model VisitPriceAuditSetting {
+  id                     String   @id @default(uuid()) @db.Uuid
+  baseVisitPriceX         Decimal  @db.Decimal(12, 2)
+  kashfMultiplier         Decimal  @default(1) @db.Decimal(6, 2)
+  recheckMultiplier       Decimal  @default(0.5) @db.Decimal(6, 2)
+  consultationMultiplier  Decimal  @default(0.75) @db.Decimal(6, 2)
+  urgentMultiplier        Decimal  @default(2) @db.Decimal(6, 2)
+  active                  Boolean  @default(true)
+  updatedByUserId         String?  @db.Uuid
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  updatedBy User? @relation("VisitPriceSettingsUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([active])
   @@index([updatedByUserId])
 }
 

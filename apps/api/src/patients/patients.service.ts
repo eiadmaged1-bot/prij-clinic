@@ -16,6 +16,11 @@ import { PrismaService } from "../prisma/prisma.service";
 import { toUtcDateOnly } from "../queue/queue-date";
 import {
   CreatePatientDto,
+  CreateClinicalPhaseDto,
+  CreateEstradiolResultDto,
+  CreateFollicularMonitoringVisitDto,
+  CreateInfertilityEpisodeDto,
+  CreateOvulationInductionCycleDto,
   PatientContextAppointmentDto,
   PatientContextConsentDto,
   PatientContextEncounterDto,
@@ -30,6 +35,8 @@ import {
   PatientInvestigationHistoryDto,
   PatientMedicationHistoryDto,
   PatientOperationHistoryDto,
+  UpdateCycleAmhDto,
+  UpdateClinicalPhaseDto,
   UpdatePatientDto
 } from "./dto";
 
@@ -85,7 +92,14 @@ export class PatientsService {
     const patients = await this.prisma.patient.findMany({
       where: { ...branchScope(user), NOT: demoPatientWhere() },
       orderBy: [{ createdAt: "desc" }],
-      take: 100
+      take: 100,
+      include: {
+        clinicalPhases: {
+          where: { status: "active" },
+          orderBy: { startDate: "desc" },
+          take: 1
+        }
+      }
     });
 
     await this.audit.record({
@@ -97,7 +111,10 @@ export class PatientsService {
       metadataJson: { count: patients.length }
     });
 
-    return patients;
+    return patients.map((patient) => {
+      const { clinicalPhases, ...row } = patient;
+      return { ...row, currentPhase: clinicalPhases[0] ?? null };
+    });
   }
 
   async get(id: string, user: AuthUser) {
@@ -194,6 +211,199 @@ export class PatientsService {
     }
 
     return { patientId: id, hints };
+  }
+
+  async listPhases(id: string, user: AuthUser) {
+    await this.get(id, user);
+    const phases = await this.prisma.patientClinicalPhase.findMany({
+      where: { patientId: id },
+      orderBy: [{ status: "asc" }, { startDate: "desc" }],
+      include: { infertilityEpisodes: { include: { cycles: true } } }
+    });
+    return { phases, currentPhase: phases.find((phase) => phase.status === "active") ?? null };
+  }
+
+  async createPhase(id: string, dto: CreateClinicalPhaseDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const phase = await this.prisma.patientClinicalPhase.create({
+      data: {
+        patientId: patient.id,
+        phaseType: dto.phaseType,
+        title: dto.title.trim(),
+        status: dto.status ?? "active",
+        startDate: new Date(dto.startDate),
+        endDate: dto.endDate ? new Date(dto.endDate) : null,
+        outcome: clean(dto.outcome),
+        linkedPregnancyId: dto.linkedPregnancyId ?? null,
+        linkedInfertilityEpisodeId: dto.linkedInfertilityEpisodeId ?? null,
+        summaryJson: jsonInput(dto.summaryJson),
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      }
+    });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient_clinical_phase.created",
+      resourceType: "patient_clinical_phase",
+      resourceId: phase.id,
+      branchId: patient.branchId,
+      severity: "high",
+      metadataJson: { patientId: id, phaseType: phase.phaseType, status: phase.status }
+    });
+    return phase;
+  }
+
+  async updatePhase(id: string, phaseId: string, dto: UpdateClinicalPhaseDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const existing = await this.prisma.patientClinicalPhase.findFirst({ where: { id: phaseId, patientId: id } });
+    if (!existing) throw new NotFoundException("Clinical phase not found.");
+    const phase = await this.prisma.patientClinicalPhase.update({
+      where: { id: phaseId },
+      data: {
+        status: dto.status ?? existing.status,
+        endDate: dto.endDate ? new Date(dto.endDate) : existing.endDate,
+        outcome: dto.outcome !== undefined ? clean(dto.outcome) : existing.outcome,
+        summaryJson: dto.summaryJson !== undefined ? jsonInput(dto.summaryJson) : jsonInput(existing.summaryJson),
+        notes: dto.notes !== undefined ? clean(dto.notes) : existing.notes
+      }
+    });
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient_clinical_phase.updated",
+      resourceType: "patient_clinical_phase",
+      resourceId: phase.id,
+      branchId: patient.branchId,
+      severity: "high",
+      metadataJson: { patientId: id, fromStatus: existing.status, toStatus: phase.status }
+    });
+    return phase;
+  }
+
+  async infertilityWorkspace(id: string, user: AuthUser) {
+    await this.get(id, user);
+    const [phases, episodes, cycles, monitoringVisits, estradiolResults] = await Promise.all([
+      this.prisma.patientClinicalPhase.findMany({ where: { patientId: id, phaseType: "infertility" }, orderBy: { startDate: "desc" } }),
+      this.prisma.infertilityEpisode.findMany({ where: { patientId: id }, orderBy: { createdAt: "desc" } }),
+      this.prisma.ovulationInductionCycle.findMany({ where: { patientId: id }, orderBy: { createdAt: "desc" } }),
+      this.prisma.follicularMonitoringVisit.findMany({ where: { patientId: id }, orderBy: { monitoringDate: "desc" } }),
+      this.prisma.estradiolResult.findMany({ where: { patientId: id }, orderBy: { resultDate: "desc" } })
+    ]);
+    return { phases, episodes, cycles, monitoringVisits, estradiolResults };
+  }
+
+  async createInfertilityEpisode(id: string, dto: CreateInfertilityEpisodeDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    if (dto.phaseId) await this.requirePatientPhase(id, dto.phaseId);
+    const episode = await this.prisma.infertilityEpisode.create({
+      data: {
+        patientId: id,
+        phaseId: dto.phaseId ?? null,
+        infertilityDurationYears: dto.infertilityDurationYears,
+        infertilityType: dto.infertilityType ?? "unknown",
+        knownFactor: dto.knownFactor ?? "unknown",
+        previousInvestigationsJson: jsonInput(dto.previousInvestigationsJson),
+        previousTreatmentJson: jsonInput(dto.previousTreatmentJson),
+        hadIUI: dto.hadIUI ?? null,
+        hadICSI: dto.hadICSI ?? null,
+        icsiAttemptsCount: dto.icsiAttemptsCount ?? null,
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "infertility_episode.created", resourceType: "infertility_episode", resourceId: episode.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, phaseId: dto.phaseId ?? null } });
+    return episode;
+  }
+
+  async createOvulationCycle(id: string, dto: CreateOvulationInductionCycleDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const episode = await this.prisma.infertilityEpisode.findFirst({ where: { id: dto.infertilityEpisodeId, patientId: id } });
+    if (!episode) throw new NotFoundException("Infertility episode not found.");
+    const cycle = await this.prisma.ovulationInductionCycle.create({
+      data: {
+        patientId: id,
+        infertilityEpisodeId: episode.id,
+        cycleNumber: dto.cycleNumber,
+        lmpDate: dto.lmpDate ? new Date(dto.lmpDate) : null,
+        cycleDay: dto.cycleDay ?? null,
+        inductionStartDate: dto.inductionStartDate ? new Date(dto.inductionStartDate) : null,
+        inductionMethod: dto.inductionMethod ?? "other",
+        medicationNotes: clean(dto.medicationNotes),
+        outcome: dto.outcome ?? "ongoing",
+        followUpDate: dto.followUpDate ? new Date(dto.followUpDate) : null,
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "ovulation_induction_cycle.created", resourceType: "ovulation_induction_cycle", resourceId: cycle.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, infertilityEpisodeId: episode.id, manualMedicationOnly: true } });
+    return cycle;
+  }
+
+  async updateCycleAmh(id: string, cycleId: string, dto: UpdateCycleAmhDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    const existing = await this.prisma.ovulationInductionCycle.findFirst({ where: { id: cycleId, patientId: id } });
+    if (!existing) throw new NotFoundException("Ovulation induction cycle not found.");
+    const cycle = await this.prisma.ovulationInductionCycle.update({
+      where: { id: cycleId },
+      data: {
+        amhRequestedStatus: dto.requestedStatus ?? existing.amhRequestedStatus,
+        amhRequestDate: dto.requestDate ? new Date(dto.requestDate) : existing.amhRequestDate,
+        amhResultValue: dto.resultValue ?? existing.amhResultValue,
+        amhUnit: dto.unit ?? existing.amhUnit,
+        amhResultDate: dto.resultDate ? new Date(dto.resultDate) : existing.amhResultDate,
+        amhNotes: dto.notes !== undefined ? clean(dto.notes) : existing.amhNotes
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "ovulation_cycle.amh_updated", resourceType: "ovulation_induction_cycle", resourceId: cycle.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, requestedStatus: cycle.amhRequestedStatus } });
+    return cycle;
+  }
+
+  async createMonitoringVisit(id: string, dto: CreateFollicularMonitoringVisitDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.requirePatientCycle(id, dto.cycleId);
+    const visit = await this.prisma.follicularMonitoringVisit.create({
+      data: {
+        patientId: id,
+        cycleId: dto.cycleId,
+        monitoringDate: new Date(dto.monitoringDate),
+        cycleDay: dto.cycleDay ?? null,
+        endometrialThicknessMm: dto.endometrialThicknessMm ?? null,
+        rightOvaryFollicleCount: dto.rightOvaryFollicleCount ?? null,
+        rightOvaryMeanSizeMm: dto.rightOvaryMeanSizeMm ?? null,
+        rightOvaryLargestSizeMm: dto.rightOvaryLargestSizeMm ?? null,
+        rightOvaryNotes: clean(dto.rightOvaryNotes),
+        leftOvaryFollicleCount: dto.leftOvaryFollicleCount ?? null,
+        leftOvaryMeanSizeMm: dto.leftOvaryMeanSizeMm ?? null,
+        leftOvaryLargestSizeMm: dto.leftOvaryLargestSizeMm ?? null,
+        leftOvaryNotes: clean(dto.leftOvaryNotes),
+        plan: clean(dto.plan),
+        nextVisitDate: dto.nextVisitDate ? new Date(dto.nextVisitDate) : null,
+        createdByUserId: user.id
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "follicular_monitoring_visit.created", resourceType: "follicular_monitoring_visit", resourceId: visit.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, cycleId: dto.cycleId, wording: "follicles" } });
+    return visit;
+  }
+
+  async createEstradiolResult(id: string, dto: CreateEstradiolResultDto, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.requirePatientCycle(id, dto.cycleId);
+    if (dto.requiredStatus) {
+      await this.prisma.ovulationInductionCycle.update({ where: { id: dto.cycleId }, data: { e2RequiredStatus: dto.requiredStatus } });
+    }
+    const result = await this.prisma.estradiolResult.create({
+      data: {
+        patientId: id,
+        cycleId: dto.cycleId,
+        value: dto.value,
+        unit: dto.unit?.trim() || "pg/mL",
+        resultDate: new Date(dto.resultDate),
+        cycleDay: dto.cycleDay ?? null,
+        notes: clean(dto.notes),
+        createdByUserId: user.id
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "estradiol_result.created", resourceType: "estradiol_result", resourceId: result.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, cycleId: dto.cycleId } });
+    return result;
   }
 
 
@@ -743,6 +953,18 @@ export class PatientsService {
     return consent;
   }
 
+  private async requirePatientPhase(patientId: string, phaseId: string) {
+    const phase = await this.prisma.patientClinicalPhase.findFirst({ where: { id: phaseId, patientId } });
+    if (!phase) throw new NotFoundException("Clinical phase not found.");
+    return phase;
+  }
+
+  private async requirePatientCycle(patientId: string, cycleId: string) {
+    const cycle = await this.prisma.ovulationInductionCycle.findFirst({ where: { id: cycleId, patientId } });
+    if (!cycle) throw new NotFoundException("Ovulation induction cycle not found.");
+    return cycle;
+  }
+
   private async resolveBranchId(user: AuthUser) {
     if (user.branchId) {
       return user.branchId;
@@ -1067,6 +1289,11 @@ function hasJsonValue(value: unknown) {
   if (Array.isArray(value)) return value.length > 0;
   if (typeof value === "object") return Object.keys(value).length > 0;
   return true;
+}
+
+function jsonInput(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  if (value === undefined || value === null || value === Prisma.JsonNull) return Prisma.JsonNull;
+  return value as Prisma.InputJsonValue;
 }
 
 function hint(type: string, severity: "low" | "medium" | "high", message: string, sourceId?: string) {

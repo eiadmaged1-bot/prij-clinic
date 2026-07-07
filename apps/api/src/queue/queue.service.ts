@@ -16,9 +16,7 @@ export class QueueService {
   ) {}
 
   async checkIn(dto: CheckInDto, user: AuthUser) {
-    if (!dto.visitType) {
-      throw new BadRequestException("Visit type is required before check-in.");
-    }
+    const visitType = dto.visitType ?? "kashf";
 
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const branchId = patient.branchId ?? (await this.resolveBranchId(user));
@@ -61,7 +59,7 @@ export class QueueService {
         patientId: dto.patientId,
         appointmentId: dto.appointmentId ?? null,
         priority: dto.priority ?? "routine",
-        visitType: dto.visitType,
+        visitType,
         checkInMethod: dto.checkInMethod?.trim() || "Returning Patient",
         receptionistUserId: user.id,
         receptionistDisplayNameSnapshot: user.displayName || user.loginId || user.email || "Reception",
@@ -88,14 +86,14 @@ export class QueueService {
         appointmentId: dto.appointmentId ?? null,
         queueNumber: ticket.queueNumber,
         queueDate: ticket.queueDate.toISOString().slice(0, 10),
-        visitType: dto.visitType,
+        visitType,
         checkInMethod: ticket.checkInMethod,
         receptionistUserId: ticket.receptionistUserId,
         receptionistDisplayNameSnapshot: ticket.receptionistDisplayNameSnapshot
       }
     });
 
-    if (dto.visitType === "urgent_kashf") {
+    if (visitType === "urgent_kashf") {
       await this.audit.record({
         actorUserId: user.id,
         action: "queue.urgent_priority_assigned",
@@ -103,7 +101,7 @@ export class QueueService {
         resourceId: ticket.id,
         branchId,
         severity: "medium",
-        metadataJson: { patientId: dto.patientId, queueNumber: ticket.queueNumber, visitType: dto.visitType }
+        metadataJson: { patientId: dto.patientId, queueNumber: ticket.queueNumber, visitType }
       });
     }
 

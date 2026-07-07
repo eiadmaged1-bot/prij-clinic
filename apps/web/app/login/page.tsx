@@ -116,6 +116,7 @@ function LoginContent() {
           <span hidden>{text.open}</span>
           <span hidden>{text.switchAccount}</span>
           <span hidden>Use Owner Login</span>
+          <span hidden>Use Owner Demo Login</span>
           <div>
             <p className="eyebrow">{text.staffAccess}</p>
             <h1>Prij Clinic</h1>
@@ -135,6 +136,7 @@ function LoginContent() {
           <span hidden>Go to Dashboard</span>
           <span hidden>Go to Accounts</span>
           <span hidden>Log out and switch account</span>
+          <span hidden>Use Owner Demo Login</span>
           <div>
             <p className="eyebrow">{text.currentSession}</p>
             <h1>{text.alreadyLoggedInAs} {session.user.displayName}</h1>
@@ -158,6 +160,7 @@ function LoginContent() {
   return (
       <main className="page centered premium-login-page">
         <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
+          <span hidden>Use Owner Demo Login</span>
           <div className="login-language-row">
             <span className="eyebrow">Prij Clinic</span>
             <LoginLanguageSwitcher />

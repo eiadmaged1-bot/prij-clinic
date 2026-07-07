@@ -30,3 +30,10 @@ ngrok http 3000
 Open `https://<public-ngrok-url>/login`, check `https://<public-ngrok-url>/api/backend/health`, then login with local QA credentials only.
 
 Cloudflare Quick Tunnel URLs are temporary random `trycloudflare.com` subdomains. A stable public route requires an owned domain added to Cloudflare or an equivalent deployment setup.
+# v1.3.8 Known Limitations
+
+- Infertility workflow stores structured induction/monitoring data but does not provide treatment suggestions.
+- Investigation templates are generic request bundles and are not decision-support or automatic workups.
+- Owner visit-price audit is separate from normal billing and does not replace cashier reconciliation.
+- Clinical phase summaries are compact and need richer transition UX in a later sprint.
+- Mobile QA still requires real device/ngrok verification before release signoff.

@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import { BillingService } from "./billing.service";
-import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VoidInvoiceDto } from "./dto";
+import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VisitPriceAuditReportQueryDto, VisitPriceAuditSettingsDto, VoidInvoiceDto } from "./dto";
 
 @Controller("billing")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -40,6 +40,24 @@ export class BillingController {
   @Permissions("billing.report")
   financeReports(@CurrentUser() user: AuthUser) {
     return this.billing.financeReports(user);
+  }
+
+  @Get("owner/visit-price-audit/settings")
+  @Permissions("billing.report")
+  ownerVisitPriceSettings(@CurrentUser() user: AuthUser) {
+    return this.billing.ownerVisitPriceSettings(user);
+  }
+
+  @Post("owner/visit-price-audit/settings")
+  @Permissions("billing.report")
+  updateOwnerVisitPriceSettings(@Body() dto: VisitPriceAuditSettingsDto, @CurrentUser() user: AuthUser) {
+    return this.billing.updateOwnerVisitPriceSettings(dto, user);
+  }
+
+  @Get("owner/visit-price-audit/report")
+  @Permissions("billing.report")
+  ownerVisitPriceReport(@Query() query: VisitPriceAuditReportQueryDto, @CurrentUser() user: AuthUser) {
+    return this.billing.ownerVisitPriceReport(query, user);
   }
 
   @Get("invoices/:id")

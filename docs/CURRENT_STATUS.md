@@ -24,3 +24,10 @@ Then open `https://<public-ngrok-url>/login`, verify `https://<public-ngrok-url>
 v1.3.3 workflow compression, guideline import fixes, receptionist no-menu cockpit, always-visible logout, role navigation, demo/test filtering, receptionist check-in signature, doctor visit signature, case library, staff chat, Pharmacology safety foundation, and Guideline Library import foundation remain in place.
 
 External AI remains disabled by default. No autonomous diagnosis, prescribing, dosing, treatment ranking, or automatic clinical finalization is allowed.
+# v1.3.8 Current Status
+
+v1.3.8 adds infertility workflow foundations, clinical phases, organized investigations, mobile drawer/footer fixes, and owner-only visit price audit endpoints.
+
+Implemented: `INFERTILITY` patient type, clinical phase API/UI badges, Infertility tab, ovulation induction cycle records, AMH, follicular monitoring, E2 serial results, investigation categories/favorites/high priority/templates, global language/logout shell footer, fixed Arabic visit labels, and reception-visible Not sexually active checkbox.
+
+Safety remains unchanged: no real patient data, no external AI, no automatic diagnosis, no automatic prescribing, no automatic dosing, and doctor review remains mandatory.

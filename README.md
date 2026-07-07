@@ -1,5 +1,11 @@
 # Prij Clinic
 
+## v1.3.8 Infertility + Organized Investigations + Mobile Workflow Fixes
+
+v1.3.8 adds `INFERTILITY` patient type, patient clinical phases, an Infertility tab with Induction of Ovulation records, AMH tracking, follicular monitoring, E2 serial results, organized investigation categories with favorites/high-priority/templates, global language/logout drawer footer fixes, fixed Arabic visit labels, reception-visible Not sexually active checkbox, and Owner-only visit price audit.
+
+The system still does not diagnose, prescribe, dose, rank treatment, or call external AI. Clinical work remains doctor-reviewed.
+
 ## v1.3.7 Public Login Real Device Hotfix
 
 v1.3.7 fixes public login through one ngrok tunnel to the web app.

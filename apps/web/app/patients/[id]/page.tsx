@@ -17,6 +17,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
+import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
 import {
   caseBoards,
   conceptionMethodChips,
@@ -116,6 +117,15 @@ type TimelineItem = {
   };
 };
 
+type ClinicalPhase = { id: string; phaseType: string; title: string; status: string; startDate?: string; outcome?: string | null; notes?: string | null };
+type InfertilityWorkspace = {
+  phases?: ClinicalPhase[];
+  episodes?: Record<string, unknown>[];
+  cycles?: Record<string, unknown>[];
+  monitoringVisits?: Record<string, unknown>[];
+  estradiolResults?: Record<string, unknown>[];
+};
+
 type ReferenceResult = {
   id: string;
   label: string;
@@ -150,6 +160,7 @@ const tabs: TabConfig[] = [
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "mother-baby", label: "Mother-Baby", icon: "pregnancy", empty: "No mother-baby workspace yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "gynecology", label: "Gynecology", icon: "doctor", endpoint: "/patients/:patientId/gynecology-visits", collectionKey: "gynecologyVisits", empty: "No gynecology visit yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
+  { key: "infertility", label: "Infertility", icon: "doctor", endpoint: "/patients/:patientId/infertility", collectionKey: "cycles", empty: "No infertility induction cycle yet.", permissions: ["encounter.read", "encounter.create"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "documents", label: "Documents", icon: "files", endpoint: "/patients/:patientId/documents", collectionKey: "patientDocuments", empty: "No document metadata yet.", permissions: ["patient_document.read"] },
   { key: "billing", label: "Invoices", icon: "billing", endpoint: "/billing/invoices", collectionKey: "invoices", empty: "No invoice yet.", permissions: ["billing.read", "billing.manage", "billing.report"], roles: ["Owner", "Admin", "Accountant"] },
   { key: "consents", label: "Consents", icon: "consent", endpoint: "/consents?patientId=:patientId", collectionKey: "consentRecords", empty: "No consent record yet.", permissions: ["patient.consent_read", "patient.consent_manage", "consent_template.read"] },
@@ -175,7 +186,7 @@ const relatedLoaders: TabConfig[] = [
   { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] }
 ];
 
-const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "ultrasound", "documents", "billing", "consents"]);
+const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "pregnancy", "gynecology", "infertility", "documents", "billing", "consents"]);
 
 export default function PatientFilePage() {
   void ClinicalPanel;
@@ -192,6 +203,8 @@ export default function PatientFilePage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [clinicalPhases, setClinicalPhases] = useState<ClinicalPhase[]>([]);
+  const [infertilityWorkspace, setInfertilityWorkspace] = useState<InfertilityWorkspace>({});
   const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -204,15 +217,21 @@ export default function PatientFilePage() {
       if (!patientWorkspaceTabs.has(tab.key)) return false;
       if (tab.roles?.length && !tab.roles.some((role) => roles.includes(role))) return false;
       if (tab.permissions?.length && !tab.permissions.some((permission) => permissions.includes(permission))) return false;
+      if (tab.key === "infertility") {
+        const hasInfertilityContext = patient?.patientType === "INFERTILITY" || clinicalPhases.some((phase) => phase.phaseType === "infertility") || (infertilityWorkspace.cycles?.length ?? 0) > 0;
+        const canOpenClinical = roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
+        return hasInfertilityContext || canOpenClinical;
+      }
       return true;
     }),
-    [permissions, roles]
+    [clinicalPhases, infertilityWorkspace.cycles?.length, patient?.patientType, permissions, roles]
   );
-  const ageLabel = patient?.dateOfBirth ? `${patient.dateOfBirth.slice(0, 10)}` : "Age not set";
+  const ageLabel = patientAgeLabel(patient?.dateOfBirth);
   const activePregnancyCount = (related.pregnancy ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "active").length;
   const pendingResultCount = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
   const openFollowUpCount = (related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up" && ["open", "in_progress"].includes(String(row.status ?? ""))).length;
   const unpaidInvoiceCount = (related.billing ?? related.invoices ?? []).filter((row) => ["draft", "issued", "partially_paid"].includes(String(row.status ?? ""))).length;
+  const currentPhase = clinicalPhases.find((phase) => phase.status === "active") ?? null;
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -279,6 +298,27 @@ export default function PatientFilePage() {
       } catch {
         setTimelineItems([]);
       }
+      try {
+        const phasesResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/phases`, {
+          credentials: "include",
+          headers: token ? { authorization: `Bearer ${token}` } : undefined
+        });
+        if (phasesResponse.ok) {
+          const phaseData = await phasesResponse.json() as { phases?: ClinicalPhase[] };
+          setClinicalPhases(phaseData.phases ?? []);
+        }
+      } catch {
+        setClinicalPhases([]);
+      }
+      try {
+        const infertilityResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/infertility`, {
+          credentials: "include",
+          headers: token ? { authorization: `Bearer ${token}` } : undefined
+        });
+        if (infertilityResponse.ok) setInfertilityWorkspace(await infertilityResponse.json() as InfertilityWorkspace);
+      } catch {
+        setInfertilityWorkspace({});
+      }
     };
     void load();
   }, [patientId, permissions]);
@@ -305,6 +345,18 @@ export default function PatientFilePage() {
     window.setTimeout(() => window.location.reload(), 500);
   }
 
+  async function updatePatientType(nextType: string) {
+    if (!patient) return;
+    const token = sessionStorage.getItem("prijClinicToken");
+    await fetch(`${getApiBaseUrl()}/patients/${patient.id}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ patientType: nextType })
+    });
+    setPatient({ ...patient, patientType: nextType });
+  }
+
   return (
     <AppShell>
       <section className="patient-simple-hero">
@@ -316,7 +368,9 @@ export default function PatientFilePage() {
           <h1>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</h1>
           <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
           <div className="workflow-band">
-            <span>{patient?.status ?? "Opening"}</span>
+            <span>{patient?.status ? patient.status.replaceAll("_", " ") : "Opening"}</span>
+            <span>{patientTypeLabel(patient?.patientType)}</span>
+            <span>{currentPhase ? phaseTypeLabel(currentPhase.phaseType) : "No active phase"}</span>
             {patient?.sexualActivityStatus === "not_sexually_active" ? <span>Virgin / Not sexually active</span> : null}
             {activePregnancyCount ? <span>Pregnant</span> : null}
             {pendingResultCount ? <span>Pending results</span> : null}
@@ -327,6 +381,14 @@ export default function PatientFilePage() {
             <span>Last visit: {timelineItems[0]?.dateTime ? formatDateTime(timelineItems[0].dateTime) : "Not recorded"}</span>
             <span>Next appointment: {String((related.appointments ?? [])[0]?.startAt ? formatDateTime(String((related.appointments ?? [])[0]?.startAt)) : "Not booked")}</span>
           </div>
+          {permissions.includes("patient.update") ? (
+            <label className="inline-edit-control">
+              Patient type
+              <select value={patient?.patientType ?? "GENERAL"} onChange={(event) => void updatePatientType(event.target.value)}>
+                {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+          ) : null}
         </div>
         <div className="patient-primary-actions">
           <button className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
@@ -399,6 +461,7 @@ export default function PatientFilePage() {
           {active.key === "case-feed" ? <PatientCaseFeed patient={patient} related={related} timelineItems={timelineItems} /> : null}
           {active.key === "case-boards" ? <CaseBoardsPanel patient={patient} related={related} /> : null}
           {active.key === "gynecology" ? <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} /> : null}
+          {active.key === "infertility" ? <InfertilityWorkspacePanel patient={patient} workspace={infertilityWorkspace} phases={clinicalPhases} /> : null}
           {active.key === "history" ? (
             <>
               <MedicalPanel patient={patient} related={related} />
@@ -2445,6 +2508,119 @@ function MorePatientSections({ setActiveTab }: { setActiveTab: (tab: string) => 
   return <section className="panel compact-panel"><div className="section-heading"><h2>More patient sections</h2><span className="badge">Comfort tabs</span></div><div className="dense-card-list">{sections.map(([key, label]) => <button className="picker-row" key={key} type="button" onClick={() => setActiveTab(key)}><strong>{label}</strong><span>Open {label.toLowerCase()}</span></button>)}</div></section>;
 }
 
+function InfertilityWorkspacePanel({ patient, workspace, phases }: { patient: Patient; workspace: InfertilityWorkspace; phases: ClinicalPhase[] }) {
+  const episodes = workspace.episodes ?? [];
+  const cycles = workspace.cycles ?? [];
+  const monitoringVisits = workspace.monitoringVisits ?? [];
+  const estradiolResults = workspace.estradiolResults ?? [];
+  const latestEpisodeId = String(episodes[0]?.id ?? "");
+  const latestCycleId = String(cycles[0]?.id ?? "");
+
+  async function post(endpoint: string, payload: Record<string, unknown>) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/${endpoint}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) window.location.reload();
+  }
+
+  async function patch(endpoint: string, payload: Record<string, unknown>) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/${endpoint}`, {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) window.location.reload();
+  }
+
+  return (
+    <section className="content-grid infertility-workspace">
+      <article className="panel">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Infertility</p>
+            <h2>Induction of Ovulation</h2>
+            <p className="muted">Doctor-reviewed workspace. Medication and plan are written manually; no automatic prescribing, dosing, diagnosis, or treatment suggestion.</p>
+          </div>
+          <span className="badge">{phases.filter((phase) => phase.phaseType === "infertility").length || "No"} phase</span>
+        </div>
+        <dl className="profile-grid">
+          <div><dt>Episodes</dt><dd>{episodes.length}</dd></div>
+          <div><dt>Induction cycles</dt><dd>{cycles.length}</dd></div>
+          <div><dt>Follicular monitoring</dt><dd>{monitoringVisits.length}</dd></div>
+          <div><dt>E2 serial results</dt><dd>{estradiolResults.length}</dd></div>
+        </dl>
+        <div className="form-actions">
+          <button className="button secondary" type="button" onClick={() => void post("phases", { phaseType: "infertility", title: "Infertility phase", startDate: new Date().toISOString().slice(0, 10) })}>Start infertility phase</button>
+          <button className="button" type="button" onClick={() => void post("infertility/episodes", { phaseId: phases.find((phase) => phase.phaseType === "infertility" && phase.status === "active")?.id, infertilityType: "unknown", knownFactor: "unknown" })}>New infertility episode</button>
+          <button className="button" type="button" disabled={!latestEpisodeId} onClick={() => void post("infertility/cycles", { infertilityEpisodeId: latestEpisodeId, cycleNumber: cycles.length + 1, inductionMethod: "other", outcome: "ongoing" })}>New induction cycle</button>
+        </div>
+      </article>
+
+      <article className="panel">
+        <div className="section-heading"><h2>AMH</h2><span className="badge">Manual result</span></div>
+        <form className="form-grid" onSubmit={(event) => {
+          event.preventDefault();
+          const data = values(event.currentTarget, ["requestedStatus", "requestDate", "resultValue", "unit", "resultDate", "notes"]);
+          void patch(`infertility/cycles/${latestCycleId}/amh`, { ...data, resultValue: data.resultValue ? Number(data.resultValue) : undefined });
+        }}>
+          <label>Status<select name="requestedStatus" defaultValue="unknown"><option value="requested">Requested</option><option value="not_requested">Not requested</option><option value="not_yet">Not yet</option><option value="unknown">Unknown</option></select></label>
+          <label>Request date<input name="requestDate" type="date" /></label>
+          <label>Result value<input name="resultValue" type="number" min="0" step="0.01" /></label>
+          <label>Unit<input name="unit" placeholder="ng/mL or pmol/L" /></label>
+          <label>Result date<input name="resultDate" type="date" /></label>
+          <label className="wide">Notes<input name="notes" /></label>
+          <button className="button" type="submit" disabled={!latestCycleId}>Save AMH</button>
+        </form>
+      </article>
+
+      <article className="panel">
+        <div className="section-heading"><h2>Follicular monitoring</h2><span className="badge">Follicles</span></div>
+        <form className="form-grid" onSubmit={(event) => {
+          event.preventDefault();
+          const raw = values(event.currentTarget, ["cycleId", "monitoringDate", "cycleDay", "endometrialThicknessMm", "rightOvaryFollicleCount", "rightOvaryMeanSizeMm", "rightOvaryLargestSizeMm", "rightOvaryNotes", "leftOvaryFollicleCount", "leftOvaryMeanSizeMm", "leftOvaryLargestSizeMm", "leftOvaryNotes", "plan", "nextVisitDate"]);
+          void post("infertility/monitoring-visits", numericPayload(raw, ["cycleDay", "endometrialThicknessMm", "rightOvaryFollicleCount", "rightOvaryMeanSizeMm", "rightOvaryLargestSizeMm", "leftOvaryFollicleCount", "leftOvaryMeanSizeMm", "leftOvaryLargestSizeMm"]));
+        }}>
+          <input name="cycleId" type="hidden" value={latestCycleId} readOnly />
+          <label>Date<input name="monitoringDate" type="date" required /></label>
+          <label>Cycle day<input name="cycleDay" type="number" min="1" /></label>
+          <label>Endometrium mm<input name="endometrialThicknessMm" type="number" min="0" step="0.1" /></label>
+          <label>Right follicles count<input name="rightOvaryFollicleCount" type="number" min="0" /></label>
+          <label>Right largest follicle mm<input name="rightOvaryLargestSizeMm" type="number" min="0" step="0.1" /></label>
+          <label>Left follicles count<input name="leftOvaryFollicleCount" type="number" min="0" /></label>
+          <label>Left largest follicle mm<input name="leftOvaryLargestSizeMm" type="number" min="0" step="0.1" /></label>
+          <label className="wide">Plan<input name="plan" placeholder="Doctor-written plan" /></label>
+          <label>Next visit<input name="nextVisitDate" type="date" /></label>
+          <button className="button" type="submit" disabled={!latestCycleId}>Add monitoring visit</button>
+        </form>
+      </article>
+
+      <article className="panel">
+        <div className="section-heading"><h2>E2 / Estradiol serial results</h2><span className="badge">{estradiolResults.length}</span></div>
+        <form className="form-grid" onSubmit={(event) => {
+          event.preventDefault();
+          const raw = values(event.currentTarget, ["cycleId", "requiredStatus", "value", "unit", "resultDate", "cycleDay", "notes"]);
+          void post("infertility/e2-results", numericPayload(raw, ["value", "cycleDay"]));
+        }}>
+          <input name="cycleId" type="hidden" value={latestCycleId} readOnly />
+          <label>Status<select name="requiredStatus" defaultValue="unknown"><option value="required">Required</option><option value="not_required">Not required</option><option value="not_yet">Not yet</option><option value="unknown">Unknown</option></select></label>
+          <label>Value<input name="value" required type="number" min="0" step="0.01" /></label>
+          <label>Unit<input name="unit" defaultValue="pg/mL" /></label>
+          <label>Result date<input name="resultDate" required type="date" /></label>
+          <label>Cycle day<input name="cycleDay" type="number" min="1" /></label>
+          <label className="wide">Notes<input name="notes" /></label>
+          <button className="button" type="submit" disabled={!latestCycleId}>Add E2 result</button>
+        </form>
+      </article>
+    </section>
+  );
+}
+
 function ActionForm({
   fields,
   note,
@@ -2505,6 +2681,10 @@ function DoctorClinicalNotePanel({ rows }: { rows: Record<string, unknown>[] }) 
 function values(form: HTMLFormElement, keys: string[]) {
   const formData = new FormData(form);
   return Object.fromEntries(keys.map((key) => [key, String(formData.get(key) ?? "").trim()]).filter(([, value]) => value));
+}
+
+function numericPayload(raw: Record<string, string>, numericKeys: string[]) {
+  return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, numericKeys.includes(key) ? Number(value) : value]));
 }
 
 async function submitVisitAction(patientId: string, endpoint: string, payload: Record<string, unknown>) {

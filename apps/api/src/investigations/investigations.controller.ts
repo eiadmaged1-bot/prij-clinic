@@ -20,8 +20,20 @@ export class InvestigationsController {
 
   @Get("catalog")
   @Permissions("investigation.read")
-  async listCatalog(@Query("q") q?: string) {
-    return { investigationCatalog: q ? await this.investigations.searchCatalog(q) : await this.investigations.listCatalog() };
+  async listCatalog(@Query("q") q: string | undefined, @Query("category") category: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.investigations.catalogWorkspace(user, q, category);
+  }
+
+  @Post("catalog/:id/favorite")
+  @Permissions("investigation.read")
+  favoriteCatalogItem(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.favoriteCatalogItem(id, user);
+  }
+
+  @Post("catalog/:id/unfavorite")
+  @Permissions("investigation.read")
+  unfavoriteCatalogItem(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.unfavoriteCatalogItem(id, user);
   }
 
   @Get("orders")

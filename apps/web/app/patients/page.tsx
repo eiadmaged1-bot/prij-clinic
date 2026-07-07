@@ -6,6 +6,7 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { ageLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
 
 type Patient = {
   id: string;
@@ -17,6 +18,8 @@ type Patient = {
   phone?: string | null;
   email?: string | null;
   status: string;
+  patientType?: string | null;
+  currentPhase?: { phaseType?: string | null; title?: string | null; status?: string | null } | null;
   branchId?: string | null;
   createdAt?: string | null;
 };
@@ -32,6 +35,8 @@ export default function PatientsPage() {
   const [rangeStart, setRangeStart] = useState(today);
   const [rangeEnd, setRangeEnd] = useState(today);
   const [patientStatus, setPatientStatus] = useState("all");
+  const [patientType, setPatientType] = useState("all");
+  const [phaseType, setPhaseType] = useState("all");
 
   useEffect(() => {
     void loadPatients();
@@ -42,11 +47,13 @@ export default function PatientsPage() {
     return patients.filter((patient) => {
       const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
       const statusMatch = patientStatus === "all" || patient.status === patientStatus;
+      const typeMatch = patientType === "all" || patient.patientType === patientType;
+      const phaseMatch = phaseType === "all" || patient.currentPhase?.phaseType === phaseType;
       const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
       const trainingMatch = !isSeededTrainingRecord(patient);
-      return textMatch && statusMatch && dateMatch && trainingMatch;
+      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && trainingMatch;
     });
-  }, [dateFilter, exactDate, patientStatus, patients, query, rangeEnd, rangeStart, today]);
+  }, [dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, today]);
 
   async function loadPatients() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -98,7 +105,7 @@ export default function PatientsPage() {
         <div className="section-heading">
           <div>
             <h2>Patient registry</h2>
-            <p className="muted">Status: {status}</p>
+            <p className="muted">{status === "Loaded" ? `${filtered.length} patient files shown` : status}</p>
           </div>
           <button className="button secondary compact" onClick={loadPatients} type="button">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
@@ -137,6 +144,24 @@ export default function PatientsPage() {
               <option value="archived">Archived</option>
             </select>
           </label>
+          <label>
+            Patient type
+            <select onChange={(event) => setPatientType(event.target.value)} value={patientType}>
+              <option value="all">All patient types</option>
+              {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Current phase
+            <select onChange={(event) => setPhaseType(event.target.value)} value={phaseType}>
+              <option value="all">All phases</option>
+              <option value="infertility">Infertility</option>
+              <option value="pregnancy">Pregnancy</option>
+              <option value="gynecology">Gynecology</option>
+              <option value="postpartum">Postpartum</option>
+              <option value="general">General</option>
+            </select>
+          </label>
         </div>
 
         {error ? <p className="form-error">{error}</p> : null}
@@ -170,12 +195,20 @@ export default function PatientsPage() {
                       <span className="muted">{patient.sex || "Sex not set"} {patient.dateOfBirth ? `- ${patient.dateOfBirth.slice(0, 10)}` : ""}</span>
                     </div>
                   </div>
-                  <span className="badge">{patient.status}</span>
+                  <span className="badge">{friendlyStatus(patient.status)}</span>
+                </div>
+                <div className="workflow-band compact">
+                  <span>{patientTypeLabel(patient.patientType)}</span>
+                  <span>{phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
                 </div>
                 <dl>
                   <div>
                     <dt>File number</dt>
                     <dd>{patientFileNumber(patient)}</dd>
+                  </div>
+                  <div>
+                    <dt>Age</dt>
+                    <dd>{ageLabel(patient.dateOfBirth)}</dd>
                   </div>
                   <div>
                     <dt>Contact</dt>
@@ -193,6 +226,10 @@ export default function PatientsPage() {
       </section>
     </AppShell>
   );
+}
+
+function friendlyStatus(value: string) {
+  return value ? value.replaceAll("_", " ") : "Not set";
 }
 
 function patientDisplayName(patient: Patient) {

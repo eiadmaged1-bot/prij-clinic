@@ -15,3 +15,13 @@ Continue manual QA for receptionist queue flow, doctor visit flow, RBAC, audit l
 Continue checking that compressed mobile navigation, cockpit-only receptionist flow, Patient File tabs, Queue Board, and Today's Desk stay compact on real devices.
 
 Before any real PHI/PII use through a public URL, complete deployment/security signoff and add access protection such as Cloudflare Access.
+# v1.3.8 Next Steps
+
+Recommended next sprint: v1.3.9 Clinical Phase Deepening + Owner Reporting QA.
+
+Focus:
+- Browser/manual QA for all role-specific mobile workflows.
+- Richer phase transition UI for infertility-to-pregnancy linking.
+- Investigation catalog seed enrichment for all required categories.
+- Owner audit dashboard visual polish and report export governance.
+- More end-to-end tests around actual API writes for infertility cycles and owner-only pricing denial.
