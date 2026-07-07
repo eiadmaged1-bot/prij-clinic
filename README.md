@@ -1,5 +1,11 @@
 # Dr Maged Attia Clinics
 
+## v1.3.9 Clinical Tags + EDD Calendar + Google Form Intake
+
+v1.3.9 removes demo workflow clutter from real UI, keeps permanent Patient QR, improves Arabic/English shell labels, adds OB G/P/A/L steppers, previous delivery mode history, smart clinical tags, Owner/Admin/Doctor cohort search, reviewed/locked EDD workflow, EDD Clinical Calendar, token-protected Google Form intake, and an External Intake Inbox.
+
+Google Form submissions remain pending and untrusted until doctor/admin review. The app still does not diagnose, prescribe, dose, rank treatment, call external AI, or finalize clinical records automatically.
+
 ## v1.3.8 Infertility + Organized Investigations + Mobile Workflow Fixes
 
 v1.3.8 adds `INFERTILITY` patient type, patient clinical phases, an Infertility tab with Induction of Ovulation records, AMH tracking, follicular monitoring, E2 serial results, organized investigation categories with favorites/high-priority/templates, global language/logout drawer footer fixes, fixed Arabic visit labels, reception-visible Not sexually active checkbox, and Owner-only visit price audit.

@@ -11,10 +11,13 @@ import { CaseLibraryModule } from "./case-library/case-library.module";
 import { ConsentsModule } from "./consents/consents.module";
 import { ConsentTemplatesModule } from "./consent-templates/consent-templates.module";
 import { ClinicDirectoryModule } from "./clinic-directory/clinic-directory.module";
+import { ClinicalTagsModule } from "./clinical-tags/clinical-tags.module";
+import { ClinicalCalendarModule } from "./clinical-calendar/clinical-calendar.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { DoctorVisitModule } from "./doctor-visit/doctor-visit.module";
 import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
+import { ExternalIntakeModule } from "./external-intake/external-intake.module";
 import { GynecologyModule } from "./gynecology/gynecology.module";
 import { GuidelinesModule } from "./guidelines/guidelines.module";
 import { HealthModule } from "./health/health.module";
@@ -55,6 +58,7 @@ import { UsersModule } from "./users/users.module";
     AppointmentsModule,
     QueueModule,
     EncountersModule,
+    ExternalIntakeModule,
     GynecologyModule,
     PrescriptionsModule,
     InvestigationsModule,
@@ -67,6 +71,8 @@ import { UsersModule } from "./users/users.module";
     PatientTasksModule,
     PatientInternalNotesModule,
     ClinicDirectoryModule,
+    ClinicalTagsModule,
+    ClinicalCalendarModule,
     PregnancyModule,
     BillingModule,
     CalculatorsModule,

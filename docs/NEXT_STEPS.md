@@ -1,5 +1,13 @@
 # Next Steps
 
+## v1.3.9 Next Steps
+
+- Run real-device QA for Arabic navigation, mobile drawer footer, G/P/A/L steppers, pregnancy tab, Clinical Tag Search, EDD Calendar, and External Intake Inbox.
+- Add richer duplicate merge tooling for reviewed external intake submissions.
+- Add deeper clinical tag grouping, tag archive/deactivate UI, and high-risk pregnancy tag workflows.
+- Add month/week EDD exports after role and privacy review.
+- Add end-to-end browser tests for Google Form review actions against a running local stack.
+
 Run real device QA on same-PC localhost, LAN, Tailscale, and one temporary public tunnel to port 3000.
 
 For public QA, use `npm run dev`, then run `ngrok http 3000` or `cloudflared tunnel --url http://localhost:3000`. Do not expose API port 3001 publicly.

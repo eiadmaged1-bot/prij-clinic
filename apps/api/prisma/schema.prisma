@@ -124,6 +124,8 @@ model User {
   createdEstradiolResults            EstradiolResult[]           @relation("EstradiolResultsCreatedBy")
   investigationFavorites             InvestigationFavorite[]
   updatedVisitPriceSettings          VisitPriceAuditSetting[]    @relation("VisitPriceSettingsUpdatedBy")
+  createdPatientClinicalTags         PatientClinicalTag[]        @relation("PatientClinicalTagsCreatedBy")
+  reviewedExternalSubmissions        ExternalPatientSubmission[] @relation("ExternalSubmissionsReviewedBy")
 
   @@index([branchId])
   @@index([createdByUserId])
@@ -312,6 +314,9 @@ model Patient {
   consentRecords            ConsentRecord[]
   patientMedications        PatientMedication[]
   patientAllergies          PatientAllergy[]
+  clinicalTags              PatientClinicalTag[]
+  externalSubmissionsCreated ExternalPatientSubmission[] @relation("ExternalSubmissionCreatedPatient")
+  externalSubmissionsAttached ExternalPatientSubmission[] @relation("ExternalSubmissionAttachedPatient")
   medicationSafetyChecks    MedicationSafetyCheck[]
   calculations              PatientCalculation[]
   datingAssessments         PregnancyDatingAssessment[]
@@ -724,6 +729,83 @@ model PatientIntake {
   @@index([intakeType])
   @@index([enteredByUserId])
   @@index([reviewedByDoctorId])
+}
+
+model ExternalPatientSubmission {
+  id                      String    @id @default(uuid()) @db.Uuid
+  source                  String    @default("google_form")
+  language                String    @default("ar")
+  externalSubmissionId    String?
+  submittedAt             DateTime? @db.Timestamptz(3)
+  receivedAt              DateTime  @default(now()) @db.Timestamptz(3)
+  rawAnswersJson          Json
+  mappedPatientJson       Json?
+  mappedCaseTypeJson      Json?
+  status                  String    @default("pending_review")
+  duplicateCandidatesJson Json?
+  reviewedByUserId        String?   @db.Uuid
+  reviewedAt              DateTime? @db.Timestamptz(3)
+  reviewDecision          String?
+  reviewReason            String?
+  createdPatientId        String?   @db.Uuid
+  attachedPatientId       String?   @db.Uuid
+  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+
+  reviewedBy      User?    @relation("ExternalSubmissionsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  createdPatient  Patient? @relation("ExternalSubmissionCreatedPatient", fields: [createdPatientId], references: [id], onDelete: SetNull)
+  attachedPatient Patient? @relation("ExternalSubmissionAttachedPatient", fields: [attachedPatientId], references: [id], onDelete: SetNull)
+
+  @@index([status, receivedAt])
+  @@index([source])
+  @@index([externalSubmissionId])
+  @@index([createdPatientId])
+  @@index([attachedPatientId])
+  @@index([reviewedByUserId])
+}
+
+model ClinicalTagDefinition {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  label       String
+  aliasesJson Json?
+  category    String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  patientTags PatientClinicalTag[]
+
+  @@index([category])
+  @@index([active])
+}
+
+model PatientClinicalTag {
+  id              String    @id @default(uuid()) @db.Uuid
+  patientId       String    @db.Uuid
+  tagDefinitionId String?   @db.Uuid
+  tagCode         String
+  label           String
+  category        String
+  sourceType      String
+  sourceId        String?
+  tagDate         DateTime? @db.Date
+  notes           String?
+  createdByUserId String?   @db.Uuid
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+
+  patient       Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  definition    ClinicalTagDefinition? @relation(fields: [tagDefinitionId], references: [id], onDelete: SetNull)
+  createdByUser User?                  @relation("PatientClinicalTagsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([patientId, tagCode, sourceType, sourceId])
+  @@index([patientId, tagCode])
+  @@index([tagCode])
+  @@index([category])
+  @@index([sourceType])
+  @@index([tagDate])
+  @@index([createdByUserId])
 }
 
 model PatientClinicalPhase {
@@ -2561,8 +2643,14 @@ model PreviousPregnancy {
   year                    Int?
   outcomeDate             DateTime? @db.Date
   outcome                 String
+  outcomeType             String?
   gestationalAgeAtOutcome String?
   modeOfDelivery          String?
+  babyOutcome             String?
+  livingChild             Boolean?
+  previousCesareanCount   Int?
+  cesareanIndication      String?
+  cesareanComplications   String?
   birthWeightGrams        Int?
   sex                     String?
   complications           String?

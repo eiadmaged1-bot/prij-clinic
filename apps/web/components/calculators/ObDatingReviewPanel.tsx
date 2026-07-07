@@ -10,8 +10,13 @@ const methods = [
   ["LMP", "LMP"],
   ["LMP_CYCLE_ADJUSTED", "LMP + cycle length"],
   ["CONCEPTION", "Conception date"],
-  ["IVF", "IVF transfer"],
+  ["IUI", "IUI / trigger / known ovulation"],
+  ["IVF_DAY3", "IVF / ICSI day 3 embryo transfer"],
+  ["IVF_DAY5", "IVF / ICSI day 5 blastocyst transfer"],
+  ["IVF_DAY6", "IVF / ICSI day 6 blastocyst transfer"],
+  ["IVF", "IVF transfer - custom embryo age"],
   ["KNOWN_EDD", "Known EDD"],
+  ["MANUAL_DOCTOR", "Manual doctor-reviewed EDD"],
   ["GA_ON_DATE", "GA on date"],
   ["ULTRASOUND_GA", "Ultrasound GA"],
   ["ULTRASOUND_BIOMETRY", "Raw ultrasound measurements"]
@@ -32,13 +37,14 @@ export function ObDatingReviewPanel({ patient, pregnancies = [] }: { patient: Pa
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-    const payload = formPayload(event.currentTarget);
+    const payload = normalizeDatingPayload(method, formPayload(event.currentTarget));
+    const { datingSource, ...inputValues } = payload;
     try {
       const result = await calculateObDating({
         patientId: patient.id,
         pregnancyEpisodeId: activePregnancy?.id,
-        datingSource: method,
-        ...payload,
+        datingSource: String(datingSource),
+        ...inputValues,
         measurements: {
           crlMm: payload.crlMm,
           bpdMm: payload.bpdMm,
@@ -107,9 +113,10 @@ export function ObDatingReviewPanel({ patient, pregnancies = [] }: { patient: Pa
         </fieldset>
         {method.includes("LMP") ? <Field name="lmpDate" label="LMP date" type="date" /> : null}
         {method === "LMP_CYCLE_ADJUSTED" ? <Field name="cycleLengthDays" label="Cycle length" type="number" /> : null}
-        {method === "CONCEPTION" ? <Field name="conceptionDate" label="Conception date" type="date" /> : null}
+        {method === "CONCEPTION" || method === "IUI" ? <Field name="conceptionDate" label={method === "IUI" ? "IUI / trigger / ovulation date" : "Conception date"} type="date" /> : null}
         {method === "IVF" ? <><Field name="embryoTransferDate" label="Embryo transfer date" type="date" /><Field name="embryoAgeDays" label="Embryo age in days" type="number" /></> : null}
-        {method === "KNOWN_EDD" ? <Field name="knownEdd" label="Known EDD" type="date" /> : null}
+        {method === "IVF_DAY3" || method === "IVF_DAY5" || method === "IVF_DAY6" ? <Field name="embryoTransferDate" label="Embryo transfer date" type="date" /> : null}
+        {method === "KNOWN_EDD" || method === "MANUAL_DOCTOR" ? <Field name="knownEdd" label={method === "MANUAL_DOCTOR" ? "Manual reviewed EDD" : "Known EDD"} type="date" /> : null}
         {method === "GA_ON_DATE" ? <><Field name="assessmentDate" label="Known date" type="date" /><Field name="gaWeeks" label="GA weeks" type="number" /><Field name="gaDays" label="GA days" type="number" /></> : null}
         {method === "ULTRASOUND_GA" ? <><Field name="scanDate" label="Scan date" type="date" /><Field name="gaWeeks" label="GA weeks" type="number" /><Field name="gaDays" label="GA days" type="number" /></> : null}
         {method === "ULTRASOUND_BIOMETRY" ? (
@@ -139,7 +146,7 @@ export function ObDatingReviewPanel({ patient, pregnancies = [] }: { patient: Pa
       </label>
       <div className="form-actions">
         <button className="button compact" onClick={() => void action("best")} type="button">Set as Best OB EDD</button>
-        <button className="button compact" onClick={() => void action("lock")} type="button">Lock EDD</button>
+        <button className="button compact" onClick={() => void action("lock")} type="button">Review and lock EDD</button>
         <button className="button secondary compact" onClick={() => void action("change")} type="button">Change locked EDD</button>
         <button className="button secondary compact" onClick={() => void action("void")} type="button">Void</button>
       </div>
@@ -172,4 +179,12 @@ function formPayload(form: HTMLFormElement) {
     payload[key] = input?.type === "number" ? Number(text) : text;
   }
   return payload;
+}
+
+function normalizeDatingPayload(method: string, payload: Record<string, unknown>): Record<string, unknown> {
+  if (method === "IUI") return { ...payload, datingSource: "CONCEPTION" };
+  if (method === "IVF_DAY3") return { ...payload, datingSource: "IVF", embryoAgeDays: 3 };
+  if (method === "IVF_DAY5") return { ...payload, datingSource: "IVF", embryoAgeDays: 5 };
+  if (method === "IVF_DAY6") return { ...payload, datingSource: "IVF", embryoAgeDays: 6 };
+  return { ...payload, datingSource: method };
 }

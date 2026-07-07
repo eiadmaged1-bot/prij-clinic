@@ -144,6 +144,11 @@ export class CreatePreviousPregnancyDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
+  outcomeType?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   gestationalAgeAtOutcome?: string;
 
@@ -151,6 +156,30 @@ export class CreatePreviousPregnancyDto {
   @IsString()
   @MaxLength(120)
   modeOfDelivery?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  babyOutcome?: string;
+
+  @IsOptional()
+  livingChild?: boolean;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(20)
+  previousCesareanCount?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  cesareanIndication?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  cesareanComplications?: string;
 
   @IsOptional()
   @IsInt()

@@ -14,12 +14,13 @@ async function main() {
   assertIncludes(`${doctorVisit}${productivity}`, ["Continue Last Work", "Continue last patient", "Continue draft prescription"], "continue last work exists");
   assertIncludes(`${doctorVisit}${productivity}`, ["Doctor Results Review Inbox", "External document needs review", "Investigation requested but result missing"], "results review inbox exists");
   assertIncludes(`${doctorVisit}${productivity}`, ["Doctor Favorites", "Exam phrases", "Follow-up intervals"], "doctor favorites exist");
-  assertIncludes(`${doctor}${productivity}`, ["Open Day Checklist", "Confirm doctors", "Check backup status", "Close Day Checklist", "Backup done"], "open/close day checklist exists");
-  assertIncludes(productivity, ["Patient waiting 20+ minutes", "Patient waiting 40+ minutes", "waitingTimeAlert"], "waiting time alert logic source exists");
-  assertIncludes(doctor, ["Queue ticket / QR card print", "Print queue ticket", "Print patient QR card", "patient sticker / file label / investigation request label"], "queue ticket and patient QR card print source exists");
+  assertNotIncludes(`${doctor}${productivity}`, ["Open Day Checklist", "Confirm doctors", "Check backup status", "Close Day Checklist", "Backup done"], "open/close day checklist removed from real UI");
+  assertNotIncludes(productivity, ["Patient waiting 20+ minutes", "Patient waiting 40+ minutes", "waitingTimeAlert"], "waiting time alert logic removed from real UI");
+  assertNotIncludes(doctor, ["Queue ticket / QR card print", "Print queue ticket", "Queue ticket QR", "patient sticker / file label / investigation request label"], "temporary queue ticket QR removed");
+  assertIncludes(patientFile, ["Patient QR", "PatientQrModal", "patientQrSvgDataUri"], "permanent patient QR remains available");
   assertIncludes(`${patientFile}${productivity}`, ["Important patient banner", "Allergy", "High-risk pregnancy", "Pending result"], "important patient banner exists");
-  assertIncludes(`${doctor}${productivity}`, ["Guided staff help", "How to add new patient", "How to scan QR", "How to print packet"], "guided help exists");
-  assertIncludes(`${doctor}${productivity}`, ["Copyable message templates", "Appointment reminder", "Investigation result ready", "Copy text only"], "copyable message templates exist");
+  assertNotIncludes(`${doctor}${productivity}`, ["Guided staff help", "How to add new patient", "How to scan QR", "How to print packet"], "guided help removed from real UI");
+  assertNotIncludes(`${doctor}${productivity}`, ["Copyable message templates", "Appointment reminder", "Investigation result ready", "Copy text only"], "copyable message templates removed from real UI");
   assertIncludes(patientFile, ["lazy-feed-list", "slice(0, 16)", "smart-empty-state"], "performance polish source exists");
   assertIncludes(patientFile, ["roles:", "permissions:", "Role-based access applies"], "RBAC result remains source-backed");
   assertIncludes(`${doctor}${doctorVisit}${patientFile}`, ["AI draft", "draft-only", "doctor review"], "AI safety result remains draft-only");

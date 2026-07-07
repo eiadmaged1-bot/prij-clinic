@@ -8,8 +8,6 @@ export type Language = "en" | "ar";
 type TranslationKey = keyof typeof en;
 
 const dictionaries = { en, ar };
-const legacyBilingualSourceLock = "Ø¹Ø±Ø¨ÙŠ";
-void legacyBilingualSourceLock;
 
 const I18nContext = createContext<{
   language: Language;
@@ -60,8 +58,8 @@ export function LanguageSwitcher() {
 
   return (
     <div className="language-switcher" aria-label="Language switcher">
-      <button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>EN</button>
       <button className={language === "ar" ? "active" : ""} type="button" onClick={() => setLanguage("ar")}>عربي</button>
+      <button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>EN</button>
     </div>
   );
 }

@@ -4672,6 +4672,116 @@ body {
   color: #fff;
 }
 
+.gpal-stepper {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.gpal-stepper > span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.gpal-stepper > div {
+  align-items: center;
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: 2.35rem minmax(3.2rem, 4.4rem) 2.35rem;
+}
+
+.gpal-stepper input {
+  min-height: 2.35rem;
+  text-align: center;
+}
+
+.gpal-live-summary {
+  align-items: center;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 8px;
+  color: var(--accent-dark);
+  display: inline-flex;
+  font-weight: 850;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.7rem;
+}
+
+.clinical-chip-row {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.intake-review-grid,
+.calendar-clean-grid {
+  align-items: start;
+}
+
+.intake-row-button {
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.intake-row-button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgb(15 143 140 / 12%);
+}
+
+.readable-answer-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  margin: 1rem 0;
+}
+
+.readable-answer-grid > div {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.readable-answer-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.readable-answer-grid strong {
+  overflow-wrap: anywhere;
+}
+
+.inline-filter {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.inline-filter input {
+  min-height: 2.3rem;
+}
+
+.secondary-page-header {
+  margin-top: 1rem;
+}
+
+.calendar-stat-grid .mini-metric-card {
+  min-height: 5.5rem;
+}
+
+.danger-soft {
+  border-color: rgb(185 28 28 / 28%);
+  color: #991b1b;
+}
+
 /* v1.2 mouse-first doctor workflow and productivity pack */
 .mouse-first-workspace,
 .case-feed-panel,

@@ -25,8 +25,7 @@ import {
   feedItemTypes,
   importantPatientBannerItems,
   previousHistoryChips,
-  smartClinicalTags,
-  waitingTimeAlert
+  smartClinicalTags
 } from "@/lib/v1200-productivity";
 
 type Patient = {
@@ -60,6 +59,7 @@ type PregnancyRecord = {
   status?: string | null;
   notes?: string | null;
   fetuses?: FetusRecord[];
+  previousPregnancies?: Record<string, unknown>[];
   antenatalVisits?: Record<string, unknown>[];
   obUltrasounds?: Record<string, unknown>[];
 };
@@ -486,6 +486,7 @@ export default function PatientFilePage() {
           {active.key === "mother-baby" ? <MotherBabyWorkspace pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
           {active.key === "pregnancy" ? (
             <>
+              <SmartHistoryOptionChips patient={patient} />
               <SmartObHistoryTags />
               <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
               <ObgynWorkspace
@@ -658,12 +659,82 @@ function CaseBoardsPanel({ patient, related }: { patient: Patient; related: Reco
               <div><dt>Pregnancy week</dt><dd>Record-linked when pregnant</dd></div>
               <div><dt>Pending actions</dt><dd>{pendingActions}</dd></div>
               <div><dt>Next follow-up</dt><dd>From follow-up tasks</dd></div>
-              <div><dt>Important alert</dt><dd>{waitingTimeAlert(20)}</dd></div>
             </dl>
             <Link className="button compact secondary" href={`/patients/${patient.id}`}>Open file</Link>
           </article>
         ))}
       </div>
+    </section>
+  );
+}
+
+const smartHistoryGroups = [
+  {
+    title: "Medical history chips",
+    sourceType: "history_sheet",
+    items: [["diabetes", "Diabetes"], ["hypertension", "Hypertension"], ["thyroid_disease", "Thyroid disease"], ["asthma", "Asthma"], ["anemia", "Anemia"], ["pcos", "PCOS"], ["endometriosis", "Endometriosis"], ["recurrent_abortion", "Recurrent abortion"]]
+  },
+  {
+    title: "Surgical/operation history chips",
+    sourceType: "operation_history",
+    items: [["cesarean_section", "Cesarean section"], ["dilation_and_curettage", "D&C / Dilation and curettage"], ["hysteroscopy", "Hysteroscopy"], ["laparoscopy", "Laparoscopy"], ["ovarian_cystectomy", "Ovarian cystectomy"], ["myomectomy", "Myomectomy"], ["hysterectomy", "Hysterectomy"], ["cervical_cerclage", "Cervical cerclage"], ["mastectomy", "Mastectomy"], ["appendectomy", "Appendectomy"], ["cholecystectomy", "Cholecystectomy"], ["bariatric_surgery", "Bariatric surgery"]]
+  },
+  {
+    title: "Obstetric/delivery chips",
+    sourceType: "previous_pregnancy",
+    items: [["normal_vaginal_delivery", "NVD"], ["previous_cesarean_section", "Previous CS"], ["instrumental_delivery", "Instrumental delivery"], ["miscarriage_abortion", "Miscarriage / abortion"], ["ectopic_pregnancy", "Ectopic"], ["molar_pregnancy", "Molar pregnancy"], ["iufd_stillbirth", "IUFD / stillbirth"]]
+  }
+] as const;
+
+function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
+  const [selected, setSelected] = useState<string[]>([]);
+  const [details, setDetails] = useState("");
+  const [status, setStatus] = useState("");
+
+  async function selectTag(code: string, label: string, sourceType: string) {
+    setSelected((items) => items.includes(code) ? items : [...items, code]);
+    setStatus("Saving tag");
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({
+        tagCode: code,
+        label,
+        category: sourceType === "operation_history" ? "surgical_history" : sourceType === "previous_pregnancy" ? "obstetric_history" : "medical_history",
+        sourceType,
+        notes: details || undefined
+      })
+    }).catch(() => null);
+    setStatus(response?.ok ? `${label} tag saved for review.` : "Could not save this tag. Check role permissions.");
+  }
+
+  return (
+    <section className="panel smart-ob-tags" aria-label="Smart history option chips">
+      <div className="section-heading">
+        <div>
+          <h2>Smart history option chips</h2>
+          <p className="muted">Selected chips create searchable clinical tags only. Doctor confirmation remains required for clinical interpretation.</p>
+        </div>
+        <span className="badge warning">Doctor review</span>
+      </div>
+      <label className="wide">Optional date/year/details<input value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Date/year, details, complications, notes" /></label>
+      {smartHistoryGroups.map((group) => (
+        <div key={group.title}>
+          <h3>{group.title}</h3>
+          <div className="clinical-chip-cloud">
+            {group.items.map(([code, label]) => (
+              <button className={`clinical-chip ${selected.includes(code) ? "active" : ""}`} key={code} type="button" onClick={() => void selectTag(code, label, group.sourceType)}>
+                <strong>{label}</strong>
+                <span>{code}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+      <p className="form-warning">Cesarean section can appear in surgical and obstetric history; review duplicate context before final interpretation.</p>
+      {status ? <p className="notice">{status}</p> : null}
     </section>
   );
 }
@@ -1557,7 +1628,7 @@ function ObgynWorkspace({
           <Metric label="LMP" value={formatDate(activePregnancy?.lmpDate ?? activePregnancy?.lmp)} />
           <Metric label="EDD" value={formatDate(activePregnancy?.estimatedDueDate ?? activePregnancy?.edd)} />
           <Metric label="Dating method" value={String(activePregnancy?.datingMethod ?? "Not recorded")} />
-          <Metric label="Gravida / Para" value={`${activePregnancy?.gravida ?? "-"} / ${activePregnancy?.para ?? "-"}`} />
+          <Metric label="G/P/A/L" value={gpalSummary(activePregnancy)} />
           <Metric label="Current status" value={String(activePregnancy?.status ?? "Not recorded")} />
           <Metric label="Fetus records" value={fetuses.length ? `${fetuses.length}` : "Not recorded"} />
           <Metric label="Antenatal visits" value={activePregnancy?.antenatalVisits?.length ? `${activePregnancy.antenatalVisits.length}` : "No visit yet"} />
@@ -1583,7 +1654,9 @@ function ObgynWorkspace({
             <div><dt>Para</dt><dd>{activePregnancy?.para ?? "Not recorded"}</dd></div>
             <div><dt>Living</dt><dd>{activePregnancy?.living ?? "Not recorded"}</dd></div>
             <div><dt>Abortions</dt><dd>{activePregnancy?.abortions ?? "Not recorded"}</dd></div>
+            <div><dt>G/P/A/L summary</dt><dd>{gpalSummary(activePregnancy)}</dd></div>
           </dl>
+          {gpalLooksInconsistent(activePregnancy) ? <p className="notice safety-note">Review G/P/A/L consistency.</p> : null}
           <div className="obgyn-mini-flow">
             <span><ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" /> Episode</span>
             <span><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /> Previous pregnancy</span>
@@ -1596,6 +1669,7 @@ function ObgynWorkspace({
         </article>
 
         <CreatePregnancyEpisodeCard patient={patient} />
+        <PreviousPregnancyHistoryCard patient={patient} pregnancy={activePregnancy} previousPregnancies={(activePregnancy?.previousPregnancies ?? []) as Record<string, unknown>[]} />
       </section>
 
       <section className="obgyn-section-grid">
@@ -1692,8 +1766,35 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function GpalStepper({ code, label, name, value, onChange }: { code: string; label: string; name: string; value: number; onChange: (value: number) => void }) {
+  const next = (delta: number) => onChange(Math.max(0, value + delta));
+  return (
+    <div className="gpal-stepper">
+      <span><b>{code}</b> {label}</span>
+      <div>
+        <button className="button secondary compact" type="button" aria-label={`Decrease ${label}`} onClick={() => next(-1)}>-</button>
+        <input aria-label={label} name={name} type="number" min="0" max="20" value={value} onChange={(event) => onChange(Math.max(0, Number(event.target.value) || 0))} />
+        <button className="button secondary compact" type="button" aria-label={`Increase ${label}`} onClick={() => next(1)}>+</button>
+      </div>
+    </div>
+  );
+}
+
+function gpalSummary(pregnancy?: PregnancyRecord) {
+  return `G${pregnancy?.gravida ?? "-"} P${pregnancy?.para ?? "-"} A${pregnancy?.abortions ?? "-"} L${pregnancy?.living ?? "-"}`;
+}
+
+function gpalLooksInconsistent(pregnancy?: PregnancyRecord) {
+  const gravida = Number(pregnancy?.gravida);
+  const para = Number(pregnancy?.para);
+  const abortions = Number(pregnancy?.abortions);
+  if ([gravida, para, abortions].some((value) => Number.isNaN(value))) return false;
+  return gravida < para + abortions;
+}
+
 function CreatePregnancyEpisodeCard({ patient }: { patient: Patient }) {
   const [status, setStatus] = useState("");
+  const [gpal, setGpal] = useState({ gravida: 1, para: 0, abortions: 0, living: 0 });
 
   async function savePregnancy(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1746,10 +1847,12 @@ function CreatePregnancyEpisodeCard({ patient }: { patient: Patient }) {
         </fieldset>
         <fieldset className="obgyn-fieldset">
           <legend>Obstetric summary</legend>
-          <label>Gravida<input name="gravida" type="number" min="0" max="20" /></label>
-          <label>Para<input name="para" type="number" min="0" max="20" /></label>
-          <label>Living<input name="living" type="number" min="0" max="20" /></label>
-          <label>Abortions<input name="abortions" type="number" min="0" max="20" /></label>
+          <GpalStepper code="G" label="Gravida" name="gravida" value={gpal.gravida} onChange={(value) => setGpal((current) => ({ ...current, gravida: value }))} />
+          <GpalStepper code="P" label="Para" name="para" value={gpal.para} onChange={(value) => setGpal((current) => ({ ...current, para: value }))} />
+          <GpalStepper code="A" label="Abortion" name="abortions" value={gpal.abortions} onChange={(value) => setGpal((current) => ({ ...current, abortions: value }))} />
+          <GpalStepper code="L" label="Living" name="living" value={gpal.living} onChange={(value) => setGpal((current) => ({ ...current, living: value }))} />
+          <p className="gpal-live-summary">G{gpal.gravida} P{gpal.para} A{gpal.abortions} L{gpal.living}</p>
+          {gpal.gravida < gpal.para + gpal.abortions ? <p className="notice safety-note">Review G/P/A/L consistency.</p> : null}
         </fieldset>
         <fieldset className="obgyn-fieldset wide">
           <legend>Doctor notes</legend>
@@ -1760,6 +1863,86 @@ function CreatePregnancyEpisodeCard({ patient }: { patient: Patient }) {
       </form>
     </article>
   );
+}
+
+const previousPregnancyOutcomeOptions = [
+  "Normal vaginal delivery",
+  "Cesarean section",
+  "Instrumental delivery",
+  "Preterm delivery",
+  "Miscarriage / abortion",
+  "Ectopic pregnancy",
+  "Molar pregnancy",
+  "Stillbirth / IUFD",
+  "Ongoing pregnancy",
+  "Other"
+];
+
+function PreviousPregnancyHistoryCard({ patient, pregnancy, previousPregnancies }: { patient: Patient; pregnancy?: PregnancyRecord; previousPregnancies: Record<string, unknown>[] }) {
+  const [status, setStatus] = useState("");
+  const summary = previousDeliverySummary(previousPregnancies);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = sessionStorage.getItem("prijClinicToken");
+    const rawPayload = formPayload(event.currentTarget, { year: "number", previousCesareanCount: "number", birthWeightGrams: "number" });
+    const payload = {
+      patientId: patient.id,
+      ...(pregnancy?.id ? { pregnancyEpisodeId: pregnancy.id } : {}),
+      ...rawPayload,
+      ...(rawPayload.livingChild === "true" ? { livingChild: true } : rawPayload.livingChild === "false" ? { livingChild: false } : {})
+    };
+    const response = await fetch(`${getApiBaseUrl()}/previous-pregnancies`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(payload)
+    }).catch(() => null);
+    if (!response?.ok) {
+      setStatus("Could not save previous pregnancy history.");
+      return;
+    }
+    setStatus("Previous pregnancy history saved for doctor review.");
+    window.setTimeout(() => window.location.reload(), 600);
+  }
+
+  return (
+    <article className="panel printable-summary">
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Previous pregnancy and delivery</p>
+          <h2>Delivery mode history</h2>
+          <p className="muted">{summary || "No previous delivery summary recorded."}</p>
+        </div>
+        <span className="badge">{previousPregnancies.length}</span>
+      </div>
+      <form className="obgyn-form-grid grouped" onSubmit={save}>
+        <label>Year<input name="year" type="number" min="1900" max="2100" /></label>
+        <label>Outcome date<input name="outcomeDate" type="date" /></label>
+        <label>Gestational age at outcome<input name="gestationalAgeAtOutcome" placeholder="e.g. 38w, 34+2, 10w" /></label>
+        <label>Outcome type<select name="outcome" defaultValue="Normal vaginal delivery">{previousPregnancyOutcomeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Mode of delivery<select name="modeOfDelivery" defaultValue="Normal vaginal delivery">{previousPregnancyOutcomeOptions.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
+        <label>Baby outcome<input name="babyOutcome" placeholder="Well, NICU, IUFD, not applicable" /></label>
+        <label>Living child<select name="livingChild" defaultValue=""><option value="">Not applicable</option><option value="true">Yes</option><option value="false">No</option></select></label>
+        <label>Previous CS count<input name="previousCesareanCount" type="number" min="0" max="20" /></label>
+        <label>CS indication<input name="cesareanIndication" /></label>
+        <label>Complications<input name="complications" /></label>
+        <label className="wide">Notes<textarea name="notes" /></label>
+        {status ? <p className="notice wide">{status}</p> : null}
+        <button className="button" type="submit">Save previous pregnancy</button>
+      </form>
+    </article>
+  );
+}
+
+function previousDeliverySummary(rows: Record<string, unknown>[]) {
+  const count = (pattern: RegExp) => rows.filter((row) => pattern.test(`${row.outcome ?? ""} ${row.outcomeType ?? ""} ${row.modeOfDelivery ?? ""}`.toLowerCase())).length;
+  const parts = [
+    ["NVD", count(/normal vaginal|nvd|vaginal delivery/)],
+    ["CS", count(/cesarean|caesarean|\bcs\b|c-section/)],
+    ["Miscarriage", count(/miscarriage|abortion/)]
+  ].filter(([, value]) => Number(value) > 0);
+  return parts.map(([label, value]) => `${label} x ${value}`).join(" · ");
 }
 
 function FetusStarterCard({ pregnancy, fetuses }: { pregnancy?: PregnancyRecord; fetuses: FetusRecord[] }) {

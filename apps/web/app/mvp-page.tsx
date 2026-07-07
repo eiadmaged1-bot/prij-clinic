@@ -443,12 +443,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               <span>{t("appSubtitle")}</span>
             </Link>
 
-            {shellNavGroups.map((group) => (
+            {shellNavGroups.map((group) => {
+              const groupLabel = navText(group.title, t);
+              return (
               <nav className={`nav-group ${openNavGroup === group.title ? "open" : ""}`} key={group.title} aria-label={group.title}>
                 {group.href ? (
                   <Link className={`nav-item nav-parent-link ${activeNavHref === group.href ? "active" : ""}`} href={group.href} onClick={() => setMobileNavOpen(false)}>
                     <ThreeDMedicalIcon name={group.icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
-                    <span>{group.title}</span>
+                    <span>{groupLabel}</span>
                     <span className="nav-dot" />
                   </Link>
                 ) : (
@@ -460,14 +462,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                       onClick={() => setOpenNavGroup((current) => (current === group.title ? null : group.title))}
                     >
                       <ThreeDMedicalIcon name={group.icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
-                      <span>{group.title}</span>
+                      <span>{groupLabel}</span>
                       <span aria-hidden="true">{openNavGroup === group.title ? "-" : "+"}</span>
                     </button>
                     <div className="nav-subitems">
                       {(group.links ?? []).map(([href, label, icon]) => (
                         <Link className={`nav-item ${activeNavHref === href ? "active" : ""}`} href={href} key={href} onClick={() => setMobileNavOpen(false)}>
                           <ThreeDMedicalIcon name={icon} size="sm" tone={group.title === "More" || group.title === "Knowledge" ? "navy" : "teal"} />
-                          <span>{label}</span>
+                          <span>{navText(label, t)}</span>
                           <span className="nav-dot" />
                         </Link>
                       ))}
@@ -475,7 +477,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                   </>
                 )}
               </nav>
-            ))}
+            );})}
             <div className="sidebar-footer">
               <LanguageSwitcher />
               <button className="button secondary compact sidebar-logout-button" onClick={() => void signOut()} type="button">
@@ -500,7 +502,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 type="button"
               >
                 <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-                <span>Menu</span>
+                <span>{t("menu")}</span>
               </button>
             ) : null}
             <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
@@ -519,7 +521,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             {canUseStaffChat ? (
               <Link className="button secondary compact chat-topbar-button" href="/staff-chat" aria-label="Staff messages">
                 <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
-                Messages
+                {t("messages")}
                 {staffChatUnread > 0 ? <span className="unread-badge">{staffChatUnread}</span> : null}
               </Link>
             ) : null}
@@ -596,6 +598,56 @@ function AccountMenu({
       </div>
     </details>
   );
+}
+
+function navText(label: string, t: ReturnType<typeof useI18n>["t"]) {
+  const map: Record<string, ReturnType<typeof useI18n>["t"] extends (key: infer K) => string ? K & string : never> = {
+    Dashboard: "dashboard",
+    Home: "home",
+    Clinic: "clinic",
+    Patients: "patients",
+    "Patient Files": "patientFiles",
+    "Clinical Work": "clinicalWork",
+    Knowledge: "knowledge",
+    Admin: "admin",
+    Calendar: "calendar",
+    "Doctor Mode": "doctorMode",
+    Reception: "reception",
+    Queue: "waitingLine",
+    "Waiting Line": "waitingLine",
+    "Doctor Waiting": "doctorWaiting",
+    "Today / Waiting": "todayWaiting",
+    "New Patient": "newPatient",
+    "Returning Patient": "returningPatient",
+    Prescriptions: "prescriptions",
+    Investigations: "investigations",
+    Billing: "billing",
+    Reports: "reports",
+    Settings: "settings",
+    Encounters: "encounters",
+    Ultrasound: "ultrasound",
+    Guidelines: "guidelines",
+    "Protocol Atlas": "protocolAtlas",
+    "Medication Reference": "medicationReference",
+    "Pharmacology / Medication Reference": "medicationReference",
+    Pharmacology: "pharmacology",
+    "AI Tools": "aiTools",
+    "Users & Roles": "usersRoles",
+    Services: "services",
+    "Clinic Settings": "clinicSettings",
+    Security: "security",
+    Appearance: "appearance",
+    Audit: "audit",
+    Messages: "messages",
+    More: "more",
+    "Case Library": "caseLibrary",
+    Documents: "documents",
+    Tasks: "tasks",
+    "Smart Clinical Search": "smartClinicalSearch",
+    "External Intake Inbox": "externalIntake"
+  };
+  const key = map[label];
+  return key ? t(key) : label;
 }
 
 export function SafetyAlert() {
@@ -776,6 +828,8 @@ void receptionistNavCompatibilityLock;
 const doctorNav = new Set([
   "/doctor",
   "/patients",
+  "/clinical-tags",
+  "/external-intake",
   "/doctor/case-library",
   "/staff-chat",
   "/guidelines",
@@ -805,7 +859,7 @@ function buildShellNavGroups(input: {
     return [
       { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
       { title: "Clinic", icon: "reception", links: compact([link("/reception", "Reception", "reception"), link("/queue", "Queue", "queue"), link("/calendar", "Calendar", "calendar"), link("/doctor/waiting", "Doctor Waiting", "doctor")]) },
-      { title: "Patients", icon: "patients", links: compact([link("/patients", "Patient Files", "patients"), link("/patients/new", "New Patient", "patients"), link("/doctor/case-library", "Case Library", "timeline")]) },
+      { title: "Patients", icon: "patients", links: compact([link("/patients", "Patient Files", "patients"), link("/patients/new", "New Patient", "patients"), link("/doctor/case-library", "Case Library", "timeline"), link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files")]) },
       { title: "Clinical Work", icon: "encounter", links: compact([link("/encounters", "Encounters", "encounter"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/reports", "Reports", "reports")]) },
       { title: "Knowledge", icon: "reports", links: compact([link("/guidelines", "Guidelines", "reports"), link("/protocol-atlas", "Protocol Atlas", "ai"), link("/medications", "Pharmacology / Medication Reference", "prescription"), link("/ai-assistant", "AI Tools", "ai")]) },
       { title: "Admin", icon: "admin", links: compact([link("/admin/accounts", "Users & Roles", "reception"), link("/admin/services", "Services", "billing"), link("/admin/settings", "Clinic Settings", "settings"), link("/admin/security-readiness", "Security", "settings"), link("/admin/appearance", "Appearance", "settings"), link("/admin/audit", "Audit", "timeline")]) },
@@ -820,7 +874,7 @@ function buildShellNavGroups(input: {
       { title: "Case Library", href: "/doctor/case-library", icon: "timeline" },
       ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : []),
       { title: "Guidelines", href: "/guidelines", icon: "reports" },
-      { title: "More", icon: "settings", links: compact([link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription")]) }
+      { title: "More", icon: "settings", links: compact([link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription")]) }
     ];
   }
 
