@@ -26,7 +26,7 @@ type Patient = {
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [status, setStatus] = useState("Loading");
+  const [status, setStatus] = useState("Search patient by name, phone, or file number.");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const today = new Date().toISOString().slice(0, 10);
@@ -42,8 +42,16 @@ export default function PatientsPage() {
   const [visibleCount, setVisibleCount] = useState(12);
 
   useEffect(() => {
-    void loadPatients();
-  }, []);
+    const text = query.trim();
+    if (text.length < 2) {
+      setPatients([]);
+      setStatus("Search patient by name, phone, or file number.");
+      return;
+    }
+    const timer = window.setTimeout(() => void loadPatients(text), 250);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, patientStatus]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -60,13 +68,19 @@ export default function PatientsPage() {
     return sortPatients(rows, sortMode);
   }, [category, dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
 
-  async function loadPatients() {
+  async function loadPatients(search = query.trim()) {
+    if (search.length < 2) {
+      setPatients([]);
+      setStatus("Search patient by name, phone, or file number.");
+      return;
+    }
     const token = sessionStorage.getItem("prijClinicToken");
     setStatus("Loading");
     setError("");
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/patients`, {
+      const params = new URLSearchParams({ q: search, includeArchived: String(patientStatus === "archived" || patientStatus === "all") });
+      const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       });
@@ -112,7 +126,7 @@ export default function PatientsPage() {
             <h2>Patient directory</h2>
             <p className="muted">{status === "Loaded" ? `${filtered.length} matching patient files` : status}</p>
           </div>
-          <button className="button secondary compact" onClick={loadPatients} type="button">
+          <button className="button secondary compact" onClick={() => void loadPatients()} type="button">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
             Refresh
           </button>
@@ -202,8 +216,14 @@ export default function PatientsPage() {
         ) : null}
 
         {status === "Loading" ? <div className="skeleton" /> : null}
+        {query.trim().length < 2 && status !== "Login required" ? (
+          <div className="empty-state smart-empty-state">
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+            <span>Search patient by name, phone, or file number.</span>
+          </div>
+        ) : null}
 
-        {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
+        {query.trim().length >= 2 && status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
           <div className="empty-state smart-empty-state">
             <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
             <span>

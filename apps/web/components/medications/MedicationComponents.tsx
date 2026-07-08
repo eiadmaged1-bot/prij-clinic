@@ -46,7 +46,7 @@ export function MedicationSearchBox() {
       <div className="section-heading">
         <div>
           <h2>Medication Search</h2>
-          <p className="muted">Generic, brand, trade, family, herbal, strength, and form lookup for clinician review.</p>
+          <p className="muted">Generic, brand, trade, family, class, and function lookup for clinician review.</p>
         </div>
         <span className="badge warning">Doctor approval required</span>
       </div>
@@ -55,7 +55,7 @@ export function MedicationSearchBox() {
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
-      {query.trim().length === 1 ? <p className="notice">Showing broad live matches. Type more letters to narrow the list.</p> : null}
+      {query.trim().length < 2 ? <p className="notice">Search medication by generic name, brand/trade alias, class/family, or function.</p> : null}
       <div className="dense-card-list">
         {results.map((result) => <MedicationResultCard key={`${result.type}-${result.id}`} result={result} />)}
       </div>
@@ -74,8 +74,11 @@ export function MedicationResultCard({ result }: { result: MedicationResult }) {
         <div><dt>Generic name</dt><dd>{result.genericName || "Not listed"}</dd></div>
         <div><dt>Brand or trade</dt><dd>{result.tradeName || result.brandName || "Not listed"}</dd></div>
         <div><dt>Drug family</dt><dd>{result.family || result.familyName || "Not listed"}</dd></div>
+        <div><dt>Pregnancy</dt><dd>{result.verificationStatus === "verified" ? "Reviewed source available" : "Review required"}</dd></div>
+        <div><dt>Lactation</dt><dd>{result.verificationStatus === "verified" ? "Reviewed source available" : "Review required"}</dd></div>
         <div><dt>Strength and form</dt><dd>{[result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Market variant only when listed"}</dd></div>
       </dl>
+      <button className="button secondary compact" type="button">Add to prescription</button>
       {result.type === "generic_medication" ? <PregnancyLactationSafetyProfile medicationGenericId={result.id} /> : null}
     </article>
   );

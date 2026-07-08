@@ -17,6 +17,7 @@ export class CaseLibraryService {
 
     const where: Prisma.EncounterWhereInput = {
       ...branchScope(user),
+      patient: { NOT: demoPatientWhere() },
       ...(requestedScope === "all" ? {} : { doctorId: user.id }),
       ...(query.doctorId && canViewAll ? { doctorId: query.doctorId } : {}),
       ...(query.visitType ? { appointment: { appointmentType: { contains: query.visitType, mode: "insensitive" } } } : {}),
@@ -31,7 +32,7 @@ export class CaseLibraryService {
         doctor: true,
         appointment: true
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }],
       take: 100
     });
 
@@ -62,6 +63,7 @@ export class CaseLibraryService {
         patientName: `${encounter.patient.firstName} ${encounter.patient.lastName}`.trim(),
         medicalRecordNumber: encounter.patient.medicalRecordNumber,
         patientPhone: encounter.patient.phone,
+        patientType: encounter.patient.patientType,
         visitDateTime: (encounter.startedAt ?? encounter.createdAt).toISOString(),
         visitType: encounter.appointment?.appointmentType ?? "Clinic visit",
         status: encounter.status,
@@ -117,6 +119,22 @@ function searchWhere(search: string): Prisma.EncounterWhereInput {
       { patient: { lastName: { contains: value, mode: "insensitive" } } },
       { patient: { medicalRecordNumber: { contains: value, mode: "insensitive" } } },
       { patient: { phone: { contains: value, mode: "insensitive" } } }
+    ]
+  };
+}
+
+function demoPatientWhere(): Prisma.PatientWhereInput {
+  const terms = ["Demo Route", "Demo Clinical", "Demo Workflow", "Demo complaint", "Archived fixture", "Test Intake", "Review DoctorUX", "UX-", "Runtime", "QA"];
+  const containsTerm = (field: "firstName" | "lastName" | "notes", term: string): Prisma.PatientWhereInput => ({
+    [field]: { contains: term, mode: "insensitive" }
+  });
+  return {
+    OR: [
+      { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
+      { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
+      { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
+      { medicalRecordNumber: { startsWith: "LOCAL-PAT-", mode: "insensitive" } },
+      ...terms.flatMap((term) => [containsTerm("firstName", term), containsTerm("lastName", term), containsTerm("notes", term)])
     ]
   };
 }

@@ -19,7 +19,7 @@ export default function PrescriptionsPage() {
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [recent, setRecent] = useState<Record<string, unknown>[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const patients: Patient[] = [];
   const [items, setItems] = useState<PrescriptionItem[]>([{ ...emptyItem }]);
   const [patientId, setPatientId] = useState("");
   const [notes, setNotes] = useState("");
@@ -33,16 +33,14 @@ export default function PrescriptionsPage() {
   }, []);
 
   async function load() {
-    const [shortcutData, templateData, prescriptionData, patientData] = await Promise.all([
+    const [shortcutData, templateData, prescriptionData] = await Promise.all([
       apiGet("/prescriptions/shortcuts"),
       apiGet("/prescriptions/templates"),
-      apiGet("/prescriptions"),
-      apiGet("/patients")
+      apiGet("/prescriptions")
     ]);
     setShortcuts((shortcutData.doctorMedicationShortcuts ?? []) as Shortcut[]);
     setTemplates((templateData.prescriptionTemplates ?? []) as Template[]);
     setRecent((prescriptionData.prescriptions ?? []) as Record<string, unknown>[]);
-    setPatients((patientData.patients ?? []) as Patient[]);
   }
 
   async function savePrescription(nextStatus = "draft") {
@@ -127,11 +125,15 @@ export default function PrescriptionsPage() {
           <UniversalSearchBox scope="prescriptions" />
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void savePrescription(); }}>
             <div className="wide">
-              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} allowStandalone standaloneLabel="Standalone print draft" />
+              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} allowStandalone standaloneLabel="Standalone draft not attached to patient." />
             </div>
             {items.map((item, index) => (
               <div className="panel compact-panel" key={index}>
-                <label>Medication name<input required value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
+                <div className="section-heading compact-section-heading">
+                  <h3>Medication {index + 1}</h3>
+                  <button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button>
+                </div>
+                <label>Medication<input required value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
                 <label>Dose text<input value={item.dose ?? ""} onChange={(event) => updateItem(index, "dose", event.target.value, setItems)} /></label>
                 <label>Timing<input value={item.frequency ?? ""} onChange={(event) => updateItem(index, "frequency", event.target.value, setItems)} /></label>
                 <label>Duration<input value={item.duration ?? ""} onChange={(event) => updateItem(index, "duration", event.target.value, setItems)} /></label>
@@ -141,7 +143,7 @@ export default function PrescriptionsPage() {
             <label>Prescription notes<input value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <div className="form-actions">
               <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add medication</button>
-              <button className="button secondary" type="button" onClick={() => setStatus("Safety check is assistive. Doctor review required.")}>Run safety check</button>
+              <button className="button secondary" type="button" onClick={() => setStatus(patientId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
               <button className="button" type="submit">Save draft</button>
               <button className="button secondary" type="button" onClick={() => { void savePrescription("printed"); window.print(); }}>Print</button>
             </div>

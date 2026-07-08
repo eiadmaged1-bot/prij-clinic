@@ -23,6 +23,7 @@ export type CaseLibraryCase = {
   visitDateTime: string;
   visitType: string;
   status: string;
+  patientType?: string | null;
   summaryPreview: string;
   tags: string[];
   doctorSignature: DoctorSignature;

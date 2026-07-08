@@ -90,9 +90,19 @@ export class PatientsService {
     }
   }
 
-  async list(user: AuthUser) {
+  async list(user: AuthUser, query: Record<string, string | undefined> = {}) {
+    const search = String(query.q ?? query.search ?? "").trim();
+    const directoryMode = query.mode === "directory";
+    const includeArchived = query.includeArchived === "true";
+    if (!directoryMode && search.length < 2) return [];
+
     const patients = await this.prisma.patient.findMany({
-      where: { ...branchScope(user), NOT: demoPatientWhere() },
+      where: {
+        ...branchScope(user),
+        ...(includeArchived ? {} : { status: { not: "archived" } }),
+        NOT: demoPatientWhere(),
+        ...(search ? patientSearchWhere(search) : {})
+      },
       orderBy: [{ createdAt: "desc" }],
       take: 100,
       include: {
@@ -100,7 +110,8 @@ export class PatientsService {
           where: { status: "active" },
           orderBy: { startDate: "desc" },
           take: 1
-        }
+        },
+        encounters: { orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }], take: 1, select: { startedAt: true, createdAt: true } }
       }
     });
 
@@ -114,8 +125,8 @@ export class PatientsService {
     });
 
     return patients.map((patient) => {
-      const { clinicalPhases, ...row } = patient;
-      return { ...row, currentPhase: clinicalPhases[0] ?? null };
+      const { clinicalPhases, encounters, ...row } = patient;
+      return { ...row, currentPhase: clinicalPhases[0] ?? null, latestVisitDate: encounters[0]?.startedAt ?? encounters[0]?.createdAt ?? null };
     });
   }
 
@@ -1357,6 +1368,19 @@ function demoPatientWhere(): Prisma.PatientWhereInput[] {
     { notes: { contains: "training", mode: "insensitive" } },
     { notes: { contains: "local demo", mode: "insensitive" } }
   ];
+}
+
+function patientSearchWhere(search: string): Prisma.PatientWhereInput {
+  return {
+    OR: [
+      { firstName: { contains: search, mode: "insensitive" } },
+      { lastName: { contains: search, mode: "insensitive" } },
+      { medicalRecordNumber: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { notes: { contains: search, mode: "insensitive" } }
+    ]
+  };
 }
 
 function historySheetTagCodes(dto: PatientHistorySheetDto) {

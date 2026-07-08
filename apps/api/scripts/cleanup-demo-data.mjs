@@ -33,12 +33,21 @@ const demoPatientWhere = {
     { medicalRecordNumber: { startsWith: "STAGE-SMOKE-", mode: "insensitive" } },
     { medicalRecordNumber: { startsWith: "LOCAL-PAT-", mode: "insensitive" } },
     { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "UX-", mode: "insensitive" } },
+    { medicalRecordNumber: { startsWith: "RUNTIME-", mode: "insensitive" } },
     { firstName: { startsWith: "Test Intake", mode: "insensitive" } },
     { firstName: { equals: "Demo", mode: "insensitive" } },
+    { firstName: { contains: "Review DoctorUX", mode: "insensitive" } },
+    { firstName: { contains: "Runtime", mode: "insensitive" } },
+    { firstName: { contains: "QA", mode: "insensitive" } },
     { lastName: { contains: "Demo", mode: "insensitive" } },
+    { lastName: { contains: "Archived fixture", mode: "insensitive" } },
     { notes: { contains: "Fake local", mode: "insensitive" } },
     { notes: { contains: "demo patient", mode: "insensitive" } },
     { notes: { contains: "demo workflow", mode: "insensitive" } },
+    { notes: { contains: "demo complaint", mode: "insensitive" } },
+    { notes: { contains: "route check fixture", mode: "insensitive" } },
+    { notes: { contains: "fake CI", mode: "insensitive" } },
     { notes: { contains: "test only", mode: "insensitive" } }
   ]
 };
@@ -46,9 +55,21 @@ const demoPatientWhere = {
 const demoTextTerms = [
   "Demo Route",
   "demo route",
+  "Demo Clinical",
+  "Demo Workflow",
+  "Demo complaint",
+  "Demo workflow note only",
+  "Archived fixture",
+  "route check fixture",
+  "Test Intake",
+  "Review DoctorUX",
+  "UX-",
+  "Runtime",
+  "QA",
   "QA Route",
   "Runtime Route",
   "Test Route",
+  "fake CI",
   "Demo appointment",
   "QA appointment",
   "Runtime appointment",
@@ -65,6 +86,7 @@ const demoGuidelineSourceWhere = {
 };
 
 const demoAppointmentWhere = {
+  status: { not: "cancelled" },
   OR: demoTextTerms.flatMap((term) => [
     { appointmentType: { contains: term, mode: "insensitive" } },
     { source: { contains: term, mode: "insensitive" } },

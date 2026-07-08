@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export type PatientPickerPatient = {
   id: string;
@@ -9,6 +10,9 @@ export type PatientPickerPatient = {
   lastName?: string | null;
   phone?: string | null;
   status?: string | null;
+  patientType?: string | null;
+  createdAt?: string | null;
+  latestVisitDate?: string | null;
 };
 
 type PatientPickerProps = {
@@ -19,6 +23,8 @@ type PatientPickerProps = {
   standaloneLabel?: string;
   label?: string;
   required?: boolean;
+  liveSearch?: boolean;
+  minSearchLength?: number;
 };
 
 export function PatientPicker({
@@ -28,17 +34,42 @@ export function PatientPicker({
   allowStandalone = false,
   standaloneLabel = "Standalone draft",
   label = "Choose patient",
-  required = false
+  required = false,
+  liveSearch = true,
+  minSearchLength = 2
 }: PatientPickerProps) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(!selectedPatientId);
-  const selected = patients.find((patient) => patient.id === selectedPatientId) ?? null;
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [livePatients, setLivePatients] = useState<PatientPickerPatient[]>([]);
+  const sourcePatients = liveSearch ? livePatients : patients;
+  const selected = sourcePatients.find((patient) => patient.id === selectedPatientId) ?? patients.find((patient) => patient.id === selectedPatientId) ?? null;
+
+  useEffect(() => {
+    if (!liveSearch) return;
+    const text = query.trim();
+    if (text.length < minSearchLength) {
+      setLivePatients([]);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void fetchPatients(text, includeArchived).then(setLivePatients).catch(() => setLivePatients([]));
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [includeArchived, liveSearch, minSearchLength, query]);
+
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase();
-    return patients
-      .filter((patient) => !text || patientSearchText(patient).includes(text))
-      .slice(0, 8);
-  }, [patients, query]);
+    if (text.length < minSearchLength) return [];
+    return sourcePatients
+      .filter((patient) => includeArchived || patient.status !== "archived")
+      .filter((patient) => patientSearchText(patient).includes(text))
+      .filter((patient) => !isDemoLikePatient(patient))
+      .sort(comparePatientRecency)
+      .slice(0, 20);
+  }, [includeArchived, minSearchLength, query, sourcePatients]);
+
+  const groupedMatches = useMemo(() => groupPatientsByType(matches), [matches]);
 
   return (
     <div className="patient-picker" data-patient-picker>
@@ -54,7 +85,11 @@ export function PatientPicker({
         <div className="patient-picker-panel">
           <label>
             Search patient
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, MRN / file number, phone" aria-label="Search patient" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search patient by name, phone, or file number." aria-label="Search patient" />
+          </label>
+          <label className="checkbox-row">
+            <input checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} type="checkbox" />
+            Include archived patients
           </label>
           <div className="dense-card-list patient-picker-results" role="listbox" aria-label="Patient results">
             {allowStandalone ? (
@@ -63,23 +98,29 @@ export function PatientPicker({
                 <span>No patient file attached</span>
               </button>
             ) : null}
-            {matches.map((patient) => (
-              <button
-                className={`picker-row ${selectedPatientId === patient.id ? "active" : ""}`}
-                key={patient.id}
-                role="option"
-                aria-selected={selectedPatientId === patient.id}
-                type="button"
-                onClick={() => {
-                  onSelect(patient.id);
-                  setExpanded(false);
-                }}
-              >
-                <strong>{patientLabel(patient)}</strong>
-                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | {patient.status ?? "active"}</span>
-              </button>
+            {query.trim().length < minSearchLength ? <p className="empty-state compact smart-empty-state"><span>Search patient by name, phone, or file number.</span></p> : null}
+            {groupedMatches.map(([group, rows]) => (
+              <section className="compact-panel" key={group}>
+                <h4>{group}</h4>
+                {rows.map((patient) => (
+                  <button
+                    className={`picker-row ${selectedPatientId === patient.id ? "active" : ""}`}
+                    key={patient.id}
+                    role="option"
+                    aria-selected={selectedPatientId === patient.id}
+                    type="button"
+                    onClick={() => {
+                      onSelect(patient.id);
+                      setExpanded(false);
+                    }}
+                  >
+                    <strong>{patientLabel(patient)}</strong>
+                    <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | {patient.status ?? "active"}</span>
+                  </button>
+                ))}
+              </section>
             ))}
-            {!matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
+            {query.trim().length >= minSearchLength && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
           </div>
         </div>
       ) : null}
@@ -102,5 +143,40 @@ export function patientLabel(patient?: PatientPickerPatient | null) {
 }
 
 export function patientSearchText(patient?: PatientPickerPatient | null) {
-  return `${patientLabel(patient)} ${patient?.medicalRecordNumber ?? ""} ${patient?.phone ?? ""} ${patient?.status ?? ""}`.toLowerCase();
+  return `${patientLabel(patient)} ${patient?.medicalRecordNumber ?? ""} ${patient?.phone ?? ""} ${patient?.status ?? ""} ${patient?.patientType ?? ""}`.toLowerCase();
+}
+
+async function fetchPatients(query: string, includeArchived: boolean) {
+  const token = sessionStorage.getItem("prijClinicToken");
+  const params = new URLSearchParams({ q: query, includeArchived: String(includeArchived) });
+  const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, {
+    credentials: "include",
+    headers: token ? { authorization: `Bearer ${token}` } : undefined
+  });
+  if (!response.ok) return [];
+  const data = (await response.json()) as { patients?: PatientPickerPatient[] };
+  return data.patients ?? [];
+}
+
+function groupPatientsByType(patients: PatientPickerPatient[]) {
+  const order = ["OB", "GYN", "INFERTILITY", "WOMEN_HEALTH", "OTHER", "UNCLASSIFIED"];
+  const labels: Record<string, string> = {
+    OB: "Obstetric / Pregnancy",
+    GYN: "Gynecology",
+    INFERTILITY: "Infertility",
+    WOMEN_HEALTH: "Women's Health / General",
+    OTHER: "Other / Unclassified",
+    UNCLASSIFIED: "Unclassified - needs patient type review"
+  };
+  return order
+    .map((key) => [labels[key], patients.filter((patient) => (patient.patientType || "UNCLASSIFIED") === key)] as const)
+    .filter(([, rows]) => rows.length > 0);
+}
+
+function comparePatientRecency(left: PatientPickerPatient, right: PatientPickerPatient) {
+  return String(right.latestVisitDate ?? right.createdAt ?? "").localeCompare(String(left.latestVisitDate ?? left.createdAt ?? ""));
+}
+
+function isDemoLikePatient(patient: PatientPickerPatient) {
+  return /\b(demo|test|qa|runtime|fixture|ux-)\b/i.test(`${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""}`);
 }

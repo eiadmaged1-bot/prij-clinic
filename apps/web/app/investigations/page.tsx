@@ -64,7 +64,7 @@ export default function InvestigationsPage() {
   const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
   const [selected, setSelected] = useState<CatalogItem[]>([]);
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const patients: Patient[] = [];
   const [patientId, setPatientId] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [category, setCategory] = useState("");
@@ -75,7 +75,6 @@ export default function InvestigationsPage() {
     const routePatientId = params.get("patientId");
     if (routePatientId) setPatientId(routePatientId);
     void loadRequests();
-    void loadPatients();
   }, []);
   const searchCatalog = useCallback(async (value: string) => {
     const expanded = expandSearchShortcut(value);
@@ -102,11 +101,6 @@ export default function InvestigationsPage() {
   async function loadRequests() {
     const data = await apiGet("/clinical-requests");
     setRequests((data.clinicalRequests ?? []) as ClinicalRequest[]);
-  }
-
-  async function loadPatients() {
-    const data = await apiGet("/patients");
-    setPatients((data.patients ?? []) as Patient[]);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -211,7 +205,7 @@ export default function InvestigationsPage() {
             <button className="button secondary" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>Print</button>
           </form>
         </article>
-        <article className="panel">
+        <details className="panel">
           <div className="section-heading"><h2>Investigation Catalog Management</h2><span className="badge">Owner/Admin/Doctor</span></div>
           <p className="muted">One-click deactivate hides items from future ordering and preserves old records. Every change must be audited by the API.</p>
           <div className="form-actions">
@@ -219,7 +213,7 @@ export default function InvestigationsPage() {
             <button className="button secondary compact" type="button">Inactive tab / restore</button>
             <span className="badge">Deactivated. Undo</span>
           </div>
-        </article>
+        </details>
         <article className="panel">
           <div className="section-heading"><h2>Result Follow-up</h2><span className="badge">{requests.length}</span></div>
           <div className="data-list">

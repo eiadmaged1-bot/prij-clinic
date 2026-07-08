@@ -253,6 +253,8 @@
     "test:v139:clinical-tags-edd-intake": "node scripts/v139-clinical-tags-edd-intake-test.mjs",
     "test:v140:mobile-productization": "node scripts/v140-mobile-productization-test.mjs",
     "test:v141:receptionist-polish": "node scripts/v141-receptionist-polish-test.mjs",
+    "test:v142:doctor-pharmacology": "node scripts/v142-doctor-pharmacology-test.mjs",
+    "test:v142:minimal-ux": "node scripts/v142-minimal-ux-test.mjs",
     "test:ui-cleanup-tailscale": "node scripts/ui-cleanup-tailscale-logout-test.mjs",
     "test:web:hydration-root": "node scripts/test-next-hydration-root.mjs",
     "test:v114:responsive-shell": "playwright test tests/v114/real-app-responsive-shell.spec.ts --config=playwright.config.ts",

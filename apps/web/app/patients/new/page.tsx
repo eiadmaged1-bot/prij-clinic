@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../mvp-page";
+import { useSession } from "../../session";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { useI18n } from "@/i18n/useI18n";
@@ -45,8 +46,12 @@ export default function NewPatientPage() {
 
 function NewPatientContent() {
   const router = useRouter();
+  const { user } = useSession();
   const { language } = useI18n();
   const copy = newPatientCopy[language];
+  const isDoctor = Boolean(user?.roles.includes("Doctor") && !user.roles.some((role) => ["Owner", "Admin", "Reception", "Receptionist"].includes(role)));
+  const canCreatePatient = Boolean(user?.permissions.includes("patient.create") || user?.roles.some((role) => ["Owner", "Admin"].includes(role)));
+  const canManageQueue = Boolean(user?.permissions.includes("queue.manage") || user?.roles.some((role) => ["Owner", "Admin", "Reception", "Receptionist"].includes(role)));
   const [form, setForm] = useState<FormState>(initialState);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -82,11 +87,13 @@ function NewPatientContent() {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "Patient";
       const formData = new FormData(event.currentTarget);
-      const saveIntent = String(formData.get("saveIntent") ?? "queue");
+      const saveIntent = String(formData.get("saveIntent") ?? (isDoctor ? "open" : "queue"));
       if (!firstName) throw new Error(copy.fullNameRequired);
       if (saveIntent === "queue" && !visitType) throw new Error(copy.visitTypeRequired);
+      if (!canCreatePatient) throw new Error("Patient registration is handled by reception.");
 
       const noteParts = [
+        isDoctor ? "Created by Doctor. Needs reception details review." : "",
         form.notes.trim(),
         form.address.trim() ? `Area/address: ${form.address.trim()}` : "",
         form.yearOfBirth.trim() ? `Year of birth: ${form.yearOfBirth.trim()}` : ""
@@ -123,7 +130,7 @@ function NewPatientContent() {
       const patient = (await response.json()) as { id: string };
       setCreatedPatientId(patient.id);
       let queueTicket: { queueNumber?: number; visitType?: string } | null = null;
-      if (saveIntent === "queue") {
+      if (saveIntent === "queue" && canManageQueue) {
         const queueResponse = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
           method: "POST",
           credentials: "include",
@@ -155,7 +162,7 @@ function NewPatientContent() {
         })
       }).catch(() => undefined);
       setSuccess(saveIntent === "queue" ? `${copy.addedToQueue} ${queueTicket?.queueNumber ?? "new"}.` : copy.patientFileSaved);
-      if (saveIntent === "queue") router.push(`/patients/${patient.id}`);
+      if (saveIntent === "queue" || saveIntent === "open") router.push(`/patients/${patient.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : copy.createFailed);
     } finally {
@@ -172,26 +179,33 @@ function NewPatientContent() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">{copy.registration}</p>
-            <h1>{copy.title}</h1>
+            <p className="eyebrow">{isDoctor ? "Doctor" : copy.registration}</p>
+            <h1>{isDoctor ? "Doctor Quick Patient File" : copy.title}</h1>
           </div>
-          <Link className="button secondary compact back-to-reception-button" href="/reception">{copy.backToReception}</Link>
+          <Link className="button secondary compact back-to-reception-button" href={isDoctor ? "/doctor" : "/reception"}>{isDoctor ? "Back to Doctor Workspace" : copy.backToReception}</Link>
         </div>
-        <p className="muted">{copy.subtitle}</p>
+        <p className="muted">{isDoctor ? "Create a minimal patient file and open the clinical workspace. Reception can complete administrative details later." : copy.subtitle}</p>
       </section>
 
       <section className="panel form-panel new-patient-card premium-depth-card">
         <div className="section-heading">
           <h2>{copy.patientDetails}</h2>
-          <span className="badge warning">{copy.reception}</span>
+          <span className="badge warning">{isDoctor ? "Doctor" : copy.reception}</span>
         </div>
+        {isDoctor && !canCreatePatient ? (
+          <div className="empty-state smart-empty-state">
+            <span>Patient registration is handled by reception.</span>
+            <Link className="button secondary compact" href="/patients">Search existing patient</Link>
+            <Link className="button secondary compact" href="/doctor/waiting">Open doctor waiting list</Link>
+          </div>
+        ) : null}
 
-        <form className="form-grid" onSubmit={submit}>
-          <label className="wide file-number-block">
+        {(!isDoctor || canCreatePatient) ? <form className="form-grid" onSubmit={submit}>
+          {!isDoctor ? <label className="wide file-number-block">
             {copy.fileNumber}
             <strong className="readonly-file-number">{form.medicalRecordNumber}</strong>
             <button className="button secondary compact" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">{copy.generateAnother}</button>
-          </label>
+          </label> : null}
           <label>
             {copy.fullName}
             <input autoComplete="name" onChange={(event) => update("fullName", event.target.value)} placeholder={copy.fullNamePlaceholder} value={form.fullName} />
@@ -212,10 +226,10 @@ function NewPatientContent() {
             <input inputMode="numeric" max={new Date().getFullYear()} min="1900" onChange={(event) => update("yearOfBirth", event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="YYYY" value={form.yearOfBirth} />
           </label>
           <div className="age-chip" aria-label="Auto-calculated age">{copy.age}: {calculatedAge}</div>
-          <label>
+          {!isDoctor ? <label>
             {copy.areaAddress}
             <input onChange={(event) => update("address", event.target.value)} placeholder={copy.areaPlaceholder} value={form.address} />
-          </label>
+          </label> : null}
           <details className="wide notes-collapsible">
             <summary>{copy.addNotes}</summary>
             <label>
@@ -223,11 +237,11 @@ function NewPatientContent() {
               <textarea onChange={(event) => update("notes", event.target.value)} rows={3} value={form.notes} />
             </label>
           </details>
-          <div className="wide">
+          {!isDoctor ? <div className="wide">
             <VisitTypeSelector value={visitType} onChange={setVisitType} />
-          </div>
+          </div> : null}
 
-          <label className="wide toggle-row sensitive-bottom-checkbox">
+          {!isDoctor ? <label className="wide toggle-row sensitive-bottom-checkbox">
             <input
               checked={form.sexualActivityStatus === "not_sexually_active"}
               onChange={(event) => update("sexualActivityStatus", event.target.checked ? "not_sexually_active" : "unknown")}
@@ -235,7 +249,7 @@ function NewPatientContent() {
             />
             {copy.notSexuallyActive}
             <span className="muted">{copy.uncheckedUnknown}</span>
-          </label>
+          </label> : null}
 
           {duplicateWarnings.length ? (
             <div className="alert warning wide" data-testid="duplicate-patient-warning">
@@ -248,14 +262,15 @@ function NewPatientContent() {
           {success ? <p className="success-message wide">{success}</p> : null}
 
           <div className="form-actions wide">
-            <button className="button" disabled={isSubmitting} name="saveIntent" value="queue" type="submit">
+            {!isDoctor && canManageQueue ? <button className="button" disabled={isSubmitting} name="saveIntent" value="queue" type="submit">
               <ThreeDMedicalIcon name="patients" size="sm" />
               {isSubmitting ? copy.saving : copy.saveAndAddToQueue}
-            </button>
-            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="file" type="submit">{copy.saveFileOnly}</button>
-            {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>{copy.openReceptionProfile}</Link> : null}
+            </button> : null}
+            {isDoctor ? <button className="button" disabled={isSubmitting} name="saveIntent" value="open" type="submit">Create and open clinical file</button> : null}
+            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="file" type="submit">{isDoctor ? "Create file only" : copy.saveFileOnly}</button>
+            {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>{isDoctor ? "Open clinical file" : copy.openReceptionProfile}</Link> : null}
           </div>
-        </form>
+        </form> : null}
       </section>
     </>
   );

@@ -4632,9 +4632,9 @@ body {
     align-items: center;
     flex-wrap: nowrap;
     min-height: 4rem;
-    max-height: 4.75rem;
+    max-height: none;
     margin-bottom: 0.7rem;
-    overflow: hidden;
+    overflow: visible;
     padding: 0.55rem 0.75rem;
   }
 
@@ -4649,6 +4649,7 @@ body {
     flex: 0 0 auto;
     flex-wrap: nowrap;
     gap: 0.4rem;
+    min-width: max-content;
   }
 
   .topbar-logout-button {
@@ -4682,8 +4683,8 @@ body {
   .doctor-comfort-mode .topbar,
   .theme-prij-heritage.doctor-comfort-mode .topbar,
   .theme-medicolize-portal.doctor-comfort-mode .topbar {
-    max-height: 4.75rem;
-    overflow: hidden;
+    max-height: none;
+    overflow: visible;
   }
 
   .doctor-comfort-mode .patient-tabs,

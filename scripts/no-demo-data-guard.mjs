@@ -6,9 +6,21 @@ const forbiddenUi = ["Prij Clinic"];
 const forbiddenVisibleTerms = [
   "Demo Route",
   "demo route",
+  "Demo Clinical",
+  "Demo Workflow",
+  "Demo complaint",
+  "Demo workflow note only",
+  "Archived fixture",
+  "route check fixture",
+  "Test Intake",
+  "Review DoctorUX",
+  "UX-",
+  "Runtime",
+  "QA",
   "QA Route",
   "Runtime Route",
   "Test Route",
+  "fake CI",
   "Demo appointment",
   "QA appointment",
   "Runtime appointment",
@@ -74,7 +86,14 @@ const [
         { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
         { medicalRecordNumber: { startsWith: "LOCAL-PAT-", mode: "insensitive" } },
         { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
-        { firstName: { startsWith: "Test Intake", mode: "insensitive" } }
+        { medicalRecordNumber: { startsWith: "UX-", mode: "insensitive" } },
+        { firstName: { startsWith: "Test Intake", mode: "insensitive" } },
+        { firstName: { contains: "Runtime", mode: "insensitive" } },
+        { firstName: { contains: "Review DoctorUX", mode: "insensitive" } },
+        { lastName: { contains: "Archived fixture", mode: "insensitive" } },
+        { notes: { contains: "Demo Workflow", mode: "insensitive" } },
+        { notes: { contains: "Demo complaint", mode: "insensitive" } },
+        { notes: { contains: "fake CI", mode: "insensitive" } }
       ]
     },
     select: { medicalRecordNumber: true, firstName: true, lastName: true }
@@ -89,6 +108,7 @@ const [
   }),
   prisma.appointment.findMany({
     where: {
+      status: { not: "cancelled" },
       OR: forbiddenVisibleTerms.flatMap((term) => [
         { appointmentType: { contains: term, mode: "insensitive" } },
         { source: { contains: term, mode: "insensitive" } },
