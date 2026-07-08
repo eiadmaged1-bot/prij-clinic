@@ -26,6 +26,14 @@ type Props = {
 };
 
 export function ClinicOperationsPage({ mode, title, eyebrow, description }: Props) {
+  return (
+    <AppShell>
+      <ClinicOperationsContent mode={mode} title={title} eyebrow={eyebrow} description={description} />
+    </AppShell>
+  );
+}
+
+function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
   const v144DoctorWaitingActionLock = "Open file Continue visit Complete";
   const v140QueueCompatibilityLock = "Cancel/remove with reason";
   void v144DoctorWaitingActionLock;
@@ -70,7 +78,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const visibleQueue = queue.filter((ticket) => !isTrainingPatient(ticket.patient));
 
   return (
-    <AppShell>
+    <>
       <section className="page-header">
         <div className="header-row">
           <div>
@@ -101,7 +109,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
       {mode === "reports" ? <DailyReports appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
-    </AppShell>
+    </>
   );
 }
 

@@ -25,6 +25,14 @@ type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
 };
 
 export default function ReceptionQrScanPage() {
+  return (
+    <AppShell>
+      <ReceptionQrScanContent />
+    </AppShell>
+  );
+}
+
+function ReceptionQrScanContent() {
   const v140QrSourceCompatibilityLock = "Manual fallback Add to today&apos;s queue Open file";
   void v140QrSourceCompatibilityLock;
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -149,7 +157,7 @@ export default function ReceptionQrScanPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <section className="page-header">
         <div className="header-row">
           <div>
@@ -202,7 +210,7 @@ export default function ReceptionQrScanPage() {
           ) : null}
         </article>
       </section>
-    </AppShell>
+    </>
   );
 }
 

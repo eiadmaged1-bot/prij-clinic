@@ -13,6 +13,14 @@ type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: st
 type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: Patient | null };
 
 export default function ReceptionHomePage() {
+  return (
+    <AppShell>
+      <ReceptionHomeContent />
+    </AppShell>
+  );
+}
+
+function ReceptionHomeContent() {
   const zeroPaperCompatibilityLock = "Quick check-in Returning Patient / QR Appointments / Payments Next patient not called yet Mark urgent Remove with reason";
   void zeroPaperCompatibilityLock;
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -80,7 +88,7 @@ export default function ReceptionHomePage() {
   }
 
   return (
-    <AppShell>
+    <>
       <section className="page-header">
         <span hidden>{zeroPaperCompatibilityLock}</span>
         <div className="header-row">
@@ -197,7 +205,7 @@ export default function ReceptionHomePage() {
         </div>
         {waiting.length > 4 ? <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link> : null}
       </section>
-    </AppShell>
+    </>
   );
 }
 

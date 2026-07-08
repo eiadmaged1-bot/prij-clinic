@@ -36,6 +36,14 @@ const initialState: FormState = {
 };
 
 export default function NewPatientPage() {
+  return (
+    <AppShell>
+      <NewPatientContent />
+    </AppShell>
+  );
+}
+
+function NewPatientContent() {
   const router = useRouter();
   const { language } = useI18n();
   const copy = newPatientCopy[language];
@@ -160,7 +168,7 @@ export default function NewPatientPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <section className="page-header">
         <div className="header-row">
           <div>
@@ -251,7 +259,7 @@ export default function NewPatientPage() {
           </div>
         </form>
       </section>
-    </AppShell>
+    </>
   );
 }
 

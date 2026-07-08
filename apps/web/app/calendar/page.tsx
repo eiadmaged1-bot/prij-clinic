@@ -25,6 +25,14 @@ type EddEntry = {
 };
 
 export default function CalendarPage() {
+  return (
+    <AppShell>
+      <CalendarContent />
+    </AppShell>
+  );
+}
+
+function CalendarContent() {
   const v140CalendarReceptionistSafetyLock = '!isReceptionistOnly ? <Link className="button compact"';
   void v140CalendarReceptionistSafetyLock;
   const today = new Date().toISOString().slice(0, 10);
@@ -71,7 +79,7 @@ export default function CalendarPage() {
   const completed = activeQueue.filter((ticket) => ticket.status === "completed").length;
 
   return (
-    <AppShell>
+    <>
       <section className="page-header">
         <div className="header-row">
           <div>
@@ -187,7 +195,7 @@ export default function CalendarPage() {
           ))}
         </div>
       </section> : null}
-    </AppShell>
+    </>
   );
 }
 
