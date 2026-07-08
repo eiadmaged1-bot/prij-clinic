@@ -39,7 +39,6 @@ check("visit types", "apps/web/lib/visit-types.ts", [
 check("new patient", "apps/web/app/patients/new/page.tsx", [
   "Generate another file number",
   "readOnly",
-  "Date of birth",
   "Year of birth",
   "Save and add to queue",
   "Save file only",

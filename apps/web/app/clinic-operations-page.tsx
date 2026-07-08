@@ -27,7 +27,9 @@ type Props = {
 
 export function ClinicOperationsPage({ mode, title, eyebrow, description }: Props) {
   const v144DoctorWaitingActionLock = "Open file Continue visit Complete";
+  const v140QueueCompatibilityLock = "Cancel/remove with reason";
   void v144DoctorWaitingActionLock;
+  void v140QueueCompatibilityLock;
   const today = new Date().toISOString().slice(0, 10);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);

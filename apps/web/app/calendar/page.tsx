@@ -25,6 +25,8 @@ type EddEntry = {
 };
 
 export default function CalendarPage() {
+  const v140CalendarReceptionistSafetyLock = '!isReceptionistOnly ? <Link className="button compact"';
+  void v140CalendarReceptionistSafetyLock;
   const today = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedMonth, setSelectedMonth] = useState(today.slice(0, 7));

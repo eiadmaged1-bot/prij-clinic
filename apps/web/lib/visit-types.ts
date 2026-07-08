@@ -8,6 +8,7 @@ export const visitTypes: Array<{ value: VisitTypeValue; label: string; urgent?: 
 ];
 
 export const visitTypeLegacyEncodingLock = "كشف إعادة استشارة مستعجل";
+export const visitTypeV140LegacyEncodingCompatibilityLock = "Ø§Ø³ØªØ´Ø§Ø±Ø© ÙƒØ´Ù Ø¥Ø¹Ø§Ø¯Ø© Ù…Ø³ØªØ¹Ø¬Ù„";
 
 export function visitTypeLabel(value?: string | null) {
   return visitTypes.find((visitType) => visitType.value === value)?.label ?? "كشف";

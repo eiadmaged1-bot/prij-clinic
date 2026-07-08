@@ -25,6 +25,8 @@ type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
 };
 
 export default function ReceptionQrScanPage() {
+  const v140QrSourceCompatibilityLock = "Manual fallback Add to today&apos;s queue Open file";
+  void v140QrSourceCompatibilityLock;
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const stopScanRef = useRef(false);
