@@ -6,6 +6,7 @@ import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIco
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "./mvp-page";
 import { useSession } from "./session";
+import { useI18n } from "@/i18n/useI18n";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; source?: string | null; notes?: string | null; cancellationReason?: string | null; noShowReason?: string | null; patient?: Patient };
@@ -35,6 +36,8 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const [dashboard, setDashboard] = useState<DashboardSummary>({});
   const [status, setStatus] = useState("Loading");
   const { user, isAdmin } = useSession();
+  const { language } = useI18n();
+  const copy = operationsCopy[language];
   const roles = user?.roles ?? [];
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -69,21 +72,21 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">{eyebrow}</p>
-            <h1>{title}</h1>
+            <p className="eyebrow">{mode === "queue" ? copy.eyebrow : eyebrow}</p>
+            <h1>{mode === "queue" ? copy.queueTitle : title}</h1>
           </div>
           <div className="topbar-actions">
             <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
             {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
-            <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />Reception</Link>
+            <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />{mode === "queue" ? copy.reception : "Reception"}</Link>
             {!isReceptionistOnly && (isAdmin || hasRole(roles, ["Doctor"])) ? <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link> : null}
-            <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>
+            <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{mode === "queue" ? copy.refresh : "Refresh"}</button>
           </div>
         </div>
         {mode !== "reports" && mode !== "queue" ? <p className="muted">{description}</p> : null}
       </section>
       <SafetyAlert />
-      {mode === "queue" ? <QueueBoard queue={visibleQueue} today={today} /> : (
+      {mode === "queue" ? <QueueBoard queue={visibleQueue} today={today} copy={copy} /> : (
         <section className="compact-metric-grid">
           <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
           <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
@@ -108,44 +111,47 @@ function CalendarLoop({ appointments, queue, invoices, isReceptionistOnly }: { a
   return <section className="content-grid"><DailyList title="Today schedule" actionLabel={isReceptionistOnly ? "Open reception profile" : "Open patient"} rows={appointments.map((appointment) => row(appointment.id, appointment.patientId, patient(appointment.patient), appointment.status, [time(appointment.startAt), appointment.appointmentType, paymentBadge(invoices, appointment.patientId)].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={appointments} queue={queue} /></section>;
 }
 
-function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
+function QueueBoard({ queue, today, copy }: { queue: QueueTicket[]; today: string; copy: OperationsCopy }) {
   const waiting = queue
     .filter((ticket) => ticket.status === "waiting")
     .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime());
   const nextTicket = queue.find((ticket) => ticket.status === "called") ?? waiting[0] ?? null;
-  const urgent = queue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
+  const activeQueue = queue.filter((ticket) => ticket.status !== "cancelled");
+  const cancelledQueue = queue.filter((ticket) => ticket.status === "cancelled");
+  const urgent = activeQueue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const completed = queue.filter((ticket) => ticket.status === "completed");
-  const rows = [...waiting, ...queue.filter((ticket) => !["cancelled", "waiting"].includes(ticket.status))];
+  const rows = [...waiting, ...activeQueue.filter((ticket) => ticket.status !== "waiting")];
   return (
     <section className="queue-board-compact">
       <div className="toolbar compact-toolbar">
-        <label>Date<input type="date" defaultValue={today} /></label>
-        <span className="badge">Reception Queue</span>
+        <label>{copy.date}<input type="date" defaultValue={today} /></label>
+        <span className="badge">{copy.receptionQueue}</span>
       </div>
       <section className="compact-metric-grid">
-        <Metric icon="queue" label="Waiting" value={waiting.length} />
-        <Metric icon="doctor" label="Next" value={nextTicket ? patient(nextTicket.patient) : "Next patient not called yet"} />
-        <Metric icon="queue" label="Urgent" value={urgent.length} />
-        <Metric icon="reports" label="Completed" value={completed.length} />
+        <Metric icon="queue" label={copy.waiting} value={waiting.length} />
+        <Metric icon="doctor" label={copy.next} value={nextTicket ? patient(nextTicket.patient) : copy.nextPatientNotCalledYet} />
+        <Metric icon="queue" label={copy.urgent} value={urgent.length} />
+        <Metric icon="reports" label={copy.completed} value={completed.length} />
       </section>
       <article className="panel compact-panel">
-        <div className="section-heading"><h2>Queue list</h2><span className="badge">{rows.length}</span></div>
-        {rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients in the queue.</span></p> : null}
+        <div className="section-heading"><h2>{copy.queueList}</h2><span className="badge">{rows.length}</span></div>
+        {rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>{copy.noPatientsWaiting}</span></p> : null}
         <div className="dense-card-list">
           {rows.map((ticket, index) => (
             <article className="data-row dense" key={ticket.id}>
               <div className="data-row-header">
-                <strong>{index + 1}. {patient(ticket.patient)} · {visitTypeLabelLocal(ticket.visitType)} · {friendly(ticket.status)} · added by {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} · {ticket.checkedInAt ? time(ticket.checkedInAt) : "today"} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "waiting duration not recorded"}</strong>
+                <strong>{index + 1}. {patient(ticket.patient)} | {visitTypeLabelLocal(ticket.visitType)} | {friendly(ticket.status)} | {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} | {ticket.checkedInAt ? time(ticket.checkedInAt) : copy.today} | {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : copy.waitingDurationNotRecorded}</strong>
               </div>
               <div className="form-actions">
-                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open reception profile</Link>
-                <button className="button secondary compact" type="button">Call patient</button>
-                <button className="button secondary compact" type="button">Mark urgent</button>
-                <button className="button secondary compact" type="button">Cancel/remove with reason</button>
+                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{copy.openReceptionProfile}</Link>
+                <button className="button secondary compact" type="button">{copy.callPatient}</button>
+                <button className="button secondary compact" type="button">{copy.markUrgent}</button>
+                <button className="button secondary compact" type="button">{copy.removeWithReason}</button>
               </div>
             </article>
           ))}
         </div>
+        {cancelledQueue.length ? <details className="cancelled-history"><summary>{copy.cancelledToday} ({cancelledQueue.length})</summary></details> : null}
       </article>
     </section>
   );
@@ -241,3 +247,52 @@ function isTrainingPatient(value?: Patient | null) {
 function hasRole(roles: string[], names: string[]) {
   return roles.some((role) => names.includes(role));
 }
+
+type OperationsCopy = (typeof operationsCopy)[keyof typeof operationsCopy];
+
+const operationsCopy = {
+  en: {
+    eyebrow: "Reception",
+    queueTitle: "Queue",
+    reception: "Reception",
+    refresh: "Refresh",
+    date: "Date",
+    receptionQueue: "Reception Queue",
+    waiting: "Waiting",
+    next: "Next",
+    urgent: "Urgent",
+    completed: "Completed",
+    nextPatientNotCalledYet: "Next patient not called yet",
+    queueList: "Queue list",
+    noPatientsWaiting: "No patients waiting",
+    today: "today",
+    waitingDurationNotRecorded: "waiting duration not recorded",
+    openReceptionProfile: "Open reception profile",
+    callPatient: "Call patient",
+    markUrgent: "Mark urgent",
+    removeWithReason: "Remove with reason",
+    cancelledToday: "Cancelled today"
+  },
+  ar: {
+    eyebrow: "الاستقبال",
+    queueTitle: "قائمة الانتظار",
+    reception: "الاستقبال",
+    refresh: "تحديث",
+    date: "تاريخ اليوم",
+    receptionQueue: "قائمة انتظار الاستقبال",
+    waiting: "في الانتظار الآن",
+    next: "المريضة التالية",
+    urgent: "مستعجل",
+    completed: "تم الانتهاء",
+    nextPatientNotCalledYet: "لم يتم استدعاء المريضة التالية بعد",
+    queueList: "قائمة الانتظار",
+    noPatientsWaiting: "لا توجد مريضات في الانتظار",
+    today: "اليوم",
+    waitingDurationNotRecorded: "مدة الانتظار غير مسجلة",
+    openReceptionProfile: "فتح ملف الاستقبال",
+    callPatient: "استدعاء",
+    markUrgent: "تحديد مستعجل",
+    removeWithReason: "إزالة مع سبب",
+    cancelledToday: "ملغاة اليوم"
+  }
+} as const;
