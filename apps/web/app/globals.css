@@ -1315,6 +1315,45 @@ details.form-fieldset summary {
   overflow-wrap: anywhere;
 }
 
+.back-to-reception-button {
+  font-size: 0.85rem;
+  min-height: 2.2rem;
+}
+
+.file-number-block {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.readonly-file-number input {
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.helper-text {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.notes-collapsible {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.7rem;
+}
+
+.notes-collapsible summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.notes-collapsible label {
+  margin-top: 0.65rem;
+}
+
 .qr-scan-card {
   min-height: 86px;
   font-size: 0.95rem;
