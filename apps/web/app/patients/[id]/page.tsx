@@ -8,6 +8,7 @@ import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIc
 import { SafeAiAssistantPanel } from "../../../components/ai-assistant/SafeAiAssistantPanel";
 import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
 import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
+import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorkspace";
 import { MedicationSafetyTerminal } from "../../../components/medications/MedicationSafetyTerminal";
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
@@ -455,10 +456,9 @@ export default function PatientFilePage() {
             <strong>Preview mode — visit not started</strong>
             <p className="muted" dir="rtl">وضع المعاينة — الزيارة لم تبدأ</p>
           </div>
-          <Link className="button compact" href={`/doctor/visit?patientId=${patientId}`}>
-            <ThreeDMedicalIcon name="encounter" size="sm" />
-            Start Visit
-          </Link>
+          <ActiveVisitLauncher className="button compact" patientId={patientId}>
+            <><ThreeDMedicalIcon name="encounter" size="sm" />Start Visit</>
+          </ActiveVisitLauncher>
         </section>
       ) : null}
 
@@ -1033,10 +1033,9 @@ function Overview({ patient, related, timelineItems }: { patient: Patient; relat
         <ThreeDMedicalIcon name="doctor" size="lg" />
         <h2>Next best step</h2>
         <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
-        <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>
-          <ThreeDMedicalIcon name="encounter" size="sm" />
-          New Encounter
-        </Link>
+        <ActiveVisitLauncher className="button large" patientId={patient.id}>
+          <><ThreeDMedicalIcon name="encounter" size="sm" />New Encounter</>
+        </ActiveVisitLauncher>
       </article>
       <article className="panel compact-panel">
         <div className="section-heading">
@@ -1737,10 +1736,9 @@ function ObgynWorkspace({
   return (
     <section className="obgyn-workspace">
       <div className="obgyn-print-toolbar no-print">
-        <Link className="button compact" href={`/doctor/visit?patientId=${patient.id}`}>
-          <ThreeDMedicalIcon name="encounter" size="sm" />
-          Start antenatal workflow
-        </Link>
+        <ActiveVisitLauncher className="button compact" patientId={patient.id}>
+          <><ThreeDMedicalIcon name="encounter" size="sm" />Start antenatal workflow</>
+        </ActiveVisitLauncher>
         <button className="button secondary compact" type="button" onClick={() => window.print()}>
           <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
           Print patient summary

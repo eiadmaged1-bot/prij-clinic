@@ -348,6 +348,9 @@ export class PregnancyService {
   }
 
   async createObUltrasound(dto: CreateObUltrasoundDto, user: AuthUser) {
+    if (!dto.patientId || !dto.encounterId) {
+      throw new BadRequestException("Patient and active visit context are required before saving an ultrasound report.");
+    }
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const pregnancy = await assertCanReferencePregnancy(this.prisma, dto.pregnancyId, user, { patientId: dto.patientId });
     await this.assertCanReferenceFetus(dto.fetusId, pregnancy?.id, user);
@@ -452,6 +455,9 @@ export class PregnancyService {
 
   async updateObUltrasound(id: string, dto: UpdateObUltrasoundDto, user: AuthUser) {
     const existing = await this.getObUltrasound(id, user);
+    if (!(dto.encounterId ?? existing.encounterId)) {
+      throw new BadRequestException("Patient and active visit context are required before updating an ultrasound report.");
+    }
 
     if (existing.status === "reviewed" && dto.status !== "voided") {
       throw new BadRequestException("Reviewed OB ultrasound records require a correction workflow before edits.");

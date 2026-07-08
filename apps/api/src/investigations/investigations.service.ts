@@ -15,6 +15,9 @@ export class InvestigationsService {
   ) {}
 
   async createOrder(dto: CreateInvestigationOrderDto, user: AuthUser) {
+    if (!dto.patientId || !dto.encounterId) {
+      throw new BadRequestException("Patient and active visit context are required before saving an investigation request.");
+    }
     await assertCanReferencePatient(this.prisma, dto.patientId, user);
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
       patientId: dto.patientId,

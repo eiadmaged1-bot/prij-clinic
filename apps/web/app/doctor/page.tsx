@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { ActiveVisitLauncher } from "../../components/clinic/ActiveVisitWorkspace";
 import { AppShell, SafetyAlert } from "../mvp-page";
+import { useSession } from "../session";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
@@ -25,6 +28,7 @@ type Appointment = {
 };
 
 export default function DoctorModePage() {
+  const { user } = useSession();
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [status, setStatus] = useState("Loading");
@@ -49,6 +53,7 @@ export default function DoctorModePage() {
 
   const current = queue.find((ticket) => ticket.status === "called");
   const counts = visitTypeCounts(queue);
+  const canStartVisit = hasAnyRolePermission(user?.roles ?? [], Action.VISIT_START) || (user?.roles ?? []).some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
   return (
     <AppShell>
@@ -60,7 +65,7 @@ export default function DoctorModePage() {
         </div>
         <div className="doctor-hero-actions">
           <Link className="button large" href="/patients"><ThreeDMedicalIcon name="patients" size="sm" />Open Patient</Link>
-          <Link className="button secondary large" href="/doctor/visit"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Start Visit</Link>
+          <Link className="button secondary large" href="/doctor/waiting"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Choose patient to start</Link>
         </div>
       </section>
 
@@ -69,7 +74,7 @@ export default function DoctorModePage() {
       <section className="doctor-today-grid">
         <FocusCard icon="queue" eyebrow="Waiting patients" value={queue.length} text="Patients waiting or moving through the clinic flow." href="/doctor/waiting" action="Open waiting list" />
         <FocusCard icon="calendar" eyebrow="Today&apos;s patients" value={appointments.length} text="Scheduled visits for today&apos;s clinical work." href="/calendar" action="Open calendar" />
-        <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow for large, readable steps." href="/doctor/visit" action="Open visit" />
+        <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow from a locked patient context." href="/doctor/waiting" action="Choose patient" />
       </section>
 
       <section className="panel compact-panel">
@@ -93,7 +98,7 @@ export default function DoctorModePage() {
             <p className="muted">Follow-up hints and visit context stay inside the patient file.</p>
             <div className="form-actions">
               <Link className="button compact" href={current.patientId ? `/patients/${current.patientId}` : "/queue"}>Open file</Link>
-              <Link className="button secondary compact" href={current.patientId ? `/doctor/visit?patientId=${current.patientId}` : "/doctor/visit"}>Continue visit</Link>
+              {current.patientId && canStartVisit && current.status !== "cancelled" ? <ActiveVisitLauncher className="button secondary compact" patientId={current.patientId}>Continue visit</ActiveVisitLauncher> : null}
               <Link className="button secondary compact" href="/doctor/waiting">Complete</Link>
             </div>
           </article>
@@ -119,7 +124,7 @@ export default function DoctorModePage() {
               <ThreeDMedicalIcon name="queue" size="sm" />
               <div>
                 <strong>Queue {ticket.queueNumber ?? "patient"}</strong>
-                <span>{ticket.status ?? "Waiting"} - {visitTypeLabel(ticket.visitType)} - Start or resume visit</span>
+                <span>{ticket.status ?? "Waiting"} - {visitTypeLabel(ticket.visitType)} - open patient file first</span>
               </div>
               <span className="button compact secondary"><ThreeDMedicalIcon name="files" size="sm" tone="slate" />Open</span>
             </Link>

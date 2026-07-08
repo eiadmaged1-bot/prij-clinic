@@ -22,13 +22,16 @@ export default function PrescriptionsPage() {
   const patients: Patient[] = [];
   const [items, setItems] = useState<PrescriptionItem[]>([{ ...emptyItem }]);
   const [patientId, setPatientId] = useState("");
+  const [encounterId, setEncounterId] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("Ready");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const routePatientId = params.get("patientId");
+    const routeVisitId = params.get("visitId") ?? params.get("encounterId");
     if (routePatientId) setPatientId(routePatientId);
+    if (routeVisitId) setEncounterId(routeVisitId);
     void load();
   }, []);
 
@@ -58,12 +61,13 @@ export default function PrescriptionsPage() {
     }
     const response = await apiPost("/prescriptions", {
       patientId: patientId.trim() || undefined,
+      encounterId: encounterId.trim() || undefined,
       sourceType: "manual",
       notes,
       printSnapshotJson: { items: cleanItems, notes, nextStatus },
       items: cleanItems
     });
-    setStatus(response.ok ? (patientId.trim() ? "Saved and attached to patient file." : "Standalone printable draft saved.") : "Could not save prescription.");
+    setStatus(response.ok ? "Saved and attached to locked visit." : "Could not save prescription. Open an active patient visit first.");
     if (response.ok) void load();
   }
 
@@ -125,7 +129,7 @@ export default function PrescriptionsPage() {
           <UniversalSearchBox scope="prescriptions" />
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void savePrescription(); }}>
             <div className="wide">
-              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} allowStandalone standaloneLabel="Standalone draft not attached to patient." />
+              {encounterId ? <p className="selected-patient-card"><strong>Locked active visit</strong><span>Prescription inherits patient and visit context.</span></p> : <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient and active visit before saving." />}
             </div>
             {items.map((item, index) => (
               <div className="panel compact-panel" key={index}>
@@ -143,7 +147,7 @@ export default function PrescriptionsPage() {
             <label>Prescription notes<input value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <div className="form-actions">
               <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add medication</button>
-              <button className="button secondary" type="button" onClick={() => setStatus(patientId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
+              <button className="button secondary" type="button" onClick={() => setStatus(patientId && encounterId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient and active visit to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
               <button className="button" type="submit">Save draft</button>
               <button className="button secondary" type="button" onClick={() => { void savePrescription("printed"); window.print(); }}>Print</button>
             </div>

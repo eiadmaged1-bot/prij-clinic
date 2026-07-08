@@ -66,6 +66,7 @@ export default function InvestigationsPage() {
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const patients: Patient[] = [];
   const [patientId, setPatientId] = useState("");
+  const [encounterId, setEncounterId] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("Ready");
@@ -73,7 +74,9 @@ export default function InvestigationsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const routePatientId = params.get("patientId");
+    const routeVisitId = params.get("visitId") ?? params.get("encounterId");
     if (routePatientId) setPatientId(routePatientId);
+    if (routeVisitId) setEncounterId(routeVisitId);
     void loadRequests();
   }, []);
   const searchCatalog = useCallback(async (value: string) => {
@@ -105,12 +108,13 @@ export default function InvestigationsPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!patientId.trim() || selected.length === 0) {
-      setStatus("Select a patient and at least one request.");
+    if (!patientId.trim() || !encounterId.trim() || selected.length === 0) {
+      setStatus("Open an active patient visit and select at least one request.");
       return;
     }
     const response = await apiPost("/clinical-requests", {
       patientId: patientId.trim(),
+      encounterId: encounterId.trim(),
       requestNote,
       items: selected.map((item) => ({ title: item.name, catalogItemId: item.id.startsWith("template-") ? undefined : item.id, requestType: item.category, requestNote }))
     });
@@ -146,7 +150,7 @@ export default function InvestigationsPage() {
             <p className="eyebrow">Clinical Requests</p>
             <h1>Requested Investigations</h1>
           </div>
-          <button className="button secondary compact" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>
+          <button className="button secondary compact" type="button" disabled={!patientId || !encounterId || selected.length === 0} onClick={() => window.print()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
             Print
           </button>
@@ -158,7 +162,7 @@ export default function InvestigationsPage() {
           <div className="section-heading"><h2>Request Builder</h2><span className="badge">{status}</span></div>
           <form className="form-grid" onSubmit={submit}>
             <div className="wide">
-              <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient file before saving this request." />
+              {encounterId ? <p className="selected-patient-card"><strong>Locked active visit</strong><span>Investigations inherit patient and visit context.</span></p> : <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient and active visit before saving this request." />}
             </div>
             <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound, histopathology" /></label>
             <div className="investigation-category-sidebar wide" aria-label="Investigation category filters">
@@ -201,8 +205,8 @@ export default function InvestigationsPage() {
               )) : <span className="empty-state compact smart-empty-state">No requests selected</span>}
             </div>
             <label>Clinical note per request<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
-            <button className="button" type="submit" disabled={!patientId || selected.length === 0}>Attach to patient</button>
-            <button className="button secondary" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>Print</button>
+            <button className="button" type="submit" disabled={!patientId || !encounterId || selected.length === 0}>Attach to locked visit</button>
+            <button className="button secondary" type="button" disabled={!patientId || !encounterId || selected.length === 0} onClick={() => window.print()}>Print</button>
           </form>
         </article>
         <details className="panel">

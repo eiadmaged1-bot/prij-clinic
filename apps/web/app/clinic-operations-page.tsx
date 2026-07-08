@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIcon";
+import { ActiveVisitLauncher } from "../components/clinic/ActiveVisitWorkspace";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { visitTypeLabel } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "./mvp-page";
@@ -214,9 +215,34 @@ function DailyList({ title, rows, actionLabel = "Open patient", doctorSelect = f
     await fetch(`${getApiBaseUrl()}/queue/${ticketId}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => undefined);
     window.location.href = `/patients/${patientId}`;
   }
-  return <article className={`panel compact-panel ${currentPatientCompact ? "current-in-room-patient-compact" : ""}`}><div className="section-heading"><h2>{title}</h2><span className="badge">{rows.length}</span></div>{previewMode ? <p className="badge accent">Preview mode — visit not started</p> : null}{rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No records to show.</span></p> : null}<div className="dense-card-list">{rows.map((item) => <article className="data-row dense" key={item.id}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{friendly(item.status)}</span></div><p className="muted">{item.detail || "No operational note."}</p><div className="form-actions">{doctorSelect ? <><Link className="button secondary compact" href={`/patients/${item.patientId}?preview=queue`}>{actionLabel}</Link><Link className="button secondary compact" href={`/patients/${item.patientId}?preview=history`}>Preview history</Link><button className="button compact" type="button" onClick={() => void selectPatient(item.id, item.patientId)}>Start Visit</button></> : <Link className="button secondary compact" href={`/patients/${item.patientId}`}>{actionLabel}</Link>}{item.invoice ? <span className="badge">{friendly(item.invoice.status ?? "open")}</span> : null}</div></article>)}</div></article>;
-}
 
+  return (
+    <article className={`panel compact-panel ${currentPatientCompact ? "current-in-room-patient-compact" : ""}`}>
+      <div className="section-heading"><h2>{title}</h2><span className="badge">{rows.length}</span></div>
+      {previewMode ? <p className="badge accent">Preview mode - visit not started</p> : null}
+      {rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No records to show.</span></p> : null}
+      <div className="dense-card-list">
+        {rows.map((item) => (
+          <article className="data-row dense" key={item.id}>
+            <div className="data-row-header"><strong>{item.title}</strong><span className="badge">{friendly(item.status)}</span></div>
+            <p className="muted">{item.detail || "No operational note."}</p>
+            <div className="form-actions">
+              {doctorSelect ? (
+                <>
+                  <Link className="button secondary compact" href={`/patients/${item.patientId}?preview=queue`}>{actionLabel}</Link>
+                  <Link className="button secondary compact" href={`/patients/${item.patientId}?preview=history`}>Preview history</Link>
+                  {item.status === "cancelled" ? <Link className="button secondary compact" href={`/patients/${item.patientId}`}>View only</Link> : <button className="button compact" type="button" onClick={() => void selectPatient(item.id, item.patientId)}>Start Visit</button>}
+                  {item.status !== "cancelled" ? <ActiveVisitLauncher className="button secondary compact" patientId={item.patientId}>Resume locked visit</ActiveVisitLauncher> : null}
+                </>
+              ) : <Link className="button secondary compact" href={`/patients/${item.patientId}`}>{actionLabel}</Link>}
+              {item.invoice ? <span className="badge">{friendly(item.invoice.status ?? "open")}</span> : null}
+            </div>
+          </article>
+        ))}
+      </div>
+    </article>
+  );
+}
 function row(id: string, patientId: string, title: string, status: string, detail: string, invoices: Invoice[]) {
   return { id, patientId, title, status, detail, invoice: invoices.find((invoice) => invoice.patientId === patientId && invoice.status !== "paid") };
 }

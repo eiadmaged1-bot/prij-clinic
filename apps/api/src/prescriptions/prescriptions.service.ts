@@ -15,7 +15,10 @@ export class PrescriptionsService {
   ) {}
 
   async create(dto: CreatePrescriptionDto, user: AuthUser) {
-    if (dto.patientId) await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    if (!dto.patientId || !dto.encounterId) {
+      throw new BadRequestException("Patient and active visit context are required before saving a prescription draft.");
+    }
+    await assertCanReferencePatient(this.prisma, dto.patientId, user);
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
       patientId: dto.patientId,
       requireDoctorScope: true

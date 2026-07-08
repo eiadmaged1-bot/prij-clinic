@@ -103,10 +103,16 @@ async function main() {
   }
   record.pass("antenatal visit create/list depth fields");
 
+  const doctorVisit = await apiJson("POST", `/patients/${patient.id}/doctor-visit/start`, owner, {});
+  const encounterId = doctorVisit.encounter?.id;
+  if (!encounterId) throw new Error("Doctor visit did not return encounterId for locked ultrasound context.");
+  record.pass("doctor visit context created for ultrasound");
+
   const ultrasound = await apiJson("POST", "/ob-ultrasounds", owner, {
     patientId: patient.id,
     pregnancyId: pregnancy.id,
     fetusId: fetusA.id,
+    encounterId,
     performedAt: "2026-06-01T09:30:00.000Z",
     scanType: "Demo growth scan",
     indication: "Demo indication only.",
