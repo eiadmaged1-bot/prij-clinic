@@ -3,6 +3,17 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 const forbiddenUi = ["Prij Clinic"];
+const forbiddenVisibleTerms = [
+  "Demo Route",
+  "demo route",
+  "QA Route",
+  "Runtime Route",
+  "Test Route",
+  "Demo appointment",
+  "QA appointment",
+  "Runtime appointment",
+  "Test appointment"
+];
 const uiFiles = [
   "apps/web/app/login/page.tsx",
   "apps/web/app/mvp-page.tsx",
@@ -27,6 +38,8 @@ const [
   forbiddenUsers,
   forbiddenPatients,
   forbiddenIntakes,
+  forbiddenAppointments,
+  forbiddenGuidelineSources,
   cleanServices,
   totalCleanServices
 ] = await Promise.all([
@@ -74,6 +87,27 @@ const [
       ]
     }
   }),
+  prisma.appointment.findMany({
+    where: {
+      OR: forbiddenVisibleTerms.flatMap((term) => [
+        { appointmentType: { contains: term, mode: "insensitive" } },
+        { source: { contains: term, mode: "insensitive" } },
+        { notes: { contains: term, mode: "insensitive" } }
+      ])
+    },
+    select: { id: true, appointmentType: true, source: true, notes: true }
+  }),
+  prisma.guidelineSource.findMany({
+    where: {
+      active: true,
+      OR: forbiddenVisibleTerms.flatMap((term) => [
+        { name: { contains: term, mode: "insensitive" } },
+        { organization: { contains: term, mode: "insensitive" } },
+        { notes: { contains: term, mode: "insensitive" } }
+      ])
+    },
+    select: { id: true, name: true, organization: true }
+  }),
   prisma.serviceItem.findMany({
     where: {
       code: { startsWith: "SVC-" },
@@ -90,6 +124,8 @@ if (forbiddenServices.length) failures.push(`Forbidden active services: ${JSON.s
 if (forbiddenUsers.length) failures.push(`Forbidden active users: ${JSON.stringify(forbiddenUsers)}`);
 if (forbiddenPatients.length) failures.push(`Forbidden active patients: ${JSON.stringify(forbiddenPatients)}`);
 if (forbiddenIntakes) failures.push(`Forbidden intake submissions: ${forbiddenIntakes}`);
+if (forbiddenAppointments.length) failures.push(`Forbidden appointments: ${JSON.stringify(forbiddenAppointments)}`);
+if (forbiddenGuidelineSources.length) failures.push(`Forbidden active guideline sources: ${JSON.stringify(forbiddenGuidelineSources)}`);
 if (cleanServices.length !== 14 || totalCleanServices !== 14) failures.push(`Clean service catalog expected 14 stable SVC rows, got active=${cleanServices.length} total=${totalCleanServices}`);
 if (cleanServices.some((service) => service.price !== null)) failures.push("Clean service catalog must be unpriced by default.");
 

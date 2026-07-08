@@ -5,6 +5,7 @@ import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../../mvp-page";
+import { useSession } from "../../session";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { autosaveLabel, enqueueOfflineOperation, saveLocalDraft, useAutosaveDraft, useOfflineSyncQueue } from "@/lib/autosave-draft";
@@ -89,6 +90,9 @@ function GuidedVisitFallback() {
 function GuidedVisitContent() {
   const searchParams = useSearchParams();
   const patientId = searchParams.get("patientId");
+  const { user, status: sessionStatus } = useSession();
+  const roles = user?.roles ?? [];
+  const isReceptionistOnly = roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
   const [step, setStep] = useState(0);
   const [saved, setSaved] = useState("");
   const [error, setError] = useState("");
@@ -249,6 +253,37 @@ function GuidedVisitContent() {
     }
     setStep(0);
     setSaved("Complaint added to draft. Save when ready.");
+  }
+
+  if (sessionStatus === "loading") {
+    return (
+      <AppShell>
+        <section className="panel">
+          <div className="skeleton" aria-label="Checking access" />
+        </section>
+      </AppShell>
+    );
+  }
+
+  if (isReceptionistOnly) {
+    return (
+      <AppShell>
+        <section className="panel">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Access denied</p>
+              <h1>Doctor visit workflow is not available to Reception</h1>
+              <p className="muted">Reception can manage identity, appointments, queue, consent basics, and payments only.</p>
+            </div>
+            <span className="badge">Reception</span>
+          </div>
+          <div className="form-actions">
+            {patientId ? <Link className="button" href={`/patients/${patientId}`}>Open reception profile</Link> : null}
+            <Link className="button secondary" href="/reception">Back to Reception</Link>
+          </div>
+        </section>
+      </AppShell>
+    );
   }
 
   return (

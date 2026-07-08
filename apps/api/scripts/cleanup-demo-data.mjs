@@ -43,6 +43,35 @@ const demoPatientWhere = {
   ]
 };
 
+const demoTextTerms = [
+  "Demo Route",
+  "demo route",
+  "QA Route",
+  "Runtime Route",
+  "Test Route",
+  "Demo appointment",
+  "QA appointment",
+  "Runtime appointment",
+  "Test appointment"
+];
+
+const demoGuidelineSourceWhere = {
+  active: true,
+  OR: demoTextTerms.flatMap((term) => [
+    { name: { contains: term, mode: "insensitive" } },
+    { organization: { contains: term, mode: "insensitive" } },
+    { notes: { contains: term, mode: "insensitive" } }
+  ])
+};
+
+const demoAppointmentWhere = {
+  OR: demoTextTerms.flatMap((term) => [
+    { appointmentType: { contains: term, mode: "insensitive" } },
+    { source: { contains: term, mode: "insensitive" } },
+    { notes: { contains: term, mode: "insensitive" } }
+  ])
+};
+
 function printSummary(summary) {
   console.log(`Demo data cleanup ${apply ? "apply" : "dry-run"}`);
   for (const [key, value] of Object.entries(summary)) {
@@ -68,6 +97,8 @@ async function collectSummary() {
     servicesDeleted: demoServiceIds.filter((id) => !referencedServiceIds.has(id)).length,
     servicesArchived: referencedServiceIds.size,
     usersDeleted: await prisma.user.count({ where: demoUserWhere }),
+    guidelineSourcesArchived: await prisma.guidelineSource.count({ where: demoGuidelineSourceWhere }),
+    appointmentsSanitized: await prisma.appointment.count({ where: demoAppointmentWhere }),
     patientsArchived: activeDemoPatientIds.length,
     queueRecordsRemoved: demoPatientIds.length ? await prisma.queueTicket.count({ where: { patientId: { in: demoPatientIds }, status: { in: ["waiting", "called"] } } }) : 0,
     intakeSubmissionsRemoved: demoPatientIds.length ? await prisma.patientIntake.count({ where: { patientId: { in: demoPatientIds }, status: { not: "signed_locked" } } }) : 0,
@@ -109,6 +140,19 @@ async function applyCleanup(summary) {
       where: { id: { in: summary.activeDemoPatientIds } },
       data: { status: "archived" }
     });
+    await tx.guidelineSource.updateMany({
+      where: demoGuidelineSourceWhere,
+      data: { active: false }
+    });
+    await tx.appointment.updateMany({
+      where: demoAppointmentWhere,
+      data: {
+        appointmentType: "Archived fixture",
+        status: "cancelled",
+        notes: null,
+        cancellationReason: "v1.4 demo/test appointment cleanup"
+      }
+    });
     await tx.userRole.deleteMany({ where: { user: demoUserWhere } });
     await tx.userPermissionOverride.deleteMany({ where: { user: demoUserWhere } });
     await tx.user.deleteMany({ where: demoUserWhere });
@@ -121,6 +165,8 @@ try {
     servicesDeleted: summary.servicesDeleted,
     servicesArchived: summary.servicesArchived,
     usersDeleted: summary.usersDeleted,
+    guidelineSourcesArchived: summary.guidelineSourcesArchived,
+    appointmentsSanitized: summary.appointmentsSanitized,
     patientsArchived: summary.patientsArchived,
     queueRecordsRemoved: summary.queueRecordsRemoved,
     intakeSubmissionsRemoved: summary.intakeSubmissionsRemoved,

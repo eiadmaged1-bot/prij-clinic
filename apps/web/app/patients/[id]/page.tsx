@@ -176,6 +176,7 @@ const tabs: TabConfig[] = [
 const relatedLoaders: TabConfig[] = [
   ...tabs,
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
+  { key: "queue", label: "Queue", icon: "queue", endpoint: "/queue/today", collectionKey: "queueTickets", empty: "No active queue ticket.", permissions: ["queue.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "results", label: "Results", icon: "reports", endpoint: "/patients/:patientId/investigation-results", collectionKey: "investigationResults", empty: "No result metadata yet. Doctor review required.", permissions: ["investigation.result_read"] },
   { key: "files", label: "Reports", icon: "reports", endpoint: "/reports", collectionKey: "reports", empty: "No report record yet. Add report metadata only after doctor review.", permissions: ["report.read"] },
@@ -232,6 +233,8 @@ export default function PatientFilePage() {
   const openFollowUpCount = (related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up" && ["open", "in_progress"].includes(String(row.status ?? ""))).length;
   const unpaidInvoiceCount = (related.billing ?? related.invoices ?? []).filter((row) => ["draft", "issued", "partially_paid"].includes(String(row.status ?? ""))).length;
   const currentPhase = clinicalPhases.find((phase) => phase.status === "active") ?? null;
+  const roleContextReady = roles.length > 0 || permissions.length > 0;
+  const isReceptionistOnly = roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -355,6 +358,34 @@ export default function PatientFilePage() {
       body: JSON.stringify({ patientType: nextType })
     });
     setPatient({ ...patient, patientType: nextType });
+  }
+
+  if (patient && !roleContextReady) {
+    return (
+      <AppShell>
+        <section className="panel">
+          <div className="skeleton" aria-label="Loading role-safe patient view" />
+        </section>
+      </AppShell>
+    );
+  }
+
+  if (patient && isReceptionistOnly) {
+    return (
+      <AppShell>
+        {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
+        <ReceptionPatientProfile
+          patient={patient}
+          ageLabel={ageLabel}
+          related={related}
+          queueRows={(related.queue ?? []) as Record<string, unknown>[]}
+          appointmentRows={(related.appointments ?? []) as Record<string, unknown>[]}
+          openFollowUpCount={openFollowUpCount}
+          unpaidInvoiceCount={unpaidInvoiceCount}
+          onShowQr={() => setQrOpen(true)}
+        />
+      </AppShell>
+    );
   }
 
   return (
@@ -543,6 +574,120 @@ function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patient: Pat
       </div>
     </section>
   );
+}
+
+function ReceptionPatientProfile({
+  patient,
+  ageLabel,
+  related,
+  queueRows,
+  appointmentRows,
+  openFollowUpCount,
+  unpaidInvoiceCount,
+  onShowQr
+}: {
+  patient: Patient;
+  ageLabel: string;
+  related: Record<string, Record<string, unknown>[]>;
+  queueRows: Record<string, unknown>[];
+  appointmentRows: Record<string, unknown>[];
+  openFollowUpCount: number;
+  unpaidInvoiceCount: number;
+  onShowQr(): void;
+}) {
+  const activeQueue = queueRows.find((row) => ["waiting", "called", "checked_in"].includes(String(row.status ?? "")));
+  const nextAppointment = appointmentRows
+    .filter((row) => row.startAt)
+    .sort((left, right) => String(left.startAt).localeCompare(String(right.startAt)))[0];
+  const consentRows = related.consents ?? [];
+  const alerts = [
+    consentRows.length === 0 ? "Needs consent" : "",
+    patient.phone || patient.email ? "" : "No contact saved",
+    openFollowUpCount > 0 ? "Follow-up due" : "",
+    unpaidInvoiceCount > 0 ? "Payment pending" : "",
+    doctorReviewedAllergyAlert(related.allergies ?? []) ? "Doctor-reviewed alert" : ""
+  ].filter(Boolean);
+
+  return (
+    <>
+      <section className="patient-simple-hero reception-profile-hero">
+        <div className="patient-avatar">
+          <ThreeDMedicalIcon name="reception" size="lg" />
+        </div>
+        <div>
+          <p className="eyebrow">Reception Profile</p>
+          <h1>{patient.firstName} {patient.lastName}</h1>
+          <p className="muted">{ageLabel} | File {patient.medicalRecordNumber} | {patient.phone || patient.email || "No contact saved"}</p>
+          <div className="workflow-band operational-alerts">
+            <span>{patient.status.replaceAll("_", " ")}</span>
+            <span>{patientTypeLabel(patient.patientType)}</span>
+            {alerts.length ? alerts.map((alert) => <span key={alert}>{alert}</span>) : <span>No operational alerts</span>}
+          </div>
+        </div>
+        <div className="patient-primary-actions">
+          <Link className="button secondary large" href="/reception">
+            <ThreeDMedicalIcon name="reception" size="sm" tone="slate" />
+            Reception
+          </Link>
+          <Link className="button large" href="/queue">
+            <ThreeDMedicalIcon name="queue" size="sm" />
+            Queue
+          </Link>
+          <button className="button secondary compact icon-only-button" type="button" onClick={onShowQr} aria-label="Show patient QR">
+            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
+          </button>
+        </div>
+      </section>
+
+      <section className="content-grid">
+        <article className="panel compact-panel">
+          <div className="section-heading"><h2>Patient identity</h2><span className="badge">Reception</span></div>
+          <dl className="profile-grid">
+            <div><dt>File number</dt><dd>{patient.medicalRecordNumber}</dd></div>
+            <div><dt>Phone/contact</dt><dd>{patient.phone || patient.email || "No contact saved"}</dd></div>
+            <div><dt>Age</dt><dd>{ageLabel}</dd></div>
+            <div><dt>Patient type</dt><dd>{patientTypeLabel(patient.patientType)}</dd></div>
+          </dl>
+        </article>
+
+        <article className="panel compact-panel">
+          <div className="section-heading"><h2>Queue status</h2><span className="badge">{activeQueue ? String(activeQueue.status).replaceAll("_", " ") : "Not queued"}</span></div>
+          {activeQueue ? (
+            <dl className="profile-grid">
+              <div><dt>Visit type</dt><dd>{String(activeQueue.visitType ?? "Clinic visit").replaceAll("_", " ")}</dd></div>
+              <div><dt>Added</dt><dd>{activeQueue.checkedInAt ? formatDateTime(String(activeQueue.checkedInAt)) : "Today"}</dd></div>
+              <div><dt>Added by</dt><dd>{String(activeQueue.receptionistDisplayNameSnapshot ?? "Reception")}</dd></div>
+            </dl>
+          ) : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No active queue ticket.</span></p>}
+          <div className="form-actions">
+            <Link className="button secondary compact" href="/queue">Manage queue</Link>
+          </div>
+        </article>
+
+        <article className="panel compact-panel">
+          <div className="section-heading"><h2>Appointments</h2><span className="badge">{appointmentRows.length}</span></div>
+          {nextAppointment ? <p className="muted">Next: {formatDateTime(String(nextAppointment.startAt))} | {String(nextAppointment.status ?? "scheduled").replaceAll("_", " ")}</p> : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="calendar" size="sm" tone="slate" /><span>No appointment booked.</span></p>}
+          <div className="form-actions">
+            <Link className="button secondary compact" href="/calendar">Open schedule</Link>
+          </div>
+        </article>
+
+        <article className="panel compact-panel">
+          <div className="section-heading"><h2>Documents, consent, payments</h2><span className="badge">Basics</span></div>
+          <dl className="profile-grid">
+            <div><dt>Consents</dt><dd>{consentRows.length}</dd></div>
+            <div><dt>Documents</dt><dd>{(related.documents ?? []).length}</dd></div>
+            <div><dt>Open balances</dt><dd>{unpaidInvoiceCount}</dd></div>
+            <div><dt>Follow-up items</dt><dd>{openFollowUpCount}</dd></div>
+          </dl>
+        </article>
+      </section>
+    </>
+  );
+}
+
+function doctorReviewedAllergyAlert(rows: Record<string, unknown>[]) {
+  return rows.some((row) => ["reviewed", "doctor_reviewed", "confirmed"].includes(String(row.reviewStatus ?? row.status ?? "").toLowerCase()));
 }
 
 function ImportantPatientBanner({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {

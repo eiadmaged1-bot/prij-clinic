@@ -15,7 +15,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["patient.create", "patient.manage"] },
   { href: "/reception/check-in", label: "Returning Patient", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
   { href: "/queue", label: "Waiting Line", icon: "queue", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["queue.read"] },
-  { href: "/staff-chat", label: "Messages", icon: "files", group: "Messages", permissions: ["staff_chat.read"] },
+  { href: "/staff-chat", label: "Messages", icon: "files", group: "Messages", roles: ["Owner", "Admin", "Doctor"], permissions: ["staff_chat.read"] },
 
   { href: "/doctor", label: "Today / Waiting", icon: "doctor", group: "Home", roles: ["Doctor"], permissions: ["encounter.read", "queue.read"] },
   { href: "/patients", label: "Patients", icon: "patients", group: "Home", roles: ["Doctor"], permissions: ["patient.read"] },

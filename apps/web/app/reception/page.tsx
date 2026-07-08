@@ -19,7 +19,6 @@ export default function ReceptionHomePage() {
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [query, setQuery] = useState("");
   const [lookupOpen, setLookupOpen] = useState(false);
-  const [waitingLineOpen, setWaitingLineOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Loading");
@@ -176,15 +175,12 @@ export default function ReceptionHomePage() {
 
       <section className="panel compact-panel waiting-line-panel">
         <div className="section-heading">
-          <button className="button secondary compact waiting-line-toggle" type="button" onClick={() => setWaitingLineOpen((value) => !value)}>
-            <ThreeDMedicalIcon name="queue" size="sm" tone="slate" />
-            Waiting Line
-          </button>
+          <h2>Queue preview</h2>
           <span className="badge">{waiting.length}</span>
         </div>
         <div className="queue-indicator-row">
           <span><strong>Next:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "Next patient not called yet"}</span>
-          <span><strong>Status:</strong> {withDoctor ? "Doctor view updated" : "Reception queue"}</span>
+          <span><strong>Status:</strong> {withDoctor ? "Patient called" : "Reception queue"}</span>
         </div>
         <div className="visit-type-counts" aria-label="Visit type counts">
           <span>كشف {counts.kashf}</span>
@@ -194,7 +190,7 @@ export default function ReceptionHomePage() {
         </div>
         {waiting.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients waiting.</span></p> : null}
         <div className="dense-card-list" data-testid="ordered-waiting-line">
-          {(waitingLineOpen ? waiting : waiting.slice(0, 4)).map((ticket, index) => (
+          {waiting.slice(0, 4).map((ticket, index) => (
             <button className="data-row dense clickable-waiting-row" key={ticket.id} type="button" onClick={() => { setSelectedPatient(ticket.patient ?? null); setLookupOpen(true); }}>
               <div className="data-row-header">
                 <strong>{index + 1}. {patientLabel(ticket.patient)} - {visitTypeLabel(ticket.visitType)} - waiting</strong>
@@ -203,6 +199,7 @@ export default function ReceptionHomePage() {
             </button>
           ))}
         </div>
+        {waiting.length > 4 ? <Link className="button secondary compact" href="/queue">Open full queue</Link> : null}
       </section>
     </AppShell>
   );

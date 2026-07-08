@@ -771,7 +771,7 @@ const receptionistNav = new Set([
   "/patients/new",
   "/reception/check-in",
   "/queue",
-  "/staff-chat"
+  "/calendar"
 ]);
 
 const receptionistNavCompatibilityLock = '"/reception/check-in" "/queue"';

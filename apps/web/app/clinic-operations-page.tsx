@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell, SafetyAlert } from "./mvp-page";
+import { useSession } from "./session";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; source?: string | null; notes?: string | null; cancellationReason?: string | null; noShowReason?: string | null; patient?: Patient };
@@ -33,6 +34,9 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
   const [orders, setOrders] = useState<InvestigationOrder[]>([]);
   const [dashboard, setDashboard] = useState<DashboardSummary>({});
   const [status, setStatus] = useState("Loading");
+  const { user, isAdmin } = useSession();
+  const roles = user?.roles ?? [];
+  const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
@@ -72,7 +76,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
             <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
             {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
             <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />Reception</Link>
-            <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link>
+            {!isReceptionistOnly && (isAdmin || hasRole(roles, ["Doctor"])) ? <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link> : null}
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Refresh</button>
           </div>
         </div>
@@ -88,7 +92,7 @@ export function ClinicOperationsPage({ mode, title, eyebrow, description }: Prop
         </section>
       )}
       {mode === "doctor" ? <DoctorHandoff queue={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status))} orders={orders} invoices={invoices} /> : null}
-      {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} /> : null}
+      {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} isReceptionistOnly={isReceptionistOnly} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
       {mode === "reports" ? <DailyReports appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
@@ -100,8 +104,8 @@ function Metric({ icon, label, value }: { icon: IconName; label: string; value: 
   return <article className="mini-metric-card"><ThreeDMedicalIcon name={icon} size="sm" /><span>{label}</span><strong>{value}</strong></article>;
 }
 
-function CalendarLoop({ appointments, queue, invoices }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[] }) {
-  return <section className="content-grid"><DailyList title="Today schedule" rows={appointments.map((appointment) => row(appointment.id, appointment.patientId, patient(appointment.patient), appointment.status, [time(appointment.startAt), appointment.appointmentType, paymentBadge(invoices, appointment.patientId)].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={appointments} queue={queue} /></section>;
+function CalendarLoop({ appointments, queue, invoices, isReceptionistOnly }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[]; isReceptionistOnly: boolean }) {
+  return <section className="content-grid"><DailyList title="Today schedule" actionLabel={isReceptionistOnly ? "Open reception profile" : "Open patient"} rows={appointments.map((appointment) => row(appointment.id, appointment.patientId, patient(appointment.patient), appointment.status, [time(appointment.startAt), appointment.appointmentType, paymentBadge(invoices, appointment.patientId)].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={appointments} queue={queue} /></section>;
 }
 
 function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
@@ -134,9 +138,8 @@ function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
                 <strong>{index + 1}. {patient(ticket.patient)} · {visitTypeLabelLocal(ticket.visitType)} · {friendly(ticket.status)} · added by {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} · {ticket.checkedInAt ? time(ticket.checkedInAt) : "today"} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "waiting duration not recorded"}</strong>
               </div>
               <div className="form-actions">
-                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open</Link>
+                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open reception profile</Link>
                 <button className="button secondary compact" type="button">Call patient</button>
-                <button className="button secondary compact" type="button">Mark in room</button>
                 <button className="button secondary compact" type="button">Mark urgent</button>
                 <button className="button secondary compact" type="button">Cancel/remove with reason</button>
               </div>
@@ -232,5 +235,9 @@ function paymentBadge(invoices: Invoice[], patientId: string) {
 function isTrainingPatient(value?: Patient | null) {
   const name = `${value?.firstName ?? ""} ${value?.lastName ?? ""}`.trim();
   const mrn = value?.medicalRecordNumber ?? "";
-  return /^Demo\b/i.test(name) || /^DEMO[-_]/i.test(mrn) || /Local training/i.test(name);
+  return /^(Demo|Test|QA|Runtime)\b/i.test(name) || /^(DEMO|TEST|QA|RUNTIME)[-_]/i.test(mrn) || /Local training/i.test(name);
+}
+
+function hasRole(roles: string[], names: string[]) {
+  return roles.some((role) => names.includes(role));
 }

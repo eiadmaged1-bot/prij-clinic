@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell } from "../mvp-page";
+import { useSession } from "../session";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string; patientType?: string; currentPhase?: { phaseType?: string } | null };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient | null };
@@ -29,6 +30,9 @@ export default function CalendarPage() {
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [eddEntries, setEddEntries] = useState<EddEntry[]>([]);
   const [status, setStatus] = useState("Loading");
+  const { user } = useSession();
+  const roles = user?.roles ?? [];
+  const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const isToday = selectedDate === today;
@@ -38,22 +42,24 @@ export default function CalendarPage() {
     const [appointmentResponse, queueResponse, eddResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${selectedDate}`, { credentials: "include", headers }),
       isToday ? fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }) : Promise.resolve(null),
-      fetch(`${getApiBaseUrl()}/clinical-calendar/edd?month=${selectedMonth}`, { credentials: "include", headers })
+      isReceptionistOnly ? Promise.resolve(null) : fetch(`${getApiBaseUrl()}/clinical-calendar/edd?month=${selectedMonth}`, { credentials: "include", headers })
     ]);
     setAppointments(appointmentResponse.ok ? ((await appointmentResponse.json()) as { appointments?: Appointment[] }).appointments ?? [] : []);
     if (queueResponse && queueResponse.ok) setQueue(((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? []);
     else setQueue([]);
-    setEddEntries(eddResponse.ok ? ((await eddResponse.json()) as { entries?: EddEntry[] }).entries ?? [] : []);
+    setEddEntries(eddResponse?.ok ? ((await eddResponse.json()) as { entries?: EddEntry[] }).entries ?? [] : []);
     setStatus("Ready");
-  }, [headers, isToday, selectedDate, selectedMonth]);
+  }, [headers, isReceptionistOnly, isToday, selectedDate, selectedMonth]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const checkedIn = queue.filter((ticket) => ticket.status === "checked_in").length;
-  const waiting = queue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length;
-  const completed = queue.filter((ticket) => ticket.status === "completed").length;
+  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
+  const visibleQueue = queue.filter((ticket) => !isTrainingPatient(ticket.patient));
+  const checkedIn = visibleQueue.filter((ticket) => ticket.status === "checked_in").length;
+  const waiting = visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length;
+  const completed = visibleQueue.filter((ticket) => ticket.status === "completed").length;
 
   return (
     <AppShell>
@@ -71,7 +77,7 @@ export default function CalendarPage() {
       </section>
 
       <section className="compact-metric-grid calendar-stat-grid">
-        <Metric label="Scheduled" value={appointments.length} />
+        <Metric label="Scheduled" value={visibleAppointments.length} />
         <Metric label={isToday ? "Checked-in today" : "Checked-in unavailable for date"} value={checkedIn} />
         <Metric label={isToday ? "Waiting today" : "Waiting unavailable for date"} value={waiting} />
         <Metric label={isToday ? "Completed today" : "Completed unavailable for date"} value={completed} />
@@ -80,12 +86,12 @@ export default function CalendarPage() {
       <section className="content-grid calendar-clean-grid">
         <article className="panel">
           <div className="section-heading"><h2>Schedule for selected date</h2><span className="badge">{status}</span></div>
-          {appointments.length === 0 ? (
+          {visibleAppointments.length === 0 ? (
             <p className="empty-state"><ThreeDMedicalIcon name="calendar" size="sm" tone="slate" /><span>No appointments scheduled today.</span></p>
           ) : null}
-          {appointments.length === 0 && queue.length > 0 ? <p className="form-warning">Patients are waiting without appointments.</p> : null}
+          {visibleAppointments.length === 0 && visibleQueue.length > 0 ? <p className="form-warning">Patients are waiting without appointments.</p> : null}
           <div className="data-list">
-            {appointments.map((appointment) => (
+            {visibleAppointments.map((appointment) => (
               <article className="data-row" key={appointment.id}>
                 <div className="data-row-header">
                   <strong>{time(appointment.startAt)} | {patientName(appointment.patient)}</strong>
@@ -93,8 +99,8 @@ export default function CalendarPage() {
                 </div>
                 <p className="muted">{appointment.appointmentType ?? "Clinic visit"} | {appointment.patient?.patientType ?? "Patient"} | {appointment.patient?.currentPhase?.phaseType ?? "No active phase"}</p>
                 <div className="form-actions">
-                  <Link className="button secondary compact" href={`/patients/${appointment.patientId}`}>Open patient file</Link>
-                  <Link className="button compact" href={`/doctor/visit?patientId=${appointment.patientId}`}>Start visit</Link>
+                  <Link className="button secondary compact" href={`/patients/${appointment.patientId}`}>{isReceptionistOnly ? "Open reception profile" : "Open patient file"}</Link>
+                  {!isReceptionistOnly ? <Link className="button compact" href={`/doctor/visit?patientId=${appointment.patientId}`}>Start visit</Link> : null}
                 </div>
               </article>
             ))}
@@ -102,25 +108,25 @@ export default function CalendarPage() {
         </article>
 
         <article className="panel">
-          <div className="section-heading"><h2>Same-day queue</h2><span className="badge">{isToday ? queue.length : "Today only"}</span></div>
+          <div className="section-heading"><h2>Same-day queue</h2><span className="badge">{isToday ? visibleQueue.length : "Today only"}</span></div>
           {!isToday ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>Queue counts are shown only for today to avoid mixing selected-date schedule with live queue state.</span></p> : null}
-          {isToday && queue.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients waiting today.</span></p> : null}
+          {isToday && visibleQueue.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No patients waiting today.</span></p> : null}
           <div className="data-list">
-            {queue.map((ticket) => (
+            {visibleQueue.map((ticket) => (
               <article className="data-row" key={ticket.id}>
                 <div className="data-row-header">
                   <strong>{patientName(ticket.patient)}</strong>
                   <span className="badge">{ticket.status.replaceAll("_", " ")}</span>
                 </div>
                 <p className="muted">{ticket.visitType ?? "كشف"} | {ticket.checkedInAt ? time(ticket.checkedInAt) : "Checked in today"}</p>
-                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open patient file</Link>
+                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{isReceptionistOnly ? "Open reception profile" : "Open patient file"}</Link>
               </article>
             ))}
           </div>
         </article>
       </section>
 
-      <section className="page-header secondary-page-header">
+      {!isReceptionistOnly ? <section className="page-header secondary-page-header">
         <div className="header-row">
           <div>
             <p className="eyebrow">EDD Clinical Calendar</p>
@@ -132,9 +138,9 @@ export default function CalendarPage() {
             <button className="button secondary compact" type="button" onClick={() => setSelectedMonth(nextMonth(today))}>EDD next month</button>
           </div>
         </div>
-      </section>
+      </section> : null}
 
-      <section className="panel">
+      {!isReceptionistOnly ? <section className="panel">
         <div className="section-heading"><h2>Locked/reviewed EDD entries</h2><span className="badge">{eddEntries.length}</span></div>
         {eddEntries.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" /><span>No locked or reviewed EDD records for this month.</span></p> : null}
         <div className="data-list">
@@ -150,7 +156,7 @@ export default function CalendarPage() {
             </article>
           ))}
         </div>
-      </section>
+      </section> : null}
     </AppShell>
   );
 }
@@ -164,6 +170,12 @@ function patientName(patient?: Patient | null) {
   return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
 }
 
+function isTrainingPatient(value?: Patient | null) {
+  const name = `${value?.firstName ?? ""} ${value?.lastName ?? ""}`.trim();
+  const mrn = value?.medicalRecordNumber ?? "";
+  return /^(Demo|Test|QA|Runtime)\b/i.test(name) || /^(DEMO|TEST|QA|RUNTIME)[-_]/i.test(mrn) || /Local training/i.test(name);
+}
+
 function time(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -173,4 +185,8 @@ function nextMonth(today: string) {
   const date = new Date(`${today}T00:00:00.000Z`);
   date.setUTCMonth(date.getUTCMonth() + 1);
   return date.toISOString().slice(0, 7);
+}
+
+function hasRole(roles: string[], names: string[]) {
+  return roles.some((role) => names.includes(role));
 }

@@ -73,14 +73,14 @@ export default function NewPatientPage() {
       const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "Patient";
+      const formData = new FormData(event.currentTarget);
+      const saveIntent = String(formData.get("saveIntent") ?? "queue");
       if (!firstName) {
         throw new Error("Enter the patient full name before creating the file.");
       }
-      if (!visitType) {
-        throw new Error("Select visit type before saving and checking in.");
+      if (saveIntent === "queue" && !visitType) {
+        throw new Error("Select visit type before saving and adding to queue.");
       }
-      const formData = new FormData(event.currentTarget);
-      const saveIntent = String(formData.get("saveIntent") ?? "queue");
       const noteParts = [
         form.notes.trim(),
         form.address.trim() ? `Area/address: ${form.address.trim()}` : "",
@@ -156,7 +156,7 @@ export default function NewPatientPage() {
         })
       }).catch(() => undefined);
       setSuccess(saveIntent === "queue" ? `Added to queue - Position ${queueTicket?.queueNumber ?? "new"}.` : "Patient file saved.");
-      if (saveIntent !== "file") router.push(`/patients/${patient.id}`);
+      if (saveIntent === "queue") router.push(`/patients/${patient.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to create patient file.");
     } finally {
@@ -272,8 +272,7 @@ export default function NewPatientPage() {
               {isSubmitting ? "Saving" : "Save and add to queue"}
             </button>
             <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="file" type="submit">Save file only</button>
-            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="open" type="submit">Save and open file</button>
-            {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>Open patient file</Link> : null}
+            {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>Open reception profile</Link> : null}
           </div>
         </form>
       </section>

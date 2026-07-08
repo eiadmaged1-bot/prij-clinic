@@ -14,6 +14,14 @@ function check(name, path, patterns) {
   }
 }
 
+function forbid(name, path, patterns) {
+  const text = file(path);
+  for (const pattern of patterns) {
+    const found = pattern instanceof RegExp ? pattern.test(text) : text.includes(pattern);
+    checks.push({ name: `${name} forbids ${String(pattern)}`, ok: !found });
+  }
+}
+
 check("topbar", "apps/web/app/mvp-page.tsx", [
   "OFFICIAL_CLINIC_NAME",
   "LanguageSwitcher",
@@ -35,7 +43,7 @@ check("new patient", "apps/web/app/patients/new/page.tsx", [
   "Year of birth",
   "Save and add to queue",
   "Save file only",
-  "Save and open file",
+  "Open reception profile",
   "Unchecked = unknown / not asked."
 ]);
 
@@ -61,9 +69,55 @@ check("queue board", "apps/web/app/clinic-operations-page.tsx", [
   "Reception Queue",
   "Next patient not called yet",
   "Call patient",
-  "Mark in room",
   "Cancel/remove with reason",
-  "urgentRank"
+  "urgentRank",
+  "!isReceptionistOnly",
+  "Open reception profile"
+]);
+
+check("calendar receptionist safety", "apps/web/app/calendar/page.tsx", [
+  "isReceptionistOnly",
+  "Open reception profile",
+  "!isReceptionistOnly ? <Link className=\"button compact\"",
+  "isTrainingPatient",
+  "visibleAppointments"
+]);
+
+check("patient reception profile", "apps/web/app/patients/[id]/page.tsx", [
+  "ReceptionPatientProfile",
+  "roleContextReady",
+  "Reception Profile",
+  "Needs consent",
+  "No contact saved",
+  "Follow-up due",
+  "Payment pending",
+  "Doctor-reviewed alert"
+]);
+
+check("doctor visit receptionist denial", "apps/web/app/doctor/visit/page.tsx", [
+  "isReceptionistOnly",
+  "Access denied",
+  "Open reception profile"
+]);
+
+forbid("new patient pre-create actions", "apps/web/app/patients/new/page.tsx", [
+  "Save and open file",
+  "Open patient file"
+]);
+
+forbid("reception dashboard cleanup", "apps/web/app/reception/page.tsx", [
+  "Messages",
+  "Doctor view updated"
+]);
+
+forbid("broken placeholder markers", "apps/web/app/reception/page.tsx", [
+  "broken-placeholder",
+  "black-placeholder-bar"
+]);
+
+forbid("broken placeholder markers", "apps/web/app/patients/new/page.tsx", [
+  "broken-placeholder",
+  "black-placeholder-bar"
 ]);
 
 check("patient directory", "apps/web/app/patients/page.tsx", [
