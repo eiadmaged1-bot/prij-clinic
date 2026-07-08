@@ -1273,6 +1273,48 @@ details.form-fieldset summary {
   transform: translateY(1px);
 }
 
+.compact-action-grid .reception-action-card {
+  min-height: 5.25rem;
+  padding: 0.85rem;
+}
+
+.today-summary-card {
+  margin-bottom: 1rem;
+}
+
+.compact-summary-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.compact-summary-list div {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.55rem;
+}
+
+.compact-summary-list .wide {
+  grid-column: 1 / -1;
+}
+
+.compact-summary-list dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.compact-summary-list dd {
+  margin: 0.2rem 0 0;
+  color: var(--foreground);
+  font-size: 1.05rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
 .qr-scan-card {
   min-height: 86px;
   font-size: 0.95rem;
@@ -4590,6 +4632,18 @@ body {
 
   .reception-action-card {
     min-height: 112px;
+  }
+
+  .compact-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .compact-action-grid .reception-action-card {
+    min-height: 4.8rem;
+  }
+
+  .compact-summary-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 /* v1.1 zero-paper visit type controls */
