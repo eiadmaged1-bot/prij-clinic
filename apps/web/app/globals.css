@@ -1354,6 +1354,19 @@ details.form-fieldset summary {
   margin-top: 0.65rem;
 }
 
+.cancelled-history {
+  margin-top: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.7rem;
+}
+
+.cancelled-history summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
 .qr-scan-card {
   min-height: 86px;
   font-size: 0.95rem;
