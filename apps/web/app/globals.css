@@ -856,6 +856,12 @@ body {
   display: none;
 }
 
+.receptionist-menu-button {
+  flex: 0 0 auto;
+  min-width: 4.2rem;
+  padding-inline: 0.55rem;
+}
+
 .account-menu {
   position: relative;
   flex: 0 0 auto;
@@ -3586,18 +3592,12 @@ button.obgyn-template-card {
   }
 
   .reception-status-grid,
-  .reception-home-grid,
-  .visit-type-grid,
-  .visit-type-grid.compact {
+  .reception-home-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .compact-desk-row {
     grid-template-columns: 1fr;
-  }
-
-  .urgent-visit-type-card {
-    width: min(100%, 7rem);
   }
 
   .theme-prij-heritage .app-main {
@@ -3722,8 +3722,6 @@ button.obgyn-template-card {
   .module-grid,
   .reception-status-grid,
   .reception-home-grid,
-  .visit-type-grid,
-  .visit-type-grid.compact,
   .queue-indicator-row,
   .guideline-search,
   .protocol-search,
@@ -4228,15 +4226,24 @@ body {
 @media (max-width: 640px) {
   .visit-type-grid,
   .visit-type-grid.compact {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.55rem;
   }
 
   .visit-type-card,
   .urgent-visit-type-card {
-    min-height: 3.25rem;
-    max-width: none;
     padding: 0.55rem;
+  }
+
+  .visit-type-card {
+    min-height: 3.25rem;
+  }
+
+  .urgent-visit-type-card {
+    width: 42%;
+    min-width: 7rem;
+    max-width: 9.5rem;
+    min-height: 3rem;
   }
 
   .visit-type-card strong,
@@ -4593,17 +4600,17 @@ body {
 
 .visit-type-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: center;
 }
 
 .visit-type-grid.compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .visit-type-card {
-  min-height: 7rem;
+  min-height: 4.5rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f7fbfc 100%);
@@ -4620,7 +4627,7 @@ body {
 }
 
 .visit-type-card strong {
-  font-size: 1.4rem;
+  font-size: 1.2rem;
   line-height: 1.1;
   white-space: nowrap;
   word-break: keep-all;
@@ -4637,16 +4644,19 @@ body {
 }
 
 .urgent-visit-type-card {
-  min-height: 7rem;
-  max-width: none;
-  padding: 0.9rem;
-  align-self: stretch;
+  grid-column: 1 / -1;
+  justify-self: center;
+  width: clamp(7.5rem, 42%, 11rem);
+  min-height: 3.35rem;
+  max-width: 45%;
+  padding: 0.65rem;
+  align-self: center;
   border-color: rgb(180 35 24 / 24%);
   background: linear-gradient(180deg, #fff 0%, #fff4f2 100%);
 }
 
 .urgent-visit-type-card strong {
-  font-size: 1.4rem;
+  font-size: 1.05rem;
 }
 
 .urgent-visit-type-card span {

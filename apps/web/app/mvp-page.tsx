@@ -468,13 +468,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               <button
                 aria-controls="clinic-mobile-navigation"
                 aria-expanded={mobileNavOpen || !sidebarCollapsed}
-                aria-label={sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
-                className={`button secondary compact app-menu-button icon-only-button ${mobileNavOpen ? "active" : ""}`}
+                aria-label={isReceptionistOnly ? t("menu") : sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
+                className={`button secondary compact app-menu-button ${isReceptionistOnly ? "receptionist-menu-button" : "icon-only-button"} ${mobileNavOpen ? "active" : ""}`}
                 onClick={toggleNavigation}
                 type="button"
-                title="Navigation"
+                title={t("menu")}
               >
-                <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
+                <ThreeDMedicalIcon name={isReceptionistOnly ? "reception" : "dashboard"} size="sm" tone="slate" />
+                {isReceptionistOnly ? <span>{t("menu")}</span> : null}
               </button>
             ) : null}
             <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
