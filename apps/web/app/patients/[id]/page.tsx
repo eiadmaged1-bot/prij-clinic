@@ -14,6 +14,7 @@ import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatin
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { visitTypeLabel } from "@/lib/visit-types";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
@@ -654,7 +655,7 @@ function ReceptionPatientProfile({
           <div className="section-heading"><h2>Queue status</h2><span className="badge">{activeQueue ? String(activeQueue.status).replaceAll("_", " ") : "Not queued"}</span></div>
           {activeQueue ? (
             <dl className="profile-grid">
-              <div><dt>Visit type</dt><dd>{String(activeQueue.visitType ?? "Clinic visit").replaceAll("_", " ")}</dd></div>
+              <div><dt>Visit type</dt><dd>{visitTypeLabel(String(activeQueue.visitType ?? ""))}</dd></div>
               <div><dt>Added</dt><dd>{activeQueue.checkedInAt ? formatDateTime(String(activeQueue.checkedInAt)) : "Today"}</dd></div>
               <div><dt>Added by</dt><dd>{String(activeQueue.receptionistDisplayNameSnapshot ?? "Reception")}</dd></div>
             </dl>
