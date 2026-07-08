@@ -35,7 +35,7 @@ export const en = {
   frontDesk: "Front Desk",
   waitingList: "Waiting List",
   waitingLine: "Waiting Line",
-  returningPatient: "Returning Patient",
+  returningPatient: "Returning Patient / QR",
   scanQr: "Scan QR",
   quickCheckIn: "Quick check-in",
   prescription: "Prescription",

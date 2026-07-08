@@ -189,9 +189,7 @@ function NewPatientContent() {
         <form className="form-grid" onSubmit={submit}>
           <label className="wide file-number-block">
             {copy.fileNumber}
-            <div className="readonly-file-number">
-              <input required readOnly value={form.medicalRecordNumber} />
-            </div>
+            <strong className="readonly-file-number">{form.medicalRecordNumber}</strong>
             <button className="button secondary compact" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">{copy.generateAnother}</button>
           </label>
           <label>

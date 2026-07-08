@@ -76,7 +76,7 @@ function CalendarContent() {
   const checkedIn = activeQueue.filter((ticket) => ticket.status === "checked_in").length;
   const waiting = activeQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length;
   const urgent = activeQueue.filter((ticket) => ticket.visitType === "urgent_kashf").length;
-  const completed = activeQueue.filter((ticket) => ticket.status === "completed").length;
+  const completed = isReceptionistOnly ? 0 : activeQueue.filter((ticket) => ticket.status === "completed").length;
 
   return (
     <>
@@ -100,7 +100,7 @@ function CalendarContent() {
           <div><dt>{copy.checkedIn}</dt><dd>{checkedIn}</dd></div>
           <div><dt>{copy.waiting}</dt><dd>{waiting}</dd></div>
           <div><dt>{copy.urgent}</dt><dd>{urgent}</dd></div>
-          <div><dt>{copy.completed}</dt><dd>{completed}</dd></div>
+          {!isReceptionistOnly ? <div><dt>{copy.completed}</dt><dd>{completed}</dd></div> : null}
           <div><dt>{copy.cancelled}</dt><dd>{cancelledQueue.length}</dd></div>
         </dl>
       </section>

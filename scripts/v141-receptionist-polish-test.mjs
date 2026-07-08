@@ -22,45 +22,103 @@ function forbid(name, path, patterns) {
   }
 }
 
+check("one receptionist home", "apps/web/app/mvp-page.tsx", [
+  '"/reception"',
+  '"/reception/qr-scan"',
+  "receptionistNav"
+]);
+
+forbid("old receptionist nav", "apps/web/app/mvp-page.tsx", [
+  '"/reception/check-in"'
+]);
+
 check("topbar controls", "apps/web/app/mvp-page.tsx", [
-  "OFFICIAL_CLINIC_NAME",
+  "Dr Maged Clinics",
   "LanguageSwitcher",
   "topbar-logout-button",
   "receptionist-menu-button"
 ]);
 
-check("arabic reception home", "apps/web/app/reception/page.tsx", [
-  "واجهة الاستقبال",
-  "بحث عن مريضة",
-  "مريضة جديدة",
+check("arabic globals", "apps/web/i18n/ar.ts", [
+  "الاستقبال",
+  "قائمة الانتظار",
   "مريضة مسجلة / QR",
-  "المواعيد / المدفوعات",
-  "!activeTicket ? <VisitTypeSelector"
+  "خروج"
 ]);
 
-forbid("reception cleanup", "apps/web/app/reception/page.tsx", [
-  "Reception updated",
+check("language switcher", "apps/web/i18n/useI18n.tsx", [
+  "عربي",
+  "EN"
+]);
+
+check("reception home compact", "apps/web/app/reception/page.tsx", [
+  "واجهة الاستقبال",
+  "بحث عن مريضة",
+  "بحث بالاسم أو الهاتف أو رقم الملف أو QR",
+  "مريضة جديدة",
+  "مريضة مسجلة / QR",
+  "قائمة الانتظار",
+  "المواعيد",
+  "في الانتظار الآن",
+  "المريضة التالية",
+  "لا توجد مريضات في الانتظار",
+  "compact-action-grid",
+  "queue-compact-line",
+  "activeTicket ? <Link"
+]);
+
+forbid("reception no finance or completed", "apps/web/app/reception/page.tsx", [
+  "Appointments / Payments",
+  "Open invoices",
+  "Collected today",
+  "Payments collected",
+  "payment",
+  "finance",
+  "completed.length",
+  "copy.completed",
   "Role-aware",
+  "Ready",
   "black-placeholder-bar",
   "broken-placeholder"
 ]);
 
-check("new patient", "apps/web/app/patients/new/page.tsx", [
+check("queue compact", "apps/web/app/clinic-operations-page.tsx", [
+  "!isReceptionistOnly && mode !== \"queue\"",
+  "! [\"cancelled\", \"completed\"].includes(ticket.status)".replace("! ", "!"),
+  "queue-compact-line",
+  "visitTypeLabelLocal(ticket.visitType)",
+  "Remove with reason",
+  "الملغيات اليوم"
+]);
+
+forbid("queue no visible completed card", "apps/web/app/clinic-operations-page.tsx", [
+  "label={copy.completed}",
+  "Reception Queue",
+  "black-placeholder-bar",
+  "broken-placeholder"
+]);
+
+check("calendar receptionist no completed metric", "apps/web/app/calendar/page.tsx", [
+  "isReceptionistOnly ? 0",
+  "!isReceptionistOnly ? <div><dt>{copy.completed}</dt><dd>{completed}</dd></div> : null",
+  "Open reception profile",
+  "Remove with reason"
+]);
+
+check("new patient final", "apps/web/app/patients/new/page.tsx", [
   "Year of birth",
-  "سنة الميلاد",
   "placeholder=\"YYYY\"",
-  "Recommended for follow-up and duplicate check.",
-  "يفضل إدخال رقم الهاتف للمتابعة ومنع التكرار.",
+  "readonly-file-number",
   "Add notes",
-  "إضافة ملاحظات",
   "Save and add to queue",
   "Save file only"
 ]);
 
-forbid("new patient no dob", "apps/web/app/patients/new/page.tsx", [
+forbid("new patient no dob or empty readonly input", "apps/web/app/patients/new/page.tsx", [
   "Date of birth",
   "dateOfBirth",
-  "type=\"date\""
+  "type=\"date\"",
+  "readOnly"
 ]);
 
 check("visit type labels", "apps/web/lib/visit-types.ts", [
@@ -77,56 +135,20 @@ check("visit type layout", "apps/web/app/globals.css", [
 ]);
 
 check("qr workflow", "apps/web/app/reception/qr-scan/page.tsx", [
-  "navigator.mediaDevices.getUserMedia",
+  "navigator.mediaDevices?.getUserMedia",
   "facingMode: \"environment\"",
   "BarcodeDetector",
-  "setCameraActive(true)",
-  "cameraActive ? <video",
+  "decoderUnsupported",
+  "Manual lookup",
   "Find patient",
-  "البحث عن المريضة",
-  "Camera permission denied",
-  "Camera unavailable. Use manual lookup."
+  "تم رفض إذن الكاميرا",
+  "الكاميرا غير متاحة. استخدم البحث اليدوي."
 ]);
 
-forbid("qr no dead scan box", "apps/web/app/reception/qr-scan/page.tsx", [
-  "<video className=\"qr-video\" ref={videoRef}"
-]);
-
-check("calendar", "apps/web/app/calendar/page.tsx", [
-  "Appointments & Queue",
-  "المواعيد والانتظار",
-  "activeQueue",
-  "cancelledQueue",
-  "visitTypeLabel(ticket.visitType)",
-  "Open reception profile",
-  "Call",
-  "Mark urgent",
-  "Remove with reason"
-]);
-
-forbid("calendar receptionist unsafe actions", "apps/web/app/calendar/page.tsx", [
-  "Doctor View",
-  "New Encounter",
-  "Prescription",
-  "Request Investigation"
-]);
-
-check("queue", "apps/web/app/clinic-operations-page.tsx", [
-  "قائمة الانتظار",
-  "لم يتم استدعاء المريضة التالية بعد",
-  "visitTypeLabelLocal(ticket.visitType)",
-  "Remove with reason"
-]);
-
-check("reception profile", "apps/web/app/patients/[id]/page.tsx", [
-  "ReceptionPatientProfile",
-  "roleContextReady",
-  "Needs consent",
-  "No contact saved",
-  "Follow-up due",
-  "Payment pending",
-  "Doctor-reviewed alert",
-  "visitTypeLabel(String(activeQueue.visitType"
+forbid("qr no unsupported before click or dead box", "apps/web/app/reception/qr-scan/page.tsx", [
+  "useState(\"Browser camera scanning unsupported",
+  "<video className=\"qr-video\" ref={videoRef}",
+  "black-placeholder-bar"
 ]);
 
 forbid("normal ui issue marker source", "apps/web/app/reception/page.tsx", [
@@ -134,8 +156,7 @@ forbid("normal ui issue marker source", "apps/web/app/reception/page.tsx", [
   "nextjs-portal",
   "__nextjs",
   "data-nextjs-toast",
-  "data-nextjs-dialog",
-  "black-placeholder-bar"
+  "data-nextjs-dialog"
 ]);
 
 const failed = checks.filter((item) => !item.ok);

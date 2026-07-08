@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
+import { visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { useI18n } from "@/i18n/useI18n";
 import { AppShell } from "../mvp-page";
 
@@ -21,29 +21,25 @@ export default function ReceptionHomePage() {
 }
 
 function ReceptionHomeContent() {
-  const zeroPaperCompatibilityLock = "Quick check-in Returning Patient / QR Appointments / Payments Next patient not called yet Mark urgent Remove with reason";
-  void zeroPaperCompatibilityLock;
   const [patients, setPatients] = useState<Patient[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [query, setQuery] = useState("");
   const [lookupOpen, setLookupOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
-  const [status, setStatus] = useState("Loading");
+  const [status, setStatus] = useState("");
   const { language } = useI18n();
   const copy = receptionCopy[language];
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
   const load = useCallback(async () => {
-    setStatus("Loading");
     const [patientResponse, queueResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/patients`, { credentials: "include", headers }),
       fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers })
     ]);
     setPatients(patientResponse.ok ? ((await patientResponse.json()) as { patients?: Patient[] }).patients ?? [] : []);
     setQueue(queueResponse.ok ? ((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? [] : []);
-    setStatus("Ready");
   }, [headers]);
 
   useEffect(() => {
@@ -51,16 +47,12 @@ function ReceptionHomeContent() {
   }, [load]);
 
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
-  const withDoctor = queue.find((ticket) => ticket.status === "called") ?? null;
   const urgentWaiting = waiting.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
-  const completed = queue.filter((ticket) => ticket.status === "completed");
   const nextPatient = [...urgentWaiting, ...waiting.filter((ticket) => !urgentWaiting.includes(ticket))][0] ?? null;
-  const counts = visitTypeCounts(waiting);
   const trimmedQuery = query.trim().toLowerCase();
   const results = trimmedQuery ? patients.filter((patient) => patientSearchText(patient).includes(trimmedQuery)).slice(0, 8) : [];
   const activeTicket = selectedPatient ? queue.find((ticket) => ticket.patientId === selectedPatient.id && ["waiting", "called"].includes(ticket.status)) : null;
   const selectedQueueIndex = selectedPatient ? waiting.findIndex((ticket) => ticket.patientId === selectedPatient.id) : -1;
-  const selectedBefore = selectedQueueIndex >= 0 ? waiting.slice(0, selectedQueueIndex) : [];
 
   async function addReturningPatientToQueue() {
     if (!selectedPatient || !visitType) {
@@ -68,7 +60,7 @@ function ReceptionHomeContent() {
       return;
     }
     if (activeTicket) {
-      setStatus(activeTicket.status === "called" ? copy.alreadyWithDoctor : `${copy.alreadyInQueue} ${selectedQueueIndex + 1}`);
+      setStatus(activeTicket.status === "called" ? copy.alreadyWithDoctor : copy.alreadyInQueue);
       return;
     }
 
@@ -90,7 +82,6 @@ function ReceptionHomeContent() {
   return (
     <>
       <section className="page-header">
-        <span hidden>{zeroPaperCompatibilityLock}</span>
         <div className="header-row">
           <div>
             <p className="eyebrow">{copy.eyebrow}</p>
@@ -109,25 +100,19 @@ function ReceptionHomeContent() {
         </label>
       </section>
 
-      <section className="reception-home-grid compact-action-grid" aria-label="Reception actions">
+      <section className="reception-home-grid compact-action-grid" aria-label={copy.receptionActions}>
         <Link className="reception-action-card premium-depth-card" href="/patients/new"><ThreeDMedicalIcon name="patients" size="sm" /><span>{copy.newPatient}</span></Link>
         <Link className="reception-action-card premium-depth-card" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" /><span>{copy.returningPatientQr}</span></Link>
         <Link className="reception-action-card premium-depth-card" href="/queue"><ThreeDMedicalIcon name="queue" size="sm" /><span>{copy.queue}</span></Link>
-        <Link className="reception-action-card premium-depth-card" href="/calendar"><ThreeDMedicalIcon name="calendar" size="sm" /><span>{copy.appointmentsPayments}</span></Link>
+        <Link className="reception-action-card premium-depth-card" href="/calendar"><ThreeDMedicalIcon name="calendar" size="sm" /><span>{copy.appointments}</span></Link>
       </section>
 
-      <section className="panel compact-panel today-summary-card" aria-label={copy.todaySummary}>
+      <section className="panel compact-panel today-summary-card" aria-label={copy.queueNow}>
         <div className="section-heading compact-section-heading">
-          <h2>{copy.todaySummary}</h2>
-          <span className="badge">{status === "Ready" ? copy.ready : copy.loading}</span>
+          <h2>{copy.queueNow}</h2>
         </div>
-        <dl className="compact-summary-list">
-          <div><dt>{copy.appointments}</dt><dd>0</dd></div>
-          <div><dt>{copy.waiting}</dt><dd>{waiting.length}</dd></div>
-          <div><dt>{copy.urgent}</dt><dd>{urgentWaiting.length}</dd></div>
-          <div><dt>{copy.completed}</dt><dd>{completed.length}</dd></div>
-          <div className="wide"><dt>{copy.next}</dt><dd>{nextPatient ? patientLabel(nextPatient.patient) : copy.nextPatientNotCalledYet}</dd></div>
-        </dl>
+        <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgentWaiting.length}</p>
+        <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {nextPatient ? patientLabel(nextPatient.patient) : copy.noPatientWaiting}</p>
       </section>
 
       {lookupOpen ? (
@@ -137,20 +122,13 @@ function ReceptionHomeContent() {
               <h2>{copy.returningPatientQr}</h2>
               <p className="muted">{copy.searchPlaceholder}</p>
             </div>
-            <span className="badge">{copy.findPatient}</span>
-          </div>
-          <div className="toolbar compact-toolbar">
-            <label className="wide">
-              {copy.searchPatient}
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} />
-            </label>
-            <Link className="button secondary" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{copy.returningPatientQr}</Link>
+            <Link className="button secondary compact" href="/reception/qr-scan">{copy.findPatient}</Link>
           </div>
           <div className="dense-card-list">
             {results.map((patient) => (
               <button className={`picker-row ${selectedPatient?.id === patient.id ? "active" : ""}`} key={patient.id} type="button" onClick={() => setSelectedPatient(patient)}>
                 <strong>{patientLabel(patient)}</strong>
-                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? copy.noPhone} | {copy.findPatient}</span>
+                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? copy.noPhone}</span>
               </button>
             ))}
             {!trimmedQuery ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>{copy.searchToFind}</span></p> : null}
@@ -163,11 +141,9 @@ function ReceptionHomeContent() {
               {activeTicket ? (
                 <div className="queue-position-card" data-testid="queue-position-card">
                   <strong>{activeTicket.status === "called" ? copy.alreadyWithDoctor : `${copy.alreadyInQueue} ${selectedQueueIndex + 1}`}</strong>
-                  {activeTicket.status === "waiting" ? <span>{copy.patientsBefore(selectedBefore.length)}</span> : null}
-                  {selectedBefore.length ? <span>{copy.before}: {selectedBefore.map((ticket) => patientLabel(ticket.patient)).join(", ")}</span> : null}
                 </div>
-              ) : null}
-              {!activeTicket ? <VisitTypeSelector value={visitType} onChange={setVisitType} compact /> : null}
+              ) : <VisitTypeSelector value={visitType} onChange={setVisitType} compact />}
+              {status ? <p className="muted">{status}</p> : null}
               <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>{copy.openReceptionProfile}</Link>
                 {activeTicket ? <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link> : <button className="button compact" type="button" onClick={() => void addReturningPatientToQueue()} disabled={!visitType}>{copy.addToQueue}</button>}
@@ -177,34 +153,25 @@ function ReceptionHomeContent() {
         </section>
       ) : null}
 
-      <section className="panel compact-panel waiting-line-panel">
-        <div className="section-heading">
-          <h2>{copy.queuePreview}</h2>
-          <span className="badge">{waiting.length}</span>
-        </div>
-        <div className="queue-indicator-row">
-          <span><strong>{copy.next}:</strong> {nextPatient ? patientLabel(nextPatient.patient) : copy.nextPatientNotCalledYet}</span>
-          <span><strong>{copy.status}:</strong> {withDoctor ? copy.patientCalled : copy.queue}</span>
-        </div>
-        <div className="visit-type-counts" aria-label="Visit type counts">
-          <span>كشف {counts.kashf}</span>
-          <span>إعادة {counts.recheck}</span>
-          <span>استشارة {counts.consultation}</span>
-          <span>مستعجل {counts.urgent_kashf}</span>
-        </div>
-        {waiting.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>{copy.noPatientsWaiting}</span></p> : null}
-        <div className="dense-card-list" data-testid="ordered-waiting-line">
-          {waiting.slice(0, 4).map((ticket, index) => (
-            <button className="data-row dense clickable-waiting-row" key={ticket.id} type="button" onClick={() => { setSelectedPatient(ticket.patient ?? null); setLookupOpen(true); }}>
-              <div className="data-row-header">
-                <strong>{index + 1}. {patientLabel(ticket.patient)} - {visitTypeLabel(ticket.visitType)} - {copy.waiting}</strong>
-              </div>
-              <p className="muted">{ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : copy.waitingDurationNotRecorded} | {copy.queueActions}</p>
-            </button>
-          ))}
-        </div>
-        {waiting.length > 4 ? <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link> : null}
-      </section>
+      {waiting.length ? (
+        <section className="panel compact-panel waiting-line-panel">
+          <div className="section-heading">
+            <h2>{copy.queuePreview}</h2>
+            <span className="badge">{waiting.length}</span>
+          </div>
+          <div className="dense-card-list" data-testid="ordered-waiting-line">
+            {waiting.slice(0, 4).map((ticket, index) => (
+              <button className="data-row dense clickable-waiting-row" key={ticket.id} type="button" onClick={() => { setSelectedPatient(ticket.patient ?? null); setLookupOpen(true); }}>
+                <div className="data-row-header">
+                  <strong>{index + 1}. {patientLabel(ticket.patient)} | {visitTypeLabel(ticket.visitType)} | {copy.waiting}</strong>
+                </div>
+                <p className="muted">{ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : copy.waitingDurationNotRecorded}</p>
+              </button>
+            ))}
+          </div>
+          {waiting.length > 4 ? <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link> : null}
+        </section>
+      ) : null}
     </>
   );
 }
@@ -228,39 +195,30 @@ const receptionCopy = {
   en: {
     eyebrow: "Reception",
     title: "Reception",
+    receptionActions: "Reception actions",
     searchPatient: "Search patient",
     searchPlaceholder: "Search by name, phone, file number, QR",
     newPatient: "New Patient",
     returningPatientQr: "Returning Patient / QR",
     queue: "Queue",
-    appointmentsPayments: "Appointments / Payments",
-    todaySummary: "Today",
     appointments: "Appointments",
+    queueNow: "Queue now",
     waiting: "Waiting now",
     urgent: "Urgent",
-    completed: "Completed",
-    next: "Next",
-    nextPatientNotCalledYet: "Next patient not called yet",
+    nextPatient: "Next patient",
+    noPatientWaiting: "No patient waiting",
     findPatient: "Find patient",
     refresh: "Refresh",
-    ready: "Ready",
-    loading: "Loading",
     noPhone: "No phone",
     searchToFind: "Search to find a returning patient.",
     noMatch: "No matching patient found.",
     alreadyInQueue: "Already in queue - Position",
     alreadyWithDoctor: "Patient is already with doctor",
-    patientsBefore: (count: number) => `${count} patient${count === 1 ? "" : "s"} before this patient.`,
-    before: "Before",
     openReceptionProfile: "Open reception profile",
     openQueue: "Open queue",
     addToQueue: "Add to queue",
     queuePreview: "Queue preview",
-    status: "Status",
-    patientCalled: "Patient called",
-    noPatientsWaiting: "No patients waiting",
     waitingDurationNotRecorded: "Waiting duration not recorded",
-    queueActions: "actions: Open, Call, Mark urgent, Remove with reason",
     selectPatientVisitType: "Select patient and visit type first",
     addingToQueue: "Adding to queue",
     patientAddedToQueue: "Patient added to queue",
@@ -269,39 +227,30 @@ const receptionCopy = {
   ar: {
     eyebrow: "الاستقبال",
     title: "واجهة الاستقبال",
+    receptionActions: "إجراءات الاستقبال",
     searchPatient: "بحث عن مريضة",
     searchPlaceholder: "بحث بالاسم أو الهاتف أو رقم الملف أو QR",
     newPatient: "مريضة جديدة",
     returningPatientQr: "مريضة مسجلة / QR",
     queue: "قائمة الانتظار",
-    appointmentsPayments: "المواعيد / المدفوعات",
-    todaySummary: "اليوم",
     appointments: "المواعيد",
+    queueNow: "قائمة الانتظار الآن",
     waiting: "في الانتظار الآن",
     urgent: "مستعجل",
-    completed: "تم الانتهاء",
-    next: "المريضة التالية",
-    nextPatientNotCalledYet: "لم يتم استدعاء المريضة التالية بعد",
+    nextPatient: "المريضة التالية",
+    noPatientWaiting: "لا توجد مريضات في الانتظار",
     findPatient: "البحث عن المريضة",
     refresh: "تحديث",
-    ready: "جاهز",
-    loading: "تحميل",
     noPhone: "لا يوجد رقم هاتف",
     searchToFind: "ابحث عن مريضة مسجلة.",
     noMatch: "لا توجد مريضة مطابقة.",
     alreadyInQueue: "موجودة بالفعل في الانتظار - رقم",
     alreadyWithDoctor: "المريضة موجودة مع الطبيب بالفعل",
-    patientsBefore: (count: number) => `${count} قبل هذه المريضة.`,
-    before: "قبلها",
     openReceptionProfile: "فتح ملف الاستقبال",
-    openQueue: "فتح الانتظار",
+    openQueue: "فتح قائمة الانتظار",
     addToQueue: "إضافة للانتظار",
-    queuePreview: "معاينة الانتظار",
-    status: "الحالة",
-    patientCalled: "تم استدعاء المريضة",
-    noPatientsWaiting: "لا توجد مريضات في الانتظار",
+    queuePreview: "قائمة انتظار اليوم",
     waitingDurationNotRecorded: "مدة الانتظار غير مسجلة",
-    queueActions: "الإجراءات: فتح الملف، استدعاء، تحديد مستعجل، إزالة مع سبب",
     selectPatientVisitType: "اختر المريضة ونوع الزيارة أولا",
     addingToQueue: "جار الإضافة للانتظار",
     patientAddedToQueue: "تمت إضافة المريضة للانتظار",

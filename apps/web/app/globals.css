@@ -858,8 +858,10 @@ body {
 
 .receptionist-menu-button {
   flex: 0 0 auto;
-  min-width: 4.2rem;
-  padding-inline: 0.55rem;
+  width: var(--density-control-height);
+  min-width: var(--density-control-height);
+  padding-inline: 0;
+  justify-content: center;
 }
 
 .account-menu {
@@ -1325,9 +1327,15 @@ details.form-fieldset summary {
   gap: 0.5rem;
 }
 
-.readonly-file-number input {
+.readonly-file-number {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  padding: 0.75rem;
   font-weight: 900;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .helper-text {
@@ -3634,15 +3642,22 @@ button.obgyn-template-card {
   }
 
   .topbar .topbar-title > div,
-  .topbar .portal-search,
-  .topbar > .topbar-actions {
+  .topbar .portal-search {
     display: none;
+  }
+
+  .topbar > .topbar-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
   }
 
   .mobile-topbar-brand {
     display: block;
     color: var(--foreground);
     font-size: 1rem;
+    max-width: min(42vw, 13rem);
     text-align: center;
   }
 
@@ -4334,9 +4349,11 @@ body {
   }
 
   .urgent-visit-type-card {
-    width: 42%;
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: clamp(7.5rem, 42%, 11rem);
     min-width: 7rem;
-    max-width: 9.5rem;
+    max-width: 11rem;
     min-height: 3rem;
   }
 
@@ -4632,6 +4649,15 @@ body {
     flex: 0 0 auto;
     flex-wrap: nowrap;
     gap: 0.4rem;
+  }
+
+  .topbar-logout-button {
+    padding-inline: 0.55rem;
+  }
+
+  .language-switcher button {
+    min-width: 2.45rem;
+    padding-inline: 0.45rem;
   }
 
   .account-menu {

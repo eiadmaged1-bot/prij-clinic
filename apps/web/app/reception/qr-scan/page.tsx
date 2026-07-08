@@ -96,12 +96,6 @@ function ReceptionQrScanContent() {
       return;
     }
 
-    const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-    if (!Detector) {
-      setScannerStatus(copy.browserUnsupported);
-      return;
-    }
-
     try {
       const stream = await openCamera();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -110,6 +104,11 @@ function ReceptionQrScanContent() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
+      }
+      const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
+      if (!Detector) {
+        setScannerStatus(copy.decoderUnsupported);
+        return;
       }
       const detector = new Detector({ formats: ["qr_code"] });
       setScannerStatus(copy.cameraActive);
@@ -272,6 +271,7 @@ const qrCopy = {
     addToQueue: "Add to today's queue",
     permissionDenied: "Camera permission denied",
     browserUnsupported: "Browser camera scanning unsupported. Use manual lookup.",
+    decoderUnsupported: "QR auto-read unavailable. Use manual lookup.",
     cameraAlreadyInUse: "Camera already in use. Use manual lookup.",
     noCameraFound: "No camera found. Use manual lookup.",
     cameraUnavailable: "Camera unavailable. Use manual lookup."
@@ -312,6 +312,7 @@ const qrCopy = {
     addToQueue: "إضافة لانتظار اليوم",
     permissionDenied: "تم رفض إذن الكاميرا",
     browserUnsupported: "المتصفح لا يدعم المسح بالكاميرا. استخدم البحث اليدوي.",
+    decoderUnsupported: "قراءة QR التلقائية غير متاحة. استخدم البحث اليدوي.",
     cameraAlreadyInUse: "الكاميرا مستخدمة حاليا. استخدم البحث اليدوي.",
     noCameraFound: "لا توجد كاميرا. استخدم البحث اليدوي.",
     cameraUnavailable: "الكاميرا غير متاحة. استخدم البحث اليدوي."

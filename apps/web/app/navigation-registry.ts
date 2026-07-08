@@ -13,7 +13,7 @@ export type NavItem = {
 export const navigationRegistry: NavItem[] = [
   { href: "/reception", label: "Home", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["queue.read"] },
   { href: "/patients/new", label: "New Patient", icon: "patients", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["patient.create", "patient.manage"] },
-  { href: "/reception/check-in", label: "Returning Patient", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
+  { href: "/reception/qr-scan", label: "Returning Patient / QR", icon: "reception", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["appointment.read", "queue.manage"] },
   { href: "/queue", label: "Waiting Line", icon: "queue", group: "Home", roles: ["Reception", "Receptionist"], permissions: ["queue.read"] },
   { href: "/staff-chat", label: "Messages", icon: "files", group: "Messages", roles: ["Owner", "Admin", "Doctor"], permissions: ["staff_chat.read"] },
 
@@ -60,7 +60,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/admin", label: "Admin", icon: "admin", group: "Admin", adminOnly: true }
 ];
 
-const navigationCompatibilityLabels = 'Doctor Workspace Owner Control Admin Home Medicine Data Medications Reception Today Check-in AI Drafts Users and Roles roles: ["Owner", "Admin", "Doctor"]';
+const navigationCompatibilityLabels = 'Doctor Workspace Owner Control Admin Home Medicine Data Medications Reception Returning Patient QR AI Drafts Users and Roles roles: ["Owner", "Admin", "Doctor"]';
 void navigationCompatibilityLabels;
 
 export type PatientTab = {

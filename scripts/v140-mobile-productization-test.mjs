@@ -24,6 +24,7 @@ function forbid(name, path, patterns) {
 
 check("topbar", "apps/web/app/mvp-page.tsx", [
   "OFFICIAL_CLINIC_NAME",
+  "Dr Maged Clinics",
   "LanguageSwitcher",
   "topbar-logout-button",
   "icon-only-button"
@@ -38,7 +39,7 @@ check("visit types", "apps/web/lib/visit-types.ts", [
 
 check("new patient", "apps/web/app/patients/new/page.tsx", [
   "Generate another file number",
-  "readOnly",
+  "readonly-file-number",
   "Year of birth",
   "Save and add to queue",
   "Save file only",
@@ -49,11 +50,10 @@ check("new patient", "apps/web/app/patients/new/page.tsx", [
 check("reception dashboard", "apps/web/app/reception/page.tsx", [
   "Search by name, phone, file number, QR",
   "Returning Patient / QR",
-  "Appointments / Payments",
+  "Appointments",
   "Waiting now",
-  "Next patient not called yet",
-  "Mark urgent",
-  "Remove with reason"
+  "No patient waiting",
+  "Add to queue"
 ]);
 
 check("qr check-in", "apps/web/app/reception/qr-scan/page.tsx", [
@@ -65,8 +65,7 @@ check("qr check-in", "apps/web/app/reception/qr-scan/page.tsx", [
 ]);
 
 check("queue board", "apps/web/app/clinic-operations-page.tsx", [
-  "Reception Queue",
-  "Next patient not called yet",
+  "queue-compact-line",
   "Call patient",
   "Cancel/remove with reason",
   "urgentRank",
@@ -101,12 +100,16 @@ check("doctor visit receptionist denial", "apps/web/app/doctor/visit/page.tsx", 
 
 forbid("new patient pre-create actions", "apps/web/app/patients/new/page.tsx", [
   "Save and open file",
-  "Open patient file"
+  "Open patient file",
+  "Date of birth",
+  "dateOfBirth"
 ]);
 
 forbid("reception dashboard cleanup", "apps/web/app/reception/page.tsx", [
   "Messages",
-  "Doctor view updated"
+  "Doctor view updated",
+  "Appointments / Payments",
+  "Completed"
 ]);
 
 forbid("broken placeholder markers", "apps/web/app/reception/page.tsx", [

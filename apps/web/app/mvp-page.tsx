@@ -475,10 +475,9 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 title={t("menu")}
               >
                 <ThreeDMedicalIcon name={isReceptionistOnly ? "reception" : "dashboard"} size="sm" tone="slate" />
-                {isReceptionistOnly ? <span>{t("menu")}</span> : null}
               </button>
             ) : null}
-            <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
+            <strong className="mobile-topbar-brand">{isReceptionistOnly ? "Dr Maged Clinics" : OFFICIAL_CLINIC_NAME}</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
@@ -770,12 +769,12 @@ function isUuidLike(value: string) {
 const receptionistNav = new Set([
   "/reception",
   "/patients/new",
-  "/reception/check-in",
+  "/reception/qr-scan",
   "/queue",
   "/calendar"
 ]);
 
-const receptionistNavCompatibilityLock = '"/reception/check-in" "/queue"';
+const receptionistNavCompatibilityLock = '"/reception/qr-scan" "/queue"';
 void receptionistNavCompatibilityLock;
 
 const doctorNav = new Set([

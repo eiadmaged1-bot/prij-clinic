@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { visitTypeLabel } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "./mvp-page";
 import { useSession } from "./session";
 import { useI18n } from "@/i18n/useI18n";
@@ -55,20 +56,22 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
 
   const load = useCallback(async () => {
     setStatus("Loading");
+    const shouldLoadFinance = !isReceptionistOnly && mode !== "queue";
+    const shouldLoadOrders = mode !== "queue";
     const [appointmentResponse, queueResponse, invoiceResponse, orderResponse, dashboardResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers }),
       fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/billing/invoices`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/investigations/orders`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/dashboard/summary`, { credentials: "include", headers })
+      shouldLoadFinance ? fetch(`${getApiBaseUrl()}/billing/invoices`, { credentials: "include", headers }) : Promise.resolve(null),
+      shouldLoadOrders ? fetch(`${getApiBaseUrl()}/investigations/orders`, { credentials: "include", headers }) : Promise.resolve(null),
+      shouldLoadFinance ? fetch(`${getApiBaseUrl()}/dashboard/summary`, { credentials: "include", headers }) : Promise.resolve(null)
     ]);
     setAppointments(appointmentResponse.ok ? ((await appointmentResponse.json()) as { appointments?: Appointment[] }).appointments ?? [] : []);
     setQueue(queueResponse.ok ? ((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? [] : []);
-    setInvoices(invoiceResponse.ok ? ((await invoiceResponse.json()) as { invoices?: Invoice[] }).invoices ?? [] : []);
-    setOrders(orderResponse.ok ? ((await orderResponse.json()) as { investigationOrders?: InvestigationOrder[] }).investigationOrders ?? [] : []);
-    setDashboard(dashboardResponse.ok ? await dashboardResponse.json() as DashboardSummary : {});
+    setInvoices(invoiceResponse?.ok ? ((await invoiceResponse.json()) as { invoices?: Invoice[] }).invoices ?? [] : []);
+    setOrders(orderResponse?.ok ? ((await orderResponse.json()) as { investigationOrders?: InvestigationOrder[] }).investigationOrders ?? [] : []);
+    setDashboard(dashboardResponse?.ok ? await dashboardResponse.json() as DashboardSummary : {});
     setStatus("Ready");
-  }, [headers, today]);
+  }, [headers, isReceptionistOnly, mode, today]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -88,7 +91,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
           <div className="topbar-actions">
             <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
             {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
-            <Link className="button compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" />{mode === "queue" ? copy.reception : "Reception"}</Link>
+            {mode !== "queue" ? <Link className="button compact" href="/reception"><ThreeDMedicalIcon name="reception" size="sm" />{copy.reception}</Link> : null}
             {!isReceptionistOnly && (isAdmin || hasRole(roles, ["Doctor"])) ? <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link> : null}
             <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{mode === "queue" ? copy.refresh : "Refresh"}</button>
           </div>
@@ -126,22 +129,20 @@ function QueueBoard({ queue, today, copy }: { queue: QueueTicket[]; today: strin
     .filter((ticket) => ticket.status === "waiting")
     .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime());
   const nextTicket = queue.find((ticket) => ticket.status === "called") ?? waiting[0] ?? null;
-  const activeQueue = queue.filter((ticket) => ticket.status !== "cancelled");
+  const activeQueue = queue.filter((ticket) => !["cancelled", "completed"].includes(ticket.status));
   const cancelledQueue = queue.filter((ticket) => ticket.status === "cancelled");
   const urgent = activeQueue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
-  const completed = queue.filter((ticket) => ticket.status === "completed");
   const rows = [...waiting, ...activeQueue.filter((ticket) => ticket.status !== "waiting")];
   return (
     <section className="queue-board-compact">
       <div className="toolbar compact-toolbar">
         <label>{copy.date}<input type="date" defaultValue={today} /></label>
-        <span className="badge">{copy.receptionQueue}</span>
+        <button className="button secondary compact" type="button" onClick={() => window.location.reload()}>{copy.refresh}</button>
       </div>
-      <section className="compact-metric-grid">
-        <Metric icon="queue" label={copy.waiting} value={waiting.length} />
-        <Metric icon="doctor" label={copy.next} value={nextTicket ? patient(nextTicket.patient) : copy.nextPatientNotCalledYet} />
-        <Metric icon="queue" label={copy.urgent} value={urgent.length} />
-        <Metric icon="reports" label={copy.completed} value={completed.length} />
+      <section className="panel compact-panel today-summary-card">
+        <div className="section-heading compact-section-heading"><h2>{copy.queueList}</h2></div>
+        <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgent.length}</p>
+        <p className="queue-compact-line"><strong>{copy.next}:</strong> {nextTicket ? patient(nextTicket.patient) : copy.noPatientsWaiting}</p>
       </section>
       <article className="panel compact-panel">
         <div className="section-heading"><h2>{copy.queueList}</h2><span className="badge">{rows.length}</span></div>
@@ -237,10 +238,7 @@ function friendly(value: string) {
 }
 
 function visitTypeLabelLocal(value?: string | null) {
-  if (value === "recheck") return "إعادة";
-  if (value === "consultation") return "استشارة";
-  if (value === "urgent_kashf") return "مستعجل";
-  return "كشف";
+  return visitTypeLabel(value);
 }
 
 function paymentBadge(invoices: Invoice[], patientId: string) {
@@ -267,11 +265,13 @@ const operationsCopy = {
     reception: "Reception",
     refresh: "Refresh",
     date: "Date",
-    receptionQueue: "Reception Queue",
+    receptionQueue: "Queue",
+    queueNow: "Queue now",
     waiting: "Waiting",
     next: "Next",
     urgent: "Urgent",
     completed: "Completed",
+    noPatientWaiting: "No patient waiting",
     nextPatientNotCalledYet: "Next patient not called yet",
     queueList: "Queue list",
     noPatientsWaiting: "No patients waiting",
@@ -303,6 +303,6 @@ const operationsCopy = {
     callPatient: "استدعاء",
     markUrgent: "تحديد مستعجل",
     removeWithReason: "إزالة مع سبب",
-    cancelledToday: "ملغاة اليوم"
+    cancelledToday: "الملغيات اليوم"
   }
 } as const;
