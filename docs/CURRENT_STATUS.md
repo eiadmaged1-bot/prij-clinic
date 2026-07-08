@@ -1,5 +1,13 @@
 # Current Status
 
+## v1.4.0 Current Status
+
+v1.4.0 mobile clinic productization is in progress on `fix/v1.4.0-mobile-clinic-productization`.
+
+Implemented in this pass: mobile-first top bar with clinic name/language/logout, icon-only secondary navigation trigger, corrected Arabic visit labels in 2x2 order, new-patient DOB/year fallback and clear save actions, reception search-first dashboard, explicit Patient QR camera start with manual fallback and confirmation card, queue next-patient logic with urgent priority ordering, search/category/sort/load-more patient directory, search-first draft-only AI assistant, expanded investigation master categories, and category-based Smart Clinical Search.
+
+Safety remains unchanged: no DB reset/drop, no migration deletion, no fake patient seed, no automatic diagnosis/prescribing, no external intake or AI draft auto-finalization, and clinical AI remains draft-only for doctor review.
+
 ## v1.3.9 Current Status
 
 v1.3.9 implements clinical tag search, EDD month calendar, reviewed Google Form intake, and workflow cleanup.

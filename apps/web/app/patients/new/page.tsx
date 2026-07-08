@@ -16,6 +16,7 @@ type FormState = {
   fullName: string;
   patientType: string;
   sexualActivityStatus: string;
+  dateOfBirth: string;
   yearOfBirth: string;
   phone: string;
   address: string;
@@ -29,6 +30,7 @@ const initialState: FormState = {
   fullName: "",
   patientType: "WOMEN_HEALTH",
   sexualActivityStatus: "unknown",
+  dateOfBirth: "",
   yearOfBirth: "",
   phone: "",
   address: "",
@@ -77,10 +79,12 @@ export default function NewPatientPage() {
       if (!visitType) {
         throw new Error("Select visit type before saving and checking in.");
       }
+      const formData = new FormData(event.currentTarget);
+      const saveIntent = String(formData.get("saveIntent") ?? "queue");
       const noteParts = [
         form.notes.trim(),
         form.address.trim() ? `Area/address: ${form.address.trim()}` : "",
-        form.yearOfBirth.trim() ? `Year of birth: ${form.yearOfBirth.trim()}` : ""
+        form.yearOfBirth.trim() && !form.dateOfBirth ? `Year of birth: ${form.yearOfBirth.trim()}` : ""
       ].filter(Boolean);
       const payload = Object.fromEntries(
         Object.entries({
@@ -90,7 +94,7 @@ export default function NewPatientPage() {
           sex: "female",
           patientType: form.patientType || "WOMEN_HEALTH",
           sexualActivityStatus: form.sexualActivityStatus,
-          dateOfBirth: form.yearOfBirth ? `${form.yearOfBirth}-01-01` : "",
+          dateOfBirth: form.dateOfBirth || (form.yearOfBirth ? `${form.yearOfBirth}-01-01` : ""),
           phone: form.phone,
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
@@ -116,16 +120,19 @@ export default function NewPatientPage() {
 
       const patient = (await response.json()) as { id: string };
       setCreatedPatientId(patient.id);
-      const queueResponse = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "content-type": "application/json",
-          ...(token ? { authorization: `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify({ patientId: patient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
-      }).catch(() => undefined);
-      const queueTicket = queueResponse?.ok ? await queueResponse.json().catch(() => null) as { queueNumber?: number; visitType?: string } | null : null;
+      let queueTicket: { queueNumber?: number; visitType?: string } | null = null;
+      if (saveIntent === "queue") {
+        const queueResponse = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "content-type": "application/json",
+            ...(token ? { authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ patientId: patient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
+        }).catch(() => undefined);
+        queueTicket = queueResponse?.ok ? await queueResponse.json().catch(() => null) as { queueNumber?: number; visitType?: string } | null : null;
+      }
       await fetch(`${getApiBaseUrl()}/patient-intake`, {
         method: "POST",
         credentials: "include",
@@ -148,8 +155,8 @@ export default function NewPatientPage() {
           }
         })
       }).catch(() => undefined);
-      setSuccess(`Added to queue - Position ${queueTicket?.queueNumber ?? "new"}.`);
-      router.push(`/patients/${patient.id}`);
+      setSuccess(saveIntent === "queue" ? `Added to queue - Position ${queueTicket?.queueNumber ?? "new"}.` : "Patient file saved.");
+      if (saveIntent !== "file") router.push(`/patients/${patient.id}`);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Unable to create patient file.");
     } finally {
@@ -190,8 +197,8 @@ export default function NewPatientPage() {
             File number
             <div className="input-action">
               <input
-                onChange={(event) => update("medicalRecordNumber", event.target.value)}
                 required
+                readOnly
                 value={form.medicalRecordNumber}
               />
               <button className="button secondary compact icon-only-button" aria-label="Regenerate file number" onClick={() => update("medicalRecordNumber", makeMrn())} type="button">
@@ -206,7 +213,7 @@ export default function NewPatientPage() {
           </label>
           <label>
             Phone number
-            <input autoComplete="tel" inputMode="tel" onChange={(event) => update("phone", event.target.value)} placeholder="Optional contact number" value={form.phone} />
+            <input autoComplete="tel" inputMode="tel" onChange={(event) => update("phone", event.target.value)} placeholder="Strongly recommended for follow-up and duplicate checks" value={form.phone} />
           </label>
           <label>
             Patient type
@@ -215,8 +222,12 @@ export default function NewPatientPage() {
             </select>
           </label>
           <label>
+            Date of birth
+            <input type="date" onChange={(event) => update("dateOfBirth", event.target.value)} value={form.dateOfBirth} />
+          </label>
+          <label>
             Year of birth
-            <input inputMode="numeric" max={new Date().getFullYear()} min="1900" onChange={(event) => update("yearOfBirth", event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="YYYY" value={form.yearOfBirth} />
+            <input disabled={Boolean(form.dateOfBirth)} inputMode="numeric" max={new Date().getFullYear()} min="1900" onChange={(event) => update("yearOfBirth", event.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="YYYY fallback if full DOB is unknown" value={form.yearOfBirth} />
           </label>
           <div className="age-chip" aria-label="Auto-calculated age">Age: {calculatedAge}</div>
           <label>
@@ -238,6 +249,7 @@ export default function NewPatientPage() {
               type="checkbox"
             />
             Not sexually active
+            <span className="muted">Unchecked = unknown / not asked.</span>
           </label>
           <details hidden>
             <summary>Sensitive details</summary>
@@ -255,10 +267,12 @@ export default function NewPatientPage() {
           {success ? <p className="success-message wide">{success}</p> : null}
 
           <div className="form-actions wide">
-            <button className="button" disabled={isSubmitting} type="submit">
+            <button className="button" disabled={isSubmitting} name="saveIntent" value="queue" type="submit">
               <ThreeDMedicalIcon name="patients" size="sm" />
-              {isSubmitting ? "Adding to waiting line" : "Save and open patient file"}
+              {isSubmitting ? "Saving" : "Save and add to queue"}
             </button>
+            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="file" type="submit">Save file only</button>
+            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="open" type="submit">Save and open file</button>
             {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>Open patient file</Link> : null}
           </div>
         </form>

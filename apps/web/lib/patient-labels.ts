@@ -1,9 +1,9 @@
 export const patientTypeOptions = [
-  { value: "OB", label: "Obstetric" },
+  { value: "WOMEN_HEALTH", label: "Women's Health" },
+  { value: "OB", label: "Obstetric / Pregnancy" },
   { value: "GYN", label: "Gynecology" },
   { value: "INFERTILITY", label: "Infertility" },
-  { value: "WOMEN_HEALTH", label: "Women's Health" },
-  { value: "GENERAL", label: "General" }
+  { value: "OTHER", label: "Other" }
 ];
 
 export function patientTypeLabel(value?: string | null) {

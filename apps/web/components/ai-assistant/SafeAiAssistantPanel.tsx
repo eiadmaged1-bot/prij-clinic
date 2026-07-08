@@ -26,6 +26,7 @@ type PatientOption = {
 export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?: string }) {
   const [patientId, setPatientId] = useState(fixedPatientId ?? "");
   const [patients, setPatients] = useState<PatientOption[]>([]);
+  const [patientQuery, setPatientQuery] = useState("");
   const [assistant, setAssistant] = useState<AiAssistantState | null>(null);
   const [safety, setSafety] = useState<AiSafetyStatus | null>(null);
   const [drafts, setDrafts] = useState<AiDraft[]>([]);
@@ -37,15 +38,20 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
 
   useEffect(() => {
     void getAiSafetyStatus().then(setSafety).catch(() => setStatus("AI assistant unavailable"));
-    if (!fixedPatientId) {
-      void workflowRequest<{ patients?: PatientOption[] }>("/patients")
-        .then((data) => {
-          setPatients(data.patients ?? []);
-          if (!patientId && data.patients?.[0]) setPatientId(data.patients[0].id);
-        })
-        .catch(() => setPatients([]));
+  }, [fixedPatientId]);
+
+  useEffect(() => {
+    if (fixedPatientId || patientQuery.trim().length < 2) {
+      setPatients([]);
+      return;
     }
-  }, [fixedPatientId, patientId]);
+    const timeout = window.setTimeout(() => {
+      void workflowRequest<{ patients?: PatientOption[] }>(`/patients?q=${encodeURIComponent(patientQuery.trim())}`)
+        .then((data) => setPatients((data.patients ?? []).filter((patient) => !isTrainingPatient(patient)).slice(0, 8)))
+        .catch(() => setPatients([]));
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [fixedPatientId, patientQuery]);
 
   const loadAssistant = useCallback(async (nextPatientId = patientId) => {
     setStatus("Loading");
@@ -123,18 +129,28 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
       </div>
 
       {!fixedPatientId ? (
-        <label>
-          Patient file
-          <select value={patientId} onChange={(event) => setPatientId(event.target.value)}>
-            <option value="">Select patient</option>
+        <article className="panel compact-panel">
+          <div className="section-heading">
+            <h3>Search patient first</h3>
+            <span className="badge">No preload</span>
+          </div>
+          <label>
+            Search by name, phone, MRN, or QR
+            <input value={patientQuery} onChange={(event) => setPatientQuery(event.target.value)} placeholder="Name, phone, MRN/file number, or QR" />
+          </label>
+          <div className="dense-card-list">
             {patients.map((patient) => (
-              <option key={patient.id} value={patient.id}>
-                {patient.firstName} {patient.lastName} - {patient.medicalRecordNumber}
-              </option>
+              <button className={`picker-row ${patientId === patient.id ? "active" : ""}`} key={patient.id} type="button" onClick={() => setPatientId(patient.id)}>
+                <strong>{patient.firstName} {patient.lastName}</strong>
+                <span>{patient.medicalRecordNumber}</span>
+              </button>
             ))}
-          </select>
-        </label>
+            {patientQuery.trim().length < 2 ? <p className="empty-state compact smart-empty-state">Enter at least two characters to search patient files.</p> : null}
+          </div>
+        </article>
       ) : null}
+
+      {patientId ? <div className="selected-patient-card"><strong>Selected patient context</strong><span>AI output is draft-only. Doctor review required before any final record changes.</span></div> : null}
 
       <div className="compact-metric-grid">
         <Metric label="Safety" value={safety?.externalAiEnabled ? "External enabled" : "External disabled"} />
@@ -149,10 +165,10 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
             <span className="badge">No diagnosis</span>
           </div>
           <div className="dense-card-list">
-            {availableDrafts.map((draft) => (
+            {taskCards(availableDrafts).map((draft) => (
               <button className="picker-row" disabled={!patientId} key={draft.kind} type="button" onClick={() => generate(draft.kind)}>
                 <strong>{draft.label}</strong>
-                <span>Uses stored patient data only.</span>
+                <span>Draft-only, patient scoped, audited.</span>
               </button>
             ))}
           </div>
@@ -219,6 +235,25 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
 
     </section>
   );
+}
+
+function taskCards(availableDrafts: Array<{ kind: string; label: string }>) {
+  const required = [
+    { kind: "patient_history_summary", label: "Summarize patient history" },
+    { kind: "visit_note_summary", label: "Draft encounter note" },
+    { kind: "investigation_summary", label: "Investigation summary" },
+    { kind: "medication_allergy_review", label: "Medication/allergy review" },
+    { kind: "follow_up_reminder", label: "Follow-up reminder draft" },
+    { kind: "referral_letter", label: "Referral letter draft" },
+    { kind: "patient_file_search", label: "Search within patient file" }
+  ];
+  const seen = new Set(required.map((item) => item.kind));
+  return [...required, ...availableDrafts.filter((item) => !seen.has(item.kind))];
+}
+
+function isTrainingPatient(patient: PatientOption) {
+  const text = `${patient.firstName} ${patient.lastName} ${patient.medicalRecordNumber}`;
+  return /\b(demo|test|qa|runtime)\b/i.test(text);
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

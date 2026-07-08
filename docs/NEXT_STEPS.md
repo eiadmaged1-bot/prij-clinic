@@ -1,5 +1,13 @@
 # Next Steps
 
+## v1.4.0 Next Steps
+
+- Complete browser QA at 320, 375, 390, 430, 768, 834, 1024, 1366, 1440, and 1920 px.
+- Finish deeper page-specific cleanup for guideline detail views, protocol atlas linking, owner service duplicate merge actions, account hard-delete/archive backend wiring, and external intake field-by-field approval UX.
+- Add running-stack Playwright tests for QR resolution, queue mutations, investigation deactivation audit, account archive/delete dependency checks, and external intake approval/rejection.
+- Keep medication safety approval wording as "Approved for reference list" only; never imply clinical safety.
+- Do not expose API port 3001 publicly; public mobile QA must continue through the web app same-origin proxy.
+
 ## v1.3.9 Next Steps
 
 - Run real-device QA for Arabic navigation, mobile drawer footer, G/P/A/L steppers, pregnancy tab, Clinical Tag Search, EDD Calendar, and External Intake Inbox.

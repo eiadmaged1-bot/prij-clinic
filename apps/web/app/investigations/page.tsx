@@ -12,6 +12,49 @@ type InvestigationTemplate = { name: string; category: string; subcategory?: str
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
 type Patient = PatientPickerPatient;
 
+const masterLabCategories = [
+  "Routine / Basic Women Health Labs",
+  "General Emergency / Inpatient Obs-Gyn Labs",
+  "Preconception Labs",
+  "Early Pregnancy / Booking Visit Labs",
+  "Prenatal Genetic / Fetal Screening Labs",
+  "Second / Third Trimester Routine Pregnancy Labs",
+  "Rh Isoimmunization / Alloimmunization",
+  "Hypertension / Preeclampsia / HELLP Labs",
+  "Gestational Diabetes / Diabetes in Pregnancy",
+  "Hyperemesis Gravidarum Labs",
+  "Intrahepatic Cholestasis of Pregnancy",
+  "Obstetric Hemorrhage / APH / PPH / Abruption",
+  "Preterm Labor / PPROM Labs",
+  "Pregnancy Infections / TORCH-type Evaluation",
+  "Anemia in Pregnancy / Gynecology",
+  "Abnormal Uterine Bleeding / Heavy Menstrual Bleeding",
+  "Amenorrhea / Oligomenorrhea",
+  "PCOS / Hyperandrogenism",
+  "Infertility / Subfertility",
+  "Recurrent Pregnancy Loss",
+  "Menopause / POI / Bone Health",
+  "Vaginal Discharge / Vaginitis / Cervicitis",
+  "PID / Pelvic Pain",
+  "UTI / Pyelonephritis in Women",
+  "Galactorrhea / Breast Endocrine Symptoms",
+  "Breast Infection / Mastitis / Abscess",
+  "Breast Cancer Labs",
+  "Cervical Cancer / Cervical Precancer Labs",
+  "Endometrial Cancer / Endometrial Hyperplasia Labs",
+  "Ovarian Cancer / Adnexal Mass Labs",
+  "Gestational Trophoblastic Disease / Molar Pregnancy",
+  "Vulvar / Vaginal Cancer Labs",
+  "Endometriosis / Adenomyosis",
+  "Fibroids / Polyps",
+  "Ectopic Pregnancy / Early Pregnancy Loss",
+  "Contraception-related Labs",
+  "Pre-operative Gynecology / Obstetric Surgery Labs",
+  "Autoimmune / Thrombophilia / High-risk Women's Health",
+  "Sexual Health / STI Screening",
+  "Preventive Women's Health / Metabolic Category"
+];
+
 export default function InvestigationsPage() {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
@@ -125,10 +168,16 @@ export default function InvestigationsPage() {
             </div>
             <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound, histopathology" /></label>
             <div className="investigation-category-sidebar wide" aria-label="Investigation category filters">
-              {categories.map((item) => (
+              {[...new Set([...categories, ...masterLabCategories])].map((item) => (
                 <button className={category === item ? "active" : ""} key={item} type="button" onClick={() => setCategory((current) => current === item ? "" : item)}>{item}</button>
               ))}
             </div>
+            {category ? (
+              <div className="wide selected-patient-card">
+                <strong>{category}</strong>
+                <span>{catalog.length} investigations in this category. Same lab may appear in multiple categories; ordering uses one master investigation item where configured.</span>
+              </div>
+            ) : null}
             <div className="wide investigation-quick-sections">
               <QuickCatalogSection title="Favorites" items={favorites} onAdd={setSelected} onStar={star} />
               <QuickCatalogSection title="High Priority / Common" items={highPriority} onAdd={setSelected} onStar={star} />
@@ -146,6 +195,7 @@ export default function InvestigationsPage() {
                 </div>
               ))}
               {!query.trim() && !category ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
+              {category && catalog.length === 0 ? <p className="empty-state compact smart-empty-state">No investigations in this category yet.</p> : null}
             </div>
             <div className="selected-request-chips wide" data-selected-request-chips>
               {selected.length ? selected.map((item) => (
@@ -160,6 +210,15 @@ export default function InvestigationsPage() {
             <button className="button" type="submit" disabled={!patientId || selected.length === 0}>Attach to patient</button>
             <button className="button secondary" type="button" disabled={!patientId || selected.length === 0} onClick={() => window.print()}>Print</button>
           </form>
+        </article>
+        <article className="panel">
+          <div className="section-heading"><h2>Investigation Catalog Management</h2><span className="badge">Owner/Admin/Doctor</span></div>
+          <p className="muted">One-click deactivate hides items from future ordering and preserves old records. Every change must be audited by the API.</p>
+          <div className="form-actions">
+            <button className="button secondary compact" type="button">Deactivate selected</button>
+            <button className="button secondary compact" type="button">Inactive tab / restore</button>
+            <span className="badge">Deactivated. Undo</span>
+          </div>
         </article>
         <article className="panel">
           <div className="section-heading"><h2>Result Follow-up</h2><span className="badge">{requests.length}</span></div>

@@ -34,7 +34,7 @@ export default function ReceptionHomePage() {
     ]);
     setPatients(patientResponse.ok ? ((await patientResponse.json()) as { patients?: Patient[] }).patients ?? [] : []);
     setQueue(queueResponse.ok ? ((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? [] : []);
-    setStatus("Ready");
+    setStatus("Reception updated");
   }, [headers]);
 
   useEffect(() => {
@@ -43,7 +43,9 @@ export default function ReceptionHomePage() {
 
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
   const withDoctor = queue.find((ticket) => ticket.status === "called") ?? null;
-  const nextPatient = waiting[0] ?? null;
+  const urgentWaiting = waiting.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
+  const completed = queue.filter((ticket) => ticket.status === "completed");
+  const nextPatient = [...urgentWaiting, ...waiting.filter((ticket) => !urgentWaiting.includes(ticket))][0] ?? null;
   const counts = visitTypeCounts(waiting);
   const trimmedQuery = query.trim().toLowerCase();
   const results = trimmedQuery ? patients.filter((patient) => patientSearchText(patient).includes(trimmedQuery)).slice(0, 8) : [];
@@ -89,11 +91,21 @@ export default function ReceptionHomePage() {
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
           </button>
         </div>
+        <p className="muted">{status}</p>
+      </section>
+
+      <section className="panel compact-panel">
+        <label>
+          Search by name, phone, file number, QR
+          <input value={query} onChange={(event) => { setQuery(event.target.value); setLookupOpen(true); }} placeholder="Name, phone, MRN/file number, QR token" />
+        </label>
       </section>
 
       <section className="reception-status-grid" aria-label="Reception queue status">
         <article className="mini-metric-card premium-depth-card"><span>Waiting now</span><strong>{waiting.length}</strong></article>
-        <article className="mini-metric-card premium-depth-card next-patient-indicator" data-testid="next-patient-indicator"><span>Next patient</span><strong>{nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</strong></article>
+        <article className="mini-metric-card premium-depth-card next-patient-indicator" data-testid="next-patient-indicator"><span>Next patient</span><strong>{nextPatient ? patientLabel(nextPatient.patient) : "Next patient not called yet"}</strong></article>
+        <article className="mini-metric-card premium-depth-card"><span>Urgent</span><strong>{urgentWaiting.length}</strong></article>
+        <article className="mini-metric-card premium-depth-card"><span>Completed</span><strong>{completed.length}</strong></article>
       </section>
 
       <section className="reception-home-grid" aria-label="Reception actions">
@@ -103,15 +115,15 @@ export default function ReceptionHomePage() {
         </Link>
         <button className="reception-action-card premium-depth-card" type="button" onClick={() => setLookupOpen((value) => !value)}>
           <ThreeDMedicalIcon name="search" size="sm" />
-          <span>Returning Patient</span>
+          <span>Returning Patient / QR</span>
         </button>
-        <button className="reception-action-card premium-depth-card" type="button" onClick={() => setWaitingLineOpen((value) => !value)}>
+        <Link className="reception-action-card premium-depth-card" href="/queue">
           <ThreeDMedicalIcon name="queue" size="sm" />
-          <span>Waiting Line</span>
-        </button>
-        <Link className="reception-action-card premium-depth-card" href="/staff-chat">
-          <ThreeDMedicalIcon name="files" size="sm" />
-          <span>Messages</span>
+          <span>Queue</span>
+        </Link>
+        <Link className="reception-action-card premium-depth-card" href="/calendar">
+          <ThreeDMedicalIcon name="calendar" size="sm" />
+          <span>Appointments / Payments</span>
         </Link>
       </section>
 
@@ -122,14 +134,14 @@ export default function ReceptionHomePage() {
               <h2>Returning Patient</h2>
               <p className="muted">Search by patient name, phone number, patient ID, or medical record number.</p>
             </div>
-            <span className="badge">{status}</span>
+            <span className="badge">Search first</span>
           </div>
           <div className="toolbar compact-toolbar">
             <label className="wide">
               Patient lookup
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, patient ID, or MRN" />
             </label>
-            <Link className="button secondary" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Scan QR / manual</Link>
+            <Link className="button secondary" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Returning Patient / QR</Link>
           </div>
           <div className="dense-card-list">
             {results.map((patient) => (
@@ -171,7 +183,7 @@ export default function ReceptionHomePage() {
           <span className="badge">{waiting.length}</span>
         </div>
         <div className="queue-indicator-row">
-          <span><strong>Next:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "No patient waiting"}</span>
+          <span><strong>Next:</strong> {nextPatient ? patientLabel(nextPatient.patient) : "Next patient not called yet"}</span>
           <span><strong>Status:</strong> {withDoctor ? "Doctor view updated" : "Reception queue"}</span>
         </div>
         <div className="visit-type-counts" aria-label="Visit type counts">
@@ -187,7 +199,7 @@ export default function ReceptionHomePage() {
               <div className="data-row-header">
                 <strong>{index + 1}. {patientLabel(ticket.patient)} - {visitTypeLabel(ticket.visitType)} - waiting</strong>
               </div>
-              <p className="muted">Tap for position details.</p>
+              <p className="muted">{ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "Waiting duration not recorded"} · actions: Open, Call, Mark urgent, Remove with reason</p>
             </button>
           ))}
         </div>
@@ -203,4 +215,10 @@ function patientLabel(patient?: Patient | null) {
 
 function patientSearchText(patient?: Patient | null) {
   return `${patientLabel(patient)} ${patient?.phone ?? ""} ${patient?.medicalRecordNumber ?? ""} ${patient?.id ?? ""}`.toLowerCase();
+}
+
+function waitingDuration(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 60) return `${minutes} min waiting`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m waiting`;
 }

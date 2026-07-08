@@ -105,24 +105,22 @@ function CalendarLoop({ appointments, queue, invoices }: { appointments: Appoint
 }
 
 function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
-  const waiting = queue.filter((ticket) => ticket.status === "waiting");
-  const next = queue.filter((ticket) => ticket.status === "next" || ticket.status === "called").slice(0, 1);
-  const nextTicket = next[0];
+  const waiting = queue
+    .filter((ticket) => ticket.status === "waiting")
+    .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime());
+  const nextTicket = queue.find((ticket) => ticket.status === "called") ?? waiting[0] ?? null;
   const urgent = queue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const completed = queue.filter((ticket) => ticket.status === "completed");
-  const rows = queue.filter((ticket) => !["cancelled"].includes(ticket.status));
+  const rows = [...waiting, ...queue.filter((ticket) => !["cancelled", "waiting"].includes(ticket.status))];
   return (
     <section className="queue-board-compact">
       <div className="toolbar compact-toolbar">
         <label>Date<input type="date" defaultValue={today} /></label>
-        <div className="segmented-control" role="tablist" aria-label="Queue view">
-          <button className="active" type="button">Reception</button>
-          <button type="button">Doctor</button>
-        </div>
+        <span className="badge">Reception Queue</span>
       </div>
       <section className="compact-metric-grid">
         <Metric icon="queue" label="Waiting" value={waiting.length} />
-        <Metric icon="doctor" label="Next" value={nextTicket ? patient(nextTicket.patient) : "None"} />
+        <Metric icon="doctor" label="Next" value={nextTicket ? patient(nextTicket.patient) : "Next patient not called yet"} />
         <Metric icon="queue" label="Urgent" value={urgent.length} />
         <Metric icon="reports" label="Completed" value={completed.length} />
       </section>
@@ -133,8 +131,14 @@ function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
           {rows.map((ticket, index) => (
             <article className="data-row dense" key={ticket.id}>
               <div className="data-row-header">
-                <strong>{index + 1}. {patient(ticket.patient)} · {visitTypeLabelLocal(ticket.visitType)} · {friendly(ticket.status)} · added by {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} · {ticket.checkedInAt ? time(ticket.checkedInAt) : "today"}</strong>
+                <strong>{index + 1}. {patient(ticket.patient)} · {visitTypeLabelLocal(ticket.visitType)} · {friendly(ticket.status)} · added by {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} · {ticket.checkedInAt ? time(ticket.checkedInAt) : "today"} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "waiting duration not recorded"}</strong>
+              </div>
+              <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>Open</Link>
+                <button className="button secondary compact" type="button">Call patient</button>
+                <button className="button secondary compact" type="button">Mark in room</button>
+                <button className="button secondary compact" type="button">Mark urgent</button>
+                <button className="button secondary compact" type="button">Cancel/remove with reason</button>
               </div>
             </article>
           ))}
@@ -142,6 +146,16 @@ function QueueBoard({ queue, today }: { queue: QueueTicket[]; today: string }) {
       </article>
     </section>
   );
+}
+
+function urgentRank(ticket: QueueTicket) {
+  return ticket.visitType === "urgent_kashf" || ticket.priority === "priority" ? 1 : 0;
+}
+
+function waitingDuration(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
+  if (minutes < 60) return `${minutes} min waiting`;
+  return `${Math.floor(minutes / 60)}h ${minutes % 60}m waiting`;
 }
 
 function DoctorHandoff({ queue, orders, invoices }: { queue: QueueTicket[]; orders: InvestigationOrder[]; invoices: Invoice[] }) {

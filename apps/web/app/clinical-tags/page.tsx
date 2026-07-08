@@ -1,36 +1,44 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell } from "../mvp-page";
 import { ClinicalTagPatient, listClinicalTagDefinitions, searchClinicalTagPatients } from "@/lib/clinical-tags";
 
-const quickTags = [
-  ["previous_cesarean_section", "Previous CS"],
-  ["dilation_and_curettage", "D&C"],
-  ["mastectomy", "Mastectomy"],
-  ["icsi", "ICSI"],
-  ["iui", "IUI"],
-  ["ovulation_induction", "Ovulation induction"],
-  ["recurrent_abortion", "Recurrent abortion"],
-  ["pcos", "PCOS"],
-  ["endometriosis", "Endometriosis"],
-  ["diabetes", "Diabetes"],
-  ["hypertension", "Hypertension"]
-] as const;
+const tagCategories: Record<string, string[]> = {
+  "Patient type / workflow": ["Obstetric", "Gynecology", "Infertility", "Women's Health", "Oncology concern", "Procedure patient", "Follow-up patient", "Result review", "Post-op follow-up", "Emergency/urgent"],
+  "Current pregnancy": ["Active pregnancy", "No active pregnancy", "Booking visit", "Antenatal follow-up", "First trimester", "Second trimester", "Third trimester", "Postpartum", "Multiple pregnancy", "Twins", "IVF pregnancy", "ICSI pregnancy", "IUI pregnancy", "Spontaneous conception"],
+  "OB history": ["Previous CS", "Previous NVD", "Previous instrumental delivery", "Previous preterm birth", "Previous miscarriage", "Recurrent miscarriage/RPL", "Previous ectopic", "Previous molar pregnancy", "Previous IUFD/stillbirth", "Previous PPH", "Previous preeclampsia", "Previous GDM", "Previous placenta previa", "Previous placenta accreta", "Previous cerclage"],
+  "Current pregnancy risks": ["High-risk pregnancy", "GDM", "Pregestational diabetes", "Chronic hypertension", "Gestational hypertension", "Preeclampsia", "HELLP risk", "Rh negative", "Anemia in pregnancy", "Placenta previa", "Accreta risk", "FGR/SGA", "Reduced fetal movement", "Malpresentation", "Breech", "Polyhydramnios", "Oligohydramnios", "PPROM", "Preterm labor", "Hyperemesis", "Cholestasis", "Thrombosis risk", "Anticoagulant use"],
+  "Gynecology complaints": ["AUB", "Heavy menstrual bleeding", "Postmenopausal bleeding", "Amenorrhea", "Oligomenorrhea", "Dysmenorrhea", "Chronic pelvic pain", "Acute pelvic pain", "Vaginal discharge", "Vulvar itching", "Dyspareunia", "Urinary symptoms", "Breast pain", "Breast lump", "Nipple discharge"],
+  "Gynecology diagnoses": ["Fibroid", "Adenomyosis", "Endometriosis", "Ovarian cyst", "Adnexal mass", "PID", "Vaginitis", "Cervicitis", "PCOS", "Endometrial polyp", "Cervical polyp", "Endometrial hyperplasia", "Menopause", "POI", "Galactorrhea"],
+  "Infertility / ART": ["Primary infertility", "Secondary infertility", "PCOS infertility", "Endometriosis infertility", "Tubal factor", "Male factor", "Unexplained infertility", "Diminished ovarian reserve", "Poor responder", "Recurrent implantation failure", "Ovulation induction", "Folliculometry", "IUI", "IVF", "ICSI", "Frozen embryo transfer", "OHSS risk", "AMH low", "AMH high"],
+  "Operations / procedures": ["CS", "D&C", "D&E/evacuation", "Hysteroscopy", "Laparoscopy", "Myomectomy", "Ovarian cystectomy", "Hysterectomy", "Ectopic surgery", "Cervical cerclage", "IUD insertion", "IUD removal", "Pap smear collection", "Colposcopy", "Cervical biopsy", "Endometrial biopsy", "Mastectomy", "Breast surgery", "Bariatric surgery", "Appendectomy", "Cholecystectomy"],
+  "Oncology / screening": ["Abnormal Pap", "HPV positive", "CIN", "Colposcopy needed", "Cervical lesion", "Endometrial thickening", "Suspected endometrial cancer", "Ovarian mass", "High CA-125", "Breast cancer history", "Family history breast/ovarian cancer", "BRCA risk", "Lynch risk"],
+  "Medical history": ["Diabetes", "Hypertension", "Thyroid disease", "Asthma", "Cardiac disease", "Renal disease", "Liver disease", "Epilepsy", "Autoimmune disease", "SLE", "Antiphospholipid syndrome", "DVT/PE history", "Thrombophilia", "Anemia", "Obesity", "Bariatric surgery history"],
+  "Infection / STI": ["UTI", "Pyelonephritis", "GBS positive", "Chlamydia", "Gonorrhea", "Trichomonas", "HSV", "Syphilis", "HIV", "HBV", "HCV", "BV", "Candida", "TORCH concern", "CMV", "Toxoplasma", "Parvovirus", "Rubella non-immune", "Varicella non-immune"],
+  "Safety / allergy": ["Drug allergy", "Penicillin allergy", "Anesthesia complication", "Bleeding tendency", "Anticoagulant use", "Steroid use", "Immunosuppressed", "Needs consent", "Needs document review", "Needs doctor review"],
+  "Medication-related": ["Current medications", "Medication allergy", "Pregnancy medication review", "Lactation medication review", "Anticoagulant", "Insulin", "Metformin", "Antihypertensive", "Thyroid medication", "Progesterone", "Fertility medication", "NSAID use", "Teratogenic medication concern"],
+  "Administrative / follow-up": ["Follow-up due", "Missed follow-up", "Pending labs", "Pending imaging", "Pending pathology", "Pending Pap/HPV", "Pending biopsy", "Pending consent", "Pending payment", "Needs phone update", "No contact saved"]
+};
+
+const aliases = "CS, Cesarean, Caesarean, C-section; D&C, DNC, Curettage; RPL, recurrent miscarriage; GDM, gestational diabetes; PIH, pregnancy hypertension; PMB, postmenopausal bleeding; AUB, abnormal uterine bleeding; ICSI, IVF, ART; PID, pelvic inflammatory disease.";
 
 export default function ClinicalTagsPage() {
-  const [query, setQuery] = useState("previous_cesarean_section");
+  const [activeCategory, setActiveCategory] = useState("Patient type / workflow");
+  const [query, setQuery] = useState("Obstetric");
   const [patients, setPatients] = useState<ClinicalTagPatient[]>([]);
-  const [status, setStatus] = useState("Loading");
+  const [status, setStatus] = useState("Search by tag");
+  const [sortMode, setSortMode] = useState("last_visit");
 
   async function runSearch(next = query) {
+    setQuery(next);
     setStatus("Searching");
     try {
       const result = await searchClinicalTagPatients(next);
       setPatients(result.patients);
-      setStatus("Ready");
+      setStatus("Search complete");
     } catch (error) {
       setPatients([]);
       setStatus(error instanceof Error ? error.message : "Could not search clinical tags.");
@@ -39,9 +47,11 @@ export default function ClinicalTagsPage() {
 
   useEffect(() => {
     void listClinicalTagDefinitions().catch(() => undefined);
-    void runSearch("previous_cesarean_section");
+    void runSearch("Obstetric");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const sortedPatients = useMemo(() => sortRows(patients, sortMode), [patients, sortMode]);
 
   return (
     <AppShell>
@@ -56,34 +66,45 @@ export default function ClinicalTagsPage() {
       </section>
 
       <section className="panel compact-panel">
-        <div className="section-heading"><h2>Quick tags</h2><span className="badge">{status}</span></div>
+        <div className="section-heading"><h2>Categories</h2><span className="badge">{status}</span></div>
         <div className="clinical-chip-row">
-          {quickTags.map(([code, label]) => (
-            <button className={`clinical-chip ${query === code ? "active" : ""}`} key={code} type="button" onClick={() => { setQuery(code); void runSearch(code); }}>
+          {Object.entries(tagCategories).map(([category, tags]) => (
+            <button className={`clinical-chip ${activeCategory === category ? "active" : ""}`} key={category} type="button" onClick={() => setActiveCategory(category)}>
+              <strong>{category}</strong>
+              <span>{tags.length} tags</span>
+            </button>
+          ))}
+        </div>
+        <div className="section-heading secondary-page-header"><h2>{activeCategory}</h2><span className="badge">{tagCategories[activeCategory]?.length ?? 0}</span></div>
+        <div className="clinical-chip-row">
+          {(tagCategories[activeCategory] ?? []).map((label) => (
+            <button className={`clinical-chip ${query === label ? "active" : ""}`} key={label} type="button" onClick={() => void runSearch(label)}>
               <strong>{label}</strong>
-              <span>{code}</span>
             </button>
           ))}
         </div>
         <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}>
-          <label className="wide">Search tag or alias<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="D&C, mastectomy, ICSI" /></label>
+          <label className="wide">Search tag or alias<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="D&C, RPL, GDM, AUB, ICSI, PID" /></label>
+          <label>Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value)}><option value="last_visit">Last visit</option><option value="name">Name</option><option value="created">Created date</option><option value="tag_date">Tag date</option></select></label>
           <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
         </form>
+        <p className="muted">Aliases: {aliases}</p>
       </section>
 
       <section className="panel">
-        <div className="section-heading"><h2>Matching patients</h2><span className="badge">{patients.length}</span></div>
-        {patients.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patients found for this tag.</span></p> : null}
+        <div className="section-heading"><h2>Matching patients</h2><span className="badge">{sortedPatients.length}</span></div>
+        {sortedPatients.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patients found for this tag.</span></p> : null}
         <div className="data-list">
-          {patients.map((row) => (
+          {sortedPatients.map((row) => (
             <article className="data-row" key={row.id}>
               <div className="data-row-header">
                 <strong>{row.patientName || "Patient"} · {row.medicalRecordNumber}</strong>
                 <span className="badge">{row.tagLabel}</span>
               </div>
-              <p className="muted">{[row.patientType, row.currentPhase?.phaseType, row.tagCategory, row.sourceType, row.tagDate?.slice(0, 10)].filter(Boolean).join(" | ")}</p>
+              <p className="muted">{[row.patientType, row.currentPhase?.phaseType, row.tagLabel, row.sourceType, row.tagDate?.slice(0, 10)].filter(Boolean).join(" | ")}</p>
               <div className="form-actions">
-                <Link className="button secondary compact" href={`/patients/${row.patientId}`}>Open patient file</Link>
+                <Link className="button secondary compact" href={`/patients/${row.patientId}`}>Open file</Link>
+                <Link className="button secondary compact" href={`/reception/check-in?patientId=${row.patientId}`}>Add to queue</Link>
               </div>
             </article>
           ))}
@@ -91,4 +112,13 @@ export default function ClinicalTagsPage() {
       </section>
     </AppShell>
   );
+}
+
+function sortRows(rows: ClinicalTagPatient[], mode: string) {
+  return [...rows].sort((left, right) => {
+    if (mode === "name") return String(left.patientName ?? "").localeCompare(String(right.patientName ?? ""));
+    if (mode === "created") return String(right.tagDate ?? "").localeCompare(String(left.tagDate ?? ""));
+    if (mode === "tag_date") return String(right.tagDate ?? "").localeCompare(String(left.tagDate ?? ""));
+    return String(right.tagDate ?? "").localeCompare(String(left.tagDate ?? ""));
+  });
 }

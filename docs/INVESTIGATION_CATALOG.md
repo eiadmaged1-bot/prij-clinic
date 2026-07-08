@@ -1,8 +1,7 @@
 # Investigation Catalog
 
-The catalog seed includes laboratory, radiology, ultrasound, X-ray, CT/MRI, cytology, histopathology, tumor markers, and external referral/procedure names.
+The investigation catalog is category-first with live search. Selecting a category must show the category title, item count, and investigation list or the empty message "No investigations in this category yet."
 
-Examples include CBC, urine routine, ferritin, CA-125, Pap smear, cervical cytology, endometrial biopsy histopathology, 4D uterus ultrasound, 4D transvaginal ultrasound, MRI pelvis, CT abdomen/pelvis, vascular surgery opinion, and varicose veins vascular assessment.
+The same lab may appear in multiple clinical categories, but the database should prefer one master investigation item linked to many categories.
 
-No prices are stored in the investigation catalog.
-
+Catalog management is Owner/Admin/Doctor only. Deactivation hides an item from future ordering, preserves old records, shows "Deactivated. Undo", and must be audited.

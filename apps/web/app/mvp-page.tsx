@@ -37,7 +37,6 @@ type MvpPageProps = {
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
-import { getUnreadStaffChatCount } from "@/lib/staff-chat";
 
 const navGroupOrder: NavItem["group"][] = [
   "Home",
@@ -332,18 +331,16 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [comfort, setComfort] = useState("comfortable");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { doctorComfortMode, setDoctorComfortMode, theme } = useTheme();
+  const { doctorComfortMode, theme } = useTheme();
   const { user, status, isAdmin, logout } = useSession();
   const { t } = useI18n();
   const permissions = user?.permissions ?? [];
   const roles = user?.roles ?? [];
   const canOpenAdmin = isAdmin;
-  const canUseDoctorComfort = hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const canUseStaffChat = permissions.includes("staff_chat.read");
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const isOwnerAdmin = hasRole(roles, ["Owner", "Admin"]);
   const isDoctorOnly = hasRole(roles, ["Doctor"]) && !isOwnerAdmin;
-  const [staffChatUnread, setStaffChatUnread] = useState(0);
   const shellNavGroups = buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly });
   const activeNavHref = shellNavGroups
     .flatMap((group) => (group.links ?? []).map(([href]) => href))
@@ -365,25 +362,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }, [router, status]);
 
   useEffect(() => {
-    if (!canUseStaffChat) return;
-    let active = true;
-    async function loadUnread() {
-      try {
-        const result = await getUnreadStaffChatCount();
-        if (active) setStaffChatUnread(result.unreadCount);
-      } catch {
-        if (active) setStaffChatUnread(0);
-      }
-    }
-    void loadUnread();
-    const timer = window.setInterval(loadUnread, 45000);
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, [canUseStaffChat]);
-
-  useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
 
@@ -399,12 +377,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileNavOpen]);
-
-  function setComfortMode(next: string) {
-    setComfort(next);
-    localStorage.setItem("prijDensityMode", next);
-    localStorage.setItem("prijComfortMode", next);
-  }
 
   function toggleNavigation() {
     if (window.matchMedia("(max-width: 1199px)").matches) {
@@ -497,12 +469,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 aria-controls="clinic-mobile-navigation"
                 aria-expanded={mobileNavOpen || !sidebarCollapsed}
                 aria-label={sidebarCollapsed ? "Expand navigation menu" : "Collapse navigation menu"}
-                className={`button secondary compact app-menu-button ${mobileNavOpen ? "active" : ""}`}
+                className={`button secondary compact app-menu-button icon-only-button ${mobileNavOpen ? "active" : ""}`}
                 onClick={toggleNavigation}
                 type="button"
+                title="Navigation"
               >
                 <ThreeDMedicalIcon name="dashboard" size="sm" tone="slate" />
-                <span>{t("menu")}</span>
               </button>
             ) : null}
             <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
@@ -513,32 +485,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           </div>
           <UniversalSearchBox />
           <div className="topbar-actions">
-            {!isReceptionistOnly ? <Link className="button compact" href="/patients/new">
-              <ThreeDMedicalIcon name="patients" size="sm" />
-              {t("newPatient")}
-            </Link> : null}
             <LanguageSwitcher />
-            {canUseStaffChat ? (
-              <Link className="button secondary compact chat-topbar-button" href="/staff-chat" aria-label="Staff messages">
-                <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
-                {t("messages")}
-                {staffChatUnread > 0 ? <span className="unread-badge">{staffChatUnread}</span> : null}
-              </Link>
-            ) : null}
-            {canUseDoctorComfort ? (
-              <button className={`button secondary compact doctor-comfort-toggle ${doctorComfortMode ? "active" : ""}`} onClick={() => setDoctorComfortMode(!doctorComfortMode)} type="button">
-                <ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />
-                {doctorComfortMode ? t("comfortOn") : t("doctorComfort")}
+            {user ? (
+              <button className="button secondary compact topbar-logout-button" onClick={() => void signOut()} type="button">
+                {t("logout")}
               </button>
             ) : null}
-            <div className="comfort-switch" aria-label="Display comfort">
-              {["comfortable", "large", "compact"].map((mode) => (
-                <button className={comfort === mode ? "active" : ""} key={mode} onClick={() => setComfortMode(mode)} type="button">
-                  <ThreeDMedicalIcon name={mode === "large" ? "search" : mode === "compact" ? "settings" : "doctor"} size="sm" tone="slate" />
-                  {mode === "comfortable" ? t("comfort") : mode === "large" ? t("large") : t("compact")}
-                </button>
-              ))}
-            </div>
           </div>
           <AccountMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
         </header>

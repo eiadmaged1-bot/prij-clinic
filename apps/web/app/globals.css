@@ -569,9 +569,16 @@ body {
   transition: width 180ms ease, padding 180ms ease, transform 180ms ease;
 }
 
-.mobile-nav-backdrop,
-.mobile-topbar-brand {
+.mobile-nav-backdrop {
   display: none;
+}
+
+.mobile-topbar-brand {
+  display: inline-flex;
+  max-width: min(52vw, 28rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-menu-button {
@@ -798,6 +805,7 @@ body {
   width: 100%;
   max-width: 100%;
   padding: calc(var(--density-space) * 1.5);
+  padding-bottom: max(calc(var(--density-space) * 1.5), env(safe-area-inset-bottom));
 }
 
 .topbar {
@@ -831,6 +839,10 @@ body {
 
 .topbar-actions {
   justify-content: flex-end;
+}
+
+.topbar-logout-button {
+  flex: 0 0 auto;
 }
 
 .icon-only-button {
@@ -4510,8 +4522,18 @@ body {
 
   .topbar .topbar-title > div,
   .topbar .portal-search,
-  .theme-prij-heritage .topbar .portal-search,
+  .theme-prij-heritage .topbar .portal-search {
+    display: none;
+  }
+
   .topbar > .topbar-actions {
+    display: inline-flex;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+  }
+
+  .account-menu {
     display: none;
   }
 
@@ -4571,13 +4593,13 @@ body {
 
 .visit-type-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(5.25rem, 0.3fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: center;
 }
 
 .visit-type-grid.compact {
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(4.75rem, 0.3fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .visit-type-card {
@@ -4615,16 +4637,16 @@ body {
 }
 
 .urgent-visit-type-card {
-  min-height: 2rem;
-  max-width: 6.5rem;
-  padding: 0.4rem;
-  align-self: center;
+  min-height: 7rem;
+  max-width: none;
+  padding: 0.9rem;
+  align-self: stretch;
   border-color: rgb(180 35 24 / 24%);
   background: linear-gradient(180deg, #fff 0%, #fff4f2 100%);
 }
 
 .urgent-visit-type-card strong {
-  font-size: 1rem;
+  font-size: 1.4rem;
 }
 
 .urgent-visit-type-card span {

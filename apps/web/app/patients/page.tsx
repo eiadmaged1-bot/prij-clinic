@@ -37,6 +37,9 @@ export default function PatientsPage() {
   const [patientStatus, setPatientStatus] = useState("all");
   const [patientType, setPatientType] = useState("all");
   const [phaseType, setPhaseType] = useState("all");
+  const [category, setCategory] = useState("today");
+  const [sortMode, setSortMode] = useState("created_newest");
+  const [visibleCount, setVisibleCount] = useState(12);
 
   useEffect(() => {
     void loadPatients();
@@ -44,16 +47,18 @@ export default function PatientsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return patients.filter((patient) => {
+    const rows = patients.filter((patient) => {
       const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
       const statusMatch = patientStatus === "all" || patient.status === patientStatus;
       const typeMatch = patientType === "all" || patient.patientType === patientType;
       const phaseMatch = phaseType === "all" || patient.currentPhase?.phaseType === phaseType;
       const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
+      const categoryMatch = matchesCategory(patient, category, today);
       const trainingMatch = !isSeededTrainingRecord(patient);
-      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && trainingMatch;
+      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && categoryMatch && trainingMatch;
     });
-  }, [dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, today]);
+    return sortPatients(rows, sortMode);
+  }, [category, dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
 
   async function loadPatients() {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -104,8 +109,8 @@ export default function PatientsPage() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <h2>Patient registry</h2>
-            <p className="muted">{status === "Loaded" ? `${filtered.length} patient files shown` : status}</p>
+            <h2>Patient directory</h2>
+            <p className="muted">{status === "Loaded" ? `${filtered.length} matching patient files` : status}</p>
           </div>
           <button className="button secondary compact" onClick={loadPatients} type="button">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
@@ -115,12 +120,37 @@ export default function PatientsPage() {
 
         <div className="toolbar">
           <label>
-            Search patient files
+            Search by name, phone, MRN/file number, husband name, QR token
             <input
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by file number, name, or phone"
+              placeholder="Search by file number, name, phone, husband name, or QR"
               value={query}
             />
+          </label>
+          <label>
+            Category
+            <select onChange={(event) => { setCategory(event.target.value); setVisibleCount(12); }} value={category}>
+              <option value="today">Today&apos;s patients</option>
+              <option value="ob">Obstetric / Pregnancy</option>
+              <option value="gyn">Gynecology</option>
+              <option value="infertility">Infertility</option>
+              <option value="womens">Women&apos;s Health / General</option>
+              <option value="high_risk">High-risk</option>
+              <option value="needs_review">Needs review</option>
+              <option value="follow_up_due">Follow-up due</option>
+              <option value="all">All patients</option>
+            </select>
+          </label>
+          <label>
+            Sort
+            <select onChange={(event) => setSortMode(event.target.value)} value={sortMode}>
+              <option value="created_newest">Created newest</option>
+              <option value="created_oldest">Created oldest</option>
+              <option value="name_az">Name A-Z</option>
+              <option value="name_za">Name Z-A</option>
+              <option value="file_number">File number</option>
+              <option value="age_year">Age/year of birth</option>
+            </select>
           </label>
           <label>
             Date
@@ -185,7 +215,7 @@ export default function PatientsPage() {
 
         {filtered.length > 0 ? (
           <div className="data-list">
-            {filtered.map((patient) => (
+            {filtered.slice(0, visibleCount).map((patient) => (
               <article className="data-row patient-list-card" key={patient.id}>
                 <div className="data-row-header">
                   <div className="patient-list-title">
@@ -219,13 +249,41 @@ export default function PatientsPage() {
                   <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
                   Open file
                 </Link>
+                <Link className="button secondary compact" href={`/reception/check-in?patientId=${patient.id}`}>Add to queue</Link>
               </article>
             ))}
+            {filtered.length > visibleCount ? (
+              <button className="button secondary" type="button" onClick={() => setVisibleCount((count) => count + 12)}>Load more</button>
+            ) : null}
           </div>
         ) : null}
       </section>
     </AppShell>
   );
+}
+
+function matchesCategory(patient: Patient, category: string, today: string) {
+  if (category === "all") return true;
+  if (category === "today") return patient.createdAt?.slice(0, 10) === today;
+  if (category === "ob") return patient.patientType === "OB" || patient.currentPhase?.phaseType === "pregnancy";
+  if (category === "gyn") return patient.patientType === "GYN" || patient.currentPhase?.phaseType === "gynecology";
+  if (category === "infertility") return patient.patientType === "INFERTILITY" || patient.currentPhase?.phaseType === "infertility";
+  if (category === "womens") return patient.patientType === "WOMEN_HEALTH" || patient.patientType === "OTHER";
+  if (category === "high_risk") return /high.?risk/i.test(`${patient.currentPhase?.title ?? ""} ${patient.currentPhase?.status ?? ""}`);
+  if (category === "needs_review") return /review/i.test(`${patient.status} ${patient.currentPhase?.status ?? ""}`);
+  if (category === "follow_up_due") return /follow/i.test(`${patient.currentPhase?.status ?? ""} ${patient.currentPhase?.title ?? ""}`);
+  return true;
+}
+
+function sortPatients(rows: Patient[], mode: string) {
+  return [...rows].sort((left, right) => {
+    if (mode === "name_az") return patientDisplayName(left).localeCompare(patientDisplayName(right));
+    if (mode === "name_za") return patientDisplayName(right).localeCompare(patientDisplayName(left));
+    if (mode === "created_oldest") return String(left.createdAt ?? "").localeCompare(String(right.createdAt ?? ""));
+    if (mode === "file_number") return left.medicalRecordNumber.localeCompare(right.medicalRecordNumber);
+    if (mode === "age_year") return String(left.dateOfBirth ?? "").localeCompare(String(right.dateOfBirth ?? ""));
+    return String(right.createdAt ?? "").localeCompare(String(left.createdAt ?? ""));
+  });
 }
 
 function friendlyStatus(value: string) {
