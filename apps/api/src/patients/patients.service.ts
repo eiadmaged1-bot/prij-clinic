@@ -150,8 +150,7 @@ export class PatientsService {
     };
     const patients = await this.prisma.patient.findMany({
       where: { ...branchScope(user), status: "active", NOT: demoPatientWhere() },
-      select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true, patientType: true, encounters: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 } },
-      take: 300
+      select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true, patientType: true, encounters: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 } }
     });
     const candidates = patients.map((patient) => scoreDuplicateCandidate(patient, input)).filter((candidate) => candidate.score >= 35).sort((a, b) => b.score - a.score).slice(0, 8);
     if (recordAudit) {
