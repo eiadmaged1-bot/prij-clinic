@@ -32,6 +32,18 @@ function authRequestFailed(response: Response) {
   return response.status >= 500;
 }
 
+async function parseErrorEnvelope(response: Response, defaultMessage: string): Promise<string> {
+  try {
+    const data = await response.clone().json();
+    if (data?.error?.message) {
+      return data.error.requestId ? `${data.error.message} (Ref: ${data.error.requestId})` : data.error.message;
+    }
+  } catch {
+    // Ignore JSON parse errors for non-JSON responses
+  }
+  return defaultMessage;
+}
+
 async function fetchAuth(url: typeof authLoginPath | typeof authMePath | typeof authLogoutPath, init?: RequestInit) {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), authRequestTimeoutMs);
@@ -116,7 +128,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setUser(null);
       setStatus("unauthenticated");
-      setMessage(connectionProblemMessage());
+      const msg = response ? await parseErrorEnvelope(response, connectionProblemMessage()) : connectionProblemMessage();
+      setMessage(msg);
       return;
     }
 
@@ -126,7 +139,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (!response.ok) {
-      clearSession(sessionEndedMessage());
+      const msg = await parseErrorEnvelope(response, sessionEndedMessage());
+      clearSession(msg);
       return;
     }
 
@@ -163,15 +177,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (response.status === 401) {
-      throw new Error(invalidLoginMessage());
+      const msg = await parseErrorEnvelope(response, invalidLoginMessage());
+      throw new Error(msg);
     }
 
     if (authRequestFailed(response)) {
-      throw new Error(connectionProblemMessage());
+      const msg = await parseErrorEnvelope(response, connectionProblemMessage());
+      throw new Error(msg);
     }
 
     if (!response.ok) {
-      throw new Error(invalidLoginMessage());
+      const msg = await parseErrorEnvelope(response, invalidLoginMessage());
+      throw new Error(msg);
     }
 
     const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
