@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { patientTypeOptions } from "@/lib/patient-labels";
 import { DuplicateCandidate, PatientDuplicateCandidates } from "./PatientDuplicateCandidates";
 
@@ -15,6 +16,7 @@ export function DoctorQuickPatientCreate() {
   const [duplicateReviewAccepted, setDuplicateReviewAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
 
   async function submit(form: HTMLFormElement, intent: SaveIntent) {
     if (loading) return;
@@ -54,25 +56,36 @@ export function DoctorQuickPatientCreate() {
           return;
         }
       }
-      const response = await fetch(`${getApiBaseUrl()}/patients`, {
+      const endpoint = intent === "start" ? "/patients/create-and-start-visit" : "/patients";
+      const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         method: "POST", credentials: "include",
-        headers: { "content-type": "application/json", "idempotency-key": crypto.randomUUID() },
+        headers: { "content-type": "application/json", "idempotency-key": idempotencyKey },
         body: JSON.stringify(payload)
       });
-      const body = await response.json().catch(() => null) as { id?: string; code?: string; message?: string; candidates?: DuplicateCandidate[] } | null;
+      const body = await response.json().catch(() => null) as { id?: string; visitId?: string; code?: string; message?: string; candidates?: DuplicateCandidate[] } | null;
       if (response.status === 409 && body?.code === "PATIENT_DUPLICATE_REVIEW_REQUIRED") {
         setCandidates(body.candidates ?? []); setOverrideRequired(true); throw new Error(body.message);
       }
-      if (!response.ok || !body?.id) throw new Error(body?.message || "Could not save the patient. Review the details and try again.");
-      if (intent === "start") {
-        const visitResponse = await fetch(`${getApiBaseUrl()}/patients/${body.id}/doctor-visit/start`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" });
-        if (!visitResponse.ok) throw new Error("Patient saved, but the visit could not be started. Open the patient file to continue safely.");
+      // If we got a 206, the patient was created but the visit start failed. We shouldn't retry creation.
+      if (response.status === 206) {
+        throw new Error(body?.message || "Patient saved, but the visit could not be started. Open the patient file to continue safely.");
+      }
+      if (!response.ok || !body?.id) {
+        throw new Error(body?.message || "Could not save the patient. Review the details and try again.");
+      }
+      
+      if (intent === "start" && body.visitId) {
         router.push(`/doctor/visit?patientId=${body.id}`);
       } else {
         router.push(`/patients/${body.id}`);
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not save the patient.");
+      // Regenerate the key so the next submission attempts a fresh create if this one really failed completely
+      // However, if it was a validation error (e.g. duplicate review required), we still want to use the same key?
+      // Actually, if it's a conflict like duplicate review, we MIGHT want to keep the same key if the user is just fixing it.
+      // But typically, if they edit the form, they are making a new request. Let's regenerate on any error.
+      regenerateIdempotencyKey();
     } finally {
       setLoading(false);
     }

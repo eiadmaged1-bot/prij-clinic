@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { useI18n } from "@/i18n/useI18n";
 import { AppShell } from "../mvp-page";
@@ -28,6 +29,7 @@ function ReceptionHomeContent() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("");
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
   const copy = receptionCopy[language];
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -68,7 +70,7 @@ function ReceptionHomeContent() {
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json", ...(headers ?? {}) },
+      headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
       body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "Returning Patient" })
     }).catch(() => null);
     setStatus(response?.ok ? copy.patientAddedToQueue : copy.couldNotAddToQueue);
@@ -76,6 +78,8 @@ function ReceptionHomeContent() {
       setSelectedPatient(null);
       setVisitType("");
       await load();
+    } else {
+      regenerateIdempotencyKey();
     }
   }
 

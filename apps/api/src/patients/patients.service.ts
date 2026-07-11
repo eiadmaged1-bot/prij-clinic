@@ -12,7 +12,9 @@ import {
   assertCanReferenceUserInBranch
 } from "../auth/reference-scope";
 import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
+import { DoctorVisitService } from "../doctor-visit/doctor-visit.service";
 import { ClinicalTagsService } from "../clinical-tags/clinical-tags.service";
+import { IdempotencyService } from "../idempotency/idempotency.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { toUtcDateOnly } from "../queue/queue-date";
 import {
@@ -44,30 +46,111 @@ import {
 
 @Injectable()
 export class PatientsService {
-  private readonly recentCreates = new Map<string, { fingerprint: string; expiresAt: number; result: Promise<unknown> }>();
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly clinicalTags: ClinicalTagsService
+    private readonly clinicalTags: ClinicalTagsService,
+    private readonly idempotency: IdempotencyService,
+    private readonly doctorVisit: DoctorVisitService
   ) {}
 
   async create(dto: CreatePatientDto, user: AuthUser, idempotencyKey?: string) {
-    const cleanKey = idempotencyKey?.trim().slice(0, 128);
-    if (!cleanKey) return this.createAfterDuplicateReview(dto, user);
-    const cacheKey = `${user.id}:${cleanKey}`;
-    const fingerprint = JSON.stringify(dto);
-    const cached = this.recentCreates.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      if (cached.fingerprint !== fingerprint) throw new ConflictException({ code: "IDEMPOTENCY_KEY_REUSED", message: "Idempotency key was already used for different patient details." });
-      return cached.result;
+    if (!idempotencyKey?.trim()) {
+      return this.createAfterDuplicateReview(dto, user);
     }
-    const result = this.createAfterDuplicateReview(dto, user);
-    this.recentCreates.set(cacheKey, { fingerprint, expiresAt: Date.now() + 5 * 60_000, result });
+
+    const branchId = await this.resolveBranchId(user);
+    const idempotency = await this.idempotency.beginOrReplay({
+      userId: user.id,
+      branchId,
+      operation: "patient.create",
+      rawKey: idempotencyKey,
+      requestPayload: dto
+    });
+
+    if (idempotency.isReplay) {
+      if (!idempotency.responseBody) {
+        throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Patient creation is still in progress." });
+      }
+      return idempotency.responseBody;
+    }
+
     try {
-      return await result;
+      const result = await this.createAfterDuplicateReview(dto, user);
+      await this.idempotency.complete({
+        recordId: idempotency.recordId,
+        responseStatus: 201,
+        responseBody: result,
+        resourceType: "patient",
+        resourceId: result.id
+      });
+      return result;
     } catch (error) {
-      this.recentCreates.delete(cacheKey);
+      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      await this.idempotency.failOrRelease({
+        recordId: idempotency.recordId,
+        safeReason,
+        releaseLock: true
+      });
+      throw error;
+    }
+  }
+
+  async createAndStartVisit(dto: CreatePatientDto, user: AuthUser, idempotencyKey?: string) {
+    if (!idempotencyKey?.trim()) {
+      throw new BadRequestException("Idempotency key required to safely combine creation and visit start.");
+    }
+
+    const branchId = await this.resolveBranchId(user);
+    const idempotency = await this.idempotency.beginOrReplay({
+      userId: user.id,
+      branchId,
+      operation: "patient.create_and_start_visit",
+      rawKey: idempotencyKey,
+      requestPayload: dto
+    });
+
+    if (idempotency.isReplay) {
+      if (!idempotency.responseBody) {
+        throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Creation and visit start is still in progress." });
+      }
+      return idempotency.responseBody;
+    }
+
+    try {
+      const patient = await this.createAfterDuplicateReview(dto, user);
+      
+      let visit;
+      try {
+        visit = await this.doctorVisit.start(patient.id, {}, user);
+      } catch (visitError) {
+        const message = visitError instanceof Error ? visitError.message : "Unknown error starting visit";
+        await this.idempotency.complete({
+          recordId: idempotency.recordId,
+          responseStatus: 206, // Partial Content indicates patient created but visit failed
+          responseBody: { id: patient.id, patientCreated: true, visitStarted: false, error: message },
+          resourceType: "patient",
+          resourceId: patient.id
+        });
+        throw visitError;
+      }
+
+      const result = { id: patient.id, visitId: visit.encounter?.id };
+      await this.idempotency.complete({
+        recordId: idempotency.recordId,
+        responseStatus: 201,
+        responseBody: result,
+        resourceType: "patient_visit",
+        resourceId: patient.id
+      });
+      return result;
+    } catch (error) {
+      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      await this.idempotency.failOrRelease({
+        recordId: idempotency.recordId,
+        safeReason,
+        releaseLock: true // Allow retry for duplicate validation errors
+      });
       throw error;
     }
   }

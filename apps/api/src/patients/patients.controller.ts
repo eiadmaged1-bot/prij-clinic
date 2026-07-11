@@ -43,6 +43,12 @@ export class PatientsController {
     return this.patients.create(dto, user, idempotencyKey);
   }
 
+  @Post("create-and-start-visit")
+  @Permissions("patient.create", "encounter.create")
+  createAndStartVisit(@Body() dto: CreatePatientDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createAndStartVisit(dto, user, idempotencyKey);
+  }
+
   @Get("duplicate-candidates")
   @Permissions("patient.read")
   duplicateCandidates(@Query() query: DuplicatePatientCandidatesDto, @CurrentUser() user: AuthUser) {

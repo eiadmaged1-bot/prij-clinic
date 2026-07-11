@@ -12,13 +12,15 @@ import {
 } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { IdempotencyService } from "../idempotency/idempotency.service";
 import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VisitPriceAuditReportQueryDto, VisitPriceAuditSettingsDto, VoidInvoiceDto } from "./dto";
 
 @Injectable()
 export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly idempotency: IdempotencyService
   ) {}
 
   async createInvoice(dto: CreateInvoiceDto, user: AuthUser) {
@@ -267,8 +269,52 @@ export class BillingService {
     return invoice;
   }
 
-  async createPayment(dto: CreatePaymentDto, user: AuthUser) {
+  async createPayment(dto: CreatePaymentDto, user: AuthUser, idempotencyKey?: string) {
+    if (!idempotencyKey?.trim()) {
+      return this.createPaymentWithoutIdempotency(dto, user);
+    }
+
     const invoice = await assertCanReferenceInvoice(this.prisma, dto.invoiceId, user);
+    const branchId = invoice.branchId;
+
+    const idempotency = await this.idempotency.beginOrReplay({
+      userId: user.id,
+      branchId,
+      operation: "payment.create",
+      rawKey: idempotencyKey,
+      requestPayload: dto
+    });
+
+    if (idempotency.isReplay) {
+      if (!idempotency.responseBody) {
+        throw new BadRequestException("Payment creation is still in progress.");
+      }
+      return idempotency.responseBody;
+    }
+
+    try {
+      const payment = await this.createPaymentWithoutIdempotency(dto, user, invoice);
+      await this.idempotency.complete({
+        recordId: idempotency.recordId,
+        responseStatus: 201,
+        responseBody: payment,
+        resourceType: "payment",
+        resourceId: payment.id
+      });
+      return payment;
+    } catch (error) {
+      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      await this.idempotency.failOrRelease({
+        recordId: idempotency.recordId,
+        safeReason,
+        releaseLock: true
+      });
+      throw error;
+    }
+  }
+
+  private async createPaymentWithoutIdempotency(dto: CreatePaymentDto, user: AuthUser, preloadedInvoice?: any) {
+    const invoice = preloadedInvoice || await assertCanReferenceInvoice(this.prisma, dto.invoiceId, user);
     if (["cancelled", "voided"].includes(invoice.status)) {
       throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
     }

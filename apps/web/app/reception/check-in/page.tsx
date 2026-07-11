@@ -6,6 +6,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { PatientPicker, SelectedPatientSummary, patientLabel, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -22,6 +23,7 @@ export default function ReceptionCheckInPage() {
   const [priority, setPriority] = useState("routine");
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Loading");
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
@@ -58,7 +60,7 @@ export default function ReceptionCheckInPage() {
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json", ...(headers ?? {}) },
+      headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
       body: JSON.stringify({
         patientId: selectedPatient.id,
         appointmentId: selectedAppointment?.id || undefined,
@@ -67,6 +69,9 @@ export default function ReceptionCheckInPage() {
       })
     });
     setStatus(response.ok ? "Patient checked in" : "Could not check in patient");
+    if (!response.ok) {
+      regenerateIdempotencyKey();
+    }
   }
 
   return (

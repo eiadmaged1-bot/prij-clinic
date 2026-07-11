@@ -8,18 +8,65 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto, QueueCancelDto } from "./dto";
 import { toUtcDateOnly } from "./queue-date";
 
+import { IdempotencyService } from "../idempotency/idempotency.service";
+
 @Injectable()
 export class QueueService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly idempotency: IdempotencyService
   ) {}
 
-  async checkIn(dto: CheckInDto, user: AuthUser) {
-    const visitType = dto.visitType ?? "kashf";
+  async checkIn(dto: CheckInDto, user: AuthUser, idempotencyKey?: string) {
+    if (!idempotencyKey?.trim()) {
+      return this.checkInWithoutIdempotency(dto, user);
+    }
 
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const branchId = patient.branchId ?? (await this.resolveBranchId(user));
+
+    const idempotency = await this.idempotency.beginOrReplay({
+      userId: user.id,
+      branchId,
+      operation: "queue.checkIn",
+      rawKey: idempotencyKey,
+      requestPayload: dto
+    });
+
+    if (idempotency.isReplay) {
+      if (!idempotency.responseBody) {
+        throw new BadRequestException("Queue check-in is still in progress.");
+      }
+      return idempotency.responseBody;
+    }
+
+    try {
+      const ticket = await this.checkInWithoutIdempotency(dto, user, patient, branchId);
+      await this.idempotency.complete({
+        recordId: idempotency.recordId,
+        responseStatus: 201,
+        responseBody: ticket,
+        resourceType: "queueTicket",
+        resourceId: ticket.id
+      });
+      return ticket;
+    } catch (error) {
+      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      await this.idempotency.failOrRelease({
+        recordId: idempotency.recordId,
+        safeReason,
+        releaseLock: true
+      });
+      throw error;
+    }
+  }
+
+  private async checkInWithoutIdempotency(dto: CheckInDto, user: AuthUser, preloadedPatient?: any, preloadedBranchId?: string) {
+    const visitType = dto.visitType ?? "kashf";
+
+    const patient = preloadedPatient || await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    const branchId = preloadedBranchId ?? patient.branchId ?? (await this.resolveBranchId(user));
 
     if (dto.appointmentId) {
       const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, {

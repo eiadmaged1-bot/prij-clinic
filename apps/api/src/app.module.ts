@@ -19,6 +19,7 @@ import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { ExternalIntakeModule } from "./external-intake/external-intake.module";
 import { GynecologyModule } from "./gynecology/gynecology.module";
+import { IdempotencyModule } from "./idempotency/idempotency.module";
 import { GuidelinesModule } from "./guidelines/guidelines.module";
 import { HealthModule } from "./health/health.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
@@ -46,6 +47,7 @@ import { UsersModule } from "./users/users.module";
   imports: [
     PrismaModule,
     HealthModule,
+    IdempotencyModule,
     GuidelinesModule,
     UsersModule,
     AuthModule,

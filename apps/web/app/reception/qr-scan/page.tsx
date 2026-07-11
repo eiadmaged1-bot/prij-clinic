@@ -6,6 +6,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -45,6 +46,7 @@ function ReceptionQrScanContent() {
   const [status, setStatus] = useState("Manual lookup ready");
   const [scannerStatus, setScannerStatus] = useState("Start camera scan");
   const [cameraActive, setCameraActive] = useState(false);
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
   const copy = qrCopy[language];
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -141,11 +143,15 @@ function ReceptionQrScanContent() {
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json", ...(headers ?? {}) },
+      headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
       body: JSON.stringify({ patientId: resolved.patientId, priority: visitType === "urgent_kashf" ? "priority" : "routine", visitType })
     }).catch(() => null);
     setStatus(response?.ok ? copy.patientAddedToQueue : copy.couldNotAddToQueue);
-    if (response?.ok) await loadQueue();
+    if (response?.ok) {
+      await loadQueue();
+    } else {
+      regenerateIdempotencyKey();
+    }
   }
 
   function stopCamera() {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -92,8 +92,8 @@ export class BillingController {
 
   @Post("payments")
   @Permissions("payment.manage")
-  createPayment(@Body() dto: CreatePaymentDto, @CurrentUser() user: AuthUser) {
-    return this.billing.createPayment(dto, user);
+  createPayment(@Body() dto: CreatePaymentDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.billing.createPayment(dto, user, idempotencyKey);
   }
 
   @Get("payments")

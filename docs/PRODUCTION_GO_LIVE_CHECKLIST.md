@@ -16,6 +16,7 @@
 - [ ] Complete database backup outside Git paths.
 - [ ] Complete uploaded-file backup outside Git paths.
 - [ ] Complete isolated restore drill.
+- [ ] Set up system cron job to run `scripts/idempotency-records-cleanup.mjs` every 15 minutes.
 - [ ] Keep reset apply disabled until owner/operator approval.
 
 ## Security
