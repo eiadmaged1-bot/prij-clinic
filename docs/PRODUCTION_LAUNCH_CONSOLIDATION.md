@@ -58,8 +58,27 @@ Implemented and source-tested:
 Deferred risks:
 
 - Creation idempotency is a five-minute in-process safeguard. Persistent idempotency across API replicas or restarts needs a dedicated persistence design.
-- Full Minimalistic mode and persistent interface-mode preferences are not implemented in this sprint; the fallback components and mobile navigation are ready to be consumed by those modes.
+- Persistent Optimized and Minimalistic modes are implemented; authenticated manual cross-device verification remains a launch checklist item.
 - Full server-side session revocation remains deferred.
+
+## Dual Interface and Patient Performance Checkpoint
+
+- `UserPreference` persists interface, density, and mobile navigation enums per authenticated user. Optimized/Comfortable/Auto are safe defaults for existing users.
+- The server is authoritative. Local storage caches only the three non-sensitive display enums to prevent visual flashing; authentication remains cookie-only.
+- Interface mode has no effect on API roles or permissions.
+- Doctor Minimalistic mobile navigation is exactly Today, Search, New Patient, Current Visit, and Account. Receptionist navigation contains no doctor visit action.
+- The shared patient registry supplies stable keys, English/Arabic labels, permissions, visibility, lazy loaders, ordering, More grouping, icons, and action IDs.
+- `GET /patients/:id/workspace-summary` is branch scoped, permission filtered, audited, and explicitly `no-store`.
+- Initial patient open now requests the workspace summary and session context. Previously it requested the patient plus all configured related/global collections, timeline, phases, and infertility workspace (about 20+ calls depending on permissions).
+- Pregnancy, infertility, documents, finance, timeline, reports, ultrasound, review hints, calculators, care review, and medication safety use registry or dynamic lazy boundaries.
+- Patient and search requests abort when stale. Search uses a two-character minimum, 275 ms debounce, scoped defaults, and isolated section failures.
+- No destructive database reset/apply or demo-data generation is part of this checkpoint.
+
+Manual QA still required before launch:
+
+- Desktop: Doctor Optimized, Receptionist Optimized, and Owner Optimized at 1440×900.
+- Mobile/tablet: Doctor Minimalistic and supported Receptionist Minimalistic at 360×800, 390×844, 430×932, and 768×1024 in English LTR and Arabic RTL.
+- Confirm sticky headers/footers, dialogs, print/share handoff, save/offline states, and cross-device preference persistence against a migrated non-production environment.
 
 ## Canonical Workflow
 
