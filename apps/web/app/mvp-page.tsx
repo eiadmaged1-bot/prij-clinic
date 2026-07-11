@@ -330,7 +330,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   void densitySourceLockLabels;
   const pathname = usePathname();
   const router = useRouter();
-  const [comfort, setComfort] = useState("comfortable");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, theme } = useTheme();
@@ -354,7 +353,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [openNavGroup, setOpenNavGroup] = useState<string | null>(routeGroupTitle);
 
   useEffect(() => {
-    setComfort(localStorage.getItem("prijDensityMode") ?? localStorage.getItem("prijComfortMode") ?? "comfortable");
     setSidebarCollapsed(localStorage.getItem("prijSidebarCollapsed") === "true");
   }, []);
 
