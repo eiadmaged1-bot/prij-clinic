@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -6,6 +6,7 @@ import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import {
   CreatePatientDto,
+  DuplicatePatientCandidatesDto,
   CreateClinicalPhaseDto,
   CreateEstradiolResultDto,
   CreateFollicularMonitoringVisitDto,
@@ -38,8 +39,14 @@ export class PatientsController {
 
   @Post()
   @Permissions("patient.create")
-  create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthUser) {
-    return this.patients.create(dto, user);
+  create(@Body() dto: CreatePatientDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.create(dto, user, idempotencyKey);
+  }
+
+  @Get("duplicate-candidates")
+  @Permissions("patient.read")
+  duplicateCandidates(@Query() query: DuplicatePatientCandidatesDto, @CurrentUser() user: AuthUser) {
+    return this.patients.duplicateCandidates(query, user);
   }
 
   @Get()

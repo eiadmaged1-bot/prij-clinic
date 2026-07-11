@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvoiceStatus, PatientInternalNoteVisibility, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -17,6 +17,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { toUtcDateOnly } from "../queue/queue-date";
 import {
   CreatePatientDto,
+  DuplicatePatientCandidatesDto,
   CreateClinicalPhaseDto,
   CreateEstradiolResultDto,
   CreateFollicularMonitoringVisitDto,
@@ -43,14 +44,51 @@ import {
 
 @Injectable()
 export class PatientsService {
+  private readonly recentCreates = new Map<string, { fingerprint: string; expiresAt: number; result: Promise<unknown> }>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly clinicalTags: ClinicalTagsService
   ) {}
 
-  async create(dto: CreatePatientDto, user: AuthUser) {
+  async create(dto: CreatePatientDto, user: AuthUser, idempotencyKey?: string) {
+    const cleanKey = idempotencyKey?.trim().slice(0, 128);
+    if (!cleanKey) return this.createAfterDuplicateReview(dto, user);
+    const cacheKey = `${user.id}:${cleanKey}`;
+    const fingerprint = JSON.stringify(dto);
+    const cached = this.recentCreates.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      if (cached.fingerprint !== fingerprint) throw new ConflictException({ code: "IDEMPOTENCY_KEY_REUSED", message: "Idempotency key was already used for different patient details." });
+      return cached.result;
+    }
+    const result = this.createAfterDuplicateReview(dto, user);
+    this.recentCreates.set(cacheKey, { fingerprint, expiresAt: Date.now() + 5 * 60_000, result });
+    try {
+      return await result;
+    } catch (error) {
+      this.recentCreates.delete(cacheKey);
+      throw error;
+    }
+  }
+
+  private async createAfterDuplicateReview(dto: CreatePatientDto, user: AuthUser) {
     const branchId = await this.resolveBranchId(user);
+    const duplicateReview = await this.duplicateCandidates({
+      name: `${dto.firstName} ${dto.lastName}`,
+      phone: dto.phone,
+      dob: dto.dateOfBirth,
+      mrn: dto.medicalRecordNumber
+    }, user);
+    const highConfidenceCandidates = duplicateReview.candidates.filter((candidate) => candidate.confidence === "HIGH");
+    const overrideReason = dto.duplicateOverrideReason?.trim();
+    if (highConfidenceCandidates.length && !overrideReason) {
+      throw new ConflictException({
+        code: "PATIENT_DUPLICATE_REVIEW_REQUIRED",
+        message: "Review the high-confidence duplicate candidates before creating a new patient.",
+        candidates: highConfidenceCandidates
+      });
+    }
 
     try {
       const patient = await this.prisma.patient.create({
@@ -77,8 +115,20 @@ export class PatientsService {
         resourceId: patient.id,
         branchId,
         severity: "medium",
-        metadataJson: { changedFields: Object.keys(dto), medicalRecordNumber: patient.medicalRecordNumber }
+        metadataJson: { changedFields: Object.keys(dto).filter((key) => key !== "duplicateOverrideReason"), medicalRecordNumber: patient.medicalRecordNumber, duplicateReviewPerformed: true }
       });
+
+      if (highConfidenceCandidates.length && overrideReason) {
+        await this.audit.record({
+          actorUserId: user.id,
+          action: "patient.duplicate_override",
+          resourceType: "patient",
+          resourceId: patient.id,
+          branchId,
+          severity: "high",
+          metadataJson: { reason: overrideReason, candidatePatientIds: highConfidenceCandidates.map((candidate) => candidate.patientId) }
+        });
+      }
 
       return patient;
     } catch (error) {
@@ -88,6 +138,33 @@ export class PatientsService {
 
       throw error;
     }
+  }
+
+  async duplicateCandidates(query: DuplicatePatientCandidatesDto, user: AuthUser, recordAudit = true) {
+    const input = {
+      name: normalizeName(query.name),
+      phone: normalizePhone(query.phone),
+      dob: query.dob ? new Date(query.dob) : null,
+      age: parseApproximateAge(query.age),
+      mrn: normalizeText(query.mrn)
+    };
+    const patients = await this.prisma.patient.findMany({
+      where: { ...branchScope(user), status: "active", NOT: demoPatientWhere() },
+      select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true, patientType: true, encounters: { select: { createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 } },
+      take: 300
+    });
+    const candidates = patients.map((patient) => scoreDuplicateCandidate(patient, input)).filter((candidate) => candidate.score >= 35).sort((a, b) => b.score - a.score).slice(0, 8);
+    if (recordAudit) {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "patient.duplicate_check",
+        resourceType: "patient",
+        branchId: user.branchId,
+        severity: "medium",
+        metadataJson: { candidateCount: candidates.length, highConfidenceCount: candidates.filter((candidate) => candidate.confidence === "HIGH").length, fieldsChecked: Object.entries(input).filter(([, value]) => value !== null && value !== "").map(([key]) => key) }
+      });
+    }
+    return { candidates };
   }
 
   async list(user: AuthUser) {
@@ -1357,6 +1434,99 @@ function demoPatientWhere(): Prisma.PatientWhereInput[] {
     { notes: { contains: "training", mode: "insensitive" } },
     { notes: { contains: "local demo", mode: "insensitive" } }
   ];
+}
+
+type DuplicatePatientRow = {
+  id: string;
+  medicalRecordNumber: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  dateOfBirth: Date | null;
+  patientType: string;
+  encounters: { createdAt: Date }[];
+};
+
+type DuplicateInput = { name: string; phone: string; dob: Date | null; age: number | null; mrn: string };
+
+function scoreDuplicateCandidate(patient: DuplicatePatientRow, input: DuplicateInput) {
+  const reasons: string[] = [];
+  let score = 0;
+  const patientName = normalizeName(`${patient.firstName} ${patient.lastName}`);
+  const patientPhone = normalizePhone(patient.phone);
+  const patientMrn = normalizeText(patient.medicalRecordNumber);
+  const exactDob = Boolean(input.dob && patient.dateOfBirth && sameDate(input.dob, patient.dateOfBirth));
+  const nameSimilarity = input.name && patientName ? similarity(input.name, patientName) : 0;
+
+  if (input.phone && patientPhone && input.phone === patientPhone) { score += 100; reasons.push("PHONE_EXACT"); }
+  if (input.mrn && patientMrn && input.mrn === patientMrn) { score += 110; reasons.push("MRN_EXACT"); }
+  if (input.name && patientName && input.name === patientName) { score += 55; reasons.push("FULL_NAME_EXACT"); }
+  else if ((input.name.length >= 3 && patientName.split(" ").some((part) => part.startsWith(input.name))) || (input.name.length >= 5 && patientName.includes(input.name))) { score += 40; reasons.push("NAME_PARTIAL"); }
+  else if (nameSimilarity >= 0.78) { score += Math.round(45 * nameSimilarity); reasons.push("NAME_SIMILAR"); }
+  if (exactDob) { score += 45; reasons.push("DOB_EXACT"); }
+  const patientAge = ageAt(patient.dateOfBirth);
+  if (!exactDob && input.age !== null && patientAge !== null && Math.abs(input.age - patientAge) <= 1) { score += 20; reasons.push("AGE_APPROXIMATE"); }
+
+  const confidence = score >= 90 ? "HIGH" : score >= 55 ? "MEDIUM" : "LOW";
+  return {
+    patientId: patient.id,
+    displayName: `${patient.firstName} ${patient.lastName}`.trim(),
+    mrn: patient.medicalRecordNumber,
+    phoneSuffix: patientPhone ? patientPhone.slice(-4) : null,
+    ageSummary: patientAge === null ? null : `${patientAge} years`,
+    patientType: patient.patientType,
+    lastVisitDate: patient.encounters[0]?.createdAt.toISOString().slice(0, 10) ?? null,
+    matchReasons: reasons,
+    confidence,
+    score
+  };
+}
+
+function normalizeText(value?: string | null) {
+  return String(value ?? "").trim().toLocaleLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeName(value?: string | null) {
+  return normalizeText(value).normalize("NFKD").replace(/[^\p{L}\p{N} ]/gu, "");
+}
+
+function normalizePhone(value?: string | null) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+function parseApproximateAge(value?: string) {
+  if (!value || !/^\d{1,3}$/.test(value)) return null;
+  const age = Number(value);
+  return age >= 0 && age <= 120 ? age : null;
+}
+
+function ageAt(date: Date | null) {
+  if (!date) return null;
+  const now = new Date();
+  let age = now.getUTCFullYear() - date.getUTCFullYear();
+  if (now.getUTCMonth() < date.getUTCMonth() || (now.getUTCMonth() === date.getUTCMonth() && now.getUTCDate() < date.getUTCDate())) age -= 1;
+  return age;
+}
+
+function sameDate(left: Date, right: Date) {
+  return left.toISOString().slice(0, 10) === right.toISOString().slice(0, 10);
+}
+
+function similarity(left: string, right: string) {
+  const longest = Math.max(left.length, right.length);
+  if (!longest) return 1;
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let diagonal = previous[0]!;
+    previous[0] = leftIndex;
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const above = previous[rightIndex]!;
+      previous[rightIndex] = Math.min(previous[rightIndex]! + 1, previous[rightIndex - 1]! + 1, diagonal + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1));
+      diagonal = above;
+    }
+  }
+  return 1 - previous[right.length]! / longest;
 }
 
 function historySheetTagCodes(dto: PatientHistorySheetDto) {

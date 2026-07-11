@@ -388,6 +388,37 @@ export class CreatePatientDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  duplicateOverrideReason?: string;
+}
+
+export class DuplicatePatientCandidatesDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  @IsOptional()
+  @IsDateString()
+  dob?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(12)
+  age?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  mrn?: string;
 }
 
 export class UpdatePatientDto {
