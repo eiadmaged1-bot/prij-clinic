@@ -63,7 +63,10 @@
 - [ ] Public web URL reaches only the web application.
 - [ ] Login works through `/api/backend`.
 - [ ] API origin is not exposed directly.
-- [ ] Logout clears the session.
+- [ ] Logout clears the server-side session.
+- [ ] Changing a user's password revokes all their active sessions.
+- [ ] Deactivating an account revokes all active sessions.
+- [ ] Changing an account's roles or permissions revokes all active sessions.
 - [ ] Unauthenticated `/auth/me` is a clean unauthorized state, not an API-down state.
 
 ## Clinical Safety

@@ -22,7 +22,7 @@ function request(options, body) {
 
 async function testSessions() {
   console.log("1. Check Session Cookie is Set on Login");
-  const loginBody = JSON.stringify({ identifier: "eyad", password: "password" });
+  const loginBody = JSON.stringify({ identifier: "eyad", password: "eyad" });
   const loginRes = await request({
     hostname: "localhost",
     port: 3000,

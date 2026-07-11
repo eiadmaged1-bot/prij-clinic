@@ -41,7 +41,7 @@ Clinical AI remains assistive only. Any clinical output must remain draft-only u
 
 - The Prisma schema already has broad clinical, finance, document, audit, queue, medication, guideline, and RBAC models.
 - The existing seed has production demo-data refusal checks, but it still includes local protected account behavior and demo-data branches that need a later dedicated seed refactor.
-- Browser authentication now uses the proxied HttpOnly cookie and removes legacy stored tokens. Full server-side session identifiers and immediate revocation remain open under SEC-004.
+- Browser authentication now uses the proxied HttpOnly cookie, removes legacy stored tokens, and enforces full server-side opaque session identifiers with explicit revocation hooks.
 - Existing cleanup scripts are fragmented across v095, v121, v132, and API-local cleanup. The canonical production launch workflow now consolidates inventory, reset planning, backup manifest gates, apply refusal gates, and verification into one named workflow.
 
 ## Doctor Patient Fallback Checkpoint
@@ -59,7 +59,7 @@ Deferred risks:
 
 - Creation idempotency is a five-minute in-process safeguard. Persistent idempotency across API replicas or restarts needs a dedicated persistence design.
 - Persistent Optimized and Minimalistic modes are implemented; authenticated manual cross-device verification remains a launch checklist item.
-- Full server-side session revocation remains deferred.
+- Full server-side session revocation is now implemented, covering token invalidation, role boundary checks, and active-session disruption.
 
 ## Dual Interface and Patient Performance Checkpoint
 

@@ -18,7 +18,7 @@ async function main() {
     ]
   };
 
-  const count = await (prisma as any).authSession.count({
+  const count = await prisma.authSession.count({
     where: filter
   });
 
@@ -29,7 +29,7 @@ async function main() {
     process.exit(0);
   }
 
-  const result = await (prisma as any).authSession.deleteMany({
+  const result = await prisma.authSession.deleteMany({
     where: filter
   });
 

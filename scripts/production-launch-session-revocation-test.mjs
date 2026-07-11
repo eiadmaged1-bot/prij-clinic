@@ -20,7 +20,7 @@ function request(options, body) {
 
 async function testSessionRevocation() {
   console.log("1. Login to get a session cookie");
-  const loginBody = JSON.stringify({ identifier: "eyad", password: "password" });
+  const loginBody = JSON.stringify({ identifier: "eyad", password: "eyad" });
   const loginRes = await request({
     hostname: "localhost",
     port: 3000,
