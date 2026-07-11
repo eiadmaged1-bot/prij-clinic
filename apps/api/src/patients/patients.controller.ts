@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -59,6 +59,13 @@ export class PatientsController {
   @Permissions("patient.read")
   get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.patients.get(id, user);
+  }
+
+  @Get(":id/workspace-summary")
+  @Header("Cache-Control", "private, no-store, max-age=0")
+  @Permissions("patient.read")
+  workspaceSummary(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.workspaceSummary(id, user);
   }
 
   @Get(":id/qr")

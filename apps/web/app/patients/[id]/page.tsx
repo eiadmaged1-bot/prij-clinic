@@ -20,6 +20,7 @@ import { AppShell, SafetyAlert } from "../../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { visitTypeLabel } from "@/lib/visit-types";
 import { useInterfaceMode } from "@/lib/interface-mode";
+import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
@@ -151,6 +152,10 @@ type ServiceItem = {
   currency: string;
 };
 
+function requestPatientWorkspaceRefresh() {
+  window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
+}
+
 const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "case-feed", label: "Case Feed", icon: "timeline", empty: "No case feed items yet.", permissions: ["patient.read", "encounter.read"] },
@@ -222,6 +227,13 @@ export default function PatientFilePage() {
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setRefreshVersion((version) => version + 1);
+    window.addEventListener("patient-workspace:refresh", refresh);
+    return () => window.removeEventListener("patient-workspace:refresh", refresh);
+  }, []);
 
   useEffect(() => {
     const requested = searchParams.get("module") ?? searchParams.get("tab");
@@ -250,15 +262,20 @@ export default function PatientFilePage() {
   const isReceptionistOnly = roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
   useEffect(() => {
+    if (activeTab === "overview" || activeTab === "more" || activeTab === "doctor-visit") return;
     const token = sessionStorage.getItem("prijClinicToken");
-    fetch(`${getApiBaseUrl()}/patients/${patientId}`, {
+    fetch(`${getApiBaseUrl()}/patients/${patientId}/workspace-summary`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
       .then(async (response) => {
         if (response.status === 401) throw new Error("Please sign in before opening patient files.");
         if (!response.ok) throw new Error("Could not open this patient file.");
-        setPatient((await response.json()) as Patient);
+        const summary = await response.json() as PatientWorkspaceSummary;
+        const names = summary.patient.displayName.trim().split(/\s+/);
+        setPatient({ id: summary.patient.id, medicalRecordNumber: summary.patient.medicalRecordNumber, firstName: names.shift() ?? summary.patient.displayName, lastName: names.join(" "), dateOfBirth: summary.patient.dateOfBirth, phone: summary.patient.contactSummary, status: "active", patientType: summary.patient.patientType });
+        setClinicalPhases(summary.activeClinicalPhase ? [{ id: "summary", status: "active", ...summary.activeClinicalPhase }] : []);
+        setRelated({ appointments: [summary.todayAppointment, summary.nextAppointment].filter(Boolean) as unknown as Record<string, unknown>[], queue: summary.currentQueueTicket ? [summary.currentQueueTicket as unknown as Record<string, unknown>] : [], results: Array.from({ length: summary.pendingResultCount ?? 0 }, () => ({ reviewStatus: "pending_review" })), tasks: summary.pendingFollowUp ? [summary.pendingFollowUp as unknown as Record<string, unknown>] : [], billing: summary.balanceState ? [summary.balanceState as unknown as Record<string, unknown>] : [] });
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to open patient file."));
 
@@ -283,7 +300,7 @@ export default function PatientFilePage() {
     const load = async () => {
       const pairs = await Promise.all(
         relatedLoaders
-          .filter((tab) => tab.endpoint)
+          .filter((tab) => tab.key === activeTab && tab.endpoint)
           .map(async (tab) => {
             try {
               const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
@@ -302,7 +319,7 @@ export default function PatientFilePage() {
           })
       );
       setRelated(Object.fromEntries(pairs));
-      try {
+      if (activeTab === "timeline") try {
         const timelineResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
@@ -314,7 +331,7 @@ export default function PatientFilePage() {
       } catch {
         setTimelineItems([]);
       }
-      try {
+      if (["pregnancy", "infertility"].includes(activeTab)) try {
         const phasesResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/phases`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
@@ -326,7 +343,7 @@ export default function PatientFilePage() {
       } catch {
         setClinicalPhases([]);
       }
-      try {
+      if (activeTab === "infertility") try {
         const infertilityResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/infertility`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
@@ -337,7 +354,7 @@ export default function PatientFilePage() {
       }
     };
     void load();
-  }, [patientId, permissions]);
+  }, [activeTab, patientId, refreshVersion]);
 
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -358,7 +375,7 @@ export default function PatientFilePage() {
     }
 
     setActionStatus("Saved to this patient file.");
-    window.setTimeout(() => window.location.reload(), 500);
+    requestPatientWorkspaceRefresh();
   }
 
   async function updatePatientType(nextType: string) {
@@ -514,7 +531,7 @@ export default function PatientFilePage() {
               <CareAssistPanel patientId={patient.id} historySheetId={String((related.history ?? [])[0]?.id ?? "") || undefined} />
             </>
           ) : null}
-          {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={() => window.location.reload()} /> : null}
+          {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={requestPatientWorkspaceRefresh} /> : null}
           {active.key === "secretary-intake" ? <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} /> : null}
           {active.key === "doctor-note" ? <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} /> : null}
           {active.key === "prescriptions" ? <RelatedPanel config={active} rows={related.prescriptions ?? []} /> : null}
@@ -1595,7 +1612,7 @@ function GynecologyWorkspace({ patient, visits }: { patient: Patient; visits: Gy
     }
 
     setStatus("Gynecology visit saved as recording-only and added to the timeline.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   const latest = visits[0];
@@ -1985,7 +2002,7 @@ function CreatePregnancyEpisodeCard({ patient }: { patient: Patient }) {
     }
 
     setStatus("Pregnancy episode saved. Doctor interpretation remains required.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   return (
@@ -2063,7 +2080,7 @@ function PreviousPregnancyHistoryCard({ patient, pregnancy, previousPregnancies 
       return;
     }
     setStatus("Previous pregnancy history saved for doctor review.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   return (
@@ -2131,7 +2148,7 @@ function FetusStarterCard({ pregnancy, fetuses }: { pregnancy?: PregnancyRecord;
     }
 
     setStatus("Fetus record saved for multiple pregnancy tracking.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   return (
@@ -2205,7 +2222,7 @@ function AntenatalVisitCard({ patient, pregnancy }: { patient: Patient; pregnanc
     }
 
     setStatus("Antenatal visit saved to the patient timeline.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   return (
@@ -2309,7 +2326,7 @@ function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patient: Pat
     }
 
     setStatus("Ultrasound report saved as recording-only and added to the timeline.");
-    window.setTimeout(() => window.location.reload(), 600);
+    requestPatientWorkspaceRefresh();
   }
 
   return (
@@ -2867,7 +2884,7 @@ function InfertilityWorkspacePanel({ patient, workspace, phases }: { patient: Pa
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(payload)
     });
-    if (response.ok) window.location.reload();
+    if (response.ok) requestPatientWorkspaceRefresh();
   }
 
   async function patch(endpoint: string, payload: Record<string, unknown>) {
@@ -2878,7 +2895,7 @@ function InfertilityWorkspacePanel({ patient, workspace, phases }: { patient: Pa
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(payload)
     });
-    if (response.ok) window.location.reload();
+    if (response.ok) requestPatientWorkspaceRefresh();
   }
 
   return (
