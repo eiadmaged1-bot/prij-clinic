@@ -6,6 +6,8 @@ import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon"
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { DoctorQuickPatientCreate } from "@/components/patients/DoctorQuickPatientCreate";
+import { PatientSearchMobile } from "@/components/patients/PatientSearchMobile";
 
 type QueueTicket = {
   id: string;
@@ -59,14 +61,22 @@ export default function DoctorModePage() {
           <p className="muted">Open patient, start visit, write note, prescribe, order tests, finish, next patient.</p>
         </div>
         <div className="doctor-hero-actions">
-          <Link className="button large" href="/patients"><ThreeDMedicalIcon name="patients" size="sm" />Open Patient</Link>
+          <a className="button large" data-action-id="patient.search" href="#doctor-patient-search"><ThreeDMedicalIcon name="patients" size="sm" />Search Patient</a>
+          <a className="button secondary large" data-action-id="patient.create" href="#doctor-new-patient">New Patient</a>
           <Link className="button secondary large" href="/doctor/visit"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Start Visit</Link>
         </div>
       </section>
 
       <SafetyAlert />
 
-      <section className="doctor-today-grid">
+      <nav className="doctor-mobile-fallback-nav" aria-label="Doctor mobile workflow">
+        <a href="#doctor-today">Today</a><a href="#doctor-patient-search">Search</a><a href="#doctor-new-patient">New Patient</a><Link href="/doctor/visit">Current Visit</Link><Link href="/profile">Account</Link>
+      </nav>
+
+      <PatientSearchMobile />
+      <DoctorQuickPatientCreate />
+
+      <section className="doctor-today-grid" id="doctor-today">
         <FocusCard icon="queue" eyebrow="Waiting patients" value={queue.length} text="Patients waiting or moving through the clinic flow." href="/doctor/waiting" action="Open waiting list" />
         <FocusCard icon="calendar" eyebrow="Today&apos;s patients" value={appointments.length} text="Scheduled visits for today&apos;s clinical work." href="/calendar" action="Open calendar" />
         <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow for large, readable steps." href="/doctor/visit" action="Open visit" />
