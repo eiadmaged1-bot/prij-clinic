@@ -50,7 +50,7 @@ const defaultCreateForm = {
 };
 
 export default function AccountsPage() {
-  const { token, isAdmin } = useSession();
+  const { isAdmin } = useSession();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -69,9 +69,8 @@ export default function AccountsPage() {
   const headers = useMemo(
     () => ({
       "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {})
     }),
-    [token]
+    []
   );
   const visibleAccounts = accounts.filter((account) => showDemoAccounts || !isDemoAccount(account));
   const selected = visibleAccounts.find((account) => account.id === selectedId) ?? visibleAccounts[0] ?? accounts.find((account) => account.protectedAccount) ?? null;
@@ -93,7 +92,7 @@ export default function AccountsPage() {
     if (!isAdmin) return;
     void loadAccounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, token]);
+  }, [isAdmin]);
 
   async function loadAccounts() {
     setLoading(true);

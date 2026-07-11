@@ -81,7 +81,6 @@ type LoginInput = {
 
 type SessionContextValue = {
   user: SessionUser | null;
-  token: string | null;
   status: "loading" | "authenticated" | "unauthenticated";
   message: string;
   isAdmin: boolean;
@@ -95,7 +94,6 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionContextValue["status"]>("loading");
   const [message, setMessage] = useState("");
 
@@ -110,7 +108,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(sessionMessageKey);
       setMessage("");
     }
-    setToken(null);
     setUser(null);
     setStatus("unauthenticated");
   }, []);
@@ -118,14 +115,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     localStorage.removeItem(tokenKey);
     sessionStorage.removeItem(tokenKey);
-    setToken(null);
 
     const response = await fetchAuth(authMePath, {
       credentials: "include"
     });
 
     if (!response || authRequestFailed(response)) {
-      setToken(null);
       setUser(null);
       setStatus("unauthenticated");
       const msg = response ? await parseErrorEnvelope(response, connectionProblemMessage()) : connectionProblemMessage();
@@ -146,7 +141,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
     if (!data?.user) {
-      setToken(null);
       setUser(null);
       setStatus("unauthenticated");
       setMessage(connectionProblemMessage());
@@ -200,7 +194,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem(tokenKey);
     sessionStorage.removeItem(sessionMessageKey);
     setMessage("");
-    setToken(null);
     setUser(data.user);
     setStatus("authenticated");
   }, []);
@@ -216,7 +209,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SessionContextValue>(
     () => ({
       user,
-      token,
       status,
       message,
       isAdmin: Boolean(
@@ -233,7 +225,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setMessage("");
       }
     }),
-    [login, logout, message, refresh, status, token, user]
+    [login, logout, message, refresh, status, user]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -128,6 +128,7 @@ model User {
   updatedVisitPriceSettings          VisitPriceAuditSetting[]    @relation("VisitPriceSettingsUpdatedBy")
   createdPatientClinicalTags         PatientClinicalTag[]        @relation("PatientClinicalTagsCreatedBy")
   reviewedExternalSubmissions        ExternalPatientSubmission[] @relation("ExternalSubmissionsReviewedBy")
+  authSessions                       AuthSession[]
 
   @@index([branchId])
   @@index([createdByUserId])
@@ -3732,4 +3733,23 @@ model AuditLog {
   @@index([branchId, createdAt])
   @@index([action])
   @@index([severity, createdAt])
+}
+
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  sessionTokenHash String    @unique
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime  @db.Timestamptz(3)
+  revokedAt        DateTime? @db.Timestamptz(3)
+  lastSeenAt       DateTime? @db.Timestamptz(3)
+  revocationReason String?
+  ipHash           String?
+  userAgentSummary String?
+  createdRequestId String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([expiresAt])
 }
