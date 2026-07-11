@@ -3,7 +3,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const targets = ["apps/web/app", "apps/web/components"];
-const buttonPattern = /<button\b([^>]*)>/g;
+const buttonPattern = /<button\b((?:=>|[^>])*)>/g;
 const ariaPattern = /aria-label=/;
 const typePattern = /\btype=/;
 const iconOnlyHintPattern = /title=|aria-describedby=|data-tooltip|<span[^>]+className=["'][^"']*sr-only/;
@@ -57,4 +57,3 @@ function inspectFile(file) {
     });
   }
 }
-

@@ -443,7 +443,7 @@ export default function PatientFilePage() {
             <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
             More
           </button>
-          <button className="button secondary compact icon-only-button" type="button" onClick={() => setQrOpen(true)} disabled={!patient} aria-label="Show patient QR">
+          <button className="button secondary compact icon-only-button" type="button" onClick={() => setQrOpen(true)} disabled={!patient} aria-label="Show patient QR" title="Show patient QR">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
           </button>
         </div>
@@ -634,7 +634,7 @@ function ReceptionPatientProfile({
             <ThreeDMedicalIcon name="queue" size="sm" />
             Queue
           </Link>
-          <button className="button secondary compact icon-only-button" type="button" onClick={onShowQr} aria-label="Show patient QR">
+          <button className="button secondary compact icon-only-button" type="button" onClick={onShowQr} aria-label="Show patient QR" title="Show patient QR">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
           </button>
         </div>

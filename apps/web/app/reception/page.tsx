@@ -87,7 +87,7 @@ function ReceptionHomeContent() {
             <p className="eyebrow">{copy.eyebrow}</p>
             <h1>{copy.title}</h1>
           </div>
-          <button className="button secondary compact icon-only-button" type="button" onClick={load} aria-label={copy.refresh}>
+          <button className="button secondary compact icon-only-button" type="button" onClick={load} aria-label={copy.refresh} title={copy.refresh}>
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
           </button>
         </div>
