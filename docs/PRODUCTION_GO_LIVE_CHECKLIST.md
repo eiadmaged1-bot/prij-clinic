@@ -20,7 +20,7 @@
 
 ## Security
 
-- [ ] Remove reusable auth tokens from browser storage before real data.
+- [x] Remove reusable auth tokens from browser storage before real data (source-contract tested; legacy values are cleared).
 - [ ] Use HttpOnly secure cookie authentication and CSRF protection.
 - [ ] Confirm API port 3001 is not publicly exposed.
 - [ ] Confirm web public access only uses port 3000 and `/api/backend`.
@@ -30,6 +30,11 @@
 
 ## Desktop QA
 
+- [x] Doctor Search Patient and New Patient actions are registered and source-tested.
+- [x] Doctor Save Patient Only and Save & Start Visit flows are implemented and source-tested.
+- [x] High-confidence duplicate creation requires a reason and records an audit event.
+- [ ] Exercise doctor create/start against a production-like isolated database.
+
 - [ ] Owner desktop Optimized.
 - [ ] Doctor desktop Optimized.
 - [ ] Receptionist desktop Optimized.
@@ -38,6 +43,10 @@
 - [ ] 1440x900.
 
 ## Mobile QA
+
+- [x] Doctor fallback navigation includes Today, Search, New Patient, Current Visit, and Account.
+- [x] New fallback buttons pass the interaction inventory.
+- [ ] Manually validate the doctor fallback at 360px in English and Arabic.
 
 - [ ] Owner mobile Optimized.
 - [ ] Doctor mobile Minimalistic.
@@ -63,4 +72,3 @@
 - [ ] AI output is draft-only.
 - [ ] Doctor review is required before clinical use.
 - [ ] Clinical record changes have audit support.
-
