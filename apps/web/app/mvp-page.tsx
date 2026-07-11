@@ -37,6 +37,7 @@ type MvpPageProps = {
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
+import { useInterfaceMode } from "@/lib/interface-mode";
 
 const navGroupOrder: NavItem["group"][] = [
   "Home",
@@ -332,6 +333,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, theme } = useTheme();
+  const { interfaceMode, densityMode } = useInterfaceMode();
   const { user, status, isAdmin, logout } = useSession();
   const { t } = useI18n();
   const permissions = user?.permissions ?? [];
@@ -396,7 +398,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
+    <main className={`app-shell theme-${theme} interface-${interfaceMode.toLowerCase()} comfort-${densityMode.toLowerCase()} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-interface-mode={interfaceMode} data-density={doctorComfortMode ? "large" : densityMode.toLowerCase()}>
       {user ? (
         <>
           <button

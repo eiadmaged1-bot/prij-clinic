@@ -61,6 +61,8 @@ model User {
   createdAt        DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
 
+  preferences UserPreference?
+
   branch                             Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
   createdByUser                      User?                       @relation("UsersCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdUsers                       User[]                      @relation("UsersCreatedBy")
@@ -131,6 +133,34 @@ model User {
   @@index([createdByUserId])
   @@index([protectedAccount])
   @@index([status])
+}
+
+enum InterfaceMode {
+  OPTIMIZED
+  MINIMALISTIC
+}
+
+enum DensityMode {
+  COMPACT
+  COMFORTABLE
+  LARGE
+}
+
+enum MobileNavigationMode {
+  AUTO
+  BOTTOM_NAV
+  DRAWER
+}
+
+model UserPreference {
+  userId               String               @id @db.Uuid
+  interfaceMode        InterfaceMode        @default(OPTIMIZED)
+  densityMode          DensityMode          @default(COMFORTABLE)
+  mobileNavigationMode MobileNavigationMode @default(AUTO)
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum ConsentType {
