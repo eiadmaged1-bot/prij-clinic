@@ -88,6 +88,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState("");
 
   const clearSession = useCallback((nextMessage?: string) => {
+    // Remove tokens left by pre-cookie releases; browser auth is cookie-only.
     localStorage.removeItem(tokenKey);
     sessionStorage.removeItem(tokenKey);
     if (nextMessage) {
@@ -103,32 +104,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(async () => {
-    const storedToken = localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
-    setToken(storedToken);
-    if (storedToken) {
-      sessionStorage.setItem(tokenKey, storedToken);
-    }
+    localStorage.removeItem(tokenKey);
+    sessionStorage.removeItem(tokenKey);
+    setToken(null);
 
     const response = await fetchAuth(authMePath, {
-      credentials: "include",
-      headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
+      credentials: "include"
     });
 
     if (!response || authRequestFailed(response)) {
       setToken(null);
       setUser(null);
       setStatus("unauthenticated");
-      setMessage(storedToken ? connectionProblemMessage() : "");
+      setMessage(connectionProblemMessage());
       return;
     }
 
     if (response.status === 401) {
-      clearSession(storedToken ? sessionEndedMessage() : undefined);
+      clearSession();
       return;
     }
 
     if (!response.ok) {
-      clearSession(storedToken ? sessionEndedMessage() : undefined);
+      clearSession(sessionEndedMessage());
       return;
     }
 
@@ -176,29 +174,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       throw new Error(invalidLoginMessage());
     }
 
-    const data = (await response.json().catch(() => null)) as { token?: string; user?: SessionUser } | null;
-    if (!data?.token || !data.user) {
+    const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
+    if (!data?.user) {
       throw new Error(connectionProblemMessage());
     }
 
-    localStorage.setItem(tokenKey, data.token);
-    sessionStorage.setItem(tokenKey, data.token);
+    localStorage.removeItem(tokenKey);
+    sessionStorage.removeItem(tokenKey);
     sessionStorage.removeItem(sessionMessageKey);
     setMessage("");
-    setToken(data.token);
+    setToken(null);
     setUser(data.user);
     setStatus("authenticated");
   }, []);
 
   const logout = useCallback(async () => {
-    const storedToken = token ?? localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
     await fetchAuth(authLogoutPath, {
       method: "POST",
-      credentials: "include",
-      headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
+      credentials: "include"
     });
     clearSession();
-  }, [clearSession, token]);
+  }, [clearSession]);
 
   const value = useMemo<SessionContextValue>(
     () => ({

@@ -148,7 +148,7 @@
     "test:production-launch:mobile": "node scripts/production-launch-data-safety-test.mjs",
     "test:production-launch:patient-performance": "node scripts/production-launch-data-safety-test.mjs",
     "test:production-launch:resilience": "node scripts/production-launch-data-safety-test.mjs",
-    "test:production-launch:security": "node scripts/production-launch-data-safety-test.mjs",
+    "test:production-launch:security": "node scripts/production-launch-data-safety-test.mjs && node scripts/production-launch-auth-storage-test.mjs",
     "test:production-launch:go-live": "node scripts/production-launch-data-safety-test.mjs",
     "test:no-demo-data": "node scripts/no-demo-data-guard.mjs",
     "db:v122:seed:medications-generic": "node scripts/v122-seed-medication-generic-foundation.mjs",
