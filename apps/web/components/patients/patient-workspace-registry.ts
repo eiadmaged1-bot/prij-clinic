@@ -14,7 +14,7 @@ const loadHeavy = () => import("./workspace-modules/HeavyPatientModule");
 export const patientWorkspaceRegistry: PatientWorkspaceItem[] = [
   item("overview", "Summary", "الملخص", 10, "patients", [], ["patient.read"], true, true, loadLight),
   item("doctor-visit", "Visit", "الزيارة", 20, "encounter", ["start-visit", "continue-visit", "finish-visit"], ["encounter.read", "encounter.create"], true, true, loadLight, ["Owner", "Admin", "Doctor"]),
-  item("prescriptions", "Prescriptions", "الوصفات", 30, "prescription", ["create-prescription"], ["prescription.read"], true, true, loadLight, ["Owner", "Admin", "Doctor"], "/prescriptions", "prescriptions"),
+  item("prescriptions", "Prescriptions", "الوصفات", 30, "prescription", ["create-prescription"], ["prescription.read"], true, true, loadLight, ["Owner", "Admin", "Doctor"], "/prescriptions?patientId=:patientId", "prescriptions"),
   item("investigations", "Requests / Results", "الطلبات / النتائج", 40, "investigations", ["create-request", "review-result"], ["clinical_requests.read", "investigation.read"], true, true, loadLight, ["Owner", "Admin", "Doctor"], "/clinical-requests?patientId=:patientId", "clinicalRequests"),
   item("pregnancy", "Women’s Health", "صحة المرأة", 50, "pregnancy", [], ["pregnancy.read", "pregnancy.manage"], true, false, loadHeavy, ["Owner", "Admin", "Doctor"], "/pregnancies?patientId=:patientId", "pregnancies"),
   item("documents", "Documents", "المستندات", 60, "files", [], ["patient_document.read"], true, false, loadHeavy, undefined, "/patients/:patientId/documents", "patientDocuments"),

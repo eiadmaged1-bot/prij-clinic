@@ -10,20 +10,25 @@ export class SearchService {
 
   async live(q: string, user: AuthUser, scope?: string) {
     const query = q.trim();
-    if (query.length < 1) return { sections: [] };
+    if (query.length < 2) return { sections: [] };
 
-    const sections = await Promise.all([
-      this.can(user, "patient.read") ? this.patients(query, user) : null,
-      this.canAny(user, ["medications.search", "medications.read", "prescription.read"]) ? this.medications(query, user) : null,
-      this.can(user, "investigation.read") ? this.investigations(query) : null,
-      this.can(user, "appointment.read") || this.can(user, "appointments.read") ? this.appointments(query, user) : null,
-      this.can(user, "billing.read") ? this.invoices(query, user) : null,
-      this.can(user, "clinical_requests.read") ? this.clinicalRequests(query, user) : null,
-      this.can(user, "prescription.read") ? this.prescriptions(query, user) : null,
-      this.can(user, "prescription_templates.read") ? this.prescriptionTemplates(query, user) : null,
-      this.can(user, "patient_document.read") ? this.documents(query, user) : null,
-      this.canAny(user, ["guideline.read", "guidelines.read", "guidelines.search"]) ? this.guidelines(query) : null
+    const requested = new Set((scope ?? "").split(",").map((value) => value.trim()).filter(Boolean));
+    const explicit = requested.size > 0 && !requested.has("global");
+    const include = (name: string) => !explicit ? ["patients", "appointments"].includes(name) : requested.has(name);
+
+    const settled = await Promise.allSettled([
+      include("patients") && this.can(user, "patient.read") ? this.patients(query, user) : Promise.resolve(null),
+      include("medications") && this.canAny(user, ["medications.search", "medications.read"]) ? this.medications(query, user) : Promise.resolve(null),
+      include("investigations") && this.can(user, "investigation.read") ? this.investigations(query) : Promise.resolve(null),
+      include("appointments") && (this.can(user, "appointment.read") || this.can(user, "appointments.read")) ? this.appointments(query, user) : Promise.resolve(null),
+      include("invoices") && this.can(user, "billing.read") ? this.invoices(query, user) : Promise.resolve(null),
+      include("clinical-requests") && this.can(user, "clinical_requests.read") ? this.clinicalRequests(query, user) : Promise.resolve(null),
+      include("prescriptions") && this.can(user, "prescription.read") ? this.prescriptions(query, user) : Promise.resolve(null),
+      include("templates") && this.can(user, "prescription_templates.read") ? this.prescriptionTemplates(query, user) : Promise.resolve(null),
+      include("documents") && this.can(user, "patient_document.read") ? this.documents(query, user) : Promise.resolve(null),
+      include("guidelines") && this.canAny(user, ["guideline.read", "guidelines.read", "guidelines.search"]) ? this.guidelines(query) : Promise.resolve(null)
     ]);
+    const sections = settled.map((result) => result.status === "fulfilled" ? result.value : null);
 
     return {
       query,

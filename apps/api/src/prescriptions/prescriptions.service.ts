@@ -50,9 +50,9 @@ export class PrescriptionsService {
     }
   }
 
-  async list(user: AuthUser) {
+  async list(user: AuthUser, patientId?: string) {
     const prescriptions = await this.prisma.prescription.findMany({
-      where: prescriptionScope(user),
+      where: { ...prescriptionScope(user), ...(patientId ? { patientId } : {}) },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { items: true, patient: true, encounter: true }

@@ -262,10 +262,11 @@ export default function PatientFilePage() {
   const isReceptionistOnly = roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
   useEffect(() => {
-    if (activeTab === "overview" || activeTab === "more" || activeTab === "doctor-visit") return;
     const token = sessionStorage.getItem("prijClinicToken");
+    const controller = new AbortController();
     fetch(`${getApiBaseUrl()}/patients/${patientId}/workspace-summary`, {
       credentials: "include",
+      signal: controller.signal,
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
       .then(async (response) => {
@@ -281,6 +282,7 @@ export default function PatientFilePage() {
 
     fetch(`${getApiBaseUrl()}/auth/me`, {
       credentials: "include",
+      signal: controller.signal,
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
       .then(async (response) => {
@@ -293,10 +295,13 @@ export default function PatientFilePage() {
         setPermissions([]);
         setRoles([]);
       });
+    return () => controller.abort();
   }, [patientId]);
 
   useEffect(() => {
+    if (activeTab === "overview" || activeTab === "more" || activeTab === "doctor-visit") return;
     const token = sessionStorage.getItem("prijClinicToken");
+    const controller = new AbortController();
     const load = async () => {
       const pairs = await Promise.all(
         relatedLoaders
@@ -306,6 +311,7 @@ export default function PatientFilePage() {
               const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
               const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
                 credentials: "include",
+                signal: controller.signal,
                 headers: token ? { authorization: `Bearer ${token}` } : undefined
               });
               if (!response.ok) return [tab.key, []] as const;
@@ -322,6 +328,7 @@ export default function PatientFilePage() {
       if (activeTab === "timeline") try {
         const timelineResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline`, {
           credentials: "include",
+          signal: controller.signal,
           headers: token ? { authorization: `Bearer ${token}` } : undefined
         });
         if (timelineResponse.ok) {
@@ -334,6 +341,7 @@ export default function PatientFilePage() {
       if (["pregnancy", "infertility"].includes(activeTab)) try {
         const phasesResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/phases`, {
           credentials: "include",
+          signal: controller.signal,
           headers: token ? { authorization: `Bearer ${token}` } : undefined
         });
         if (phasesResponse.ok) {
@@ -346,6 +354,7 @@ export default function PatientFilePage() {
       if (activeTab === "infertility") try {
         const infertilityResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/infertility`, {
           credentials: "include",
+          signal: controller.signal,
           headers: token ? { authorization: `Bearer ${token}` } : undefined
         });
         if (infertilityResponse.ok) setInfertilityWorkspace(await infertilityResponse.json() as InfertilityWorkspace);
@@ -354,6 +363,7 @@ export default function PatientFilePage() {
       }
     };
     void load();
+    return () => controller.abort();
   }, [activeTab, patientId, refreshVersion]);
 
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
