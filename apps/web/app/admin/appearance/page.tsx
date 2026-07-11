@@ -181,7 +181,7 @@ export default function AppearancePage() {
       {message ? <p className="success-message">{message}</p> : null}
 
       <section className="theme-preview-grid" aria-label="Theme choices">
-        {themes.map((appTheme) => (
+        {process.env.NODE_ENV !== "production" ? themes.map((appTheme) => (
           <article className={`theme-preview theme-preview-${appTheme.id} ${selectedTheme === appTheme.id ? "selected" : ""}`} key={appTheme.id}>
             <div className="theme-preview-window">
               <span />
@@ -202,7 +202,7 @@ export default function AppearancePage() {
               </button>
             </div>
           </article>
-        ))}
+        )) : <p className="muted">The official operational theme is locked for production.</p>}
       </section>
 
       <section className="panel">

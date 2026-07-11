@@ -5386,3 +5386,38 @@ html[lang="ar"] .panel label {
   .operational-card { display: flex; min-height: 64px; padding: 12px; border: 1px solid #dbe4e8; border-radius: 10px; flex-direction: column; background: #fff; }
   .modal, [role="dialog"] { max-width: 100vw; max-height: 100dvh; overflow: auto; }
 }
+
+/* Official production operational surface. Print rules remain separate below. */
+.app-shell {
+  --production-bg: #f7f9fa;
+  --production-surface: #ffffff;
+  --production-text: #172b3a;
+  --production-accent: #087f7b;
+  --production-danger: #b42318;
+  --production-warning: #9a6700;
+  background: var(--production-bg);
+  color: var(--production-text);
+}
+.app-shell .panel,
+.app-shell .card,
+.app-shell .operational-card {
+  padding: 16px;
+  border: 1px solid #dbe4e8;
+  border-radius: 10px;
+  background: var(--production-surface);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 5%);
+}
+.app-shell .button { border-radius: 8px; }
+.app-shell .button:not(.secondary):not(.danger) { background: var(--production-accent); }
+.app-shell .danger { color: var(--production-danger); }
+.app-shell :is(a, button, input, select, textarea):focus-visible { outline: 3px solid rgb(8 127 123 / 28%); outline-offset: 2px; }
+.workflow-band > :nth-child(n + 5) { display: none; }
+.appearance-options { display: grid; gap: 8px; margin-block: 16px; border: 0; padding: 0; }
+.appearance-option { display: flex; min-height: 48px; gap: 10px; align-items: center; padding: 12px; border: 1px solid #dbe4e8; border-radius: 10px; }
+.appearance-option small { display: block; color: #52606d; }
+@media (max-width: 767px) {
+  .app-shell .panel, .app-shell .card, .app-shell .operational-card { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

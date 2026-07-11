@@ -11,6 +11,11 @@ The clinic application has one official operational theme.
 - Gradients: avoid on operational screens.
 - Shadows: keep light and functional.
 - Cards: one consistent card style.
+- Operational tokens: `#f7f9fa` background, `#ffffff` surface, `#172b3a` text, and `#087f7b` accent.
+- Danger uses `#b42318`; warning uses muted amber `#9a6700`.
+- Experimental themes are not shown in production settings.
+- Standard card border is a subtle 1px neutral border with a 10px radius.
+- Standard padding is 16px desktop and 12px mobile.
 
 ## Interaction
 
@@ -22,6 +27,10 @@ The clinic application has one official operational theme.
 - Disabled controls must explain why.
 - Loading controls must be locked.
 - Successful mutations must show visible confirmation.
+- Operational screens expose one primary action and group secondary actions.
+- Every icon action needs an accessible name and visible or discoverable label.
+- Focus uses a visible teal outline; minimalism never removes keyboard affordances.
+- Motion respects `prefers-reduced-motion`.
 
 ## Mobile
 
@@ -34,6 +43,8 @@ The clinic application has one official operational theme.
 - Support safe-area insets.
 - Required widths: 360px, 390px, 430px, 768px, and desktop.
 - Bottom sheets become full-screen on small phones when necessary.
+- Sticky and fixed controls reserve content space and include safe-area insets.
+- Complex mobile forms use viewport-fitting full-screen sheets.
 
 ## Language
 
@@ -45,4 +56,3 @@ The clinic application has one official operational theme.
 ## Print
 
 Print design is separate from screen design and must not force screen layout compromises.
-
