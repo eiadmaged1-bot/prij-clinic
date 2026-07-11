@@ -38,6 +38,7 @@ type MvpPageProps = {
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { useInterfaceMode } from "@/lib/interface-mode";
+import { MobileBottomNav, doctorMinimalisticNav, receptionistMinimalisticNav } from "@/components/layout/MobileBottomNav";
 
 const navGroupOrder: NavItem["group"][] = [
   "Home",
@@ -498,6 +499,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
         </header>
         {children}
       </div>
+      {user && interfaceMode === "MINIMALISTIC" && (isDoctorOnly || isReceptionistOnly) ? <MobileBottomNav items={isDoctorOnly ? doctorMinimalisticNav : receptionistMinimalisticNav} /> : null}
     </main>
   );
 }

@@ -4,17 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
-import { SafeAiAssistantPanel } from "../../../components/ai-assistant/SafeAiAssistantPanel";
-import { ObDatingReviewPanel } from "../../../components/calculators/ObDatingReviewPanel";
-import { CareAssistPanel } from "../../../components/care-assist/CareAssistPanel";
-import { MedicationSafetyTerminal } from "../../../components/medications/MedicationSafetyTerminal";
+const SafeAiAssistantPanel = dynamic(() => import("../../../components/ai-assistant/SafeAiAssistantPanel").then((module) => module.SafeAiAssistantPanel), { loading: () => <div className="skeleton" aria-label="Loading review hints" /> });
+const ObDatingReviewPanel = dynamic(() => import("../../../components/calculators/ObDatingReviewPanel").then((module) => module.ObDatingReviewPanel), { loading: () => <div className="skeleton" aria-label="Loading calculator" /> });
+const CareAssistPanel = dynamic(() => import("../../../components/care-assist/CareAssistPanel").then((module) => module.CareAssistPanel), { loading: () => <div className="skeleton" aria-label="Loading care review" /> });
+const MedicationSafetyTerminal = dynamic(() => import("../../../components/medications/MedicationSafetyTerminal").then((module) => module.MedicationSafetyTerminal), { loading: () => <div className="skeleton" aria-label="Loading medication safety" /> });
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
+import { patientWorkspaceRegistry, visiblePatientWorkspaceItems } from "../../../components/patients/patient-workspace-registry";
+import { DoctorMobilePatientHeader } from "../../../components/doctor/DoctorMobilePatientHeader";
+import { DoctorMobileVisitFooter } from "../../../components/doctor/DoctorMobileVisitFooter";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { visitTypeLabel } from "@/lib/visit-types";
+import { useInterfaceMode } from "@/lib/interface-mode";
 import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
@@ -146,7 +151,7 @@ type ServiceItem = {
   currency: string;
 };
 
-const tabs: TabConfig[] = [
+const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
   { key: "case-feed", label: "Case Feed", icon: "timeline", empty: "No case feed items yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "case-boards", label: "Case Boards", icon: "queue", empty: "No case boards yet.", permissions: ["patient.read"], roles: ["Owner", "Admin", "Doctor"] },
@@ -175,7 +180,7 @@ const tabs: TabConfig[] = [
 ];
 
 const relatedLoaders: TabConfig[] = [
-  ...tabs,
+  ...patientWorkspaceRegistry,
   { key: "appointments", label: "Appointments", icon: "calendar", endpoint: "/appointments", collectionKey: "appointments", empty: "No appointment recorded yet.", permissions: ["appointment.read", "appointments.read"] },
   { key: "queue", label: "Queue", icon: "queue", endpoint: "/queue/today", collectionKey: "queueTickets", empty: "No active queue ticket.", permissions: ["queue.read"] },
   { key: "visits", label: "Encounters", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
@@ -190,6 +195,10 @@ const relatedLoaders: TabConfig[] = [
 
 const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "pregnancy", "gynecology", "infertility", "documents", "billing", "consents"]);
 
+const tabs: TabConfig[] = patientWorkspaceRegistry;
+void legacyTabDefinitions;
+void patientWorkspaceTabs;
+
 export default function PatientFilePage() {
   void ClinicalPanel;
   void ProtocolAtlasPanel;
@@ -201,6 +210,7 @@ export default function PatientFilePage() {
   const searchParams = useSearchParams();
   const patientId = params.id;
   const isPreviewMode = searchParams.get("preview") === "queue" || searchParams.get("preview") === "history";
+  const { interfaceMode } = useInterfaceMode();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
@@ -213,12 +223,14 @@ export default function PatientFilePage() {
   const [actionStatus, setActionStatus] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
 
+  useEffect(() => {
+    const requested = searchParams.get("module") ?? searchParams.get("tab");
+    if (requested && patientWorkspaceRegistry.some((entry) => entry.key === requested)) setActiveTab(requested);
+  }, [searchParams]);
+
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const visibleTabs = useMemo(
-    () => tabs.filter((tab) => {
-      if (!patientWorkspaceTabs.has(tab.key)) return false;
-      if (tab.roles?.length && !tab.roles.some((role) => roles.includes(role))) return false;
-      if (tab.permissions?.length && !tab.permissions.some((permission) => permissions.includes(permission))) return false;
+    () => visiblePatientWorkspaceItems({ mode: interfaceMode, mobile: false, permissions, roles }).filter((tab) => {
       if (tab.key === "infertility") {
         const hasInfertilityContext = patient?.patientType === "INFERTILITY" || clinicalPhases.some((phase) => phase.phaseType === "infertility") || (infertilityWorkspace.cycles?.length ?? 0) > 0;
         const canOpenClinical = roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
@@ -226,7 +238,7 @@ export default function PatientFilePage() {
       }
       return true;
     }),
-    [clinicalPhases, infertilityWorkspace.cycles?.length, patient?.patientType, permissions, roles]
+    [clinicalPhases, infertilityWorkspace.cycles?.length, interfaceMode, patient?.patientType, permissions, roles]
   );
   const ageLabel = patientAgeLabel(patient?.dateOfBirth);
   const activePregnancyCount = (related.pregnancy ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "active").length;
@@ -391,6 +403,7 @@ export default function PatientFilePage() {
 
   return (
     <AppShell>
+      {interfaceMode === "MINIMALISTIC" && patient ? <DoctorMobilePatientHeader name={`${patient.firstName} ${patient.lastName}`} summary={`${ageLabel} · ${patient.medicalRecordNumber}`} /> : null}
       <section className="patient-simple-hero">
         <div className="patient-avatar">
           <ThreeDMedicalIcon name="patients" size="lg" />
@@ -484,7 +497,7 @@ export default function PatientFilePage() {
             {visibleTabs.map((tab) => (
               <button className={`tab-button ${activeTab === tab.key ? "active" : ""}`} data-tab-key={tab.key} key={tab.key} onClick={() => setActiveTab(tab.key)} type="button">
                 <ThreeDMedicalIcon name={tab.icon} size="sm" />
-                {tab.label}
+                {interfaceMode === "MINIMALISTIC" && tab.key === "prescriptions" ? "Rx" : interfaceMode === "MINIMALISTIC" && tab.key === "investigations" ? "Requests" : tab.label}
               </button>
             ))}
           </section>
@@ -537,6 +550,7 @@ export default function PatientFilePage() {
       ) : !error ? (
         <div className="skeleton" />
       ) : null}
+      {interfaceMode === "MINIMALISTIC" && patient && activeTab === "doctor-visit" ? <DoctorMobileVisitFooter status={actionStatus.startsWith("Saving") ? "Saving" : actionStatus.startsWith("Saved") ? "Saved" : "Saved"} onAction={(action) => { if (action === "rx") setActiveTab("prescriptions"); else if (action === "requests") setActiveTab("investigations"); else if (action === "finish" && window.confirm("Finish and sign this visit?")) setActionStatus("Saved"); else if (action === "save") setActionStatus("Saving"); }} /> : null}
     </AppShell>
   );
 }
