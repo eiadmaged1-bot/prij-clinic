@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 
 console.log('--- Phase 2: CSRF Protection Test ---');
 
-const API_URL = 'http://localhost:3001';
+if (!process.env.TEST_API_PORT) throw new Error('TEST_API_PORT is required.');
+const API_URL = `http://127.0.0.1:${Number(process.env.TEST_API_PORT)}`;
 
 async function runTests() {
   console.log('1. Testing missing CSRF token on mutation');

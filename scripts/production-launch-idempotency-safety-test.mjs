@@ -6,7 +6,8 @@ import crypto from 'crypto';
 console.log('Running production-launch-idempotency-safety-test.mjs...');
 
 const prisma = new PrismaClient();
-const apiPort = Number(process.env.TEST_API_PORT ?? 3001);
+if (!process.env.TEST_API_PORT || !process.env.TEST_SESSION_COOKIE || !process.env.TEST_CSRF_TOKEN || !process.env.TEST_USER_ID) throw new Error('Explicit isolated API/session variables are required.');
+const apiPort = Number(process.env.TEST_API_PORT); const testCookie = process.env.TEST_SESSION_COOKIE; const csrfToken = process.env.TEST_CSRF_TOKEN;
 
 function request(options, body) {
   return new Promise((resolve, reject) => {
@@ -59,25 +60,9 @@ function hashPayload(val) {
 }
 
 async function testIdempotencySafety() {
-  console.log('1. Login to get a session cookie');
-  const loginBody = JSON.stringify({ identifier: 'eyad', password: 'eyad' });
-  const loginRes = await request({
-    hostname: 'localhost',
-    port: apiPort,
-    path: '/auth/login',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(loginBody)
-    }
-  }, loginBody);
-
-  assert.strictEqual(loginRes.res.statusCode, 201, 'Login failed');
-  const setCookie = loginRes.res.headers['set-cookie'];
-  const cookie = setCookie ? setCookie.map(c => c.split(';')[0]).join('; ') : '';
-  const authenticatedUser = JSON.parse(loginRes.data).user;
-  assert.ok(authenticatedUser?.id, 'Login response must identify the authenticated test user');
-  const sessionUser = await prisma.user.findUniqueOrThrow({ where: { id: authenticatedUser.id } });
+  console.log('1. Use an explicitly provisioned synthetic session');
+  const cookie = testCookie;
+  const sessionUser = await prisma.user.findUniqueOrThrow({ where: { id: process.env.TEST_USER_ID } });
 
   console.log('2. Manually insert a FRESH stuck IN_PROGRESS idempotency record');
   const freshKey = 'test-fresh-' + Date.now();
@@ -111,6 +96,7 @@ async function testIdempotencySafety() {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body1),
       'Cookie': cookie,
+      'x-csrf-token': csrfToken,
       'Idempotency-Key': freshKey
     }
   }, body1);
@@ -152,6 +138,7 @@ async function testIdempotencySafety() {
       'Content-Type': 'application/json',
       'Content-Length': Buffer.byteLength(body2),
       'Cookie': cookie,
+      'x-csrf-token': csrfToken,
       'Idempotency-Key': staleKey
     }
   }, body2);

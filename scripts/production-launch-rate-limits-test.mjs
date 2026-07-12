@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 
 console.log('--- Phase 4: Rate Limits Test ---');
 
-const API_URL = 'http://localhost:3001/auth/login';
+if (!process.env.TEST_API_PORT) throw new Error('TEST_API_PORT is required.');
+const API_URL = `http://127.0.0.1:${Number(process.env.TEST_API_PORT)}/auth/login`;
 
 async function runTests() {
   console.log(`1. Testing /auth/login rate limit (10 per minute)`);
@@ -29,7 +30,7 @@ async function runTests() {
     } catch (error) {
       if (error.code === 'ECONNREFUSED') {
         console.error(`Warning: API server at ${API_URL} is not running. Start it to run this test.`);
-        process.exit(0);
+        process.exit(1);
       }
       console.error('Fetch failed:', error);
       process.exit(1);

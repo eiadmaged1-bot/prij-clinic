@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
-const apiPort = Number(process.env.TEST_API_PORT ?? 3001);
+if (!process.env.TEST_API_PORT || !process.env.TEST_SESSION_COOKIE || !process.env.TEST_CSRF_TOKEN) throw new Error('Explicit isolated API/session variables are required.');
+const apiPort = Number(process.env.TEST_API_PORT); const cookie = process.env.TEST_SESSION_COOKIE; const csrfToken = process.env.TEST_CSRF_TOKEN;
 
 function request(method, path, cookie, body, csrfToken) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
@@ -17,10 +18,6 @@ function request(method, path, cookie, body, csrfToken) {
   });
 }
 
-const login = await request('POST', '/auth/login', '', { identifier: 'eyad', password: 'eyad' });
-assert.equal(login.status, 201);
-const csrfToken = JSON.parse(login.data).csrfToken;
-const cookie = (login.headers['set-cookie'] ?? []).map(value => value.split(';')[0]).join('; ');
 
 async function createInvoice(label) {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;

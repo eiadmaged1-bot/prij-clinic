@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 
 console.log('--- Phase 3: Security Headers Test ---');
 
-const WEB_URL = 'http://localhost:3000';
+if (!process.env.TEST_WEB_ORIGIN || new URL(process.env.TEST_WEB_ORIGIN).port !== '3100') throw new Error('TEST_WEB_ORIGIN on port 3100 is required.');
+const WEB_URL = process.env.TEST_WEB_ORIGIN;
 
 async function runTests() {
   console.log(`1. Testing headers from ${WEB_URL}`);
@@ -34,8 +35,7 @@ async function runTests() {
   } catch (error) {
     if (error.code === 'ECONNREFUSED') {
       console.error(`Warning: Next.js server at ${WEB_URL} is not running. Start it to run this test.`);
-      // We don't fail the build if the server isn't running yet, or maybe we do?
-      process.exit(0);
+      process.exit(1);
     }
     console.error('Failed header test:', error);
     process.exit(1);

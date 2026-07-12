@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 import { PrismaClient } from '@prisma/client';
 
 const require = createRequire(import.meta.url);
 const prismaCli = require.resolve('prisma/build/index.js');
+const schemaPath = resolve('apps/api/prisma/schema.prisma');
 
 if (process.argv.length !== 2) {
   console.error('This test accepts no command-line flags.');
@@ -37,8 +40,8 @@ try {
   console.log(`schema: ${schema}`);
   console.log('disposable: yes');
 
-  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy', '--schema', 'prisma/schema.prisma'], {
-    cwd: 'apps/api', env: process.env, stdio: 'inherit'
+  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy', '--schema', schemaPath], {
+    cwd: tmpdir(), env: process.env, stdio: 'inherit'
   });
 
   const migrationDirectories = readdirSync('apps/api/prisma/migrations', { withFileTypes: true }).filter(entry => entry.isDirectory()).length;
@@ -65,9 +68,9 @@ try {
   assert.ok(!indexes.some(row => row.indexname === 'Appointment_status_startAt_idx'));
 
   const drift = execFileSync(process.execPath, [prismaCli,
-    'migrate', 'diff', '--from-schema-datasource', 'prisma/schema.prisma',
-    '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code'
-  ], { cwd: 'apps/api', env: process.env, encoding: 'utf8' });
+    'migrate', 'diff', '--from-schema-datasource', schemaPath,
+    '--to-schema-datamodel', schemaPath, '--exit-code'
+  ], { cwd: tmpdir(), env: process.env, encoding: 'utf8' });
   assert.match(drift, /No difference detected/i, 'deployed migration chain must match Prisma schema');
   console.log(JSON.stringify({ migrationCount: migrations.length, result: 'pass' }));
 } finally {
