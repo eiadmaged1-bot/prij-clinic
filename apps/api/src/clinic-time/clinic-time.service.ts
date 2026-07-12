@@ -22,25 +22,26 @@ export class ClinicTimeService {
    * Get the start and end of the day in UTC, based on the clinic's local midnight.
    */
   getClinicDayBounds(dateString: string): { start: Date; end: Date } {
-    const tempDate = new Date(`${dateString}T12:00:00Z`);
+    const [year, month, day] = dateString.split("-").map(Number);
+    // 12:00 UTC falls on the same calendar day globally (except extreme edges)
+    const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: this.timezone,
-      timeZoneName: "shortOffset"
+      hour: "numeric",
+      hour12: false
     });
-    const parts = formatter.formatToParts(tempDate);
-    const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "GMT+02:00";
     
-    let offsetString = tzPart.replace("GMT", "");
-    if (!offsetString.includes(":")) {
-        offsetString += ":00";
-    }
-    offsetString = offsetString.startsWith("+") || offsetString.startsWith("-") ? offsetString : "+" + offsetString;
-    if (offsetString.length === 5) {
-        offsetString = offsetString.substring(0, 1) + "0" + offsetString.substring(1); // e.g. +2:00 -> +02:00
-    }
+    // The local hour at 12:00 UTC (e.g., 14 for UTC+2, 15 for UTC+3)
+    const localHourStr = formatter.format(utcDate);
+    const localHour = parseInt(localHourStr, 10);
     
-    const start = new Date(`${dateString}T00:00:00.000${offsetString}`);
-    const end = new Date(`${dateString}T23:59:59.999${offsetString}`);
+    // Calculate exact offset in hours from 12:00 UTC
+    const offsetHours = localHour - 12;
+    
+    // Midnight local is (00:00 - offset UTC)
+    const start = new Date(Date.UTC(year, month - 1, day, -offsetHours, 0, 0, 0));
+    const end = new Date(Date.UTC(year, month - 1, day, 23 - offsetHours, 59, 59, 999));
     
     return { start, end };
   }
