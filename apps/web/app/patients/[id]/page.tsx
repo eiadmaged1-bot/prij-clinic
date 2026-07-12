@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
-import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
+import { useEffect, useMemo, useState } from "react";
+import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { patientWorkspaceRegistry, visiblePatientWorkspaceItems } from "../../../components/patients/patient-workspace-registry";
 import { DoctorMobilePatientHeader } from "../../../components/doctor/DoctorMobilePatientHeader";
@@ -14,24 +11,11 @@ import { DoctorMobileVisitFooter } from "../../../components/doctor/DoctorMobile
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { visitTypeLabel } from "@/lib/visit-types";
 import { useInterfaceMode } from "@/lib/interface-mode";
 import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
-import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
-import { searchMedications, type MedicationResult } from "@/lib/medications";
-import { patientQrSvgDataUri } from "@/lib/patient-qr";
 import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
-import {
-  caseBoards,
-  conceptionMethodChips,
-  currentPregnancyTags,
-  feedItemTypes,
-  importantPatientBannerItems,
-  previousHistoryChips,
-  smartClinicalTags
-} from "@/lib/v1200-productivity";
 import { AppActionButton } from "@/components/actions/AppActionButton";
-import { Patient, PregnancyRecord, FetusRecord, GynecologyVisit, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, ReferenceResult, ServiceItem, SafeAiAssistantPanel, ObDatingReviewPanel, CareAssistPanel, MedicationSafetyTerminal, smartHistoryGroups, gynecologyTemplateOptions, gynecologyTemplateFields, previousPregnancyOutcomeOptions, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, doctorReviewedAllergyAlert, ImportantPatientBanner, PatientCaseFeed, CaseBoardsPanel, SmartHistoryOptionChips, SmartObHistoryTags, Overview, MiniCount, MedicationSafetyWorkspace, Metric, DoctorTemplateCards, ReferencePicker, PatientActionPanel, SelectedPatientSummary, PatientQrModal, MorePatientSections, ActionForm, SecretaryIntakePanel, DoctorClinicalNotePanel, values, numericPayload, submitVisitAction, formPayload, RelatedPanel, billingRowSummary, PrintPacketPanel, templateLabel, templateSummary, formatDate, SmartPatientEmptyState, formatDateTime } from "./patient-components";
+import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel, formatDateTime } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
 
 const legacyTabDefinitions: TabConfig[] = [

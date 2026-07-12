@@ -37,7 +37,7 @@ export default async function DiagnosticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {auditData.logs.map((log: any) => (
+                {auditData.logs.map((log: { id: string; action: string; userId: string | null; createdAt: string }) => (
                   <tr key={log.id} className="border-b">
                     <td className="px-4 py-3">{log.id}</td>
                     <td className="px-4 py-3 font-medium text-gray-900">{log.action}</td>

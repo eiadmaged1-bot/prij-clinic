@@ -1,26 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
-import { AppActionButton } from "@/components/actions/AppActionButton";
-import { AppActionLink } from "@/components/actions/AppActionLink";
-import { useParams, useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
-import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
-import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
-import { patientWorkspaceRegistry, visiblePatientWorkspaceItems } from "../../../components/patients/patient-workspace-registry";
-import { DoctorMobilePatientHeader } from "../../../components/doctor/DoctorMobilePatientHeader";
-import { DoctorMobileVisitFooter } from "../../../components/doctor/DoctorMobileVisitFooter";
-import { AppShell, SafetyAlert } from "../../mvp-page";
+import { FormEvent, useState } from "react";
+import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { visitTypeLabel } from "@/lib/visit-types";
-import { useInterfaceMode } from "@/lib/interface-mode";
-import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
-import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
-import { searchMedications, type MedicationResult } from "@/lib/medications";
-import { patientQrSvgDataUri } from "@/lib/patient-qr";
-import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
-import { caseBoards, conceptionMethodChips, currentPregnancyTags, feedItemTypes, importantPatientBannerItems, previousHistoryChips, smartClinicalTags } from "@/lib/v1200-productivity";
 import { Patient, PregnancyRecord, FetusRecord, formPayload, requestPatientWorkspaceRefresh, previousPregnancyOutcomeOptions } from "./patient-components";
 
 export function MotherBabyWorkspace({ pregnancies, reports, orders }: { pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[] }) {

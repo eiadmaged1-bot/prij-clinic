@@ -15,24 +15,45 @@ import {
   DoctorClinicalNotePanel,
   SmartHistoryOptionChips,
   SmartObHistoryTags,
-  ObDatingReviewPanel
+  ObDatingReviewPanel,
+  type ClinicalPhase,
+  type InfertilityWorkspace,
+  type Patient,
+  type TabConfig,
+  type TimelineItem
 } from "./patient-components";
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 
-type ModuleComponent = ComponentType<Record<string, any>>;
-const lazy = (loader: () => Promise<ModuleComponent>) => dynamic(loader, { loading: () => <div className="skeleton" aria-label="Loading patient module" /> });
+type WorkspaceModuleProps = {
+  active: TabConfig;
+  patient: Patient;
+  related: Record<string, Record<string, unknown>[]>;
+  timelineItems: TimelineItem[];
+  timelineHasMore: boolean;
+  loadMoreTimeline: () => void;
+  infertilityWorkspace: InfertilityWorkspace;
+  clinicalPhases: ClinicalPhase[];
+  submitPatientAction: (endpoint: string, payload: Record<string, unknown>) => Promise<void>;
+  actionStatus: string;
+  requestPatientWorkspaceRefresh: () => void;
+  permissions: string[];
+  roles: string[];
+  setActiveTab: (tab: string) => void;
+};
+type ModuleComponent = ComponentType<WorkspaceModuleProps>;
+const lazy = <Props extends object>(loader: () => Promise<ComponentType<Props>>) => dynamic<Props>(loader, { loading: () => <div className="skeleton" aria-label="Loading patient module" /> });
 
-const Timeline = lazy(() => import("./timeline-components").then((module) => module.Timeline as ModuleComponent));
-const DoctorVisitFlow = lazy(() => import("./visit-flow-components").then((module) => module.DoctorVisitFlow as ModuleComponent));
-const MedicalPanel = lazy(() => import("./panel-components").then((module) => module.MedicalPanel as ModuleComponent));
-const HistorySheetWorkspace = lazy(() => import("./panel-components").then((module) => module.HistorySheetWorkspace as ModuleComponent));
-const GynecologyWorkspace = lazy(() => import("./panel-components").then((module) => module.GynecologyWorkspace as ModuleComponent));
-const InfertilityWorkspacePanel = lazy(() => import("./panel-components").then((module) => module.InfertilityWorkspacePanel as ModuleComponent));
-const MotherBabyWorkspace = lazy(() => import("./pregnancy-components").then((module) => module.MotherBabyWorkspace as ModuleComponent));
-const ObgynWorkspace = lazy(() => import("./panel-components").then((module) => module.ObgynWorkspace as ModuleComponent));
-const UltrasoundWorkspace = lazy(() => import("./panel-components").then((module) => module.UltrasoundWorkspace as ModuleComponent));
-const InvestigationsPanel = lazy(() => import("./panel-components").then((module) => module.InvestigationsPanel as ModuleComponent));
-const DocumentsPanel = lazy(() => import("./panel-components").then((module) => module.DocumentsPanel as ModuleComponent));
+const Timeline = lazy(() => import("./timeline-components").then((module) => module.Timeline));
+const DoctorVisitFlow = lazy(() => import("./visit-flow-components").then((module) => module.DoctorVisitFlow));
+const MedicalPanel = lazy(() => import("./panel-components").then((module) => module.MedicalPanel));
+const HistorySheetWorkspace = lazy(() => import("./panel-components").then((module) => module.HistorySheetWorkspace));
+const GynecologyWorkspace = lazy(() => import("./panel-components").then((module) => module.GynecologyWorkspace));
+const InfertilityWorkspacePanel = lazy(() => import("./panel-components").then((module) => module.InfertilityWorkspacePanel));
+const MotherBabyWorkspace = lazy(() => import("./pregnancy-components").then((module) => module.MotherBabyWorkspace));
+const ObgynWorkspace = lazy(() => import("./panel-components").then((module) => module.ObgynWorkspace));
+const UltrasoundWorkspace = lazy(() => import("./panel-components").then((module) => module.UltrasoundWorkspace));
+const InvestigationsPanel = lazy(() => import("./panel-components").then((module) => module.InvestigationsPanel));
+const DocumentsPanel = lazy(() => import("./panel-components").then((module) => module.DocumentsPanel));
 
 export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   overview: ({ patient, related, timelineItems }) => <Overview patient={patient} related={related} timelineItems={timelineItems} />,
@@ -60,7 +81,7 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   more: ({ setActiveTab }) => <MorePatientSections setActiveTab={setActiveTab} />
 };
 
-export function WorkspaceModuleRenderer(props: Record<string, any>) {
+export function WorkspaceModuleRenderer(props: WorkspaceModuleProps) {
   const Component = workspaceComponentsRegistry[props.active.key];
   if (Component) return <Component {...props} />;
   const ignoredKeys = ["overview", "case-feed", "case-boards", "mother-baby", "medical", "history-sheet", "care-assist", "doctor-visit", "clinical", "timeline", "print-packet", "ai-snapshot", "protocol-atlas", "calculators", "pregnancy", "ultrasound", "medications", "allergies", "herbals", "medication-safety", "prescription-safety"];
