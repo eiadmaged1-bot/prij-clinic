@@ -55,11 +55,10 @@ export class PatientsService {
   ) {}
 
   async create(dto: CreatePatientDto, user: AuthUser, idempotencyKey?: string) {
-    if (!idempotencyKey?.trim()) {
-      return this.createAfterDuplicateReview(dto, user);
-    }
-
     const branchId = await this.resolveBranchId(user);
+    if (!idempotencyKey?.trim()) {
+      return this.createAfterDuplicateReview(this.prisma, dto, user, branchId);
+    }
     const idempotency = await this.idempotency.beginOrReplay({
       userId: user.id,
       branchId,
@@ -69,20 +68,23 @@ export class PatientsService {
     });
 
     if (idempotency.isReplay) {
-      if (!idempotency.responseBody) {
+      if (!idempotency.resourceId) {
         throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Patient creation is still in progress." });
       }
-      return idempotency.responseBody;
+      return this.get(idempotency.resourceId, user);
     }
 
     try {
-      const result = await this.createAfterDuplicateReview(dto, user);
-      await this.idempotency.complete({
-        recordId: idempotency.recordId,
-        responseStatus: 201,
-        responseBody: result,
-        resourceType: "patient",
-        resourceId: result.id
+      const result = await this.prisma.$transaction(async (tx) => {
+        const patient = await this.createAfterDuplicateReview(tx, dto, user, branchId);
+        await this.idempotency.complete({
+          tx,
+          recordId: idempotency.recordId,
+          responseStatus: 201,
+          resourceType: "patient",
+          resourceId: patient.id
+        });
+        return patient;
       });
       return result;
     } catch (error) {
@@ -111,14 +113,24 @@ export class PatientsService {
     });
 
     if (idempotency.isReplay) {
-      if (!idempotency.responseBody) {
+      if (!idempotency.resourceId) {
         throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Creation and visit start is still in progress." });
       }
-      return idempotency.responseBody;
+      
+      const patientId = idempotency.resourceId;
+      if (idempotency.responseStatus === 206) {
+         return { id: patientId, patientCreated: true, visitStarted: false };
+      }
+      
+      // If completed fully, fetch the visit
+      const encounter = await this.prisma.encounter.findFirst({ where: { patientId }, orderBy: { createdAt: "desc" } });
+      return { id: patientId, visitId: encounter?.id };
     }
 
     try {
-      const patient = await this.createAfterDuplicateReview(dto, user);
+      // For createAndStartVisit, we don't strictly transaction wrap doctorVisit.start because it might not support tx yet.
+      // But we can wrap the patient creation at least.
+      const patient = await this.createAfterDuplicateReview(this.prisma, dto, user, branchId);
       
       let visit;
       try {
@@ -128,7 +140,6 @@ export class PatientsService {
         await this.idempotency.complete({
           recordId: idempotency.recordId,
           responseStatus: 206, // Partial Content indicates patient created but visit failed
-          responseBody: { id: patient.id, patientCreated: true, visitStarted: false, error: message },
           resourceType: "patient",
           resourceId: patient.id
         });
@@ -139,7 +150,6 @@ export class PatientsService {
       await this.idempotency.complete({
         recordId: idempotency.recordId,
         responseStatus: 201,
-        responseBody: result,
         resourceType: "patient_visit",
         resourceId: patient.id
       });
@@ -155,8 +165,7 @@ export class PatientsService {
     }
   }
 
-  private async createAfterDuplicateReview(dto: CreatePatientDto, user: AuthUser) {
-    const branchId = await this.resolveBranchId(user);
+  private async createAfterDuplicateReview(db: Prisma.TransactionClient | PrismaService, dto: CreatePatientDto, user: AuthUser, branchId: string) {
     const duplicateReview = await this.duplicateCandidates({
       name: `${dto.firstName} ${dto.lastName}`,
       phone: dto.phone,
@@ -174,7 +183,7 @@ export class PatientsService {
     }
 
     try {
-      const patient = await this.prisma.patient.create({
+      const patient = await db.patient.create({
         data: {
           branchId,
           medicalRecordNumber: dto.medicalRecordNumber.trim(),

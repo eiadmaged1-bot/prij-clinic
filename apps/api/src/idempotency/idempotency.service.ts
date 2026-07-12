@@ -23,12 +23,14 @@ export class IdempotencyService {
     const requestHash = hashPayload(params.requestPayload);
     const expiryHours = params.expiryHours ?? 24;
     const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+    const scopeKey = params.scopeKey ?? params.branchId ?? "GLOBAL";
 
     try {
       const record = await this.prisma.idempotencyRecord.create({
         data: {
           userId: params.userId,
           branchId: params.branchId,
+          scopeKey,
           operation: params.operation,
           keyHash,
           requestHash,
@@ -46,8 +48,9 @@ export class IdempotencyService {
         // Unique constraint failed, meaning the key has been used before.
         const existing = await this.prisma.idempotencyRecord.findUnique({
           where: {
-            userId_operation_keyHash: {
+            userId_scopeKey_operation_keyHash: {
               userId: params.userId,
+              scopeKey,
               operation: params.operation,
               keyHash
             }
@@ -55,7 +58,6 @@ export class IdempotencyService {
         });
 
         if (!existing) {
-          // Extremely rare race condition where the record was deleted between create failure and findUnique
           throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Operation is currently in progress." });
         }
 
@@ -64,6 +66,16 @@ export class IdempotencyService {
         }
 
         if (existing.status === "IN_PROGRESS") {
+          // Check for stale IN_PROGRESS (e.g. server crashed before tx commit).
+          // 2 minutes threshold:
+          if (Date.now() - existing.createdAt.getTime() > 2 * 60 * 1000) {
+            // It's stale. Since complete() runs inside a transaction now, an old IN_PROGRESS means the tx rolled back.
+            // Safe to delete and release the lock.
+            await this.prisma.idempotencyRecord.delete({ where: { id: existing.id } });
+            // Recursively retry
+            return this.beginOrReplay(params);
+          }
+
           throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Operation is currently in progress. Please wait." });
         }
 
@@ -72,11 +84,11 @@ export class IdempotencyService {
             isReplay: true,
             recordId: existing.id,
             responseStatus: existing.responseStatus,
-            responseBody: existing.responseBody
+            resourceType: existing.resourceType,
+            resourceId: existing.resourceId
           };
         }
 
-        // If it's FAILED or some other state, we don't allow replay of a failed terminal state without a new key
         throw new ConflictException({ code: "IDEMPOTENCY_KEY_REUSED", message: "Idempotency key was already used for a failed operation. Generate a new key." });
       }
 
@@ -86,12 +98,12 @@ export class IdempotencyService {
 
   async complete(params: CompleteIdempotencyParams): Promise<void> {
     try {
-      await this.prisma.idempotencyRecord.update({
+      const db = params.tx ?? this.prisma;
+      await db.idempotencyRecord.update({
         where: { id: params.recordId },
         data: {
           status: "COMPLETED",
           responseStatus: params.responseStatus,
-          responseBody: params.responseBody ?? Prisma.DbNull,
           resourceType: params.resourceType,
           resourceId: params.resourceId,
           completedAt: new Date()
@@ -104,13 +116,13 @@ export class IdempotencyService {
 
   async failOrRelease(params: FailOrReleaseIdempotencyParams): Promise<void> {
     try {
+      const db = params.tx ?? this.prisma;
       if (params.releaseLock !== false) {
-        // Default behavior: release the lock by deleting the record so the client can retry
-        await this.prisma.idempotencyRecord.delete({
+        await db.idempotencyRecord.delete({
           where: { id: params.recordId }
         });
       } else {
-        await this.prisma.idempotencyRecord.update({
+        await db.idempotencyRecord.update({
           where: { id: params.recordId },
           data: {
             status: "FAILED",

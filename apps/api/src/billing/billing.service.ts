@@ -286,10 +286,10 @@ export class BillingService {
     });
 
     if (idempotency.isReplay) {
-      if (!idempotency.responseBody) {
+      if (!idempotency.resourceId) {
         throw new BadRequestException("Payment creation is still in progress.");
       }
-      return idempotency.responseBody;
+      return this.prisma.payment.findUnique({ where: { id: idempotency.resourceId }, include: paymentIncludes });
     }
 
     try {
@@ -297,7 +297,6 @@ export class BillingService {
       await this.idempotency.complete({
         recordId: idempotency.recordId,
         responseStatus: 201,
-        responseBody: payment,
         resourceType: "payment",
         resourceId: payment.id
       });

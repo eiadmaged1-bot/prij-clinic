@@ -23,8 +23,6 @@ model Branch {
   patients             Patient[]
   appointments         Appointment[]
   queueTickets         QueueTicket[]
-  queueDayCounters     QueueDayCounter[]
-  activeQueueLocks     ActiveQueueTicketLock[]
   encounters           Encounter[]
   reports              Report[]
   investigationResults InvestigationResult[]
@@ -322,7 +320,6 @@ model Patient {
   createdByUser               User?                             @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   appointments                Appointment[]
   queueTickets                QueueTicket[]
-  activeQueueLocks          ActiveQueueTicketLock[]
   encounters                  Encounter[]
   patientIntakes              PatientIntake[]
   prescriptions               Prescription[]
@@ -469,7 +466,6 @@ model QueueTicket {
   branch             Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
   patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
   appointment        Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  activeLock         ActiveQueueTicketLock?
   invoices           Invoice[]
   staffConversations StaffConversation[]
   staffMessages      StaffMessage[]
@@ -3508,13 +3504,6 @@ enum MedicationSafetyProfileConfidenceLevel {
   unknown
 }
 
-enum IdempotencyStatus {
-  IN_PROGRESS
-  COMPLETED
-  REJECTED
-  FAILED
-}
-
 model CareAssistRule {
   id               String                 @id @default(uuid()) @db.Uuid
   code             String                 @unique
@@ -3768,52 +3757,25 @@ model AuthSession {
 }
 
 model IdempotencyRecord {
-  id             String            @id @default(uuid()) @db.Uuid
-  userId         String            @db.Uuid
-  branchId       String?           @db.Uuid
-  scopeKey       String            @default("GLOBAL")
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  branchId       String?   @db.Uuid
   operation      String
   keyHash        String
   requestHash    String
-  status         IdempotencyStatus @default(IN_PROGRESS)
+  status         String    @default("IN_PROGRESS")
   responseStatus Int?
+  responseBody   Json?
   resourceType   String?
   resourceId     String?
-  createdAt      DateTime          @default(now()) @db.Timestamptz(3)
-  completedAt    DateTime?         @db.Timestamptz(3)
-  expiresAt      DateTime          @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  completedAt    DateTime? @db.Timestamptz(3)
+  expiresAt      DateTime  @db.Timestamptz(3)
 
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, scopeKey, operation, keyHash])
+  @@unique([userId, operation, keyHash])
   @@index([expiresAt])
   @@index([branchId, operation, createdAt])
-}
-
-model QueueDayCounter {
-  id          String   @id @default(uuid()) @db.Uuid
-  branchId    String   @db.Uuid
-  queueDate   DateTime @db.Date
-  nextNumber  Int      @default(1)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
-
-  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-
-  @@unique([branchId, queueDate])
-}
-
-model ActiveQueueTicketLock {
-  id            String   @id @default(uuid()) @db.Uuid
-  branchId      String   @db.Uuid
-  patientId     String   @db.Uuid
-  queueDate     DateTime @db.Date
-  queueTicketId String   @db.Uuid @unique
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-
-  branch      Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  patient     Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  queueTicket QueueTicket @relation(fields: [queueTicketId], references: [id], onDelete: Cascade)
-
-  @@unique([branchId, patientId, queueDate])
 }

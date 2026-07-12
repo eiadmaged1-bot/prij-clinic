@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+﻿import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -6,7 +6,7 @@ import { assertCanReferenceAppointment, assertCanReferencePatient } from "../aut
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto, QueueCancelDto } from "./dto";
-import { toUtcDateOnly } from "./queue-date";
+import { ClinicTimeService } from "../clinic-time/clinic-time.service";
 
 import { IdempotencyService } from "../idempotency/idempotency.service";
 
@@ -15,12 +15,13 @@ export class QueueService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly idempotency: IdempotencyService
+    private readonly idempotency: IdempotencyService,
+    private readonly clinicTime: ClinicTimeService
   ) {}
 
   async checkIn(dto: CheckInDto, user: AuthUser, idempotencyKey?: string) {
     if (!idempotencyKey?.trim()) {
-      return this.checkInWithoutIdempotency(dto, user);
+      return this.prisma.$transaction(tx => this.checkInWithoutIdempotency(tx, dto, user));
     }
 
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
@@ -35,20 +36,23 @@ export class QueueService {
     });
 
     if (idempotency.isReplay) {
-      if (!idempotency.responseBody) {
+      if (!idempotency.resourceId) {
         throw new BadRequestException("Queue check-in is still in progress.");
       }
-      return idempotency.responseBody;
+      return this.prisma.queueTicket.findUnique({ where: { id: idempotency.resourceId }, include: { patient: true, appointment: true } });
     }
 
     try {
-      const ticket = await this.checkInWithoutIdempotency(dto, user, patient, branchId);
-      await this.idempotency.complete({
-        recordId: idempotency.recordId,
-        responseStatus: 201,
-        responseBody: ticket,
-        resourceType: "queueTicket",
-        resourceId: ticket.id
+      const ticket = await this.prisma.$transaction(async (tx) => {
+        const t = await this.checkInWithoutIdempotency(tx, dto, user, patient, branchId);
+        await this.idempotency.complete({
+          tx,
+          recordId: idempotency.recordId,
+          responseStatus: 201,
+          resourceType: "queueTicket",
+          resourceId: t.id
+        });
+        return t;
       });
       return ticket;
     } catch (error) {
@@ -62,7 +66,7 @@ export class QueueService {
     }
   }
 
-  private async checkInWithoutIdempotency(dto: CheckInDto, user: AuthUser, preloadedPatient?: any, preloadedBranchId?: string) {
+  private async checkInWithoutIdempotency(tx: Prisma.TransactionClient, dto: CheckInDto, user: AuthUser, preloadedPatient?: any, preloadedBranchId?: string) {
     const visitType = dto.visitType ?? "kashf";
 
     const patient = preloadedPatient || await assertCanReferencePatient(this.prisma, dto.patientId, user);
@@ -79,8 +83,10 @@ export class QueueService {
     }
 
     const checkedInAt = new Date();
-    const queueDate = toUtcDateOnly(checkedInAt);
-    const activeTicket = await this.prisma.queueTicket.findFirst({
+    const dateString = this.clinicTime.getClinicDate(checkedInAt);
+    const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
+
+    const activeTicket = await tx.queueTicket.findFirst({
       where: {
         branchId,
         patientId: dto.patientId,
@@ -95,27 +101,52 @@ export class QueueService {
       if (dto.appointmentId && activeTicket.appointmentId === dto.appointmentId) {
         return activeTicket;
       }
-      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : `Already in queue · Position ${activeTicket.queueNumber}`);
+      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : "Already in queue - Position $");
     }
 
     let ticket;
-
     try {
-      ticket = await this.createTicketWithRetry({
-        branchId,
-        patientId: dto.patientId,
-        appointmentId: dto.appointmentId ?? null,
-        priority: dto.priority ?? "routine",
-        visitType,
-        checkInMethod: dto.checkInMethod?.trim() || "Returning Patient",
-        receptionistUserId: user.id,
-        receptionistDisplayNameSnapshot: user.displayName || user.loginId || user.email || "Reception",
-        checkedInAt,
-        queueDate
+      const counter = await tx.queueDayCounter.upsert({
+        where: { branchId_queueDate: { branchId, queueDate } },
+        create: { branchId, queueDate, nextNumber: 2 },
+        update: { nextNumber: { increment: 1 } }
+      });
+      // the upsert returns the value AFTER increment, so we subtract 1 for this ticket
+      // if it was created as 2, then we are number 1
+      const queueNumber = counter.nextNumber - 1;
+
+      ticket = await tx.queueTicket.create({
+        data: {
+          branchId,
+          patientId: dto.patientId,
+          appointmentId: dto.appointmentId ?? null,
+          queueNumber,
+          queueDate,
+          checkedInAt,
+          priority: dto.priority ?? "routine",
+          visitType,
+          checkInMethod: dto.checkInMethod?.trim() || "Returning Patient",
+          receptionistUserId: user.id,
+          receptionistDisplayNameSnapshot: user.displayName || user.loginId || user.email || "Reception"
+        },
+        include: { patient: true, appointment: true }
+      });
+
+      // Create ActiveQueueTicketLock
+      await tx.activeQueueTicketLock.create({
+        data: {
+          branchId,
+          patientId: dto.patientId,
+          queueDate,
+          queueTicketId: ticket.id
+        }
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
         throw new BadRequestException("Referenced patient or appointment was not found.");
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new BadRequestException({ code: "QUEUE_ACTIVE_TICKET_EXISTS", message: "Patient already has an active ticket today." });
       }
 
       throw error;
@@ -132,7 +163,7 @@ export class QueueService {
         patientId: dto.patientId,
         appointmentId: dto.appointmentId ?? null,
         queueNumber: ticket.queueNumber,
-        queueDate: ticket.queueDate.toISOString().slice(0, 10),
+        queueDate: dateString,
         visitType,
         checkInMethod: ticket.checkInMethod,
         receptionistUserId: ticket.receptionistUserId,
@@ -156,7 +187,8 @@ export class QueueService {
   }
 
   async today(user: AuthUser) {
-    const queueDate = toUtcDateOnly();
+    const dateString = this.clinicTime.getClinicDate();
+    const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
 
     const tickets = await this.prisma.queueTicket.findMany({
       where: { queueDate, ...branchScope(user), patient: { NOT: demoPatientWhere() } },
@@ -168,35 +200,22 @@ export class QueueService {
   }
 
   async call(id: string, user: AuthUser) {
-    return this.transition(id, user, "queue.called", {
-      status: "called",
-      calledAt: new Date()
-    });
+    return this.transition(id, user, "queue.called", { status: "called", calledAt: new Date() }, "waiting");
   }
 
   async selectForDoctor(id: string, user: AuthUser) {
-    return this.transition(id, user, "doctor_queue.patient_selected", {
-      status: "called",
-      calledAt: new Date()
-    });
+    return this.transition(id, user, "doctor_queue.patient_selected", { status: "called", calledAt: new Date() }, "waiting");
   }
 
   async complete(id: string, user: AuthUser) {
-    return this.transition(id, user, "queue.completed", {
-      status: "completed",
-      completedAt: new Date()
-    });
+    return this.transition(id, user, "queue.completed", { status: "completed", completedAt: new Date() }, "called");
   }
 
   async cancel(id: string, dto: QueueCancelDto, user: AuthUser) {
     if (!dto.reason?.trim()) {
       throw new BadRequestException("Queue cancellation reason is required.");
     }
-    return this.transition(id, user, "queue.cancelled", {
-      status: "cancelled",
-      cancelledAt: new Date(),
-      cancellationReason: dto.reason.trim()
-    }, dto.reason.trim());
+    return this.transition(id, user, "queue.cancelled", { status: "cancelled", cancelledAt: new Date(), cancellationReason: dto.reason.trim() }, undefined, dto.reason.trim());
   }
 
   private async transition(
@@ -204,106 +223,56 @@ export class QueueService {
     user: AuthUser,
     action: string,
     data: { status: "called" | "completed" | "cancelled"; calledAt?: Date; completedAt?: Date; cancelledAt?: Date; cancellationReason?: string },
+    expectedPreviousStatus?: "waiting" | "called",
     reason?: string
   ) {
-    const existing = await this.prisma.queueTicket.findFirst({ where: { id, ...branchScope(user) } });
+    return await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.queueTicket.findFirst({ where: { id, ...branchScope(user) } });
 
-    if (!existing) {
-      throw new NotFoundException("Queue ticket not found.");
-    }
-
-    const ticket = await this.prisma.queueTicket.update({
-      where: { id },
-      data,
-      include: { patient: true, appointment: true }
-    });
-
-    await this.audit.record({
-      actorUserId: user.id,
-      action,
-      resourceType: "queue_ticket",
-      resourceId: ticket.id,
-      branchId: ticket.branchId,
-      severity: "medium",
-      reason,
-      metadataJson: { from: existing.status, to: ticket.status, reasonCaptured: Boolean(reason) }
-    });
-
-    return ticket;
-  }
-
-  private async createTicketWithRetry(input: {
-    branchId: string;
-    patientId: string;
-    appointmentId: string | null;
-    priority: "routine" | "priority";
-    visitType: "kashf" | "recheck" | "consultation" | "urgent_kashf";
-    checkInMethod: string;
-    receptionistUserId: string;
-    receptionistDisplayNameSnapshot: string;
-    checkedInAt: Date;
-    queueDate: Date;
-  }) {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        return await this.prisma.$transaction(async (tx) => {
-          const queueNumber = await this.nextQueueNumber(tx, input.branchId, input.queueDate);
-
-          return tx.queueTicket.create({
-            data: {
-              branchId: input.branchId,
-              patientId: input.patientId,
-              appointmentId: input.appointmentId,
-              queueNumber,
-              queueDate: input.queueDate,
-              checkedInAt: input.checkedInAt,
-              priority: input.priority,
-              visitType: input.visitType,
-              checkInMethod: input.checkInMethod,
-              receptionistUserId: input.receptionistUserId,
-              receptionistDisplayNameSnapshot: input.receptionistDisplayNameSnapshot
-            },
-            include: { patient: true, appointment: true }
-          });
-        });
-      } catch (error) {
-        if (isUniqueViolation(error) && attempt < 2) {
-          continue;
-        }
-
-        throw error;
+      if (!existing) {
+        throw new NotFoundException("Queue ticket not found.");
       }
-    }
 
-    throw new BadRequestException("Could not allocate a queue number. Please try again.");
-  }
+      if (expectedPreviousStatus && existing.status !== expectedPreviousStatus) {
+        throw new BadRequestException({ code: "QUEUE_INVALID_TRANSITION", message: "Cannot transition ticket from $ to $" });
+      }
 
-  private async nextQueueNumber(tx: Prisma.TransactionClient, branchId: string, queueDate: Date) {
-    const latest = await tx.queueTicket.findFirst({
-      where: { branchId, queueDate },
-      orderBy: { queueNumber: "desc" }
+      const ticket = await tx.queueTicket.update({
+        where: { id },
+        data,
+        include: { patient: true, appointment: true }
+      });
+      
+      // If completed or cancelled, delete lock
+      if (data.status === "completed" || data.status === "cancelled") {
+        await tx.activeQueueTicketLock.deleteMany({ where: { queueTicketId: id } });
+      }
+
+      await this.audit.record({
+        actorUserId: user.id,
+        action,
+        resourceType: "queue_ticket",
+        resourceId: ticket.id,
+        branchId: ticket.branchId,
+        severity: "medium",
+        reason,
+        metadataJson: { from: existing.status, to: ticket.status, reasonCaptured: Boolean(reason) }
+      });
+
+      return ticket;
     });
-
-    return (latest?.queueNumber ?? 0) + 1;
   }
 
   private async resolveBranchId(user: AuthUser) {
     if (user.branchId) {
       return user.branchId;
     }
-
     const branch = await this.prisma.branch.findFirst({ orderBy: { createdAt: "asc" } });
-
     if (!branch) {
       throw new BadRequestException("Branch is not configured.");
     }
-
     return branch.id;
   }
-}
-
-function isUniqueViolation(error: unknown) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
 function queueSortRank(ticket: { status: string; visitType: string }) {

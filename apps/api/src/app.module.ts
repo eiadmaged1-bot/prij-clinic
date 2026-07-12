@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ClinicTimeModule } from "./clinic-time/clinic-time.module";
 import { AiDraftsModule } from "./ai-drafts/ai-drafts.module";
 import { AiManagementModule } from "./ai-management/ai-management.module";
 import { AuditModule } from "./audit/audit.module";
@@ -46,6 +47,7 @@ import { UsersModule } from "./users/users.module";
 @Module({
   imports: [
     PrismaModule,
+    ClinicTimeModule,
     HealthModule,
     IdempotencyModule,
     GuidelinesModule,

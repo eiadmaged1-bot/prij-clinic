@@ -2,16 +2,19 @@ import { Injectable } from "@nestjs/common";
 import type { AuthUser } from "../auth/auth.types";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { ClinicTimeService } from "../clinic-time/clinic-time.service";
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly clinicTime: ClinicTimeService
+  ) {}
 
   async summary(user: AuthUser) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateString = this.clinicTime.getClinicDate();
+    const { start: today, end: tomorrowMinus1Ms } = this.clinicTime.getClinicDayBounds(dateString);
+    const tomorrow = new Date(tomorrowMinus1Ms.getTime() + 1);
 
     const [
       appointmentsToday,

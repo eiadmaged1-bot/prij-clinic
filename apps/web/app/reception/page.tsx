@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -115,7 +115,7 @@ function ReceptionHomeContent() {
         <div className="section-heading compact-section-heading">
           <h2>{copy.queueNow}</h2>
         </div>
-        <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgentWaiting.length}</p>
+        <p className="queue-compact-line">{copy.waiting}: {waiting.length} Â· {copy.urgent}: {urgentWaiting.length}</p>
         <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {nextPatient ? patientLabel(nextPatient.patient) : copy.noPatientWaiting}</p>
       </section>
 
@@ -229,35 +229,35 @@ const receptionCopy = {
     couldNotAddToQueue: "Could not add patient to queue"
   },
   ar: {
-    eyebrow: "الاستقبال",
-    title: "واجهة الاستقبال",
-    receptionActions: "إجراءات الاستقبال",
-    searchPatient: "بحث عن مريضة",
-    searchPlaceholder: "بحث بالاسم أو الهاتف أو رقم الملف أو QR",
-    newPatient: "مريضة جديدة",
-    returningPatientQr: "مريضة مسجلة / QR",
-    queue: "قائمة الانتظار",
-    appointments: "المواعيد",
-    queueNow: "قائمة الانتظار الآن",
-    waiting: "في الانتظار الآن",
-    urgent: "مستعجل",
-    nextPatient: "المريضة التالية",
-    noPatientWaiting: "لا توجد مريضات في الانتظار",
-    findPatient: "البحث عن المريضة",
-    refresh: "تحديث",
-    noPhone: "لا يوجد رقم هاتف",
-    searchToFind: "ابحث عن مريضة مسجلة.",
-    noMatch: "لا توجد مريضة مطابقة.",
-    alreadyInQueue: "موجودة بالفعل في الانتظار - رقم",
-    alreadyWithDoctor: "المريضة موجودة مع الطبيب بالفعل",
-    openReceptionProfile: "فتح ملف الاستقبال",
-    openQueue: "فتح قائمة الانتظار",
-    addToQueue: "إضافة للانتظار",
-    queuePreview: "قائمة انتظار اليوم",
-    waitingDurationNotRecorded: "مدة الانتظار غير مسجلة",
-    selectPatientVisitType: "اختر المريضة ونوع الزيارة أولا",
-    addingToQueue: "جار الإضافة للانتظار",
-    patientAddedToQueue: "تمت إضافة المريضة للانتظار",
-    couldNotAddToQueue: "تعذرت إضافة المريضة للانتظار"
+    eyebrow: "Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
+    title: "ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
+    receptionActions: "Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
+    searchPatient: "Ø¨Ø­Ø« Ø¹Ù† Ù…Ø±ÙŠØ¶Ø©",
+    searchPlaceholder: "Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ù‡Ø§ØªÙ Ø£Ùˆ Ø±Ù‚Ù… Ø§Ù„Ù…Ù„Ù Ø£Ùˆ QR",
+    newPatient: "Ù…Ø±ÙŠØ¶Ø© Ø¬Ø¯ÙŠØ¯Ø©",
+    returningPatientQr: "Ù…Ø±ÙŠØ¶Ø© Ù…Ø³Ø¬Ù„Ø© / QR",
+    queue: "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    appointments: "Ø§Ù„Ù…ÙˆØ§Ø¹ÙŠØ¯",
+    queueNow: "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¢Ù†",
+    waiting: "ÙÙŠ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„Ø¢Ù†",
+    urgent: "Ù…Ø³ØªØ¹Ø¬Ù„",
+    nextPatient: "Ø§Ù„Ù…Ø±ÙŠØ¶Ø© Ø§Ù„ØªØ§Ù„ÙŠØ©",
+    noPatientWaiting: "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±ÙŠØ¶Ø§Øª ÙÙŠ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    findPatient: "Ø§Ù„Ø¨Ø­Ø« Ø¹Ù† Ø§Ù„Ù…Ø±ÙŠØ¶Ø©",
+    refresh: "ØªØ­Ø¯ÙŠØ«",
+    noPhone: "Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø±Ù‚Ù… Ù‡Ø§ØªÙ",
+    searchToFind: "Ø§Ø¨Ø­Ø« Ø¹Ù† Ù…Ø±ÙŠØ¶Ø© Ù…Ø³Ø¬Ù„Ø©.",
+    noMatch: "Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±ÙŠØ¶Ø© Ù…Ø·Ø§Ø¨Ù‚Ø©.",
+    alreadyInQueue: "Ù…ÙˆØ¬ÙˆØ¯Ø© Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± - Ø±Ù‚Ù…",
+    alreadyWithDoctor: "Ø§Ù„Ù…Ø±ÙŠØ¶Ø© Ù…ÙˆØ¬ÙˆØ¯Ø© Ù…Ø¹ Ø§Ù„Ø·Ø¨ÙŠØ¨ Ø¨Ø§Ù„ÙØ¹Ù„",
+    openReceptionProfile: "ÙØªØ­ Ù…Ù„Ù Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
+    openQueue: "ÙØªØ­ Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    addToQueue: "Ø¥Ø¶Ø§ÙØ© Ù„Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    queuePreview: "Ù‚Ø§Ø¦Ù…Ø© Ø§Ù†ØªØ¸Ø§Ø± Ø§Ù„ÙŠÙˆÙ…",
+    waitingDurationNotRecorded: "Ù…Ø¯Ø© Ø§Ù„Ø§Ù†ØªØ¸Ø§Ø± ØºÙŠØ± Ù…Ø³Ø¬Ù„Ø©",
+    selectPatientVisitType: "Ø§Ø®ØªØ± Ø§Ù„Ù…Ø±ÙŠØ¶Ø© ÙˆÙ†ÙˆØ¹ Ø§Ù„Ø²ÙŠØ§Ø±Ø© Ø£ÙˆÙ„Ø§",
+    addingToQueue: "Ø¬Ø§Ø± Ø§Ù„Ø¥Ø¶Ø§ÙØ© Ù„Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    patientAddedToQueue: "ØªÙ…Øª Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø±ÙŠØ¶Ø© Ù„Ù„Ø§Ù†ØªØ¸Ø§Ø±",
+    couldNotAddToQueue: "ØªØ¹Ø°Ø±Øª Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…Ø±ÙŠØ¶Ø© Ù„Ù„Ø§Ù†ØªØ¸Ø§Ø±"
   }
 } as const;
