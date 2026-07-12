@@ -141,12 +141,19 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
         </div>
         <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
           {encounterId ? (
-            <AppActionButton actionId="encounter.delete" userPermissions={permissions} userRoles={roles} className="button secondary danger" type="button" onClick={() => {
-              if (window.confirm("Delete this draft visit?")) {
-                alert("Delete flow triggered. API integration pending.");
-              }
+            <AppActionButton actionId="encounter.void" userPermissions={permissions} userRoles={roles} className="button secondary danger" type="button" onClick={async () => {
+              const reason = window.prompt("Reason for voiding this draft visit:")?.trim();
+              if (!reason) return;
+              const response = await fetch(`${getApiBaseUrl()}/encounters/${encounterId}/void`, {
+                method: "PATCH",
+                credentials: "include",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({ reason })
+              });
+              if (!response.ok) { setStatus("Could not void this draft visit."); return; }
+              setVisit(null); setStatus("Visit voided."); onReload();
             }}>
-              <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Delete
+              <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Void
             </AppActionButton>
           ) : null}
           <button className="button" type="button" onClick={() => void startVisit()} disabled={!!encounterId}>Start Visit</button>

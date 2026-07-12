@@ -13,7 +13,8 @@ type Props = AnchorHTMLAttributes<HTMLAnchorElement> & {
 
 export function AppActionLink({ actionId, locale = "en", href, userPermissions, userRoles, children, ...props }: Props) {
   const action = requireAppAction(actionId);
-  const hasPermission = !action.permission || (userPermissions && userPermissions.includes(action.permission));
+  const requiredPermissions = action.requiredPermissions ?? (action.permission ? [action.permission] : []);
+  const hasPermission = requiredPermissions.length === 0 || requiredPermissions.every((permission) => userPermissions?.includes(permission));
   const label = locale === "ar" ? action.labelAr : action.labelEn;
 
   if (!hasPermission) {
@@ -30,4 +31,3 @@ export function AppActionLink({ actionId, locale = "en", href, userPermissions, 
     </Link>
   );
 }
-

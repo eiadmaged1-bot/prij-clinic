@@ -5,6 +5,7 @@ export type AppActionDefinition = {
   labelAr: string;
   labelEn: string;
   permission: string | null;
+  requiredPermissions?: string[];
   route?: string;
   handlerContract?: string;
   loadingState: string;
@@ -25,7 +26,7 @@ export const coreAppActions: AppActionDefinition[] = [
     id: "patient.search",
     labelAr: "بحث عن مريضة",
     labelEn: "Search Patient",
-    permission: "patients.read",
+    permission: "patient.read",
     route: "/patients",
     loadingState: "Searching patients",
     successState: "Patient results loaded",
@@ -67,7 +68,7 @@ export const coreAppActions: AppActionDefinition[] = [
     id: "patient.saveOnly", labelAr: "حفظ المريضة فقط", labelEn: "Save Patient Only", permission: "patient.create", handlerContract: "POST /patients", loadingState: "Saving patient", successState: "Patient saved", validationErrorState: "Correct patient details", networkErrorState: "Patient creation is unavailable", disabledReason: "Patient create permission is required", mobileBehavior: "Secondary full-width action", optimizedModeBehavior: "Secondary doctor fallback action", minimalisticModeBehavior: "Available beneath the primary action", accessibleName: "Save patient only", auditRequirement: "mutation_audit", automatedTestStatus: "TESTED"
   },
   {
-    id: "patient.saveAndStartVisit", labelAr: "حفظ وبدء الزيارة", labelEn: "Save & Start Visit", permission: "patient.create", handlerContract: "POST /patients then POST /patients/:id/doctor-visit/start", loadingState: "Saving patient and starting visit", successState: "Doctor visit started", validationErrorState: "Correct patient and visit details", networkErrorState: "Patient saved state is reported before retry", disabledReason: "Patient create and encounter create permissions are required", mobileBehavior: "Primary full-width action", optimizedModeBehavior: "Primary doctor fallback action", minimalisticModeBehavior: "Primary New Patient action", accessibleName: "Save patient and start visit", auditRequirement: "clinical_audit", automatedTestStatus: "TESTED"
+    id: "patient.saveAndStartVisit", labelAr: "حفظ وبدء الزيارة", labelEn: "Save & Start Visit", permission: "patient.create", requiredPermissions: ["patient.create", "encounter.create"], handlerContract: "POST /patients/create-and-start-visit", loadingState: "Saving patient and starting visit", successState: "Doctor visit started", validationErrorState: "Correct patient and visit details", networkErrorState: "Patient saved state is reported before retry", disabledReason: "Patient create and encounter create permissions are required", mobileBehavior: "Primary full-width action", optimizedModeBehavior: "Primary doctor fallback action", minimalisticModeBehavior: "Primary New Patient action", accessibleName: "Save patient and start visit", auditRequirement: "clinical_audit", automatedTestStatus: "TESTED"
   },
   {
     id: "visit.startAfterPatientCreate", labelAr: "بدء الزيارة بعد التسجيل", labelEn: "Start Visit After Patient Create", permission: "encounter.create", handlerContract: "POST /patients/:id/doctor-visit/start", loadingState: "Starting doctor visit", successState: "Doctor visit started", validationErrorState: "A patient is required", networkErrorState: "Open the saved patient to retry", disabledReason: "Encounter create permission is required", mobileBehavior: "Navigates to current visit", optimizedModeBehavior: "Runs after successful create", minimalisticModeBehavior: "Runs behind primary save action", accessibleName: "Start visit after creating patient", auditRequirement: "clinical_audit", automatedTestStatus: "TESTED"
@@ -110,7 +111,7 @@ export const coreAppActions: AppActionDefinition[] = [
     id: "investigation.create",
     labelAr: "طلب فحص",
     labelEn: "Request Investigation",
-    permission: "clinical_requests.create",
+    permission: "clinical_requests.write",
     loadingState: "Loading requests",
     successState: "Ready",
     validationErrorState: "Validation failed",
@@ -124,19 +125,20 @@ export const coreAppActions: AppActionDefinition[] = [
     automatedTestStatus: "NOT_STARTED"
   },
   {
-    id: "encounter.delete",
-    labelAr: "حذف الزيارة",
-    labelEn: "Delete Visit",
-    permission: "encounter.delete",
-    loadingState: "Deleting visit",
-    successState: "Visit deleted",
-    validationErrorState: "Cannot delete visit",
+    id: "encounter.void",
+    labelAr: "إلغاء الزيارة",
+    labelEn: "Void Visit",
+    permission: "encounter.void",
+    handlerContract: "PATCH /encounters/:id/void with reason",
+    loadingState: "Voiding visit",
+    successState: "Visit voided",
+    validationErrorState: "A reason is required to void a draft visit",
     networkErrorState: "Service unavailable",
-    disabledReason: "Requires Owner role or encounter.delete permission",
+    disabledReason: "Requires encounter.void permission",
     mobileBehavior: "Hidden context action",
     optimizedModeBehavior: "Hidden context action",
     minimalisticModeBehavior: "Hidden context action",
-    accessibleName: "Delete visit",
+    accessibleName: "Void visit",
     auditRequirement: "security_audit",
     automatedTestStatus: "NOT_STARTED"
   },

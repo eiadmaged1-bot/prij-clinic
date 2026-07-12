@@ -367,6 +367,7 @@
     "test:production-launch:migration-chain": "node scripts/production-launch-migration-chain-test.mjs",
     "test:production-launch:architecture-boundaries": "node scripts/production-launch-patient-architecture-test.mjs",
     "test:production-launch:workspace-architecture": "node scripts/production-launch-workspace-architecture-test.mjs",
+    "test:production-launch:action-registry": "node scripts/production-launch-action-registry-test.mjs",
     "staging:env:check": "powershell -ExecutionPolicy Bypass -File scripts/staging-env-check.ps1",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:repair": "node scripts/prisma-repair-client.mjs",

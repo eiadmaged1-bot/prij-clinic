@@ -16,7 +16,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 export function AppActionButton({ actionId, locale = "en", isLoading = false, disabledReason, userPermissions, userRoles, children, disabled, ...props }: Props) {
   const action = requireAppAction(actionId);
-  const hasPermission = !action.permission || (userPermissions && userPermissions.includes(action.permission));
+  const requiredPermissions = action.requiredPermissions ?? (action.permission ? [action.permission] : []);
+  const hasPermission = requiredPermissions.length === 0 || requiredPermissions.every((permission) => userPermissions?.includes(permission));
   const isEffectivelyDisabled = disabled || isLoading || !hasPermission;
   const reason = disabledReason || (!hasPermission ? action.disabledReason : (disabled ? action.disabledReason : ""));
   const label = locale === "ar" ? action.labelAr : action.labelEn;
@@ -37,4 +38,3 @@ export function AppActionButton({ actionId, locale = "en", isLoading = false, di
     </span>
   );
 }
-
