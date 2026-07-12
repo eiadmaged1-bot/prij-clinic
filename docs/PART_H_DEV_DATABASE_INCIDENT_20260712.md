@@ -32,6 +32,7 @@ The Prisma command reported and dropped these columns:
 | `GuidelineDocument` | `citationLabel` | 51 |
 | `GuidelineDocument` | `documentType` | 51 |
 | `GuidelineDocument` | `reviewStatus` | 51 |
+| `GuidelineDocument` | `storageRef` | 0/non-null warning not emitted |
 | `GuidelineImportJob` | `createdByUserId` | 14 |
 | `GuidelineImportJob` | `importType` | 65 |
 | `GuidelineImportJob` | `summary` | 14 |
@@ -42,16 +43,18 @@ The Prisma command reported and dropped these columns:
 | `GuidelineSection` | `reviewStatus` | 2,549 |
 | `GuidelineSection` | `sortOrder` | 2,549 |
 | `GuidelineSource` | `abbreviation` | 25 |
+| `GuidelineVersion` | `publishedYear` | 0/non-null warning not emitted |
+| `GuidelineVersion` | `sourceUrl` | 0/non-null warning not emitted |
 
-Read-only `information_schema.columns` inspection confirms all 15 columns are currently absent.
+Read-only `information_schema.columns` inspection and comparison with the clean migration chain confirm all 18 columns are currently absent. The retained Prisma warning enumerated only the 15 columns that held non-null values; migration-chain comparison identified the three additional nullable columns.
 
 ## Tables, Rows, Indexes, and Constraints
 
-- Affected tables: `GuidelineChunk`, `GuidelineDocument`, `GuidelineImportJob`, `GuidelineQueryLog`, `GuidelineReviewDecision`, `GuidelineSection`, and `GuidelineSource`.
+- Affected tables: `GuidelineChunk`, `GuidelineDocument`, `GuidelineImportJob`, `GuidelineQueryLog`, `GuidelineReviewDecision`, `GuidelineSection`, `GuidelineSource`, and `GuidelineVersion`.
 - The retained Prisma output reports column drops only. It does not report any dropped table, broad row deletion, or data-manipulation statement.
 - No evidence indicates that rows in these tables were deleted. Data stored specifically inside the dropped columns was removed with those columns.
-- The retained output does not enumerate a separately dropped index or constraint. Current read-only catalog output records the surviving Guideline indexes and constraints. Exact historical column-dependent index/constraint definitions cannot be proven from the retained command log and must not be invented.
-- Foreign-key-like historical fields (`createdByUserId`, `actorUserId`, and `reviewerUserId`) may previously have had dependent constraints, but no retained schema artifact establishes their exact names or definitions.
+- Clean migration-chain comparison establishes that these indexes were removed by synchronization: `GuidelineChunk_citationLabel_idx`, `GuidelineChunk_reviewStatus_idx`, `GuidelineChunk_sectionId_chunkIndex_key`, `GuidelineDocument_archivedAt_idx`, `GuidelineDocument_reviewStatus_idx`, `GuidelineQueryLog_actorUserId_createdAt_idx`, `GuidelineQueryLog_mode_idx`, `GuidelineSection_documentId_idx`, `GuidelineSource_name_key`, and `GuidelineSource_status_idx`.
+- No clean-chain constraint difference is attributable to these historical scalar fields; the authoritative migration did not create foreign keys for `createdByUserId`, `actorUserId`, or `reviewerUserId`.
 
 ## Data-Loss Determination
 

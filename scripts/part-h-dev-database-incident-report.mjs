@@ -2,13 +2,21 @@ import { PrismaClient } from '@prisma/client';
 
 const LOST_COLUMNS = {
   GuidelineChunk: ['reviewStatus'],
-  GuidelineDocument: ['archivedAt', 'citationLabel', 'documentType', 'reviewStatus'],
+  GuidelineDocument: ['archivedAt', 'citationLabel', 'documentType', 'reviewStatus', 'storageRef'],
   GuidelineImportJob: ['createdByUserId', 'importType', 'summary'],
   GuidelineQueryLog: ['actorUserId', 'mode', 'queryText'],
   GuidelineReviewDecision: ['reviewerUserId'],
   GuidelineSection: ['reviewStatus', 'sortOrder'],
-  GuidelineSource: ['abbreviation']
+  GuidelineSource: ['abbreviation'],
+  GuidelineVersion: ['publishedYear', 'sourceUrl']
 };
+
+const LOST_INDEXES = [
+  'GuidelineChunk_citationLabel_idx', 'GuidelineChunk_reviewStatus_idx', 'GuidelineChunk_sectionId_chunkIndex_key',
+  'GuidelineDocument_archivedAt_idx', 'GuidelineDocument_reviewStatus_idx',
+  'GuidelineQueryLog_actorUserId_createdAt_idx', 'GuidelineQueryLog_mode_idx',
+  'GuidelineSection_documentId_idx', 'GuidelineSource_name_key', 'GuidelineSource_status_idx'
+];
 
 const args = process.argv.slice(2);
 if (args.length !== 2 || args[0] !== '--expected-database' || !/^[a-zA-Z0-9_]+$/.test(args[1] ?? '')) {
@@ -68,6 +76,7 @@ try {
     names.filter(column => !present.has(`${table}.${column}`)).map(column => ({ table, column }))
   );
   const databaseNames = databases.map(row => row.database_name);
+  const presentIndexes = new Set(indexes.map(row => row.index_name));
   const classification = expectedDatabase === 'prij_clinic_dev' ? 'persistent development' : expectedDatabase.includes('_test_part_h_') ? 'disposable Part H test' : 'unknown';
 
   console.log(JSON.stringify({
@@ -80,6 +89,7 @@ try {
     guidelineIndexes: indexes,
     guidelineConstraints: constraints,
     historicalColumnsMissing,
+    historicalIndexesMissing: LOST_INDEXES.filter(index => !presentIndexes.has(index)),
     databaseNames,
     activeNamedDatabasePresent: databaseNames.includes('prij_clinic_active')
   }, null, 2));

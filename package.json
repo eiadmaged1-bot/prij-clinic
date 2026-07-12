@@ -364,6 +364,7 @@
     "test:pilot:denials": "node scripts/pilot-walkthrough-test.mjs denials",
     "test:pilot:demo": "node scripts/pilot-walkthrough-test.mjs demo",
     "test:e2e:v01": "node scripts/e2e-v01-workflow-test.mjs",
+    "test:production-launch:migration-chain": "node scripts/production-launch-migration-chain-test.mjs",
     "staging:env:check": "powershell -ExecutionPolicy Bypass -File scripts/staging-env-check.ps1",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:repair": "node scripts/prisma-repair-client.mjs",

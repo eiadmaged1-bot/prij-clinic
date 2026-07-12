@@ -163,7 +163,7 @@ model UserPreference {
   densityMode          DensityMode          @default(COMFORTABLE)
   mobileNavigationMode MobileNavigationMode @default(AUTO)
   createdAt            DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime             @updatedAt @db.Timestamptz(3)
+  updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -322,7 +322,7 @@ model Patient {
   createdByUser               User?                             @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   appointments                Appointment[]
   queueTickets                QueueTicket[]
-  activeQueueLocks          ActiveQueueTicketLock[]
+  activeQueueLocks            ActiveQueueTicketLock[]
   encounters                  Encounter[]
   patientIntakes              PatientIntake[]
   prescriptions               Prescription[]
@@ -441,7 +441,7 @@ model Appointment {
   @@index([branchId, startAt])
   @@index([patientId, startAt])
   @@index([doctorId, startAt])
-  @@index([status, startAt])
+  @@index([status])
 }
 
 model QueueTicket {
@@ -467,9 +467,9 @@ model QueueTicket {
   createdAt                       DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt                       DateTime          @updatedAt @db.Timestamptz(3)
 
-  branch             Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient            Patient             @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointment        Appointment?        @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  branch             Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient            Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment        Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   activeLock         ActiveQueueTicketLock?
   invoices           Invoice[]
   staffConversations StaffConversation[]
@@ -482,6 +482,7 @@ model QueueTicket {
   @@index([patientId])
   @@index([appointmentId])
   @@index([status])
+  @@index([receptionistUserId])
 }
 
 enum EncounterStatus {
@@ -633,6 +634,7 @@ model Encounter {
   @@index([startedByUserId, startedAt])
   @@index([appointmentId])
   @@index([status])
+  @@index([voidedByUserId])
 }
 
 model StaffConversation {
@@ -770,7 +772,7 @@ model PatientIntake {
 }
 
 model ExternalPatientSubmission {
-  id                      String    @id @default(uuid()) @db.Uuid
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   source                  String    @default("google_form")
   language                String    @default("ar")
   externalSubmissionId    String?
@@ -788,7 +790,7 @@ model ExternalPatientSubmission {
   createdPatientId        String?   @db.Uuid
   attachedPatientId       String?   @db.Uuid
   createdAt               DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+  updatedAt               DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
 
   reviewedBy      User?    @relation("ExternalSubmissionsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   createdPatient  Patient? @relation("ExternalSubmissionCreatedPatient", fields: [createdPatientId], references: [id], onDelete: SetNull)
@@ -803,14 +805,14 @@ model ExternalPatientSubmission {
 }
 
 model ClinicalTagDefinition {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String   @unique
   label       String
   aliasesJson Json?
   category    String
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   patientTags PatientClinicalTag[]
 
@@ -819,7 +821,7 @@ model ClinicalTagDefinition {
 }
 
 model PatientClinicalTag {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId       String    @db.Uuid
   tagDefinitionId String?   @db.Uuid
   tagCode         String
@@ -831,7 +833,7 @@ model PatientClinicalTag {
   notes           String?
   createdByUserId String?   @db.Uuid
   createdAt       DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient       Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
   definition    ClinicalTagDefinition? @relation(fields: [tagDefinitionId], references: [id], onDelete: SetNull)
@@ -847,7 +849,7 @@ model PatientClinicalTag {
 }
 
 model PatientClinicalPhase {
-  id                         String              @id @default(uuid()) @db.Uuid
+  id                         String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId                  String              @db.Uuid
   phaseType                  ClinicalPhaseType
   title                      String
@@ -861,7 +863,7 @@ model PatientClinicalPhase {
   notes                      String?
   createdByUserId            String              @db.Uuid
   createdAt                  DateTime            @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime            @updatedAt @db.Timestamptz(3)
+  updatedAt                  DateTime            @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient                  Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
   createdByUser            User                 @relation("ClinicalPhasesCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
@@ -876,7 +878,7 @@ model PatientClinicalPhase {
 }
 
 model InfertilityEpisode {
-  id                         String                   @id @default(uuid()) @db.Uuid
+  id                         String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId                  String                   @db.Uuid
   phaseId                    String?                  @db.Uuid
   infertilityDurationYears   Decimal?                 @db.Decimal(5, 2)
@@ -891,7 +893,7 @@ model InfertilityEpisode {
   status                     InfertilityEpisodeStatus @default(active)
   createdByUserId            String                   @db.Uuid
   createdAt                  DateTime                 @default(now()) @db.Timestamptz(3)
-  updatedAt                  DateTime                 @updatedAt @db.Timestamptz(3)
+  updatedAt                  DateTime                 @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient       Patient                   @relation(fields: [patientId], references: [id], onDelete: Restrict)
   phase         PatientClinicalPhase?     @relation(fields: [phaseId], references: [id], onDelete: SetNull)
@@ -905,7 +907,7 @@ model InfertilityEpisode {
 }
 
 model OvulationInductionCycle {
-  id                   String                       @id @default(uuid()) @db.Uuid
+  id                   String                       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId            String                       @db.Uuid
   infertilityEpisodeId String                       @db.Uuid
   cycleNumber          Int
@@ -926,7 +928,7 @@ model OvulationInductionCycle {
   e2RequiredStatus     EstradiolRequiredStatus      @default(unknown)
   createdByUserId      String                       @db.Uuid
   createdAt            DateTime                     @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime                     @updatedAt @db.Timestamptz(3)
+  updatedAt            DateTime                     @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient            Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
   infertilityEpisode InfertilityEpisode          @relation(fields: [infertilityEpisodeId], references: [id], onDelete: Restrict)
@@ -940,7 +942,7 @@ model OvulationInductionCycle {
 }
 
 model FollicularMonitoringVisit {
-  id                      String    @id @default(uuid()) @db.Uuid
+  id                      String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId               String    @db.Uuid
   cycleId                 String    @db.Uuid
   monitoringDate          DateTime  @db.Date
@@ -958,7 +960,7 @@ model FollicularMonitoringVisit {
   nextVisitDate           DateTime? @db.Date
   createdByUserId         String    @db.Uuid
   createdAt               DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt               DateTime  @updatedAt @db.Timestamptz(3)
+  updatedAt               DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient       Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
   cycle         OvulationInductionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
@@ -970,7 +972,7 @@ model FollicularMonitoringVisit {
 }
 
 model EstradiolResult {
-  id              String   @id @default(uuid()) @db.Uuid
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId       String   @db.Uuid
   cycleId         String   @db.Uuid
   value           Decimal  @db.Decimal(12, 4)
@@ -980,7 +982,7 @@ model EstradiolResult {
   notes           String?
   createdByUserId String   @db.Uuid
   createdAt       DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   patient       Patient                 @relation(fields: [patientId], references: [id], onDelete: Restrict)
   cycle         OvulationInductionCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
@@ -1675,7 +1677,7 @@ model DrugMarketImportRun {
 }
 
 model OfficialMedicationSourceSnapshot {
-  id                 String    @id @default(uuid()) @db.Uuid
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sourceId           String?   @db.Uuid
   countryCode        String
   sourceName         String
@@ -1739,7 +1741,7 @@ model DrugMarketMergeCandidate {
 }
 
 model InvestigationCatalogItem {
-  id             String   @id @default(uuid()) @db.Uuid
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code           String   @unique
   name           String
   normalizedName String?
@@ -1774,7 +1776,7 @@ model InvestigationCatalogItem {
 }
 
 model InvestigationFavorite {
-  id                         String   @id @default(uuid()) @db.Uuid
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId                     String   @db.Uuid
   investigationCatalogItemId String   @db.Uuid
   createdAt                  DateTime @default(now()) @db.Timestamptz(3)
@@ -2166,7 +2168,7 @@ enum PatientInternalNoteVisibility {
 }
 
 model ExternalProvider {
-  id           String               @id @default(uuid()) @db.Uuid
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String
   providerType ExternalProviderType
   contactName  String?
@@ -2183,7 +2185,7 @@ model ExternalProvider {
 }
 
 model ClinicDepartment {
-  id             String               @id @default(uuid()) @db.Uuid
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   branchId       String?              @db.Uuid
   code           String               @unique
   name           String
@@ -2200,7 +2202,7 @@ model ClinicDepartment {
 }
 
 model InvestigationResult {
-  id                           String                          @id @default(uuid()) @db.Uuid
+  id                           String                          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId                    String                          @db.Uuid
   branchId                     String?                         @db.Uuid
   orderId                      String?                         @db.Uuid
@@ -2417,7 +2419,7 @@ model Report {
 }
 
 model PatientDocument {
-  id                     String                              @id @default(uuid()) @db.Uuid
+  id                     String                              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId              String                              @db.Uuid
   branchId               String?                             @db.Uuid
   linkedReportId         String?                             @db.Uuid
@@ -2453,12 +2455,12 @@ model PatientDocument {
   originalFilenameSafe   String?
   detectedMimeType       String?
   declaredMimeType       String?
-  sha256                  String?
+  sha256                 String?
   encryptionVersion      Int?
   encryptionKeyId        String?
   scanStatus             DocumentScanStatus?
   scanProvider           String?
-  scanCompletedAt        DateTime?                            @db.Timestamptz(3)
+  scanCompletedAt        DateTime?                           @db.Timestamptz(3)
   quarantineStatus       DocumentQuarantineStatus?
   createdRequestId       String?
   uploadedByUserId       String?                             @db.Uuid
@@ -2493,7 +2495,7 @@ model PatientDocument {
 }
 
 model ConsentTemplate {
-  id               String                  @id @default(uuid()) @db.Uuid
+  id               String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code             String                  @unique
   title            String
   category         ConsentTemplateCategory
@@ -2515,7 +2517,7 @@ model ConsentTemplate {
 }
 
 model Referral {
-  id                   String            @id @default(uuid()) @db.Uuid
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId            String            @db.Uuid
   branchId             String?           @db.Uuid
   encounterId          String?           @db.Uuid
@@ -2550,7 +2552,7 @@ model Referral {
 }
 
 model PatientTask {
-  id                 String              @id @default(uuid()) @db.Uuid
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId          String?             @db.Uuid
   branchId           String?             @db.Uuid
   assignedToUserId   String?             @db.Uuid
@@ -2584,7 +2586,7 @@ model PatientTask {
 }
 
 model PatientInternalNote {
-  id              String                        @id @default(uuid()) @db.Uuid
+  id              String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   patientId       String                        @db.Uuid
   branchId        String?                       @db.Uuid
   createdByUserId String?                       @db.Uuid
@@ -2967,7 +2969,7 @@ model SystemSetting {
 }
 
 model VisitPriceAuditSetting {
-  id                     String   @id @default(uuid()) @db.Uuid
+  id                     String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   baseVisitPriceX        Decimal  @db.Decimal(12, 2)
   kashfMultiplier        Decimal  @default(1) @db.Decimal(6, 2)
   recheckMultiplier      Decimal  @default(0.5) @db.Decimal(6, 2)
@@ -2976,7 +2978,7 @@ model VisitPriceAuditSetting {
   active                 Boolean  @default(true)
   updatedByUserId        String?  @db.Uuid
   createdAt              DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt              DateTime @updatedAt @db.Timestamptz(3)
+  updatedAt              DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   updatedBy User? @relation("VisitPriceSettingsUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
 
@@ -3020,6 +3022,7 @@ model AiDraft {
 model GuidelineSource {
   id                 String               @id @default(uuid()) @db.Uuid
   name               String
+  abbreviation       String?
   organization       String
   sourceType         GuidelineSourceType
   websiteUrl         String?
@@ -3036,9 +3039,11 @@ model GuidelineSource {
   importJobs   GuidelineImportJob[]
   updateChecks GuidelineUpdateCheck[]
 
+  @@unique([name])
   @@index([organization])
   @@index([sourceType])
   @@index([active])
+  @@index([status])
 }
 
 model GuidelineDocument {
@@ -3053,6 +3058,7 @@ model GuidelineDocument {
   lastReviewedDate    DateTime?              @db.Date
   versionLabel        String?
   guidelineStatus     GuidelineStatus        @default(NEEDS_REVIEW)
+  documentType        String                 @default("demo_text")
   licenseStatus       GuidelineLicenseStatus @default(CHECK_REQUIRED)
   originalUrl         String?
   localFilePath       String?
@@ -3064,6 +3070,10 @@ model GuidelineDocument {
   fileEncryptionIv    String?
   fileEncryptionTag   String?
   downloadsAllowed    Boolean                @default(false)
+  reviewStatus        String                 @default("pending_governance_review")
+  citationLabel       String                 @default("Local evidence library citation")
+  storageRef          String?
+  archivedAt          DateTime?              @db.Timestamptz(3)
   importedByUserId    String?                @db.Uuid
   reviewedByUserId    String?                @db.Uuid
   reviewedAt          DateTime?              @db.Timestamptz(3)
@@ -3089,12 +3099,16 @@ model GuidelineDocument {
   @@index([fileSha256])
   @@index([accessLevel])
   @@index([downloadsAllowed])
+  @@index([reviewStatus])
+  @@index([archivedAt])
 }
 
 model GuidelineVersion {
   id                String          @id @default(uuid()) @db.Uuid
   documentId        String          @db.Uuid
   versionLabel      String
+  publishedYear     Int?
+  sourceUrl         String?
   publicationDate   DateTime?       @db.Date
   lastReviewedDate  DateTime?       @db.Date
   status            GuidelineStatus @default(NEEDS_REVIEW)
@@ -3114,23 +3128,26 @@ model GuidelineVersion {
 }
 
 model GuidelineSection {
-  id          String   @id @default(uuid()) @db.Uuid
-  documentId  String   @db.Uuid
-  versionId   String?  @db.Uuid
-  heading     String
-  sectionPath String?
-  pageStart   Int?
-  pageEnd     Int?
-  orderIndex  Int
-  text        String
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  id           String   @id @default(uuid()) @db.Uuid
+  documentId   String   @db.Uuid
+  versionId    String?  @db.Uuid
+  heading      String
+  sectionPath  String?
+  pageStart    Int?
+  pageEnd      Int?
+  orderIndex   Int
+  sortOrder    Int      @default(0)
+  text         String
+  reviewStatus String   @default("pending_governance_review")
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
   document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
   version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
   chunks   GuidelineChunk[]
 
   @@index([documentId, orderIndex])
+  @@index([documentId])
   @@index([versionId])
 }
 
@@ -3146,6 +3163,7 @@ model GuidelineChunk {
   pageStart        Int?
   pageEnd          Int?
   citationLabel    String
+  reviewStatus     String   @default("pending_governance_review")
   embeddingJson    Json?
   searchVectorText String?
   createdAt        DateTime @default(now()) @db.Timestamptz(3)
@@ -3156,9 +3174,12 @@ model GuidelineChunk {
   version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
 
   @@unique([documentId, chunkIndex])
+  @@unique([sectionId, chunkIndex])
   @@index([documentId])
   @@index([sectionId])
   @@index([versionId])
+  @@index([citationLabel])
+  @@index([reviewStatus])
 }
 
 model GuidelineImportJob {
@@ -3168,6 +3189,9 @@ model GuidelineImportJob {
   sourceId          String?                  @db.Uuid
   documentId        String?                  @db.Uuid
   requestedByUserId String?                  @db.Uuid
+  createdByUserId   String?                  @db.Uuid
+  importType        String                   @default("demo_text")
+  summary           String?
   inputUrl          String?
   inputFileName     String?
   message           String?
@@ -3218,6 +3242,7 @@ model GuidelineReviewDecision {
   decision        GuidelineReviewDecisionValue
   reason          String?
   decidedByUserId String                       @db.Uuid
+  reviewerUserId  String?                      @db.Uuid
   decidedAt       DateTime                     @default(now()) @db.Timestamptz(3)
   createdAt       DateTime                     @default(now()) @db.Timestamptz(3)
 
@@ -3235,6 +3260,9 @@ model GuidelineQueryLog {
   id            String              @id @default(uuid()) @db.Uuid
   userId        String              @db.Uuid
   query         String
+  queryText     String              @default("(empty)")
+  mode          String              @default("search")
+  actorUserId   String?             @db.Uuid
   specialty     String?
   topic         String?
   answerMode    GuidelineAnswerMode
@@ -3248,6 +3276,8 @@ model GuidelineQueryLog {
   @@index([specialty])
   @@index([topic])
   @@index([answerMode])
+  @@index([actorUserId, createdAt])
+  @@index([mode])
 }
 
 model ClinicalProtocol {
@@ -3676,6 +3706,8 @@ model MedicationSafetyProfile {
   @@index([reviewStatus])
   @@index([confidenceLevel])
   @@index([reviewedByUserId])
+  @@index([sourceRefreshStatus])
+  @@index([lastCheckedAt])
 }
 
 model Role {
@@ -3826,11 +3858,11 @@ model IdempotencyRecord {
 }
 
 model QueueDayCounter {
-  id          String   @id @default(uuid()) @db.Uuid
-  branchId    String   @db.Uuid
-  queueDate   DateTime @db.Date
-  nextNumber  Int      @default(1)
-  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  id         String   @id @default(uuid()) @db.Uuid
+  branchId   String   @db.Uuid
+  queueDate  DateTime @db.Date
+  nextNumber Int      @default(1)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
 
   branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
@@ -3842,7 +3874,7 @@ model ActiveQueueTicketLock {
   branchId      String   @db.Uuid
   patientId     String   @db.Uuid
   queueDate     DateTime @db.Date
-  queueTicketId String   @db.Uuid @unique
+  queueTicketId String   @unique @db.Uuid
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
 
   branch      Branch      @relation(fields: [branchId], references: [id], onDelete: Cascade)

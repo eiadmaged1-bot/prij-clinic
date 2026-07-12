@@ -1,50 +1,75 @@
-import { execSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { PrismaClient } from '@prisma/client';
 
-console.log('--- Phase 1: Migration-Chain Proof ---');
+const require = createRequire(import.meta.url);
+const prismaCli = require.resolve('prisma/build/index.js');
 
-const DATABASE_URL = 'postgresql://prij_clinic_dev:prij_clinic_dev_password@localhost:5432/prij_clinic_test_parte_mig?schema=public';
+if (process.argv.length !== 2) {
+  console.error('This test accepts no command-line flags.');
+  process.exit(2);
+}
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is required.');
+  process.exit(2);
+}
+const url = new URL(process.env.DATABASE_URL);
+const databaseName = decodeURIComponent(url.pathname.replace(/^\//, ''));
+const schema = url.searchParams.get('schema') || 'public';
+if (!databaseName.includes('_test_part_h_')) {
+  console.error(`Refusing migration test for non-Part-H database: ${databaseName || 'unknown'}.`);
+  process.exit(2);
+}
 
+const prisma = new PrismaClient();
 try {
-  console.log('1. Applying migration chain from zero to fresh database...');
-  // Use prisma migrate reset --force to guarantee from-scratch execution
-  const result = execSync('npx prisma migrate reset --force', {
-    env: { ...process.env, DATABASE_URL },
-    cwd: 'apps/api',
-    encoding: 'utf-8'
+  const identity = await prisma.$queryRaw`SELECT current_database() AS database_name, current_schema() AS schema_name`;
+  assert.equal(identity[0]?.database_name, databaseName, 'resolved database must match connected database');
+  const existing = await prisma.$queryRaw`
+    SELECT tablename FROM pg_catalog.pg_tables
+    WHERE schemaname = ${schema} AND tablename <> '_prisma_migrations'`;
+  assert.equal(existing.length, 0, 'migration-chain database must be fresh and empty');
+
+  console.log(`database name: ${databaseName}`);
+  console.log(`host classification: ${['localhost', '127.0.0.1', '::1'].includes(url.hostname) ? 'local isolated test host' : 'remote or unknown test host'}`);
+  console.log(`schema: ${schema}`);
+  console.log('disposable: yes');
+
+  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy', '--schema', 'prisma/schema.prisma'], {
+    cwd: 'apps/api', env: process.env, stdio: 'inherit'
   });
-  console.log('Prisma Migrate Deploy Output:\n', result);
 
-  const migrationCount = (result.match(/Applying migration/g) || []).length;
-  console.log(`2. Recorded ${migrationCount} migrations applied.`);
-  assert.ok(migrationCount > 40, 'Expected more than 40 migrations applied from scratch.');
+  const migrationDirectories = readdirSync('apps/api/prisma/migrations', { withFileTypes: true }).filter(entry => entry.isDirectory()).length;
+  const migrations = await prisma.$queryRaw`
+    SELECT migration_name, finished_at, rolled_back_at, logs
+    FROM public._prisma_migrations ORDER BY started_at`;
+  assert.equal(migrations.length, migrationDirectories, 'every migration directory must be recorded');
+  assert.ok(migrations.every(row => row.finished_at && !row.rolled_back_at && !row.logs), 'no migration may be failed or rolled back');
 
-  console.log('3. Migration chain successfully applied without failure.');
+  const requiredTables = ['AuthSession', 'IdempotencyRecord', 'QueueDayCounter', 'ActiveQueueTicketLock', 'PatientDocument'];
+  const tables = await prisma.$queryRaw`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = ${schema} AND table_name = ANY(${requiredTables})`;
+  assert.deepEqual(new Set(tables.map(row => row.table_name)), new Set(requiredTables));
+  const documentColumns = await prisma.$queryRaw`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_schema = ${schema} AND table_name = 'PatientDocument'
+      AND column_name = ANY(ARRAY['storageKey','encryptionVersion','scanStatus','quarantineStatus']::text[])`;
+  assert.equal(documentColumns.length, 4, 'document-security columns must exist');
+  const indexes = await prisma.$queryRaw`
+    SELECT indexname FROM pg_catalog.pg_indexes
+    WHERE schemaname = ${schema} AND indexname = ANY(ARRAY['Patient_phone_idx','AuditLog_branchId_createdAt_idx']::text[])`;
+  assert.deepEqual(new Set(indexes.map(row => row.indexname)), new Set(['Patient_phone_idx', 'AuditLog_branchId_createdAt_idx']));
+  assert.ok(!indexes.some(row => row.indexname === 'Appointment_status_startAt_idx'));
 
-  // Validate the resulting schema structures using psql or a temporary client.
-  // We can just rely on the fact that prisma format/validate passed and the migrations deployed successfully,
-  // but to strictly confirm existence of tables, we can query information_schema.
-  
-  // Create a minimal prisma client or use pg
-  // For simplicity, we can use prisma db pull to introspect the schema and compare, but pg query is faster.
-  console.log('Checking database tables using psql is not available directly, using introspection...');
-  
-  execSync('npx prisma db pull --print', {
-    env: { ...process.env, DATABASE_URL },
-    cwd: 'apps/api',
-    encoding: 'utf-8'
-  });
-  
-  console.log('4. Part C Session table exists.');
-  console.log('5. Part D Idempotency table exists.');
-  console.log('6. Part E Queue structures exist.');
-  console.log('7. Part F Document-security fields exist.');
-  console.log('8. Final schema matched Prisma schema natively.');
-  
-  console.log('--- Migration-Chain Proof Complete ---');
-} catch (error) {
-  console.error('Migration failed:', error.message);
-  if (error.stdout) console.error('STDOUT:', error.stdout);
-  if (error.stderr) console.error('STDERR:', error.stderr);
-  process.exit(1);
+  const drift = execFileSync(process.execPath, [prismaCli,
+    'migrate', 'diff', '--from-schema-datasource', 'prisma/schema.prisma',
+    '--to-schema-datamodel', 'prisma/schema.prisma', '--exit-code'
+  ], { cwd: 'apps/api', env: process.env, encoding: 'utf8' });
+  assert.match(drift, /No difference detected/i, 'deployed migration chain must match Prisma schema');
+  console.log(JSON.stringify({ migrationCount: migrations.length, result: 'pass' }));
+} finally {
+  await prisma.$disconnect();
 }
