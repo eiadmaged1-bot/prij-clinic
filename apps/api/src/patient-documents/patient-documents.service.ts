@@ -223,7 +223,7 @@ export class PatientDocumentsService {
     if (document.confidentialityLevel === "restricted" && !user.permissions.includes("patient_document.restricted_read")) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     if (user.roles.includes("Receptionist") && !["insurance_document_placeholder", "consent_form"].includes(document.documentType)) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     if (document.status === "archived" || document.status === "voided" || document.quarantineStatus !== "PROMOTED" || !document.storageKey) throw new BadRequestException({ code: "DOCUMENT_NOT_READY", message: "Document is not ready." });
-    const buffer = await this.encryptedStorage.readAuthorized(document.storageKey);
+    const buffer = await this.encryptedStorage.readAuthorized(document.storageKey, document.encryptionKeyId);
     if (sha256(buffer) !== document.sha256) throw new BadRequestException({ code: "DOCUMENT_INTEGRITY_FAILED", message: "Document integrity check failed." });
     await this.audit.record({ actorUserId: user.id, action: "patient_document.downloaded", resourceType: "patient_document", resourceId: document.id, branchId: document.branchId, severity: "high", metadataJson: { access: "authorized" } });
     return { buffer, mimeType: document.detectedMimeType ?? "application/octet-stream", filename: safeDisplayFileName(document.originalFilenameSafe ?? document.displayFileName ?? "document") };

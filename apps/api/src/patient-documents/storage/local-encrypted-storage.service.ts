@@ -33,12 +33,12 @@ export class LocalEncryptedStorageService {
     return promotedKey;
   }
 
-  async readAuthorized(storageKey: string): Promise<Buffer> {
+  async readAuthorized(storageKey: string, encryptionKeyId?: string | null): Promise<Buffer> {
     if (!storageKey.startsWith("promoted/")) throw new BadRequestException({ code: "DOCUMENT_NOT_READY", message: "Document is not ready." });
     try {
       const envelope = await readFile(this.pathFor(storageKey));
       if (!envelope.subarray(0, MAGIC.length).equals(MAGIC) || envelope[MAGIC.length] !== VERSION) throw new Error("invalid envelope");
-      const { key } = encryptionConfig(); const nonceStart = MAGIC.length + 1;
+      const { key } = encryptionConfig(encryptionKeyId ?? undefined); const nonceStart = MAGIC.length + 1;
       const decipher = createDecipheriv("aes-256-gcm", key, envelope.subarray(nonceStart, nonceStart + 12));
       decipher.setAuthTag(envelope.subarray(nonceStart + 12, nonceStart + 28));
       return Buffer.concat([decipher.update(envelope.subarray(nonceStart + 28)), decipher.final()]);
@@ -57,10 +57,17 @@ export class LocalEncryptedStorageService {
   }
 }
 
-function encryptionConfig() {
+function encryptionConfig(requestedKeyId?: string) {
   const encoded = process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY; const keyId = process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY_ID;
   if (!encoded || !keyId) throw new ServiceUnavailableException("Patient document encryption is not configured.");
-  const key = Buffer.from(encoded, "base64");
+  let selected = encoded;
+  if (requestedKeyId && requestedKeyId !== keyId) {
+    try {
+      const keyring = JSON.parse(process.env.PATIENT_DOCUMENT_DECRYPTION_KEYS_JSON || "{}") as Record<string, string>;
+      selected = keyring[requestedKeyId] ?? "";
+    } catch { throw new ServiceUnavailableException("Patient document encryption configuration is invalid."); }
+  }
+  const key = Buffer.from(selected, "base64");
   if (key.length !== 32) throw new ServiceUnavailableException("Patient document encryption configuration is invalid.");
-  return { key, keyId };
+  return { key, keyId: requestedKeyId ?? keyId };
 }
