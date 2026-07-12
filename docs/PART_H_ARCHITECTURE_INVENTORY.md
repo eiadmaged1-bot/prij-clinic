@@ -1,47 +1,50 @@
 # Part H Architecture Inventory
 
-## Largest API Controllers by Line Count
-1. `admin.controller.ts` (~10.5 KB)
-2. `patients.controller.ts` (~9.8 KB)
-3. `medications.controller.ts` (~9.2 KB)
-4. `drug-market.controller.ts` (~7.7 KB)
-5. `guidelines.controller.ts` (~6.4 KB)
+## Patient API Ownership
 
-## Largest API Services by Line Count
-1. `patients.service.ts` (~86.5 KB)
-2. `guidelines.service.ts` (~44.4 KB)
-3. `rbac.service.ts` (~34.2 KB)
-4. `billing.service.ts` (~33.9 KB)
-5. `drug-market.service.ts` (~26.3 KB)
+The patient controller remains the route owner and contains no Prisma access. Domain behavior has a single service owner:
 
-## Largest Web Pages/Components by Line Count
-1. `apps/web/app/patients/[id]/page.tsx` (~180 KB)
-2. `apps/web/components/medications/MedicationComponents.tsx` (~38.4 KB)
-3. `apps/web/app/mvp-page.tsx` (~34.3 KB)
-4. `apps/web/app/admin/page.tsx` (~27.1 KB)
-5. `apps/web/app/clinic-operations-page.tsx` (~25.5 KB)
+| Responsibility | Owner |
+| --- | --- |
+| Search, exact MRN, normalized phone, English/Arabic prefix, duplicate candidates | `PatientSearchService` |
+| Patient lookup and workspace summary | `PatientLookupService` |
+| Registration and duplicate-prevention transaction | `PatientRegistrationService` |
+| Timeline aggregation, filtering, stable cursor | `PatientTimelineService` |
+| Remaining patient lifecycle operations | `PatientsService` |
 
-## Modules with More Than One Responsibility
-- `PatientsModule`: Handles patient identity, search, workspaces, encounters, duplicate-checks, and timelines.
-- `Patients [id] page.tsx`: Handles UI for Summary, Visit, Rx, Requests, Pregnancy, Timeline, Ultrasound, Reports, Documents, Billing, and deep routing within the frontend.
+`PatientsModule` compiles in a real Nest application context. Routes and response envelopes used by existing callers remain compatible. Branch and permission scope are enforced server-side. Concurrent matching registration requests do not create duplicate patients.
 
-## Duplicated Logic Identified
-- **Patient Permission Logic**: Branch-scope and role-based checks are duplicated across multiple domain controllers referencing patients.
-- **Branch-Scope Logic**: Frequently repeated in `findMany` queries globally.
-- **Action Visibility Logic**: Hardcoded in UI components and inconsistently mapped.
-- **Navigation/Workspace-Tab Definitions**: Present in `page.tsx` and duplicated in layouts/mobile menus.
-- **Date/Time Logic**: Ad-hoc timestamp comparisons in `queue` and `billing`.
-- **Idempotency Handling**: Repeated patterns for caching/locking in high-risk mutation endpoints.
+## Patient Workspace Measurements
 
-## Performance and Bounded Queries
-- **Pages Issuing Excessive Initial Requests**: Patient workspace (`[id]/page.tsx`) aggressively fetches data for all tabs simultaneously.
-- **Global List Endpoints without Pagination**: Audit logs, patient search, appointments history, documents, guidelines.
-- **Unbounded Queries**: `findMany` usage in `PatientsService`, `BillingService`, and `AuditController` without limits.
-- **Missing Search Indexes**: Searching across `medicalRecordNumber`, `phone`, and normalized names lacks optimized composite indices in PostgreSQL.
-- **Client-Side PHI Filtering**: Search screens pull full subsets and filter locally instead of leveraging DB-side exact matches.
+Measurements use physical source lines:
 
-## Architectural Risks
-- **High-Risk Transaction Boundaries**: Patient creation + visit start; check-in + active lock; payment + invoice rollup. Often lack robust `Prisma.$transaction` isolation or outbox patterns.
-- **Modules with Weak Loading/Error/Empty States**: Dynamic module switching inside `[id]/page.tsx` uses basic `null` or raw JSON string returns.
-- **Circular or Global-Module Dependencies**: Several modules inject `PatientsService` globally due to missing domain splits.
-- **Operationally Unsafe Dynamic Imports**: `page.tsx` imports heavy visualization and clinical calculators statically, severely bloating the initial Javascript bundle.
+| File | Before recovery | Final |
+| --- | ---: | ---: |
+| `apps/web/app/patients/[id]/page.tsx` | 404 | 431 |
+| `apps/web/app/patients/[id]/patient-components.tsx` | 2,819 | 1,312 |
+
+The route page now orchestrates session/workspace state and navigation. Extracted domain owners are:
+
+- `panel-components.tsx` — 742 lines
+- `pregnancy-components.tsx` — 498 lines
+- `visit-flow-components.tsx` — 272 lines
+- `workspace-module-renderer.tsx` — 89 lines
+- `timeline-components.tsx` — 87 lines
+- `patient-workspace-registry.ts` — 41 lines
+
+The largest remaining patient workspace file is `patient-components.tsx` at 1,312 lines; no replacement 3,000-line monolith remains. The authoritative registry defines 16 unique modules covering summary, visit, prescriptions, investigations, women’s health, documents, billing, More, timeline, consents, infertility, ultrasound, reports, internal notes, review hints, and admin history.
+
+Heavy modules cross a dynamic-import boundary and do not fetch until active. Module selection uses `?module=`, responds to browser back/forward, supports reload/deep links, and accepts the legacy `?tab=` mapping. Minimalistic keys remain Summary, Visit, Rx, Requests, and More. Receptionists cannot resolve clinical-only modules or trigger their data requests.
+
+## Dependency and Performance Verification
+
+- Nest application context compiled with 296 sources and one Prisma provider.
+- Only the intended foundational Auth, ClinicTime, and Idempotency modules are global.
+- No patient-domain circular dependency or unresolved workspace import was detected.
+- Two unchanged legacy cycles remain: `audit`/`auth` and `auth`/`users`.
+- Initial patient workspace after session bootstrap made one application-data request; visible module switch made one; timeline deep link made two.
+- Receptionist workspace made one application-data request and no clinical request.
+- Final patient route build output: 32.4 kB route size and 164 kB First Load JS (103 kB shared).
+- Build-manifest aggregate for the patient initial route was 355,125 raw bytes across five files. Heavy lazy chunks measured 23,119, 38,559, and 15,831 bytes and were absent from the initial route chunk list.
+
+Automated source and browser tests preserve bilingual labels and RTL contracts. Visual Arabic/RTL and viewport verification remains pending Manual QA.

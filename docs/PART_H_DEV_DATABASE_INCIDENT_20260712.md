@@ -73,7 +73,7 @@ No evidence shows deletion of patient rows or other table rows, and this investi
 
 - Persistent development database versus current Prisma schema: the Guideline objects inspected match the current schema shape after the destructive push, including absence of the historical columns. This does not make the lost data recoverable or the operation acceptable.
 - Persistent development database versus migration history: `db push` bypassed migration history, so schema shape alone cannot establish migration-chain integrity.
-- Clean migration-chain database: to be created and verified in Checkpoint 2 using a fresh database whose name contains `_test_part_h_`; this report will not mutate `prij_clinic_dev`.
+- Clean migration-chain database: `prij_clinic_test_part_h_chain_final` received all 46 migrations through `prisma migrate deploy`; required schema objects and indexes were present and the final schema had no unexpected drift. This verification did not mutate `prij_clinic_dev`.
 
 ## Recovery Options and Recommendation
 

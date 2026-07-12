@@ -1,31 +1,89 @@
 # Manual QA Wave 1
 
-This document outlines the manual testing procedures required before production launch.
+Status: **PENDING — not executed by the Part H recovery sprint.**
 
-## 1. Login and CSRF Verification
-1. Open an incognito browser window.
-2. Navigate to `http://localhost:3000/login`.
-3. Open Developer Tools -> Network tab.
-4. Attempt to log in with invalid credentials.
-5. Verify that a `POST` request is sent to `/api/backend/auth/login`.
-6. Verify that the request contains the `x-csrf-token` header.
-7. Verify that the server returns a `401 Unauthorized`.
-8. Log in with valid credentials.
-9. Verify that a session cookie (`prij_clinic_session`) is set.
-10. Verify that a `csrf-token` cookie is set.
+Follow `MANUAL_QA_WAVE_1_STARTUP.md` and use only synthetic data in a fresh `_test_part_h_` database. Record Pass, Fail plus defect ID, or Blocked for every role/language/viewport combination; do not infer a pass from automated tests.
 
-## 2. API Rate Limiting Verification
-1. Write a script or use a tool (e.g. `curl` or Postman) to rapidly send login requests to `/api/backend/auth/login`.
-2. After 10 requests within a minute, verify that the server returns `429 Too Many Requests`.
+## Coverage Matrix
 
-## 3. Owner Diagnostics Page
-1. Log in as an OWNER.
-2. Navigate to `/owner/diagnostics`.
-3. Verify that the "API Status" shows as "up" (green indicator).
-4. Verify that the "Recent Audit Logs" table populates with recent system activity.
+Roles:
 
-## 4. General Smoke Testing
-1. Navigate through the primary patient management workflows.
-2. Verify that pages load without critical errors.
-3. Attempt to create a new patient and verify success.
-4. Check the application logs to ensure that the patient creation was logged securely without exposing PHI.
+- [ ] Doctor
+- [ ] Receptionist
+- [ ] Owner
+- [ ] Nurse
+
+Viewports:
+
+- [ ] 1440×900
+- [ ] 360×800
+- [ ] 390×844
+- [ ] 430×932
+- [ ] 768×1024
+
+Languages and direction:
+
+- [ ] English LTR
+- [ ] Arabic RTL
+
+## Authentication and Operational Security
+
+- [ ] Login and logout work through `/api/backend`; invalid login is safely rejected.
+- [ ] Session persists across navigation/reload and logout revokes it.
+- [ ] Approved session-revocation scenarios terminate active sessions.
+- [ ] Mutating browser requests contain the CSRF header and same-origin cookies.
+- [ ] Rate limiting yields the structured 429 state without leaking credentials.
+- [ ] Owner diagnostics displays health and safe recent audit information.
+- [ ] Error screens show a safe message and requestId without PHI.
+- [ ] External-device traffic reaches web port 3100 only; API port 3101 is not exposed.
+
+## Interface Modes and Navigation
+
+- [ ] Optimized mode preserves the complete role-appropriate workspace.
+- [ ] Minimalistic mode preserves Summary, Visit, Rx, Requests, and More for an authorized doctor.
+- [ ] Receptionist Minimalistic navigation exposes no clinical module/action.
+- [ ] Mode preference persists as designed without changing permissions.
+- [ ] Mobile navigation has no horizontal overflow, unreachable control, or obscured content.
+- [ ] Browser back/forward restores patient workspace modules.
+- [ ] A copied `?module=` deep link reloads the correct authorized module.
+- [ ] Forbidden deep links do not fetch or reveal the module.
+
+## Patient and Clinic Workflows
+
+- [ ] Exact MRN, normalized phone, English prefix, and Arabic prefix patient searches work.
+- [ ] Search remains branch scoped and returns no cross-branch patient.
+- [ ] Create Patient and duplicate-candidate review work with unique synthetic fixtures.
+- [ ] Concurrent matching creation does not create duplicate patients.
+- [ ] Save Patient Only and Save & Start Visit preserve their response and audit behavior.
+- [ ] Appointments create/update/cancel flows remain role scoped.
+- [ ] Queue check-in and permitted transitions work without duplicate transition.
+
+## Patient Workspace and Clinical Modules
+
+- [ ] Summary opens with no duplicate patient request or all-tab preload.
+- [ ] Visit workflow, finish, and reason-required audited void behavior work for authorized roles.
+- [ ] Receptionist cannot invoke encounter, prescription, or investigation creation directly.
+- [ ] Prescription creation and viewing preserve doctor workflow.
+- [ ] Investigation/request creation and results preserve permission boundaries.
+- [ ] Documents upload, quarantine/readiness, download, and receptionist category restrictions work.
+- [ ] Billing and payment work; prohibited void/adjust actions remain unavailable and denied.
+- [ ] Timeline loads newest-first, loads older pages once, and shows no duplicate/missing item.
+- [ ] Pregnancy, infertility, ultrasound, reports, and diagnostics load only for authorized roles.
+
+## Presentation and Accessibility
+
+- [ ] Arabic labels render correctly with RTL layout and logical control order.
+- [ ] English labels render correctly with LTR layout.
+- [ ] Dialogs, loading states, empty states, and errors remain usable at every viewport.
+- [ ] Touch controls are usable on phone viewports and keyboard focus remains visible.
+- [ ] No synthetic patient name, MRN, phone, filename, token, or credential appears in logs/screenshots unexpectedly.
+
+## Evidence Summary
+
+- Execution date: _pending_
+- Tester: _pending_
+- Environment/database name only: _pending_
+- Passed: _pending_
+- Failed/defect IDs: _pending_
+- Blocked: _pending_
+- Final disposition: _pending_

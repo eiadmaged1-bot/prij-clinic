@@ -93,3 +93,21 @@
 - [x] Proxy errors correctly parse fallback body.code.
 
 - [x] Part G verified: CSRF, Security Headers, Rate Limits, Audit Logging, Health, Playwright Smoke Tests
+
+## Part H Recovery and Verification
+
+- [x] Persistent-development database incident documented with exact affected objects and recovery recommendation.
+- [x] Confirm identified destructive command targeted `prij_clinic_dev`, not the active clinic database.
+- [x] Confirm no persistent database repair or migration was executed during Part H recovery.
+- [x] Deploy all 46 migrations to a fresh `_test_part_h_` database with `migrate deploy` and verify no unexpected drift.
+- [x] Pass patient architecture behavior three times with unique fixtures on three fresh databases.
+- [x] Verify patient workspace registry uniqueness, permission filtering, deep-link mapping, and lazy boundaries.
+- [x] Align action registry permissions with authoritative backend enforcement; use audited encounter void semantics.
+- [x] Verify stable timeline pagination across multiple sources, equal timestamps, roles, branches, and pages.
+- [x] Measure the patient workspace with real browser network instrumentation.
+- [x] Verify patient bundle boundaries against the final production build output.
+- [x] Pass Parts A-G automated regressions, all workspace typechecks, and the final build.
+- [ ] Execute `MANUAL_QA_WAVE_1_STARTUP.md` only after explicit approval.
+- [ ] Complete every role, viewport, English LTR, and Arabic RTL item in `MANUAL_QA_WAVE_1.md`.
+- [ ] Record screenshots and defect IDs using synthetic data only.
+- [ ] Resolve or explicitly accept every Manual QA defect before go-live.
