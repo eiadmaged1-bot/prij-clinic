@@ -101,6 +101,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Remove tokens left by pre-cookie releases; browser auth is cookie-only.
     localStorage.removeItem(tokenKey);
     sessionStorage.removeItem(tokenKey);
+    // Also remove csrf token
+    document.cookie = "csrf-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     if (nextMessage) {
       sessionStorage.setItem(sessionMessageKey, nextMessage);
       setMessage(nextMessage);
@@ -156,6 +158,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMessage(sessionStorage.getItem(sessionMessageKey) ?? "");
     void refresh();
+
+    // Patch fetch to automatically append x-csrf-token for mutations
+    if (typeof window !== "undefined") {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        let [resource, config] = args;
+        
+        let method = "GET";
+        if (resource instanceof Request) {
+          method = resource.method.toUpperCase();
+        } else if (config && config.method) {
+          method = config.method.toUpperCase();
+        }
+
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+          const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
+          if (match && match[1]) {
+            const csrfToken = match[1];
+            if (resource instanceof Request) {
+              resource.headers.set("x-csrf-token", csrfToken);
+            } else {
+              config = config || {};
+              config.headers = {
+                ...config.headers,
+                "x-csrf-token": csrfToken
+              };
+              args[1] = config;
+            }
+          }
+        }
+        return originalFetch(...args);
+      };
+    }
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {

@@ -43,9 +43,21 @@ import { ReferenceModule } from "./reference/reference.module";
 import { SearchModule } from "./search/search.module";
 import { StaffChatModule } from "./staff-chat/staff-chat.module";
 import { UsersModule } from "./users/users.module";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { CsrfGuard } from "./auth/csrf.guard";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { LoggerInterceptor } from "./common/logger.interceptor";
+import { AuditController } from "./audit/audit.controller";
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: "default",
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     PrismaModule,
     ClinicTimeModule,
     HealthModule,
@@ -90,6 +102,23 @@ import { UsersModule } from "./users/users.module";
     ProtocolAtlasModule,
     AiManagementModule,
     StaffChatModule
+  ],
+  controllers: [
+    AuditController
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggerInterceptor,
+    }
   ]
 })
 export class AppModule {}
