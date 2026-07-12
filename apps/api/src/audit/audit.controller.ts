@@ -2,7 +2,7 @@ import { Controller, Get, UseGuards } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../rbac/roles.guard";
-import { Roles } from "../rbac/roles.decorator";
+import { RequireRoles } from "../rbac/require-roles.decorator";
 
 @Controller("audit")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -10,7 +10,7 @@ export class AuditController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get("recent")
-  @Roles("OWNER")
+  @RequireRoles("OWNER")
   async getRecentLogs() {
     return this.prisma.auditLog.findMany({
       take: 10,
