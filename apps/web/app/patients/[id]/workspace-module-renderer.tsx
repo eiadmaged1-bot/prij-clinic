@@ -37,7 +37,7 @@ const DocumentsPanel = lazy(() => import("./panel-components").then((module) => 
 export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   overview: ({ patient, related, timelineItems }) => <Overview patient={patient} related={related} timelineItems={timelineItems} />,
   "case-feed": ({ patient, related, timelineItems }) => <PatientCaseFeed patient={patient} related={related} timelineItems={timelineItems} />,
-  timeline: ({ patient, timelineItems }) => <Timeline items={timelineItems} patient={patient} />,
+  timeline: ({ patient, timelineItems, timelineHasMore, loadMoreTimeline }) => <Timeline items={timelineItems} patient={patient} hasMore={timelineHasMore} onLoadMore={loadMoreTimeline} />,
   gynecology: ({ patient, related }) => <GynecologyWorkspace patient={patient} visits={related.gynecology ?? []} />,
   infertility: ({ patient, infertilityWorkspace, clinicalPhases }) => <InfertilityWorkspacePanel patient={patient} workspace={infertilityWorkspace} phases={clinicalPhases} />,
   "mother-baby": ({ related }) => <MotherBabyWorkspace pregnancies={related.pregnancy ?? []} reports={related.files ?? []} orders={related.orders ?? []} />,

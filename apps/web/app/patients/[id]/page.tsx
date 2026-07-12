@@ -96,6 +96,8 @@ export default function PatientFilePage() {
   const [activeTab, setActiveTabState] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
+  const [timelineNextCursor, setTimelineNextCursor] = useState<string | null>(null);
+  const [timelineHasMore, setTimelineHasMore] = useState(false);
   const [clinicalPhases, setClinicalPhases] = useState<ClinicalPhase[]>([]);
   const [infertilityWorkspace, setInfertilityWorkspace] = useState<InfertilityWorkspace>({});
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -190,7 +192,7 @@ export default function PatientFilePage() {
     const load = async () => {
       const pairs = await Promise.all(
         relatedLoaders
-          .filter((tab) => tab.key === activeTab && tab.endpoint && tab.key !== "infertility")
+          .filter((tab) => tab.key === activeTab && tab.endpoint && !["infertility", "timeline"].includes(tab.key))
           .map(async (tab) => {
             try {
               const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
@@ -210,8 +212,10 @@ export default function PatientFilePage() {
           })
       );
       setRelated((current) => ({ ...current, ...Object.fromEntries(pairs) }));
-      const timelinePair = pairs.find(([key]) => key === "timeline");
-      if (timelinePair) setTimelineItems(timelinePair[1] as TimelineItem[]);
+      if (activeTab === "timeline") try {
+        const response = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline?limit=25`, { credentials: "include", signal: controller.signal, headers: token ? { authorization: `Bearer ${token}` } : undefined });
+        if (response.ok) { const data = await response.json() as { items?: TimelineItem[]; nextCursor?: string | null; hasMore?: boolean }; setTimelineItems(data.items ?? []); setTimelineNextCursor(data.nextCursor ?? null); setTimelineHasMore(Boolean(data.hasMore)); }
+      } catch { setTimelineItems([]); setTimelineNextCursor(null); setTimelineHasMore(false); }
       if (["pregnancy", "infertility"].includes(activeTab)) try {
         const phasesResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/phases`, {
           credentials: "include",
@@ -239,6 +243,16 @@ export default function PatientFilePage() {
     void load();
     return () => controller.abort();
   }, [activeTab, patientId, refreshVersion, roleContextReady, visibleTabs]);
+
+  async function loadMoreTimeline() {
+    if (!timelineNextCursor) return;
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline?limit=25&cursor=${encodeURIComponent(timelineNextCursor)}`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined });
+    if (!response.ok) return;
+    const data = await response.json() as { items?: TimelineItem[]; nextCursor?: string | null; hasMore?: boolean };
+    setTimelineItems((current) => [...current, ...(data.items ?? []).filter((item) => !current.some((existing) => item.id ? existing.id === item.id : existing.type === item.type && existing.dateTime === item.dateTime && existing.title === item.title))]);
+    setTimelineNextCursor(data.nextCursor ?? null); setTimelineHasMore(Boolean(data.hasMore));
+  }
 
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -408,6 +422,8 @@ export default function PatientFilePage() {
             patient={patient}
             related={related}
             timelineItems={timelineItems}
+            timelineHasMore={timelineHasMore}
+            loadMoreTimeline={loadMoreTimeline}
             clinicalPhases={clinicalPhases}
             infertilityWorkspace={infertilityWorkspace}
             actionStatus={actionStatus}

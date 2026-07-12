@@ -84,8 +84,8 @@ export class PatientsController {
 
   @Get(":id/timeline")
   @Permissions("patient.read")
-  timeline(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.patients.timeline(id, user);
+  timeline(@Param("id") id: string, @Query("limit") limit: string | undefined, @Query("cursor") cursor: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.timeline(id, user, { limit, cursor });
   }
 
   @Get(":id/follow-up-hints")

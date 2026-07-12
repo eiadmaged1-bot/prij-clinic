@@ -11,7 +11,7 @@ import {
   assertCanReferenceQueueTicket,
   assertCanReferenceUserInBranch
 } from "../auth/reference-scope";
-import { branchScope, doctorScope, isOwnerOrAdmin } from "../auth/scope";
+import { branchScope, doctorScope, EMPTY_SCOPE_ID, isOwnerOrAdmin } from "../auth/scope";
 import { DoctorVisitService } from "../doctor-visit/doctor-visit.service";
 import { ClinicalTagsService } from "../clinical-tags/clinical-tags.service";
 import { IdempotencyService } from "../idempotency/idempotency.service";
@@ -540,8 +540,12 @@ export class PatientsService {
   }
 
 
-  async timeline(id: string, user: AuthUser) {
+  async timeline(id: string, user: AuthUser, query: { limit?: string; cursor?: string } = {}) {
     const patient = await this.get(id, user);
+    const limit = parseTimelineLimit(query.limit);
+    const cursor = decodeTimelineCursor(query.cursor);
+    const candidateTake = limit + 1;
+    const clinicalScope = isReceptionistOnly(user) ? { id: EMPTY_SCOPE_ID } : {};
     const [
       appointments,
       queueTickets,
@@ -565,31 +569,31 @@ export class PatientsService {
       patientInternalNotes
       // v0.12.2 history rows are loaded separately through the history sheet workspace.
     ] = await Promise.all([
-      this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { doctor: true }, orderBy: { startAt: "desc" }, take: 100 }),
-      this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { checkedInAt: "desc" }, take: 100 }),
-      this.prisma.encounter.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, signedByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.prescription.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, items: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { items: true, doctor: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user) }, include: { uploadedByUser: true, reviewedByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.gynecologyVisit.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true }, orderBy: { visitDate: "desc" }, take: 100 }),
-      this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user) }, include: { fetuses: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) } }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.antenatalVisit.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { visitDate: "desc" }, take: 100 }),
-      this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user) }, include: { reviewedByUser: true }, orderBy: { performedAt: "desc" }, take: 100 }),
-      this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.payment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { recordedByUser: true }, orderBy: { paidAt: "desc" }, take: 100 }),
-      this.prisma.consentRecord.findMany({ where: { patientId: id }, include: { capturedByUser: true }, orderBy: { capturedAt: "desc" }, take: 100 }),
-      this.prisma.investigationResult.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
-      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user) }, orderBy: { createdAt: "desc" }, take: 100 })
+      this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "appointment", "startAt") }, include: { doctor: true }, orderBy: [{ startAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "queue", "checkedInAt") }, orderBy: [{ checkedInAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.encounter.findMany({ where: { patientId: id, ...doctorScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "encounter", "createdAt") }, include: { doctor: true, signedByUser: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.prescription.findMany({ where: { patientId: id, ...doctorScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "prescription", "createdAt") }, include: { doctor: true, items: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "investigation", "createdAt") }, include: { items: true, doctor: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "report", "createdAt") }, include: { uploadedByUser: true, reviewedByUser: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.gynecologyVisit.findMany({ where: { patientId: id, ...branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "gynecology", "visitDate") }, include: { createdByUser: true }, orderBy: [{ visitDate: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "pregnancy", "createdAt") }, include: { fetuses: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "previous_pregnancy", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) }, ...clinicalScope, ...timelineCursorWhere(cursor, "pregnancy_fetus", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.antenatalVisit.findMany({ where: { patientId: id, ...branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "antenatal_visit", "visitDate") }, orderBy: [{ visitDate: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "ultrasound", "performedAt") }, include: { reviewedByUser: true }, orderBy: [{ performedAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "invoice", "createdAt") }, include: { createdByUser: true }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.payment.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "payment", "paidAt") }, include: { recordedByUser: true }, orderBy: [{ paidAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.consentRecord.findMany({ where: { patientId: id, ...timelineCursorWhere(cursor, "consent", "capturedAt") }, include: { capturedByUser: true }, orderBy: [{ capturedAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.investigationResult.findMany({ where: { patientId: id, ...branchScope(user), ...clinicalScope, ...timelineCursorWhere(cursor, "investigation_result", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "patient_document", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "referral", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "patient_task", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user), ...timelineCursorWhere(cursor, "internal_note", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake })
     ]);
 
     const items = [
-      timelineItem(patient.createdAt, "patient", "Patient file created", patient.status, `MRN ${patient.medicalRecordNumber}`, patient.createdByUserId ? "Staff member" : undefined, `/patients/${patient.id}`),
-      ...appointments.map((item) => timelineItem(item.startAt, "appointment", "Appointment booked", item.status, item.appointmentType ?? "Clinic appointment", item.doctor?.displayName, "/appointments")),
+      timelineItem(patient.createdAt, "patient", "Patient file created", patient.status, `MRN ${patient.medicalRecordNumber}`, patient.createdByUserId ? "Staff member" : undefined, `/patients/${patient.id}`, undefined, patient.id),
+      ...appointments.map((item) => timelineItem(item.startAt, "appointment", "Appointment booked", item.status, item.appointmentType ?? "Clinic appointment", item.doctor?.displayName, "/appointments", undefined, item.id)),
       ...queueTickets.map((item) => timelineItem(
         item.checkedInAt,
         "queue",
@@ -597,7 +601,7 @@ export class PatientsService {
         item.status,
         `Added by: ${item.receptionistDisplayNameSnapshot ?? "Reception"} · ${visitTypeDisplay(item.visitType)} · ${formatTime(item.checkedInAt)}`,
         item.receptionistDisplayNameSnapshot ?? undefined,
-        "/queue"
+        "/queue", undefined, item.id
       )),
       ...encounters.map((item) => timelineItem(
         item.startedAt ?? item.createdAt,
@@ -607,27 +611,29 @@ export class PatientsService {
         item.chiefComplaint ?? "Doctor visit note",
         item.doctorDisplayNameSnapshot ?? item.doctor.displayName,
         "/encounters",
-        doctorSignature(item)
+        doctorSignature(item), item.id
       )),
-      ...prescriptions.map((item) => timelineItem(item.createdAt, "prescription", "Prescription created", item.status, `${item.items.length} medicine item(s)`, item.doctor.displayName, "/prescriptions")),
-      ...investigationOrders.map((item) => timelineItem(item.createdAt, "investigation", "Investigation ordered", item.status, item.items.map((orderItem) => orderItem.testName).join(", ") || "Investigation order", item.doctor.displayName, "/investigations")),
-      ...reports.map((item) => timelineItem(item.createdAt, "report", "Report created", item.status, item.title, item.uploadedByUser?.displayName, "/reports")),
-      ...gynecologyVisits.map((item) => timelineItem(item.visitDate, "gynecology", gynecologyTimelineTitle(item.templateType), "recorded", item.reasonForVisit ?? "Recording-only gynecology visit", item.createdByUser?.displayName, `/patients/${patient.id}`)),
-      ...pregnancies.map((item) => timelineItem(item.createdAt, "pregnancy", "Pregnancy episode recorded", item.status, `${item.fetuses.length || 1} fetus record(s)`, undefined, "/pregnancies")),
-      ...previousPregnancies.map((item) => timelineItem(item.createdAt, "previous_pregnancy", "Previous pregnancy history recorded", "recorded", item.outcome, undefined, "/pregnancies")),
-      ...pregnancyFetuses.map((item) => timelineItem(item.createdAt, "pregnancy_fetus", "Fetus record created", item.status, item.label, undefined, "/pregnancies")),
-      ...pregnancyFetuses.map((item) => timelineItem(item.updatedAt, "pregnancy_fetus", "Fetus record updated", item.status, item.label, undefined, "/pregnancies")),
-      ...antenatalVisits.map((item) => timelineItem(item.visitDate, "antenatal_visit", "Antenatal visit recorded", "recorded", item.gestationalAgeDisplay ?? "Pregnancy follow-up", undefined, "/pregnancies")),
-      ...obUltrasounds.map((item) => timelineItem(item.performedAt, "ultrasound", item.status === "draft" ? "Ultrasound draft recorded" : "Ultrasound study recorded", item.status, item.scanType ?? "Recording only; clinician interpretation required", item.reviewedByUser?.displayName, "/ultrasound")),
-      ...invoices.map((item) => timelineItem(item.createdAt, "invoice", "Invoice created", item.status, `Balance ${item.balanceAmount.toString()}`, item.createdByUser?.displayName, "/billing")),
-      ...payments.map((item) => timelineItem(item.paidAt, "payment", "Payment recorded", item.status, `${item.method} ${item.amount.toString()}`, item.recordedByUser?.displayName, "/billing")),
-      ...consentRecords.map((item) => timelineItem(item.capturedAt, "consent", "Consent recorded", item.status, item.consentType.replaceAll("_", " "), item.capturedByUser?.displayName, "/consents")),
-      ...investigationResults.map((item) => timelineItem(item.createdAt, "investigation_result", item.criticalFlag ? "Critical result metadata recorded" : "Result metadata recorded", item.reviewStatus, item.title, undefined, "/investigations")),
-      ...patientDocuments.map((item) => timelineItem(item.createdAt, "patient_document", "Document archived", item.status, `${item.title} (${item.storageMode})`, undefined, `/patients/${patient.id}`)),
-      ...referrals.map((item) => timelineItem(item.createdAt, "referral", "Referral created", item.status, item.reason, undefined, "/referrals")),
-      ...patientTasks.map((item) => timelineItem(item.createdAt, "patient_task", "Patient task created", item.status, item.title, undefined, "/tasks")),
-      ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`))
-    ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()).slice(0, 100);
+      ...prescriptions.map((item) => timelineItem(item.createdAt, "prescription", "Prescription created", item.status, `${item.items.length} medicine item(s)`, item.doctor.displayName, "/prescriptions", undefined, item.id)),
+      ...investigationOrders.map((item) => timelineItem(item.createdAt, "investigation", "Investigation ordered", item.status, item.items.map((orderItem) => orderItem.testName).join(", ") || "Investigation order", item.doctor.displayName, "/investigations", undefined, item.id)),
+      ...reports.map((item) => timelineItem(item.createdAt, "report", "Report created", item.status, item.title, item.uploadedByUser?.displayName, "/reports", undefined, item.id)),
+      ...gynecologyVisits.map((item) => timelineItem(item.visitDate, "gynecology", gynecologyTimelineTitle(item.templateType), "recorded", item.reasonForVisit ?? "Recording-only gynecology visit", item.createdByUser?.displayName, `/patients/${patient.id}`, undefined, item.id)),
+      ...pregnancies.map((item) => timelineItem(item.createdAt, "pregnancy", "Pregnancy episode recorded", item.status, `${item.fetuses.length || 1} fetus record(s)`, undefined, "/pregnancies", undefined, item.id)),
+      ...previousPregnancies.map((item) => timelineItem(item.createdAt, "previous_pregnancy", "Previous pregnancy history recorded", "recorded", item.outcome, undefined, "/pregnancies", undefined, item.id)),
+      ...pregnancyFetuses.map((item) => timelineItem(item.createdAt, "pregnancy_fetus", "Fetus record created", item.status, item.label, undefined, "/pregnancies", undefined, item.id)),
+      ...antenatalVisits.map((item) => timelineItem(item.visitDate, "antenatal_visit", "Antenatal visit recorded", "recorded", item.gestationalAgeDisplay ?? "Pregnancy follow-up", undefined, "/pregnancies", undefined, item.id)),
+      ...obUltrasounds.map((item) => timelineItem(item.performedAt, "ultrasound", item.status === "draft" ? "Ultrasound draft recorded" : "Ultrasound study recorded", item.status, item.scanType ?? "Recording only; clinician interpretation required", item.reviewedByUser?.displayName, "/ultrasound", undefined, item.id)),
+      ...invoices.map((item) => timelineItem(item.createdAt, "invoice", "Invoice created", item.status, `Balance ${item.balanceAmount.toString()}`, item.createdByUser?.displayName, "/billing", undefined, item.id)),
+      ...payments.map((item) => timelineItem(item.paidAt, "payment", "Payment recorded", item.status, `${item.method} ${item.amount.toString()}`, item.recordedByUser?.displayName, "/billing", undefined, item.id)),
+      ...consentRecords.map((item) => timelineItem(item.capturedAt, "consent", "Consent recorded", item.status, item.consentType.replaceAll("_", " "), item.capturedByUser?.displayName, "/consents", undefined, item.id)),
+      ...investigationResults.map((item) => timelineItem(item.createdAt, "investigation_result", item.criticalFlag ? "Critical result metadata recorded" : "Result metadata recorded", item.reviewStatus, item.title, undefined, "/investigations", undefined, item.id)),
+      ...patientDocuments.map((item) => timelineItem(item.createdAt, "patient_document", "Document archived", item.status, `${item.title} (${item.storageMode})`, undefined, `/patients/${patient.id}`, undefined, item.id)),
+      ...referrals.map((item) => timelineItem(item.createdAt, "referral", "Referral created", item.status, item.reason, undefined, "/referrals", undefined, item.id)),
+      ...patientTasks.map((item) => timelineItem(item.createdAt, "patient_task", "Patient task created", item.status, item.title, undefined, "/tasks", undefined, item.id)),
+      ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`, undefined, item.id))
+    ].filter((item) => isTimelineItemAfterCursor(item, cursor)).sort(compareTimelineItems);
+    const hasMore = items.length > limit;
+    const pageItems = items.slice(0, limit);
+    const nextCursor = hasMore && pageItems.length ? encodeTimelineCursor(pageItems[pageItems.length - 1]!) : null;
 
     await this.audit.record({
       actorUserId: user.id,
@@ -636,10 +642,10 @@ export class PatientsService {
       resourceId: patient.id,
       branchId: patient.branchId,
       severity: "medium",
-      metadataJson: { count: items.length }
+      metadataJson: { count: pageItems.length, hasMore }
     });
 
-    return { patientId: patient.id, items };
+    return { patientId: patient.id, items: pageItems, nextCursor, hasMore };
   }
 
   async historySheets(id: string, user: AuthUser) {
@@ -1197,8 +1203,62 @@ export class PatientsService {
   }
 }
 
-function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor?: string, href?: string, doctorSignature?: Record<string, unknown>) {
-  return { dateTime: dateTime.toISOString(), type, title, status, description, actor, href, doctorSignature };
+type TimelineCursor = { timestamp: string; type: string; id: string };
+type TimelineItemRow = { id: string; sourceId: string; dateTime: string; type: string; title: string; status: string; description: string; actor?: string; href?: string; doctorSignature?: Record<string, unknown> };
+
+function parseTimelineLimit(raw?: string) {
+  if (raw === undefined || raw === "") return 25;
+  if (!/^\d+$/.test(raw)) throw timelineCursorError("Timeline limit must be an integer between 1 and 50.");
+  const limit = Number(raw);
+  if (limit < 1 || limit > 50) throw timelineCursorError("Timeline limit must be between 1 and 50.");
+  return limit;
+}
+
+function decodeTimelineCursor(raw?: string): TimelineCursor | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as Partial<TimelineCursor> & { v?: number };
+    if (value.v !== 1 || typeof value.timestamp !== "string" || Number.isNaN(Date.parse(value.timestamp)) || typeof value.type !== "string" || !/^[a-z_]{1,40}$/.test(value.type) || typeof value.id !== "string" || !/^[0-9a-f-]{36}$/i.test(value.id)) throw new Error("invalid");
+    return { timestamp: new Date(value.timestamp).toISOString(), type: value.type, id: value.id };
+  } catch {
+    throw timelineCursorError("Timeline cursor is invalid.");
+  }
+}
+
+function encodeTimelineCursor(item: TimelineItemRow) {
+  return Buffer.from(JSON.stringify({ v: 1, timestamp: item.dateTime, type: item.type, id: item.sourceId }), "utf8").toString("base64url");
+}
+
+function timelineCursorError(message: string) {
+  return new BadRequestException({ code: "PATIENT_TIMELINE_CURSOR_INVALID", message });
+}
+
+function timelineCursorWhere(cursor: TimelineCursor | null, sourceType: string, dateField: string): Record<string, unknown> {
+  if (!cursor) return {};
+  const timestamp = new Date(cursor.timestamp);
+  if (sourceType < cursor.type) return { [dateField]: { lt: timestamp } };
+  if (sourceType > cursor.type) return { [dateField]: { lte: timestamp } };
+  return { OR: [{ [dateField]: { lt: timestamp } }, { [dateField]: timestamp, id: { gt: cursor.id } }] };
+}
+
+function compareTimelineItems(left: TimelineItemRow, right: TimelineItemRow) {
+  const timestampDifference = Date.parse(right.dateTime) - Date.parse(left.dateTime);
+  if (timestampDifference) return timestampDifference;
+  const typeDifference = left.type.localeCompare(right.type);
+  return typeDifference || left.sourceId.localeCompare(right.sourceId);
+}
+
+function isTimelineItemAfterCursor(item: TimelineItemRow, cursor: TimelineCursor | null) {
+  if (!cursor) return true;
+  return compareTimelineItems(item, { ...item, dateTime: cursor.timestamp, type: cursor.type, sourceId: cursor.id }) > 0;
+}
+
+function isReceptionistOnly(user: AuthUser) {
+  return user.roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !user.roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
+}
+
+function timelineItem(dateTime: Date, type: string, title: string, status: string, description: string, actor: string | undefined, href: string | undefined, doctorSignature: Record<string, unknown> | undefined, sourceId: string): TimelineItemRow {
+  return { id: `${type}:${sourceId}`, sourceId, dateTime: dateTime.toISOString(), type, title, status, description, actor, href, doctorSignature };
 }
 
 function doctorSignature(item: {

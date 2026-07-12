@@ -94,6 +94,8 @@ export type TabConfig = {
       roles?: string[];
     };
 export type TimelineItem = {
+      id?: string;
+      sourceId?: string;
       dateTime: string;
       type: string;
       title: string;

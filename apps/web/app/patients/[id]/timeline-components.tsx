@@ -24,7 +24,7 @@ import { caseBoards, conceptionMethodChips, currentPregnancyTags, feedItemTypes,
 import type { Patient, TimelineItem } from "./patient-components";
 import { formatDateTime } from "./workspace-formatters";
 
-export function Timeline({ patient, items }: { patient: Patient; items: TimelineItem[] }) {
+export function Timeline({ patient, items, hasMore = false, onLoadMore }: { patient: Patient; items: TimelineItem[]; hasMore?: boolean; onLoadMore?: () => void }) {
     const [filter, setFilter] = useState("All");
     const filters = ["All", "Clinical", "Billing", "Documents", "Pregnancy", "Gynecology", "Investigations", "AI drafts", "Queue/appointments"];
     const baseItems = items.length > 0 ? items : [{ title: "Patient file opened", description: `MRN ${patient.medicalRecordNumber}`, type: "patients", status: patient.status, dateTime: new Date().toISOString() }];
@@ -60,6 +60,7 @@ export function Timeline({ patient, items }: { patient: Patient; items: Timeline
           </article>
         ))}
       </div>
+      {hasMore ? <button className="button secondary" type="button" onClick={onLoadMore}>Load older events</button> : null}
     </section>
     );
 }
