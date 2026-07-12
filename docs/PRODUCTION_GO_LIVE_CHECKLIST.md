@@ -91,3 +91,5 @@
 - [x] Idempotency safety includes canonical hashing and 6m timeout.
 - [x] Clinic time is strictly mathematically calculated rather than string parsed.
 - [x] Proxy errors correctly parse fallback body.code.
+
+- [x] Part G verified: CSRF, Security Headers, Rate Limits, Audit Logging, Health, Playwright Smoke Tests

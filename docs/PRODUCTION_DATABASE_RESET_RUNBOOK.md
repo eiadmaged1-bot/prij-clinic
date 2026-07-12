@@ -78,3 +78,5 @@ After an isolated restore, run `npm run documents:storage:reconcile` with the re
 - Patient-linked operational records.
 - Queue, visit, prescription, investigation, report, document, billing, payment, intake, consent record, referral, task, internal note, AI draft, staff chat, infertility, pregnancy, ultrasound, and patient-linked medication/allergy records.
 - Demo/test/placeholder prescription templates and medication shortcuts when not reviewed production configuration.
+
+- Part G Readiness: Migration Chain Proof applied flawlessly to fresh DB.
