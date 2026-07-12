@@ -258,35 +258,6 @@ export class PatientsService {
     return { candidates };
   }
 
-  async list(user: AuthUser) {
-    const patients = await this.prisma.patient.findMany({
-      where: { ...branchScope(user), NOT: demoPatientWhere() },
-      orderBy: [{ createdAt: "desc" }],
-      take: 100,
-      include: {
-        clinicalPhases: {
-          where: { status: "active" },
-          orderBy: { startDate: "desc" },
-          take: 1
-        }
-      }
-    });
-
-    await this.audit.record({
-      actorUserId: user.id,
-      action: "patient.list_read",
-      resourceType: "patient",
-      branchId: user.branchId,
-      severity: "medium",
-      metadataJson: { count: patients.length }
-    });
-
-    return patients.map((patient) => {
-      const { clinicalPhases, ...row } = patient;
-      return { ...row, currentPhase: clinicalPhases[0] ?? null };
-    });
-  }
-
   async get(id: string, user: AuthUser) {
     const patient = await this.prisma.patient.findFirst({ where: { id, ...branchScope(user) } });
 

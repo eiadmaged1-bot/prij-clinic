@@ -31,11 +31,12 @@ import {
   UpdatePatientDto
 } from "./dto";
 import { PatientsService } from "./patients.service";
+import { PatientSearchService } from "./services/patient-search.service";
 
 @Controller("patients")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PatientsController {
-  constructor(private readonly patients: PatientsService) {}
+  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService) {}
 
   @Post()
   @Permissions("patient.create")
@@ -58,7 +59,7 @@ export class PatientsController {
   @Get()
   @Permissions("patient.read")
   async list(@CurrentUser() user: AuthUser) {
-    return { patients: await this.patients.list(user) };
+    return { patients: await this.search.list(user) };
   }
 
   @Get(":id")
