@@ -32,11 +32,12 @@ import {
 } from "./dto";
 import { PatientsService } from "./patients.service";
 import { PatientSearchService } from "./services/patient-search.service";
+import { PatientLookupService } from "./services/patient-lookup.service";
 
 @Controller("patients")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PatientsController {
-  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService) {}
+  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService, private readonly lookup: PatientLookupService) {}
 
   @Post()
   @Permissions("patient.create")
@@ -58,21 +59,21 @@ export class PatientsController {
 
   @Get()
   @Permissions("patient.read")
-  async list(@CurrentUser() user: AuthUser) {
-    return { patients: await this.search.list(user) };
+  async list(@CurrentUser() user: AuthUser, @Query("q") query?: string) {
+    return { patients: await this.search.list(user, query) };
   }
 
   @Get(":id")
   @Permissions("patient.read")
   get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.patients.get(id, user);
+    return this.lookup.get(id, user);
   }
 
   @Get(":id/workspace-summary")
   @Header("Cache-Control", "private, no-store, max-age=0")
   @Permissions("patient.read")
   workspaceSummary(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.patients.workspaceSummary(id, user);
+    return this.lookup.workspaceSummary(id, user);
   }
 
   @Get(":id/qr")

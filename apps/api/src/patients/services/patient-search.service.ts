@@ -20,11 +20,22 @@ export class PatientSearchService {
     private readonly audit: AuditService
   ) {}
 
-  async list(user: AuthUser) {
+  async list(user: AuthUser, rawQuery?: string) {
+    const query = rawQuery?.trim() ?? "";
+    const normalizedPhone = query.replace(/\D/g, "");
+    const where: Prisma.PatientWhereInput = { ...branchScope(user), NOT: demoPatientWhere() };
+    if (query) {
+      where.OR = [
+        { medicalRecordNumber: { equals: query, mode: "insensitive" } },
+        { firstName: { startsWith: query, mode: "insensitive" } },
+        { lastName: { startsWith: query, mode: "insensitive" } },
+        ...(normalizedPhone ? [{ phone: { contains: normalizedPhone } } satisfies Prisma.PatientWhereInput] : [])
+      ];
+    }
     const patients = await this.prisma.patient.findMany({
-      where: { ...branchScope(user), NOT: demoPatientWhere() },
+      where,
       orderBy: [{ createdAt: "desc" }],
-      take: 100,
+      take: query ? 25 : 100,
       include: {
         clinicalPhases: {
           where: { status: "active" },

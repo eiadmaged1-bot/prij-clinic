@@ -8,13 +8,14 @@ import { UsersModule } from "../users/users.module";
 import { PatientsController } from "./patients.controller";
 import { PatientsService } from "./patients.service";
 import { PatientSearchService } from "./services/patient-search.service";
+import { PatientLookupService } from "./services/patient-lookup.service";
 
 import { DoctorVisitModule } from "../doctor-visit/doctor-visit.module";
 
 @Module({
   imports: [AuditModule, AuthModule, ClinicalTagsModule, PrismaModule, RbacModule, UsersModule, DoctorVisitModule],
   controllers: [PatientsController],
-  providers: [PatientsService, PatientSearchService],
+  providers: [PatientsService, PatientSearchService, PatientLookupService],
   exports: [PatientsService]
 })
 export class PatientsModule {}
