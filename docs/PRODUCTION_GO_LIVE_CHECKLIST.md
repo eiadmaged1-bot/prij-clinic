@@ -1,4 +1,4 @@
-# Production Go-Live Checklist
+﻿# Production Go-Live Checklist
 
 ## Code and Branch
 
@@ -76,3 +76,11 @@
 - [ ] AI output is draft-only.
 - [ ] Doctor review is required before clinical use.
 - [ ] Clinical record changes have audit support.
+
+## Concurrency and Time
+
+- [x] Queue transitions use atomic row-level updates to prevent race conditions.
+- [x] Billing payments use SELECT ... FOR UPDATE to prevent lost balance updates.
+- [x] Idempotency safety includes canonical hashing and 6m timeout.
+- [x] Clinic time is strictly mathematically calculated rather than string parsed.
+- [x] Proxy errors correctly parse fallback body.code.
