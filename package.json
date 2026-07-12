@@ -155,6 +155,7 @@
     "test:production-launch:clinic-timezone": "node scripts/production-launch-clinic-timezone-test.mjs",
     "test:production-launch:queue-payment-safety": "node scripts/production-launch-queue-payment-safety-test.mjs",
     "auth:sessions:cleanup": "node scripts/auth-sessions-cleanup.mjs",
+    "documents:storage:reconcile": "node scripts/document-storage-reconcile.mjs",
     "test:production-launch:dual-interface": "node scripts/production-launch-dual-interface-test.mjs",
     "test:production-launch:mobile": "node scripts/production-launch-mobile-test.mjs",
     "test:production-launch:patient-performance": "node scripts/production-launch-patient-performance-test.mjs",
