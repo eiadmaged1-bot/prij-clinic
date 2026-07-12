@@ -26,7 +26,12 @@ export class LoggerInterceptor implements NestInterceptor {
     "nationalId",
     "iqama",
     "phone",
-    "email"
+    "email",
+    "patientName",
+    "firstName",
+    "lastName",
+    "medicalRecordNumber",
+    "mrn"
   ]);
 
   private redact(obj: any): any {
@@ -53,7 +58,8 @@ export class LoggerInterceptor implements NestInterceptor {
     const req = context.switchToHttp().getRequest<Request>();
     const res = context.switchToHttp().getResponse<Response>();
     
-    const { method, originalUrl, ip } = req;
+    const { method, ip } = req;
+    const requestPath = req.path;
     const userAgent = req.get("user-agent") || "";
     const startTime = Date.now();
 
@@ -61,13 +67,13 @@ export class LoggerInterceptor implements NestInterceptor {
     const safeBody = this.redact(req.body);
     const safeQuery = this.redact(req.query);
 
-    this.logger.log(`[REQ] ${method} ${originalUrl} - IP: ${ip} - Body: ${JSON.stringify(safeBody)} - Query: ${JSON.stringify(safeQuery)}`);
+    this.logger.log(`[REQ] ${method} ${requestPath} - IP: ${ip} - Body: ${JSON.stringify(safeBody)} - Query: ${JSON.stringify(safeQuery)}`);
 
     return next.handle().pipe(
       tap(() => {
         const duration = Date.now() - startTime;
         const statusCode = res.statusCode;
-        this.logger.log(`[RES] ${method} ${originalUrl} ${statusCode} - ${duration}ms - ${userAgent}`);
+        this.logger.log(`[RES] ${method} ${requestPath} ${statusCode} - ${duration}ms - ${userAgent}`);
       })
     );
   }
