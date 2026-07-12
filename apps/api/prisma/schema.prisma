@@ -2993,6 +2993,7 @@ model GuidelineSource {
   countryOrRegion    String?
   specialties        Json?
   defaultAccessLevel GuidelineAccessLevel @default(OWNER_DOCTOR)
+  status             String               @default("active")
   notes              String?
   active             Boolean              @default(true)
   createdAt          DateTime             @default(now()) @db.Timestamptz(3)
