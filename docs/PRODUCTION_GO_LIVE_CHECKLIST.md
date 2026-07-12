@@ -28,6 +28,13 @@
 - [ ] Confirm production secrets are not committed.
 - [ ] Confirm backups are encrypted and access-controlled.
 - [ ] Confirm PHI/PII is redacted from logs and audit metadata where required.
+- [x] Document MIME/extension/magic-byte validation and encrypted quarantine are implemented and source/unit tested.
+- [ ] Provision a 32-byte document encryption key and non-secret key identifier through the deployment secret manager.
+- [ ] Configure and validate a production malware scanner; production must remain fail-closed while status is `NOT_CONFIGURED`.
+- [ ] Apply the patient document security migration through the reviewed deployment workflow (not applied in this sprint).
+- [ ] Back up and restore the encrypted document root together with its matching database snapshot and key-version inventory.
+- [ ] Run `npm run documents:storage:reconcile` in dry-run mode and review count-only results before any `--apply`.
+- [ ] Complete authenticated upload/download browser QA for Doctor, Owner, and restricted Receptionist access.
 
 ## Desktop QA
 

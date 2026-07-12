@@ -60,6 +60,12 @@ Apply refuses when:
 - Production users or branches would be deleted.
 - Verified catalogs would be deleted.
 
+## Encrypted Document Backup and Restore
+
+The database and `PATIENT_DOCUMENT_STORAGE_ROOT` form one consistency set. Back them up at the same recovery point and keep both outside Git with access control and encryption. Retain the encryption key identifier inventory and every still-required decryption key in the deployment secret manager; raw keys must never enter a manifest or database.
+
+After an isolated restore, run `npm run documents:storage:reconcile` with the restored database and storage root. Review missing-file, orphan-file, checksum, stale-quarantine, and stuck-scan counts. Do not use `--apply` until the restore operator approves moving suspicious files into orphan quarantine. Reconciliation never permanently erases files by default.
+
 ## Preserved Data Classes
 
 - Migrations and schema.
@@ -72,4 +78,3 @@ Apply refuses when:
 - Patient-linked operational records.
 - Queue, visit, prescription, investigation, report, document, billing, payment, intake, consent record, referral, task, internal note, AI draft, staff chat, infertility, pregnancy, ultrasound, and patient-linked medication/allergy records.
 - Demo/test/placeholder prescription templates and medication shortcuts when not reviewed production configuration.
-
