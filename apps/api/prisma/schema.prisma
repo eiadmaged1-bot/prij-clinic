@@ -369,6 +369,7 @@ model Patient {
   @@index([status])
   @@index([patientType])
   @@index([lastName, firstName])
+  @@index([phone])
 }
 
 model ConsentRecord {
@@ -440,7 +441,7 @@ model Appointment {
   @@index([branchId, startAt])
   @@index([patientId, startAt])
   @@index([doctorId, startAt])
-  @@index([status])
+  @@index([status, startAt])
 }
 
 model QueueTicket {
