@@ -2045,8 +2045,24 @@ enum PatientDocumentStatus {
 enum PatientDocumentStorageMode {
   metadata_only
   local_demo_file
+  secure_encrypted_local
   production_external_storage_placeholder
   external_reference_placeholder
+}
+
+enum DocumentScanStatus {
+  PENDING
+  CLEAN
+  REJECTED
+  ERROR
+  NOT_CONFIGURED
+}
+
+enum DocumentQuarantineStatus {
+  QUARANTINED
+  PROMOTED
+  REJECTED
+  ORPHANED
 }
 
 enum PatientDocumentConfidentialityLevel {
@@ -2432,6 +2448,18 @@ model PatientDocument {
   summaryText            String?
   tagsJson               Json?
   confidentialityLevel   PatientDocumentConfidentialityLevel @default(normal)
+  storageKey             String?
+  originalFilenameSafe   String?
+  detectedMimeType       String?
+  declaredMimeType       String?
+  sha256                  String?
+  encryptionVersion      Int?
+  encryptionKeyId        String?
+  scanStatus             DocumentScanStatus?
+  scanProvider           String?
+  scanCompletedAt        DateTime?                            @db.Timestamptz(3)
+  quarantineStatus       DocumentQuarantineStatus?
+  createdRequestId       String?
   uploadedByUserId       String?                             @db.Uuid
   reviewedByUserId       String?                             @db.Uuid
   reviewedAt             DateTime?                           @db.Timestamptz(3)
@@ -2457,6 +2485,10 @@ model PatientDocument {
   @@index([storageMode])
   @@index([sanitizedSha256])
   @@index([confidentialityLevel])
+  @@index([storageKey])
+  @@index([patientId, sha256])
+  @@index([quarantineStatus, createdAt])
+  @@index([scanStatus, createdAt])
 }
 
 model ConsentTemplate {

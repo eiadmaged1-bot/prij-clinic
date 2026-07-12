@@ -104,6 +104,14 @@ export function validateRuntimeEnv() {
   if ((isProduction || isStaging) && process.env.PATIENT_FILE_STORAGE_MODE === "local_demo_file") {
     errors.push("PATIENT_FILE_STORAGE_MODE=local_demo_file is forbidden in staging and production.");
   }
+  if (isProduction && (!process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY || !process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY_ID)) {
+    errors.push("Patient document encryption key and key identifier are required in production.");
+  }
+  if (process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY) {
+    try {
+      if (Buffer.from(process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY, "base64").length !== 32) errors.push("PATIENT_DOCUMENT_ENCRYPTION_KEY must decode to exactly 32 bytes.");
+    } catch { errors.push("PATIENT_DOCUMENT_ENCRYPTION_KEY must be valid base64."); }
+  }
 
   const jwtExpiresIn = process.env.JWT_EXPIRES_IN ?? "1h";
   if (isProduction && !/^\d+[smh]$/.test(jwtExpiresIn)) {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
@@ -34,14 +34,26 @@ export class PatientDocumentsController {
 
   @Post("upload")
   @Permissions("patient_document.create")
-  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 25 * 1024 * 1024 } }))
   upload(
     @Param("patientId") patientId: string,
     @UploadedFile() file: UploadedPatientDocumentFile,
     @Body() dto: UploadPatientDocumentDto,
-    @CurrentUser() user: AuthUser
+    @CurrentUser() user: AuthUser,
+    @Req() request: { requestId?: string }
   ) {
-    return this.documents.createFromUpload(patientId, file, dto, user);
+    return this.documents.createFromUpload(patientId, file, dto, user, request.requestId);
+  }
+
+  @Get(":documentId/download")
+  @Permissions("patient_document.read")
+  async download(@Param("patientId") patientId: string, @Param("documentId") documentId: string, @CurrentUser() user: AuthUser, @Res() response: any) {
+    const download = await this.documents.download(patientId, documentId, user);
+    response.setHeader("Content-Type", download.mimeType);
+    response.setHeader("Content-Disposition", `attachment; filename="${download.filename}"`);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("Cache-Control", "private, no-store");
+    response.status(200).send(download.buffer);
   }
 
   @Get(":documentId")
