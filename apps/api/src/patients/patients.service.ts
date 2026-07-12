@@ -613,26 +613,26 @@ export class PatientsService {
       patientInternalNotes
       // v0.12.2 history rows are loaded separately through the history sheet workspace.
     ] = await Promise.all([
-      this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { doctor: true } }),
-      this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.encounter.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, signedByUser: true } }),
-      this.prisma.prescription.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, items: true } }),
-      this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { items: true, doctor: true } }),
-      this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user) }, include: { uploadedByUser: true, reviewedByUser: true } }),
-      this.prisma.gynecologyVisit.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true } }),
-      this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user) }, include: { fetuses: true } }),
-      this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user) } }),
-      this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) } } }),
-      this.prisma.antenatalVisit.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user) }, include: { reviewedByUser: true } }),
-      this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true } }),
-      this.prisma.payment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { recordedByUser: true } }),
-      this.prisma.consentRecord.findMany({ where: { patientId: id }, include: { capturedByUser: true } }),
-      this.prisma.investigationResult.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user) } }),
-      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user) } })
+      this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { doctor: true }, orderBy: { startAt: "desc" }, take: 100 }),
+      this.prisma.queueTicket.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { checkedInAt: "desc" }, take: 100 }),
+      this.prisma.encounter.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, signedByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.prescription.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { doctor: true, items: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.investigationOrder.findMany({ where: { patientId: id, ...doctorScope(user) }, include: { items: true, doctor: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.report.findMany({ where: { patientId: id, ...branchScope(user) }, include: { uploadedByUser: true, reviewedByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.gynecologyVisit.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true }, orderBy: { visitDate: "desc" }, take: 100 }),
+      this.prisma.pregnancy.findMany({ where: { patientId: id, ...branchScope(user) }, include: { fetuses: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.previousPregnancy.findMany({ where: { patientId: id, patient: branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.pregnancyFetus.findMany({ where: { pregnancy: { patientId: id, ...branchScope(user) } }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.antenatalVisit.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { visitDate: "desc" }, take: 100 }),
+      this.prisma.obUltrasound.findMany({ where: { patientId: id, ...branchScope(user) }, include: { reviewedByUser: true }, orderBy: { performedAt: "desc" }, take: 100 }),
+      this.prisma.invoice.findMany({ where: { patientId: id, ...branchScope(user) }, include: { createdByUser: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.payment.findMany({ where: { patientId: id, ...branchScope(user) }, include: { recordedByUser: true }, orderBy: { paidAt: "desc" }, take: 100 }),
+      this.prisma.consentRecord.findMany({ where: { patientId: id }, include: { capturedByUser: true }, orderBy: { capturedAt: "desc" }, take: 100 }),
+      this.prisma.investigationResult.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user) }, orderBy: { createdAt: "desc" }, take: 100 }),
+      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user) }, orderBy: { createdAt: "desc" }, take: 100 })
     ]);
 
     const items = [
@@ -675,7 +675,7 @@ export class PatientsService {
       ...referrals.map((item) => timelineItem(item.createdAt, "referral", "Referral created", item.status, item.reason, undefined, "/referrals")),
       ...patientTasks.map((item) => timelineItem(item.createdAt, "patient_task", "Patient task created", item.status, item.title, undefined, "/tasks")),
       ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`))
-    ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
+    ].sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime()).slice(0, 100);
 
     await this.audit.record({
       actorUserId: user.id,

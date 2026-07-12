@@ -23,7 +23,8 @@ export async function fetchAuditLogs() {
   // Let's create an endpoint in apps/api for this, or just return dummy data for the UI if the endpoint isn't made yet.
   
   try {
-    const sessionCookie = cookies().get("prij_clinic_session")?.value;
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("prij_clinic_session")?.value;
     const res = await fetch(`${API_URL}/audit/recent`, {
       cache: "no-store",
       headers: {
