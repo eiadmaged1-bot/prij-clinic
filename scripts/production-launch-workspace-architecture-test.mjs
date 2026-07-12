@@ -43,7 +43,7 @@ assert.match(pageSource, /searchParams\.get\("module"\)/, "deep module links mus
 assert.match(pageSource, /searchParams\.get\("tab"\)/, "legacy tab deep links must remain supported");
 assert.match(pageSource, /router\.push\(`\?\$\{nextParams\.toString\(\)\}`/, "module switches must update browser history");
 assert.match(pageSource, /visiblePatientWorkspaceItems/, "navigation must use the authoritative registry");
-assert.match(pageSource, /!roleContextReady \|\| !visibleTabs\.some/, "module data must wait for role-safe visibility");
+assert.match(pageSource, /!roleContextReady \|\| !canAccessActiveTab/, "module data must wait for role-safe authorization");
 const rendererSource = fs.readFileSync(rendererPath, "utf8");
 for (const moduleName of ["timeline-components", "visit-flow-components", "panel-components", "pregnancy-components"]) {
   assert.match(rendererSource, new RegExp(`dynamic|lazy`));

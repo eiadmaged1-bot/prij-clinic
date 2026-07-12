@@ -138,6 +138,10 @@ export default function PatientFilePage() {
     }),
     [clinicalPhases, infertilityWorkspace.cycles?.length, interfaceMode, patient?.patientType, permissions, roles]
   );
+  const canAccessActiveTab = useMemo(() => {
+    const entry = patientWorkspaceRegistry.find((item) => item.key === activeTab);
+    return Boolean(entry && (!entry.requiredPermissions.length || entry.requiredPermissions.some((permission) => permissions.includes(permission))) && (!entry.roles?.length || entry.roles.some((role) => roles.includes(role))));
+  }, [activeTab, permissions, roles]);
   const ageLabel = patientAgeLabel(patient?.dateOfBirth);
   const activePregnancyCount = (related.pregnancy ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "active").length;
   const pendingResultCount = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
@@ -185,7 +189,7 @@ export default function PatientFilePage() {
   }, [patientId]);
 
   useEffect(() => {
-    if (!roleContextReady || !visibleTabs.some((tab) => tab.key === activeTab)) return;
+    if (!roleContextReady || !canAccessActiveTab) return;
     if (activeTab === "overview" || activeTab === "more" || activeTab === "doctor-visit") return;
     const token = sessionStorage.getItem("prijClinicToken");
     const controller = new AbortController();
@@ -242,7 +246,7 @@ export default function PatientFilePage() {
     };
     void load();
     return () => controller.abort();
-  }, [activeTab, patientId, refreshVersion, roleContextReady, visibleTabs]);
+  }, [activeTab, patientId, refreshVersion, roleContextReady, canAccessActiveTab]);
 
   async function loadMoreTimeline() {
     if (!timelineNextCursor) return;

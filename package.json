@@ -369,6 +369,8 @@
     "test:production-launch:workspace-architecture": "node scripts/production-launch-workspace-architecture-test.mjs",
     "test:production-launch:action-registry": "node scripts/production-launch-action-registry-test.mjs",
     "test:production-launch:pagination": "node scripts/production-launch-pagination-test.mjs",
+    "test:production-launch:patient-workspace-budget": "node scripts/production-launch-patient-workspace-budget-test.mjs",
+    "test:production-launch:bundle-budget": "node scripts/production-launch-bundle-budget-test.mjs",
     "staging:env:check": "powershell -ExecutionPolicy Bypass -File scripts/staging-env-check.ps1",
     "prisma:generate": "npm run prisma:generate -w apps/api",
     "prisma:repair": "node scripts/prisma-repair-client.mjs",
