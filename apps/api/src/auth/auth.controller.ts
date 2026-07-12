@@ -12,6 +12,7 @@ import { CurrentUser } from "./current-user.decorator";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import type { AuthUser, RequestWithUser } from "./auth.types";
 import { AuthService } from "./auth.service";
+import { Throttle } from "@nestjs/throttler";
 
 type LoginBody = {
   email?: unknown;
@@ -42,6 +43,7 @@ export class AuthController {
     return cookies.prij_clinic_session;
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post("login")
   async login(
     @Body() body: LoginBody,
@@ -60,6 +62,8 @@ export class AuthController {
       requestId: request.requestId
     });
 
+    const csrfToken = crypto.randomUUID();
+
     response.cookie("prij_clinic_session", sessionToken, {
       httpOnly: true,
       sameSite: "lax",
@@ -68,13 +72,33 @@ export class AuthController {
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
-    return { user };
+    response.cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be readable by client JS
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    return { user, csrfToken };
   }
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
-  me(@CurrentUser() user: AuthUser) {
-    return { user };
+  me(
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) response: CookieResponse
+  ) {
+    const csrfToken = crypto.randomUUID();
+    response.cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be readable by client JS
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    return { user, csrfToken };
   }
 
   @Post("logout")
@@ -94,6 +118,13 @@ export class AuthController {
 
     response.clearCookie("prij_clinic_session", {
       httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/"
+    });
+
+    response.clearCookie("csrf-token", {
+      httpOnly: false,
       sameSite: "lax",
       secure: process.env.APP_ENV === "production",
       path: "/"
