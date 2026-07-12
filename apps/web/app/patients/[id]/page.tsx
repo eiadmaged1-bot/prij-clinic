@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
@@ -31,7 +31,8 @@ import {
   smartClinicalTags
 } from "@/lib/v1200-productivity";
 import { AppActionButton } from "@/components/actions/AppActionButton";
-import { WorkspaceModuleRenderer, Patient, PregnancyRecord, FetusRecord, GynecologyVisit, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, ReferenceResult, ServiceItem, SafeAiAssistantPanel, ObDatingReviewPanel, CareAssistPanel, MedicationSafetyTerminal, smartHistoryGroups, gynecologyTemplateOptions, gynecologyTemplateFields, previousPregnancyOutcomeOptions, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, doctorReviewedAllergyAlert, ImportantPatientBanner, PatientCaseFeed, CaseBoardsPanel, SmartHistoryOptionChips, SmartObHistoryTags, MotherBabyWorkspace, Overview, MiniCount, MedicalPanel, ClinicalPanel, InvestigationsPanel, DocumentsPanel, MedicationSafetyWorkspace, DoctorVisitFlow, VisitPacketPreview, insertHintIntoPlan, ProtocolAtlasPanel, CalculatorsPanel, UltrasoundWorkspace, GynecologyWorkspace, ObgynWorkspace, Metric, GpalStepper, gpalSummary, gpalLooksInconsistent, CreatePregnancyEpisodeCard, PreviousPregnancyHistoryCard, previousDeliverySummary, FetusStarterCard, AntenatalVisitCard, UltrasoundReportBuilder, DoctorTemplateCards, HistorySheetWorkspace, ReferencePicker, PatientActionPanel, SelectedPatientSummary, PatientQrModal, MorePatientSections, InfertilityWorkspacePanel, ActionForm, SecretaryIntakePanel, DoctorClinicalNotePanel, values, numericPayload, submitVisitAction, formPayload, RelatedPanel, billingRowSummary, Timeline, timelineMatchesFilter, DoctorSignatureBadge, PrintPacketPanel, timelineIcon, templateLabel, templateSummary, formatDate, SmartPatientEmptyState, formatDateTime } from "./patient-components";
+import { Patient, PregnancyRecord, FetusRecord, GynecologyVisit, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, ReferenceResult, ServiceItem, SafeAiAssistantPanel, ObDatingReviewPanel, CareAssistPanel, MedicationSafetyTerminal, smartHistoryGroups, gynecologyTemplateOptions, gynecologyTemplateFields, previousPregnancyOutcomeOptions, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, doctorReviewedAllergyAlert, ImportantPatientBanner, PatientCaseFeed, CaseBoardsPanel, SmartHistoryOptionChips, SmartObHistoryTags, Overview, MiniCount, MedicationSafetyWorkspace, Metric, DoctorTemplateCards, ReferencePicker, PatientActionPanel, SelectedPatientSummary, PatientQrModal, MorePatientSections, ActionForm, SecretaryIntakePanel, DoctorClinicalNotePanel, values, numericPayload, submitVisitAction, formPayload, RelatedPanel, billingRowSummary, PrintPacketPanel, templateLabel, templateSummary, formatDate, SmartPatientEmptyState, formatDateTime } from "./patient-components";
+import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
 
 const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
@@ -82,19 +83,17 @@ void legacyTabDefinitions;
 void patientWorkspaceTabs;
 
 export default function PatientFilePage() {
-  void ClinicalPanel;
-  void ProtocolAtlasPanel;
-  void CalculatorsPanel;
   void PrintPacketPanel;
   void PatientQuickActions;
   void PatientActionPanel;
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const patientId = params.id;
   const isPreviewMode = searchParams.get("preview") === "queue" || searchParams.get("preview") === "history";
   const { interfaceMode } = useInterfaceMode();
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTabState] = useState("overview");
   const [related, setRelated] = useState<Record<string, Record<string, unknown>[]>>({});
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [clinicalPhases, setClinicalPhases] = useState<ClinicalPhase[]>([]);
@@ -114,8 +113,16 @@ export default function PatientFilePage() {
 
   useEffect(() => {
     const requested = searchParams.get("module") ?? searchParams.get("tab");
-    if (requested && patientWorkspaceRegistry.some((entry) => entry.key === requested)) setActiveTab(requested);
+    if (requested && patientWorkspaceRegistry.some((entry) => entry.key === requested)) setActiveTabState(requested);
   }, [searchParams]);
+
+  function setActiveTab(nextTab: string) {
+    setActiveTabState(nextTab);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("module", nextTab);
+    nextParams.delete("tab");
+    router.push(`?${nextParams.toString()}`, { scroll: false });
+  }
 
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const visibleTabs = useMemo(
@@ -176,13 +183,14 @@ export default function PatientFilePage() {
   }, [patientId]);
 
   useEffect(() => {
+    if (!roleContextReady || !visibleTabs.some((tab) => tab.key === activeTab)) return;
     if (activeTab === "overview" || activeTab === "more" || activeTab === "doctor-visit") return;
     const token = sessionStorage.getItem("prijClinicToken");
     const controller = new AbortController();
     const load = async () => {
       const pairs = await Promise.all(
         relatedLoaders
-          .filter((tab) => tab.key === activeTab && tab.endpoint)
+          .filter((tab) => tab.key === activeTab && tab.endpoint && tab.key !== "infertility")
           .map(async (tab) => {
             try {
               const endpoint = (tab.endpoint ?? "").replace(":patientId", encodeURIComponent(patientId));
@@ -201,20 +209,9 @@ export default function PatientFilePage() {
             }
           })
       );
-      setRelated(Object.fromEntries(pairs));
-      if (activeTab === "timeline") try {
-        const timelineResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/timeline`, {
-          credentials: "include",
-          signal: controller.signal,
-          headers: token ? { authorization: `Bearer ${token}` } : undefined
-        });
-        if (timelineResponse.ok) {
-          const timelineData = await timelineResponse.json() as { items?: TimelineItem[] };
-          setTimelineItems(timelineData.items ?? []);
-        }
-      } catch {
-        setTimelineItems([]);
-      }
+      setRelated((current) => ({ ...current, ...Object.fromEntries(pairs) }));
+      const timelinePair = pairs.find(([key]) => key === "timeline");
+      if (timelinePair) setTimelineItems(timelinePair[1] as TimelineItem[]);
       if (["pregnancy", "infertility"].includes(activeTab)) try {
         const phasesResponse = await fetch(`${getApiBaseUrl()}/patients/${patientId}/phases`, {
           credentials: "include",
@@ -241,7 +238,7 @@ export default function PatientFilePage() {
     };
     void load();
     return () => controller.abort();
-  }, [activeTab, patientId, refreshVersion]);
+  }, [activeTab, patientId, refreshVersion, roleContextReady, visibleTabs]);
 
   async function submitPatientAction(endpoint: string, payload: Record<string, unknown>) {
     const token = sessionStorage.getItem("prijClinicToken");
