@@ -322,6 +322,17 @@ export class BillingService {
     const paidAt = toDateTime(dto.paidAt) ?? new Date();
 
     const payment = await this.prisma.$transaction(async (tx) => {
+      // 1. Lock the invoice row to prevent payment concurrency bugs
+      const lockedInvoices = await tx.$queryRaw<any[]>`SELECT id, status, "totalAmount", "amountPaid" FROM "Invoice" WHERE id = ${invoice.id}::uuid FOR UPDATE`;
+      if (!lockedInvoices.length) {
+        throw new NotFoundException("Invoice not found.");
+      }
+      const lockedInvoice = lockedInvoices[0];
+
+      if (["cancelled", "voided"].includes(lockedInvoice.status)) {
+        throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
+      }
+
       const created = await tx.payment.create({
         data: {
           invoiceId: invoice.id,
@@ -337,9 +348,12 @@ export class BillingService {
         include: paymentIncludes
       });
 
+      const currentTotal = money(lockedInvoice.totalAmount);
+      const currentAmountPaid = money(lockedInvoice.amountPaid);
+
       await tx.invoice.update({
         where: { id: invoice.id },
-        data: paymentRollup(invoice.totalAmount, invoice.amountPaid.add(paymentAmount))
+        data: paymentRollup(currentTotal, currentAmountPaid.add(paymentAmount))
       });
 
       return created;
