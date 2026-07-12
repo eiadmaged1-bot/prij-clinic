@@ -67,9 +67,22 @@ export default function ReceptionCheckInPage() {
         priority,
         visitType
       })
-    });
-    setStatus(response.ok ? "Patient checked in" : "Could not check in patient");
-    if (!response.ok) {
+    }).catch(() => null);
+
+    if (response?.ok) {
+      setStatus("Patient checked in");
+    } else {
+      if (response) {
+        const body = await response.json().catch(() => ({}));
+        const code = body.error?.code || body.code;
+        if (code === "QUEUE_ACTIVE_TICKET_EXISTS") {
+          setStatus("Patient is already in the queue or with doctor");
+        } else {
+          setStatus("Could not check in patient");
+        }
+      } else {
+        setStatus("Could not check in patient");
+      }
       regenerateIdempotencyKey();
     }
   }

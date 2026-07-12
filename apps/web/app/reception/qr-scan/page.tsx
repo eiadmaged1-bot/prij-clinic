@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -146,10 +146,22 @@ function ReceptionQrScanContent() {
       headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
       body: JSON.stringify({ patientId: resolved.patientId, priority: visitType === "urgent_kashf" ? "priority" : "routine", visitType })
     }).catch(() => null);
-    setStatus(response?.ok ? copy.patientAddedToQueue : copy.couldNotAddToQueue);
+
     if (response?.ok) {
+      setStatus(copy.patientAddedToQueue);
       await loadQueue();
     } else {
+      if (response) {
+        const body = await response.json().catch(() => ({}));
+        const code = body.error?.code || body.code;
+        if (code === "QUEUE_ACTIVE_TICKET_EXISTS") {
+          setStatus(copy.alreadyInQueue);
+        } else {
+          setStatus(copy.couldNotAddToQueue);
+        }
+      } else {
+        setStatus(copy.couldNotAddToQueue);
+      }
       regenerateIdempotencyKey();
     }
   }

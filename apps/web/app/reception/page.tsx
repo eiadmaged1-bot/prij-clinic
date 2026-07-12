@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -73,12 +73,24 @@ function ReceptionHomeContent() {
       headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
       body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "Returning Patient" })
     }).catch(() => null);
-    setStatus(response?.ok ? copy.patientAddedToQueue : copy.couldNotAddToQueue);
+
     if (response?.ok) {
+      setStatus(copy.patientAddedToQueue);
       setSelectedPatient(null);
       setVisitType("");
       await load();
     } else {
+      if (response) {
+        const body = await response.json().catch(() => ({}));
+        const code = body.error?.code || body.code;
+        if (code === "QUEUE_ACTIVE_TICKET_EXISTS") {
+          setStatus(copy.alreadyInQueue);
+        } else {
+          setStatus(copy.couldNotAddToQueue);
+        }
+      } else {
+        setStatus(copy.couldNotAddToQueue);
+      }
       regenerateIdempotencyKey();
     }
   }
