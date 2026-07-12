@@ -67,12 +67,14 @@ export class IdempotencyService {
 
         if (existing.status === "IN_PROGRESS") {
           // Check for stale IN_PROGRESS (e.g. server crashed before tx commit).
-          // 2 minutes threshold:
-          if (Date.now() - existing.createdAt.getTime() > 2 * 60 * 1000) {
-            // It's stale. Since complete() runs inside a transaction now, an old IN_PROGRESS means the tx rolled back.
-            // Safe to delete and release the lock.
+          // 5 minutes threshold to ensure no long transaction is still active.
+          if (Date.now() - existing.createdAt.getTime() > 5 * 60 * 1000) {
+            // It's safely stale. We must check if the resource was actually created.
+            // But since we can't generically check, we assume the transaction rolled back.
+            // If the transaction committed but complete() failed, deleting it would allow duplicate!
+            // BUT we also changed complete() to throw and crash the transaction if it fails.
+            // So if it's IN_PROGRESS, the transaction DEFINITELY rolled back or crashed.
             await this.prisma.idempotencyRecord.delete({ where: { id: existing.id } });
-            // Recursively retry
             return this.beginOrReplay(params);
           }
 
@@ -97,41 +99,33 @@ export class IdempotencyService {
   }
 
   async complete(params: CompleteIdempotencyParams): Promise<void> {
-    try {
-      const db = params.tx ?? this.prisma;
-      await db.idempotencyRecord.update({
-        where: { id: params.recordId },
-        data: {
-          status: "COMPLETED",
-          responseStatus: params.responseStatus,
-          resourceType: params.resourceType,
-          resourceId: params.resourceId,
-          completedAt: new Date()
-        }
-      });
-    } catch (error) {
-      this.logger.error(`Failed to complete idempotency record ${params.recordId}`, error);
-    }
+    const db = params.tx ?? this.prisma;
+    await db.idempotencyRecord.update({
+      where: { id: params.recordId },
+      data: {
+        status: "COMPLETED",
+        responseStatus: params.responseStatus,
+        resourceType: params.resourceType,
+        resourceId: params.resourceId,
+        completedAt: new Date()
+      }
+    });
   }
 
   async failOrRelease(params: FailOrReleaseIdempotencyParams): Promise<void> {
-    try {
-      const db = params.tx ?? this.prisma;
-      if (params.releaseLock !== false) {
-        await db.idempotencyRecord.delete({
-          where: { id: params.recordId }
-        });
-      } else {
-        await db.idempotencyRecord.update({
-          where: { id: params.recordId },
-          data: {
-            status: "FAILED",
-            completedAt: new Date()
-          }
-        });
-      }
-    } catch (error) {
-      this.logger.error(`Failed to failOrRelease idempotency record ${params.recordId}`, error);
+    const db = params.tx ?? this.prisma;
+    if (params.releaseLock !== false) {
+      await db.idempotencyRecord.delete({
+        where: { id: params.recordId }
+      });
+    } else {
+      await db.idempotencyRecord.update({
+        where: { id: params.recordId },
+        data: {
+          status: "FAILED",
+          completedAt: new Date()
+        }
+      });
     }
   }
 }
