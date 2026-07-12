@@ -45,4 +45,13 @@ Please verify the following during Manual QA Wave 1, specifically addressing the
 - [ ] Confirm no timeline items older than the top 100 recent overall events are loaded in one go.
 - [ ] Check the `GET /encounters` (Case Feed) loads successfully.
 
+### 5. Performance, Indexes, and Bundle Budgets
+- [ ] **Search by Phone:** Try searching for a patient by phone number. Verify the search is extremely fast (utilizes new composite indexes).
+- [ ] **Workspace Loading Limits:** On initial boot of a patient workspace, verify in the Network tab that minimal requests are made (Workspace Summary + Tab Dependencies).
+- [ ] **Lazy Loaded Libraries:** Navigate to the Calculators or Protocol Atlas tabs. Verify they render properly as they use dynamic imports to prevent blocking the initial bundle.
+
+### 6. Transaction Boundaries & Idempotency
+- [ ] **Payments:** Process a payment. Ensure the transaction is smooth. Behind the scenes, the system now enforces row-level `FOR UPDATE` locking and idempotency tracking to prevent negative balances or double payments during concurrent requests.
+- [ ] **Check-in:** Attempt to check in a patient. Verify the queue ticket updates without error.
+
 **IMPORTANT:** Password functionality remains strictly frozen. Do not attempt to test new password policies, resets, or complexity validation changes as none were implemented.
