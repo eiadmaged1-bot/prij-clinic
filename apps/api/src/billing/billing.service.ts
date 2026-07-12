@@ -350,6 +350,9 @@ export class BillingService {
 
       const currentTotal = money(lockedInvoice.totalAmount);
       const currentAmountPaid = money(lockedInvoice.amountPaid);
+      if (currentAmountPaid.add(paymentAmount).greaterThan(currentTotal)) {
+        throw new BadRequestException({ code: "PAYMENT_EXCEEDS_BALANCE", message: "Payment exceeds the remaining invoice balance." });
+      }
 
       await tx.invoice.update({
         where: { id: invoice.id },

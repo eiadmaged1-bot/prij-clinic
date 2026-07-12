@@ -1,98 +1,38 @@
-import * as http from 'http';
-import * as assert from 'assert';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+const apiPort = Number(process.env.TEST_API_PORT ?? 3001);
 
-function request(options, body) {
+function request(method, path, cookie, body, extraHeaders = {}) {
+  const payload = body === undefined ? undefined : JSON.stringify(body);
   return new Promise((resolve, reject) => {
-    const req = http.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => resolve({ res, data }));
-    });
-    req.on('error', reject);
-    if (body) {
-      req.write(body);
-    }
-    req.end();
+    const req = http.request({ hostname: 'localhost', port: apiPort, method, path, headers: {
+      ...(cookie ? { Cookie: cookie } : {}), ...(payload ? { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) } : {}), ...extraHeaders
+    } }, res => { let data = ''; res.on('data', chunk => data += chunk); res.on('end', () => resolve({ status: res.statusCode, data, headers: res.headers })); });
+    req.on('error', reject); if (payload) req.write(payload); req.end();
   });
 }
 
-async function testQueueConcurrency() {
-  console.log('1. Login to get session');
-  const loginBody = JSON.stringify({ identifier: 'eyad', password: 'eyad' });
-  const loginRes = await request({
-    hostname: 'localhost',
-    port: 3001,
-    path: '/auth/login',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(loginBody) }
-  }, loginBody);
-  const setCookie = loginRes.res.headers['set-cookie'];
-  const cookie = setCookie ? setCookie.map(c => c.split(';')[0]).join('; ') : '';
-
-  console.log('2. Create a test patient');
-  const rand = Date.now().toString().slice(-6);
-  const patientBody = JSON.stringify({
-    medicalRecordNumber: 'QTEST-' + rand,
-    firstName: 'QueueTest',
-    lastName: 'Patient',
-    phone: '010' + rand + '12'
-  });
-  const patientRes = await request({
-    hostname: 'localhost',
-    port: 3001,
-    path: '/patients',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(patientBody), 'Cookie': cookie, 'Idempotency-Key': 'qtest-' + rand }
-  }, patientBody);
-  const patientId = JSON.parse(patientRes.data).id;
-
-  console.log('3. Add patient to queue');
-  const queueBody = JSON.stringify({ patientId, priority: 'routine', checkInMethod: 'Walk-in' });
-  const qRes = await request({
-    hostname: 'localhost',
-    port: 3001,
-    path: '/queue/check-in',
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(queueBody), 'Cookie': cookie }
-  }, queueBody);
-  console.log("Queue response:", qRes.statusCode, qRes.data);
-  const ticketId = JSON.parse(qRes.data).id;
-  assert.ok(ticketId, 'Queue ticket created');
-
-  console.log('4. Attempt CONCURRENT status transition to "called" and "completed"');
-  // Send both requests at exactly the same time
-  const callResPromise = request({
-    hostname: 'localhost',
-    port: 3001,
-    path: '/queue/' + ticketId + '/call',
-    method: 'PATCH',
-    headers: { 'Cookie': cookie }
-  });
-  
-  const compResPromise = request({
-    hostname: 'localhost',
-    port: 3001,
-    path: '/queue/' + ticketId + '/complete',
-    method: 'PATCH',
-    headers: { 'Cookie': cookie }
-  });
-
-  const [callRes, compRes] = await Promise.all([callResPromise, compResPromise]);
-  console.log('Call Response Status:', callRes.res.statusCode, callRes.data);
-  console.log('Complete Response Status:', compRes.res.statusCode, compRes.data);
-
-  // One should succeed, the other MUST fail because they expect different previous statuses
-  // Actually, they both expect different statuses!
-  // call expects "waiting", complete expects "called".
-  // So if they are sent concurrently, call should succeed, complete should FAIL!
-  
-  assert.strictEqual(callRes.res.statusCode, 200, 'Call should succeed (was waiting)');
-  assert.strictEqual(compRes.res.statusCode, 400, 'Complete should fail because it was not called yet (race condition prevented)');
-  
-  console.log('Queue transition concurrency safety passed!');
+const login = await request('POST', '/auth/login', '', { identifier: 'eyad', password: 'eyad' });
+assert.equal(login.status, 201);
+const cookie = (login.headers['set-cookie'] ?? []).map(value => value.split(';')[0]).join('; ');
+const patients = [];
+for (let index = 0; index < 5; index += 1) {
+  const suffix = `${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`;
+  const response = await request('POST', '/patients', cookie, {
+    medicalRecordNumber: `QC-${suffix}`, firstName: 'Isolated', lastName: `Queue${index}`,
+    phone: `01${Math.floor(Math.random() * 1e9).toString().padStart(9, '0')}`
+  }, { 'Idempotency-Key': `queue-patient-${suffix}` });
+  assert.equal(response.status, 201, response.data);
+  patients.push(JSON.parse(response.data).id);
 }
 
-testQueueConcurrency().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+const results = await Promise.all(patients.map((patientId, index) => request('POST', '/queue/check-in', cookie, {
+  patientId, priority: 'routine', checkInMethod: 'Automated isolated concurrency test'
+}, { 'Idempotency-Key': `queue-checkin-${Date.now()}-${index}-${Math.random()}` })));
+assert.ok(results.every(result => result.status === 201), results.map(result => `${result.status}:${result.data}`).join('\n'));
+const tickets = results.map(result => JSON.parse(result.data));
+assert.equal(new Set(tickets.map(ticket => ticket.id)).size, 5, 'all concurrent actions must create distinct tickets');
+assert.equal(new Set(tickets.map(ticket => ticket.queueNumber)).size, 5, 'concurrent queue numbers must be unique');
+const sorted = tickets.map(ticket => ticket.queueNumber).sort((a, b) => a - b);
+assert.deepEqual(sorted, Array.from({ length: 5 }, (_, index) => sorted[0] + index), 'concurrent queue numbers must be contiguous');
+console.log('Real concurrent queue check-ins passed with unique contiguous numbers.');

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 
 @Injectable()
 export class ClinicTimeService {
@@ -22,27 +22,44 @@ export class ClinicTimeService {
    * Get the start and end of the day in UTC, based on the clinic's local midnight.
    */
   getClinicDayBounds(dateString: string): { start: Date; end: Date } {
-    const [year, month, day] = dateString.split("-").map(Number);
-    // 12:00 UTC falls on the same calendar day globally (except extreme edges)
-    const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-    
+    const parts = dateString.split("-").map(Number);
+    if (parts.length !== 3 || parts.some(value => !Number.isInteger(value))) {
+      throw new BadRequestException("Invalid clinic date.");
+    }
+
+    const [year, month, day] = parts as [number, number, number];
+    if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) {
+      throw new BadRequestException("Invalid clinic date.");
+    }
+
+    const start = this.localMidnightUtc(year, month, day);
+    const followingDate = new Date(Date.UTC(year, month - 1, day + 1));
+    const nextDayStart = this.localMidnightUtc(
+      followingDate.getUTCFullYear(),
+      followingDate.getUTCMonth() + 1,
+      followingDate.getUTCDate()
+    );
+
+    // Preserve the public inclusive `end` contract while deriving it from the
+    // exclusive next-day boundary so DST changes cannot create gaps/overlaps.
+    return { start, end: new Date(nextDayStart.getTime() - 1) };
+  }
+
+  private localMidnightUtc(year: number, month: number, day: number): Date {
+    // Noon UTC is safely within the requested Cairo calendar date and allows
+    // Intl to provide the offset in effect for that date.
+    const utcDate = new Date(Date.UTC(year, month - 1, day, 12));
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: this.timezone,
-      hour: "numeric",
-      hour12: false
+      timeZoneName: "shortOffset"
     });
-    
-    // The local hour at 12:00 UTC (e.g., 14 for UTC+2, 15 for UTC+3)
-    const localHourStr = formatter.format(utcDate);
-    const localHour = parseInt(localHourStr, 10);
-    
-    // Calculate exact offset in hours from 12:00 UTC
-    const offsetHours = localHour - 12;
-    
-    // Midnight local is (00:00 - offset UTC)
-    const start = new Date(Date.UTC(year, month - 1, day, -offsetHours, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month - 1, day, 23 - offsetHours, 59, 59, 999));
-    
-    return { start, end };
+    const offsetLabel = formatter.formatToParts(utcDate).find(part => part.type === "timeZoneName")?.value;
+    const match = /^GMT(?<sign>[+-])(?<hours>\d{1,2})(?::(?<minutes>\d{2}))?$/.exec(offsetLabel ?? "");
+    if (!match?.groups) {
+      throw new BadRequestException("Clinic timezone is unavailable.");
+    }
+    const direction = match.groups.sign === "+" ? 1 : -1;
+    const offsetMinutes = direction * (Number(match.groups.hours) * 60 + Number(match.groups.minutes ?? 0));
+    return new Date(Date.UTC(year, month - 1, day) - offsetMinutes * 60_000);
   }
 }

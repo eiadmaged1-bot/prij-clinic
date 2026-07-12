@@ -1,50 +1,44 @@
-import assert from 'assert';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
-function getClinicDayBounds(dateString, timezone = 'Africa/Cairo') {
-  const tempDate = new Date(`${dateString}T12:00:00Z`);
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    timeZoneName: 'shortOffset'
-  });
-  const parts = formatter.formatToParts(tempDate);
-  const tzPart = parts.find(p => p.type === 'timeZoneName')?.value || 'GMT+02:00';
-  
-  let offsetString = tzPart.replace('GMT', '');
-  if (!offsetString.includes(':')) {
-      offsetString += ':00';
-  }
-  offsetString = offsetString.startsWith('+') || offsetString.startsWith('-') ? offsetString : '+' + offsetString;
-  if (offsetString.length === 5) {
-      offsetString = offsetString.substring(0, 1) + '0' + offsetString.substring(1); // e.g. +2:00 -> +02:00
-  }
-  
-  const start = new Date(`${dateString}T00:00:00.000${offsetString}`);
-  const end = new Date(`${dateString}T23:59:59.999${offsetString}`);
-  
-  return { start, end };
+function parseClinicDate(dateString) {
+  const parts = dateString.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(value => !Number.isInteger(value))) throw new Error('Invalid clinic date.');
+  const [year, month, day] = parts;
+  if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) throw new Error('Invalid clinic date.');
+  return [year, month, day];
 }
 
-function getClinicDayBoundsRobust(dateString, timezone = 'Africa/Cairo') {
-  const [year, month, day] = dateString.split('-').map(Number);
-  const utcDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    hour: 'numeric',
-    hour12: false
-  });
-  const localHour = parseInt(formatter.format(utcDate), 10);
-  const offsetHours = localHour - 12;
-  const startUtc = new Date(Date.UTC(year, month - 1, day, -offsetHours, 0, 0, 0));
-  const endUtc = new Date(Date.UTC(year, month - 1, day, 23 - offsetHours, 59, 59, 999));
-  return { start: startUtc, end: endUtc };
+function localMidnightUtc(year, month, day) {
+  const noon = new Date(Date.UTC(year, month - 1, day, 12));
+  const label = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Cairo', timeZoneName: 'shortOffset' })
+    .formatToParts(noon).find(part => part.type === 'timeZoneName')?.value;
+  const match = /^GMT([+-])(\d{1,2})(?::(\d{2}))?$/.exec(label ?? '');
+  assert.ok(match, 'Cairo offset must be available');
+  const minutes = (match[1] === '+' ? 1 : -1) * (Number(match[2]) * 60 + Number(match[3] ?? 0));
+  return new Date(Date.UTC(year, month - 1, day) - minutes * 60_000);
 }
 
-console.log('Testing timezone offset logic...');
-try {
-  const res1 = getClinicDayBoundsRobust('2026-07-12'); // Summer time (likely UTC+3)
-  console.log('Robust 2026-07-12 bounds:', res1);
-  const res2 = getClinicDayBoundsRobust('2026-01-15'); // Winter time (likely UTC+2)
-  console.log('Robust 2026-01-15 bounds:', res2);
-} catch (e) {
-  console.error('Failed:', e.message);
+function bounds(value) {
+  const [year, month, day] = parseClinicDate(value);
+  const start = localMidnightUtc(year, month, day);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const nextDayStart = localMidnightUtc(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate());
+  return { start, nextDayStart };
 }
+
+assert.equal(bounds('2026-01-15').start.toISOString(), '2026-01-14T22:00:00.000Z', 'Cairo winter midnight must be UTC+2');
+assert.equal(bounds('2026-07-12').start.toISOString(), '2026-07-11T21:00:00.000Z', 'Cairo summer midnight must be UTC+3');
+for (const date of ['2026-01-15', '2026-07-12']) {
+  const { start, nextDayStart } = bounds(date);
+  assert.equal(nextDayStart.getTime() - start.getTime(), 86_400_000, `${date} must have contiguous midnight boundaries`);
+  assert.equal(new Date(nextDayStart.getTime() - 1).getTime() + 1, nextDayStart.getTime());
+}
+for (const invalid of ['2026-02-31', '2025-02-29', '2026-13-01', '2026-00-01', 'not-a-date']) {
+  assert.throws(() => bounds(invalid), /Invalid clinic date/);
+}
+
+const source = fs.readFileSync(new URL('../apps/api/src/clinic-time/clinic-time.service.ts', import.meta.url), 'utf8');
+assert.match(source, /parts\.length !== 3/);
+assert.match(source, /nextDayStart\.getTime\(\) - 1/);
+console.log('Clinic timezone winter, summer, midnight, and invalid-date tests passed.');

@@ -6,6 +6,7 @@ import crypto from 'crypto';
 console.log('Running production-launch-idempotency-safety-test.mjs...');
 
 const prisma = new PrismaClient();
+const apiPort = Number(process.env.TEST_API_PORT ?? 3001);
 
 function request(options, body) {
   return new Promise((resolve, reject) => {
@@ -62,7 +63,7 @@ async function testIdempotencySafety() {
   const loginBody = JSON.stringify({ identifier: 'eyad', password: 'eyad' });
   const loginRes = await request({
     hostname: 'localhost',
-    port: 3001,
+    port: apiPort,
     path: '/auth/login',
     method: 'POST',
     headers: {
@@ -74,7 +75,9 @@ async function testIdempotencySafety() {
   assert.strictEqual(loginRes.res.statusCode, 201, 'Login failed');
   const setCookie = loginRes.res.headers['set-cookie'];
   const cookie = setCookie ? setCookie.map(c => c.split(';')[0]).join('; ') : '';
-  const sessionUser = await prisma.user.findFirst({ where: { loginId: 'eyad' } });
+  const authenticatedUser = JSON.parse(loginRes.data).user;
+  assert.ok(authenticatedUser?.id, 'Login response must identify the authenticated test user');
+  const sessionUser = await prisma.user.findUniqueOrThrow({ where: { id: authenticatedUser.id } });
 
   console.log('2. Manually insert a FRESH stuck IN_PROGRESS idempotency record');
   const freshKey = 'test-fresh-' + Date.now();
@@ -101,7 +104,7 @@ async function testIdempotencySafety() {
   const body1 = JSON.stringify(payload);
   const req1 = await request({
     hostname: 'localhost',
-    port: 3001,
+    port: apiPort,
     path: '/patients',
     method: 'POST',
     headers: {
@@ -142,7 +145,7 @@ async function testIdempotencySafety() {
   const body2 = JSON.stringify(payload2);
   const req2 = await request({
     hostname: 'localhost',
-    port: 3001,
+    port: apiPort,
     path: '/patients',
     method: 'POST',
     headers: {
