@@ -41,6 +41,9 @@ export class PatientDocumentsService {
     if (!user.permissions.includes("patient_document.restricted_read")) {
       where.confidentialityLevel = { not: "restricted" };
     }
+    if (user.roles.includes("Receptionist")) {
+      where.documentType = { in: ["insurance_document_placeholder", "consent_form"] };
+    }
     const documents = await this.prisma.patientDocument.findMany({ where, orderBy: { createdAt: "desc" }, include: includeDocument });
     return documents.map(safeDocument);
   }
@@ -232,10 +235,11 @@ export class PatientDocumentsService {
   async get(patientId: string, documentId: string, user: AuthUser) {
     await assertCanReferencePatient(this.prisma, patientId, user);
     const document = await this.prisma.patientDocument.findFirst({ where: { id: documentId, patientId, ...branchScope(user) }, include: includeDocument });
-    if (!document) throw new NotFoundException("Patient document not found.");
+    if (!document) throw new NotFoundException({ code: "DOCUMENT_NOT_FOUND", message: "Patient document not found." });
     if (document.confidentialityLevel === "restricted" && !user.permissions.includes("patient_document.restricted_read")) {
-      throw new ForbiddenException("Restricted document access denied.");
+      throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     }
+    if (user.roles.includes("Receptionist") && !["insurance_document_placeholder", "consent_form"].includes(document.documentType)) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     return safeDocument(document);
   }
 
