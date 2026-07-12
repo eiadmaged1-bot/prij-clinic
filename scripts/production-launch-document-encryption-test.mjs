@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os'; import path from 'node:path'; import { randomBytes } from 'node:crypto';
+import { loadTypeScript } from './document-test-loader.mjs';
+const { LocalEncryptedStorageService } = loadTypeScript('apps/api/src/patient-documents/storage/local-encrypted-storage.service.ts');
+const root = await mkdtemp(path.join(os.tmpdir(), 'prij-doc-encryption-')); const key = randomBytes(32);
+process.env.PATIENT_DOCUMENT_STORAGE_ROOT = root; process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY = key.toString('base64'); process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY_ID = 'test-v1';
+const storage = new LocalEncryptedStorageService(); const plaintext = Buffer.from('synthetic document content');
+const quarantined = await storage.writeQuarantine(plaintext); const encrypted = await readFile(storage.pathFor(quarantined.storageKey)); assert.equal(encrypted.includes(plaintext), false);
+const promoted = await storage.validateAndPromote(quarantined.storageKey); assert.deepEqual(await storage.readAuthorized(promoted, 'test-v1'), plaintext);
+const pathToCipher = storage.pathFor(promoted); const tampered = Buffer.from(await readFile(pathToCipher)); tampered[tampered.length - 1] ^= 1; await writeFile(pathToCipher, tampered); await assert.rejects(storage.readAuthorized(promoted, 'test-v1'), /securely/);
+process.env.PATIENT_DOCUMENT_ENCRYPTION_KEY = randomBytes(32).toString('base64'); await assert.rejects(storage.readAuthorized(promoted, 'test-v1'), /securely/);
+assert.equal(JSON.stringify(quarantined).includes(key.toString('base64')), false); await rm(root, { recursive: true, force: true });
+console.log('AES-GCM plaintext, decrypt, tamper, wrong-key, and key non-disclosure tests passed.');
