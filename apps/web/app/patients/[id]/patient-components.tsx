@@ -1,5 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
+import { AppActionButton } from "@/components/actions/AppActionButton";
+import { AppActionLink } from "@/components/actions/AppActionLink";
 import { useParams, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -235,11 +237,11 @@ export function requestPatientWorkspaceRefresh() {
     window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
 }
 
-export function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patient: Patient; setActiveTab(tab: string): void; onShowQr(): void }) {
-    const actions: Array<{ label: string; tab?: string; href?: string; onClick?: () => void; icon: IconName }> = [
-            { label: "Add visit", tab: "doctor-visit", icon: "encounter" },
-            { label: "Add prescription", tab: "prescriptions", icon: "prescription" },
-            { label: "Request investigation", tab: "investigations", icon: "investigations" },
+export function PatientQuickActions({ patient, setActiveTab, onShowQr, permissions = [], roles = [] }: { patient: Patient; setActiveTab(tab: string): void; onShowQr(): void; permissions?: string[]; roles?: string[] }) {
+    const actions: Array<{ actionId?: string; label: string; tab?: string; href?: string; onClick?: () => void; icon: IconName }> = [
+            { actionId: "encounter.create", label: "Add visit", tab: "doctor-visit", icon: "encounter" },
+            { actionId: "prescription.create", label: "Add prescription", tab: "prescriptions", icon: "prescription" },
+            { actionId: "investigation.create", label: "Request investigation", tab: "investigations", icon: "investigations" },
             { label: "Add payment", tab: "billing", icon: "billing" },
             { label: "Upload document", tab: "documents", icon: "files" },
             { label: "Print packet", href: `/patients/${patient.id}/print/packet`, icon: "reports" },
@@ -255,15 +257,29 @@ export function PatientQuickActions({ patient, setActiveTab, onShowQr }: { patie
       </div>
       <div className="toolbar compact-toolbar">
         {actions.map((action) => action.href ? (
-          <Link className="button secondary compact" href={action.href} key={action.label}>
-            <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
-            {action.label}
-          </Link>
+          action.actionId ? (
+            <AppActionLink actionId={action.actionId} userPermissions={permissions} userRoles={roles} className="button secondary compact" href={action.href} key={action.label}>
+              <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+              {action.label}
+            </AppActionLink>
+          ) : (
+            <Link className="button secondary compact" href={action.href} key={action.label}>
+              <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+              {action.label}
+            </Link>
+          )
         ) : (
-          <button className="button secondary compact" key={action.label} type="button" onClick={action.onClick ?? (() => action.tab && setActiveTab(action.tab))}>
-            <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
-            {action.label}
-          </button>
+          action.actionId ? (
+            <AppActionButton actionId={action.actionId} userPermissions={permissions} userRoles={roles} className="button secondary compact" key={action.label} type="button" onClick={action.onClick ?? (() => action.tab && setActiveTab(action.tab))}>
+              <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+              {action.label}
+            </AppActionButton>
+          ) : (
+            <button className="button secondary compact" key={action.label} type="button" onClick={action.onClick ?? (() => action.tab && setActiveTab(action.tab))}>
+              <ThreeDMedicalIcon name={action.icon} size="sm" tone="slate" />
+              {action.label}
+            </button>
+          )
         ))}
       </div>
     </section>
@@ -824,7 +840,7 @@ export function MedicationSafetyWorkspace({ patientId }: { patientId: string }) 
     );
 }
 
-export function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void }) {
+export function DoctorVisitFlow({ patient, related, onReload, permissions = [], roles = [] }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void; permissions?: string[]; roles?: string[] }) {
     const [visit, setVisit] = useState<DoctorVisitState | null>(null);
     const [status, setStatus] = useState("Open or start a visit.");
     const [selectedMedication, setSelectedMedication] = useState<MedicationResult | null>(null);
@@ -938,7 +954,18 @@ export function DoctorVisitFlow({ patient, related, onReload }: { patient: Patie
           <h2>Doctor Visit Flow</h2>
           <p className="muted">History, Care Assist, encounter draft, generic prescription, investigations, follow-up, and print packet.</p>
         </div>
-        <button className="button" type="button" onClick={() => void startVisit()}>Start Visit</button>
+        <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
+          {encounterId ? (
+            <AppActionButton actionId="encounter.delete" userPermissions={permissions} userRoles={roles} className="button secondary danger" type="button" onClick={() => {
+              if (window.confirm("Delete this draft visit?")) {
+                alert("Delete flow triggered. API integration pending.");
+              }
+            }}>
+              <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Delete
+            </AppActionButton>
+          ) : null}
+          <button className="button" type="button" onClick={() => void startVisit()} disabled={!!encounterId}>Start Visit</button>
+        </div>
       </div>
       <div className="workflow-band" aria-label="Doctor visit workflow stepper">
         {(visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Packet"]).map((step) => (
@@ -2902,7 +2929,7 @@ export const OtherWorkspaceComponents: Record<string, React.FC<any>> = {
       <CareAssistPanel patientId={patient.id} historySheetId={String((related.history ?? [])[0]?.id ?? "") || undefined} />
     </>
   ),
-  "doctor-visit": ({ patient, related, requestPatientWorkspaceRefresh }) => <DoctorVisitFlow patient={patient} related={related} onReload={requestPatientWorkspaceRefresh} />,
+  "doctor-visit": ({ patient, related, requestPatientWorkspaceRefresh, permissions, roles }) => <DoctorVisitFlow patient={patient} related={related} onReload={requestPatientWorkspaceRefresh} permissions={permissions} roles={roles} />,
   "secretary-intake": ({ related }) => <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} />,
   "doctor-note": ({ related }) => <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} />,
   "prescriptions": ({ active, related }) => <RelatedPanel config={active} rows={related.prescriptions ?? []} />,

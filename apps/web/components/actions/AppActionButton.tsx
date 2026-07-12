@@ -9,12 +9,16 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   locale?: "ar" | "en";
   isLoading?: boolean;
   disabledReason?: string;
+  userPermissions?: string[];
+  userRoles?: string[];
   children?: ReactNode;
 };
 
-export function AppActionButton({ actionId, locale = "en", isLoading = false, disabledReason, children, disabled, ...props }: Props) {
+export function AppActionButton({ actionId, locale = "en", isLoading = false, disabledReason, userPermissions, userRoles, children, disabled, ...props }: Props) {
   const action = requireAppAction(actionId);
-  const reason = disabledReason || (disabled ? action.disabledReason : "");
+  const hasPermission = !action.permission || (userPermissions && userPermissions.includes(action.permission));
+  const isEffectivelyDisabled = disabled || isLoading || !hasPermission;
+  const reason = disabledReason || (!hasPermission ? action.disabledReason : (disabled ? action.disabledReason : ""));
   const label = locale === "ar" ? action.labelAr : action.labelEn;
 
   return (
@@ -24,12 +28,12 @@ export function AppActionButton({ actionId, locale = "en", isLoading = false, di
         type={props.type || "button"}
         aria-label={props["aria-label"] || action.accessibleName}
         aria-busy={isLoading || undefined}
-        disabled={disabled || isLoading}
+        disabled={isEffectivelyDisabled}
         title={props.title || label}
       >
         {children || label}
       </button>
-      {disabled || isLoading ? <DisabledActionReason reason={isLoading ? action.loadingState : reason} /> : null}
+      {isEffectivelyDisabled ? <DisabledActionReason reason={isLoading ? action.loadingState : reason} /> : null}
     </span>
   );
 }

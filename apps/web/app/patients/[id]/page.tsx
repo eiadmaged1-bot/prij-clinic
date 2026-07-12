@@ -30,6 +30,7 @@ import {
   previousHistoryChips,
   smartClinicalTags
 } from "@/lib/v1200-productivity";
+import { AppActionButton } from "@/components/actions/AppActionButton";
 import { WorkspaceModuleRenderer, Patient, PregnancyRecord, FetusRecord, GynecologyVisit, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, ReferenceResult, ServiceItem, SafeAiAssistantPanel, ObDatingReviewPanel, CareAssistPanel, MedicationSafetyTerminal, smartHistoryGroups, gynecologyTemplateOptions, gynecologyTemplateFields, previousPregnancyOutcomeOptions, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, doctorReviewedAllergyAlert, ImportantPatientBanner, PatientCaseFeed, CaseBoardsPanel, SmartHistoryOptionChips, SmartObHistoryTags, MotherBabyWorkspace, Overview, MiniCount, MedicalPanel, ClinicalPanel, InvestigationsPanel, DocumentsPanel, MedicationSafetyWorkspace, DoctorVisitFlow, VisitPacketPreview, insertHintIntoPlan, ProtocolAtlasPanel, CalculatorsPanel, UltrasoundWorkspace, GynecologyWorkspace, ObgynWorkspace, Metric, GpalStepper, gpalSummary, gpalLooksInconsistent, CreatePregnancyEpisodeCard, PreviousPregnancyHistoryCard, previousDeliverySummary, FetusStarterCard, AntenatalVisitCard, UltrasoundReportBuilder, DoctorTemplateCards, HistorySheetWorkspace, ReferencePicker, PatientActionPanel, SelectedPatientSummary, PatientQrModal, MorePatientSections, InfertilityWorkspacePanel, ActionForm, SecretaryIntakePanel, DoctorClinicalNotePanel, values, numericPayload, submitVisitAction, formPayload, RelatedPanel, billingRowSummary, Timeline, timelineMatchesFilter, DoctorSignatureBadge, PrintPacketPanel, timelineIcon, templateLabel, templateSummary, formatDate, SmartPatientEmptyState, formatDateTime } from "./patient-components";
 
 const legacyTabDefinitions: TabConfig[] = [
@@ -339,18 +340,18 @@ export default function PatientFilePage() {
           ) : null}
         </div>
         <div className="patient-primary-actions">
-          <button className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
+          <AppActionButton actionId="encounter.create" userPermissions={permissions} userRoles={roles} className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
             <ThreeDMedicalIcon name="encounter" size="sm" />
             New Encounter
-          </button>
-          <button className="button secondary large" type="button" onClick={() => setActiveTab("prescriptions")} disabled={!patient}>
+          </AppActionButton>
+          <AppActionButton actionId="prescription.create" userPermissions={permissions} userRoles={roles} className="button secondary large" type="button" onClick={() => setActiveTab("prescriptions")} disabled={!patient}>
             <ThreeDMedicalIcon name="prescription" size="sm" tone="slate" />
             Prescription
-          </button>
-          <button className="button secondary large" type="button" onClick={() => setActiveTab("investigations")} disabled={!patient}>
+          </AppActionButton>
+          <AppActionButton actionId="investigation.create" userPermissions={permissions} userRoles={roles} className="button secondary large" type="button" onClick={() => setActiveTab("investigations")} disabled={!patient}>
             <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
             Request Investigation
-          </button>
+          </AppActionButton>
           <Link className="button secondary large" href="/calendar">
             <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
             Book Follow-up
@@ -416,6 +417,8 @@ export default function PatientFilePage() {
             submitPatientAction={submitPatientAction}
             requestPatientWorkspaceRefresh={requestPatientWorkspaceRefresh}
             setActiveTab={setActiveTab}
+            permissions={permissions}
+            roles={roles}
           />
         </>
       ) : !error ? (
