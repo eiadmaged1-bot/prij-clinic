@@ -1,4 +1,4 @@
-﻿import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -233,13 +233,22 @@ export class QueueService {
         throw new NotFoundException("Queue ticket not found.");
       }
 
-      if (expectedPreviousStatus && existing.status !== expectedPreviousStatus) {
-        throw new BadRequestException({ code: "QUEUE_INVALID_TRANSITION", message: "Cannot transition ticket from $ to $" });
+      const whereClause: Prisma.QueueTicketWhereInput = { id, ...branchScope(user) };
+      if (expectedPreviousStatus) {
+        whereClause.status = expectedPreviousStatus;
       }
 
-      const ticket = await tx.queueTicket.update({
+      const result = await tx.queueTicket.updateMany({
+        where: whereClause,
+        data
+      });
+
+      if (result.count === 0) {
+        throw new BadRequestException({ code: "QUEUE_INVALID_TRANSITION", message: `Cannot transition ticket. It may have already been transitioned by another user.` });
+      }
+
+      const ticket = await tx.queueTicket.findUniqueOrThrow({
         where: { id },
-        data,
         include: { patient: true, appointment: true }
       });
       
