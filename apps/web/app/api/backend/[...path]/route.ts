@@ -26,7 +26,6 @@ const allowedRequestHeaders = new Set([
   "user-agent",
   "cookie",
   "referer",
-  "origin",
   "x-request-id",
   "idempotency-key",
   "x-csrf-token"
@@ -64,7 +63,7 @@ function forwardedRequestHeaders(request: NextRequest, generatedRequestId: strin
 
   request.headers.forEach((value, key) => {
     const normalized = key.toLowerCase();
-    if (allowedRequestHeaders.has(normalized)) {
+    if (allowedRequestHeaders.has(normalized) && normalized !== "origin") {
       headers.set(key, value);
     }
   });

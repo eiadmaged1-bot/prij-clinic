@@ -7,8 +7,11 @@ const apiBase = readFileSync("apps/web/lib/api-base-url.ts", "utf8");
 const nextConfig = readFileSync("apps/web/next.config.ts", "utf8");
 
 assert(route.includes('process.env.PRIJ_API_INTERNAL_ORIGIN || "http://localhost:3001"'), "proxy must default server-side internal API origin to localhost:3001");
-assert(route.includes("request.arrayBuffer()"), "proxy must forward request bodies");
-assert(route.includes("forwardedRequestHeaders(request)"), "proxy must forward request headers");
+assert(
+  route.includes("readBodyWithLimit(request, limit)") && route.includes("init.body = Buffer.from(bodyBuffer)"),
+  "proxy must forward bounded request bodies"
+);
+assert(route.includes("forwardedRequestHeaders(request, requestId)"), "proxy must forward request headers with a request ID");
 assert(route.includes("forwardedResponseHeaders(upstream)"), "proxy must forward response headers");
 assert(route.includes("export const POST = proxy"), "proxy must forward POST login");
 assert(route.includes("export const GET = proxy"), "proxy must forward GET session/health");

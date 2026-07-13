@@ -20,7 +20,10 @@ assert(apiBase.includes("isPrivateIpv4") && apiBase.includes("isTailscaleOrCgnat
 
 assert(route.includes('process.env.PRIJ_API_INTERNAL_ORIGIN || "http://localhost:3001"'), "proxy target must be fixed to internal API origin");
 assert(route.includes('normalized !== "origin"'), "proxy must not forward public browser Origin to internal API");
-assert(route.includes("request.arrayBuffer()"), "proxy must forward request body");
+assert(
+  route.includes("readBodyWithLimit(request, limit)") && route.includes("init.body = Buffer.from(bodyBuffer)"),
+  "proxy must forward the bounded request body"
+);
 assert(route.includes("url.search = request.nextUrl.search"), "proxy must forward query string");
 assert(route.includes("appendSetCookieHeaders(upstream, responseHeaders)"), "proxy must preserve API set-cookie responses");
 assert(!route.includes("searchParams.get(\"target\")") && !route.includes("target="), "proxy must not accept arbitrary upstream targets");
