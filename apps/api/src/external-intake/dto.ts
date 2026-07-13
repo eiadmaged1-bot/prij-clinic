@@ -1,33 +1,45 @@
 import { IsBoolean, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class GoogleFormIntakeDto {
+  @IsString()
+  @MaxLength(200)
+  submissionId!: string;
+
+  @IsString()
+  @MaxLength(80)
+  submittedAt!: string;
+
+  @IsString()
+  @MaxLength(240)
+  fullName!: string;
+
+  @IsString()
+  @MaxLength(40)
+  primaryPhone!: string;
+
   @IsOptional()
   @IsString()
-  source?: string;
+  @MaxLength(500)
+  addressText?: string;
 
   @IsOptional()
   @IsString()
-  language?: string;
+  @MaxLength(240)
+  spouseName?: string;
 
   @IsOptional()
   @IsString()
-  externalSubmissionId?: string;
+  @MaxLength(40)
+  birthValue?: string;
+
+  @IsString()
+  @MaxLength(80)
+  followUpType!: string;
 
   @IsOptional()
   @IsString()
-  submittedAt?: string;
-
-  @IsOptional()
-  @IsObject()
-  rawAnswers?: Record<string, unknown>;
-
-  @IsOptional()
-  @IsObject()
-  patient?: Record<string, unknown>;
-
-  @IsOptional()
-  @IsObject()
-  mappedCaseType?: Record<string, unknown>;
+  @MaxLength(40)
+  secondaryPhone?: string;
 }
 
 export class CreatePatientFromSubmissionDto {
@@ -56,6 +68,12 @@ export class AttachSubmissionDto {
 }
 
 export class RejectSubmissionDto {
+  @IsString()
+  @MaxLength(1000)
+  reason!: string;
+}
+
+export class RequestCorrectionDto {
   @IsString()
   @MaxLength(1000)
   reason!: string;

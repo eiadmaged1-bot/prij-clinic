@@ -9,7 +9,7 @@ async function bootstrap() {
   loadRootEnv();
   validateRuntimeEnv();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const port = Number(process.env.API_PORT ?? 3001);
   const host = process.env.API_HOST;
 

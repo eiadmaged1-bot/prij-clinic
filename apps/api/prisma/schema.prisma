@@ -737,6 +737,7 @@ model ExternalPatientSubmission {
   source                  String    @default("google_form")
   language                String    @default("ar")
   externalSubmissionId    String?
+  payloadHash             String?
   submittedAt             DateTime? @db.Timestamptz(3)
   receivedAt              DateTime  @default(now()) @db.Timestamptz(3)
   rawAnswersJson          Json
@@ -759,7 +760,8 @@ model ExternalPatientSubmission {
 
   @@index([status, receivedAt])
   @@index([source])
-  @@index([externalSubmissionId])
+  @@unique([externalSubmissionId])
+  @@index([payloadHash])
   @@index([createdPatientId])
   @@index([attachedPatientId])
   @@index([reviewedByUserId])
@@ -1754,6 +1756,15 @@ model InvestigationFavorite {
 
   @@unique([userId, investigationCatalogItemId])
   @@index([investigationCatalogItemId])
+}
+
+model ExternalIntakeReplayNonce {
+  id        String   @id @default(uuid()) @db.Uuid
+  nonceHash String   @unique
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([expiresAt])
 }
 
 model InvestigationFavoriteSet {

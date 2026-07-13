@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell } from "../mvp-page";
-import { attachSubmissionToPatient, createPatientFromSubmission, ExternalIntakeSubmission, listExternalIntake, rejectExternalSubmission } from "@/lib/external-intake";
+import { attachSubmissionToPatient, createPatientFromSubmission, ExternalIntakeSubmission, listExternalIntake, rejectExternalSubmission, requestExternalIntakeCorrection } from "@/lib/external-intake";
 
 const mappedFields = [
   ["fullName", "Full name"],
@@ -110,7 +110,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
   const caseType = objectValue(currentSubmission.mappedCaseTypeJson);
   const duplicates = Array.isArray(currentSubmission.duplicateCandidatesJson) ? currentSubmission.duplicateCandidatesJson : [];
 
-  async function action(event: FormEvent<HTMLFormElement>, kind: "create" | "attach" | "reject") {
+  async function action(event: FormEvent<HTMLFormElement>, kind: "create" | "attach" | "reject" | "correction") {
     event.preventDefault();
     if (!reviewReason.trim()) {
       setStatus("Review reason is required.");
@@ -125,6 +125,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
       if (kind === "create") await createPatientFromSubmission(currentSubmission.id, reviewReason, createInitialPhase);
       if (kind === "attach") await attachSubmissionToPatient(currentSubmission.id, patientId, reviewReason);
       if (kind === "reject") await rejectExternalSubmission(currentSubmission.id, reviewReason);
+      if (kind === "correction") await requestExternalIntakeCorrection(currentSubmission.id, reviewReason);
       await onChanged();
       setStatus("Saved");
     } catch (error) {
@@ -176,9 +177,10 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
         <button className="button secondary" type="submit">Attach to existing patient</button>
       </form>
 
-      <form className="form-grid" onSubmit={(event) => void action(event, "reject")}>
-        <button className="button secondary danger-soft" type="submit">Reject/archive with reason</button>
-      </form>
+      <div className="form-actions">
+        <form onSubmit={(event) => void action(event, "correction")}><button className="button secondary" type="submit">Request correction</button></form>
+        <form onSubmit={(event) => void action(event, "reject")}><button className="button secondary danger-soft" type="submit">Reject/archive with reason</button></form>
+      </div>
       {status ? <p className="muted">{status}</p> : null}
       <p className="form-warning">External text is untrusted and is not written to signed records, pregnancy episodes, investigations, or documents without review.</p>
     </section>

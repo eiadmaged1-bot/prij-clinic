@@ -59,7 +59,7 @@ assert(obDating.includes("Review and lock EDD") && obDating.includes("Reason is 
 assert(calendar.includes("EDD Clinical Calendar") && calendar.includes("/clinical-calendar/edd") && calendar.includes("Locked/reviewed EDD entries"), "EDD month calendar exists");
 
 assert(schema.includes("model ExternalPatientSubmission"), "external intake submission model exists");
-assert(externalIntakeController.includes("x-prij-intake-token") && externalIntakeService.includes("PRIJ_EXTERNAL_INTAKE_TOKEN"), "Google Form webhook requires secure token header");
+assert(externalIntakeController.includes("x-prij-timestamp") && externalIntakeController.includes("x-prij-signature") && externalIntakeService.includes("PRIJ_EXTERNAL_INTAKE_SECRET") && externalIntakeService.includes("timingSafeEqual"), "Google Form webhook requires timestamped constant-time HMAC verification");
 assert(externalIntakeService.includes("status: \"pending_review\"") && externalIntakeService.includes("pendingReview: true"), "external intake stores pending submissions before review");
 assert(externalIntakeService.includes("patient_created_after_review") && externalIntakeService.includes("attached_after_review"), "create/attach only happen after review actions");
 assert(externalIntakeService.includes("الاسم بالكامل") && externalIntakeService.includes("نوع المتابعة"), "Arabic Google Form field names are mapped");

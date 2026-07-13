@@ -38,3 +38,10 @@ export function rejectExternalSubmission(id: string, reason: string) {
     body: JSON.stringify({ reason })
   });
 }
+
+export function requestExternalIntakeCorrection(id: string, reason: string) {
+  return workflowRequest(`/external-intake/${id}/request-correction`, {
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
