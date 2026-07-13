@@ -740,6 +740,75 @@ body {
   }
 }
 
+/* Compact patient identity and focused eight-tab clinical workspace. */
+.patient-simple-hero,
+.doctor-comfort-mode .patient-simple-hero {
+  grid-template-columns: auto minmax(0, 1fr) minmax(320px, auto);
+  min-height: 132px;
+  max-width: 1600px;
+  margin-inline: auto;
+  background: var(--surface);
+  padding: var(--space-3) var(--space-4);
+}
+
+.patient-simple-hero h1,
+.doctor-comfort-mode .patient-simple-hero h1 {
+  font-family: var(--font-sans);
+  font-size: clamp(1.45rem, 2vw, 2rem);
+}
+
+.patient-primary-actions,
+.doctor-comfort-mode .patient-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  justify-content: stretch;
+}
+
+.patient-primary-actions .button.large {
+  min-height: 40px;
+  padding-inline: var(--space-3);
+  white-space: nowrap;
+}
+
+.patient-tabs.simple,
+.doctor-comfort-mode .patient-tabs.simple {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: var(--space-2);
+  max-width: 1600px;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.patient-tabs.simple .tab-button,
+.doctor-comfort-mode .patient-tabs.simple .tab-button,
+.doctor-comfort-mode .patient-tabs.simple .tab-button[data-tab-key="history"] {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.womens-health-workspace {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (max-width: 1199px) {
+  .patient-simple-hero,
+  .doctor-comfort-mode .patient-simple-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .patient-primary-actions,
+  .doctor-comfort-mode .patient-primary-actions,
+  .patient-tabs.simple,
+  .doctor-comfort-mode .patient-tabs.simple {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 :root[data-theme="prij-heritage"] {
   --background: var(--pc-paper);
   --background-soft: #fbf8f3;

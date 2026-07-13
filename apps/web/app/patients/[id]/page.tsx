@@ -156,9 +156,10 @@ const tabs: TabConfig[] = [
   { key: "visits", label: "Visits", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No visit note yet. Start a visit when the doctor is ready.", permissions: ["encounter.read"] },
   { key: "secretary-intake", label: "Secretary Intake", icon: "files", endpoint: "/patient-intake?patientId=:patientId", collectionKey: "patientIntakes", empty: "No patient-reported intake yet.", permissions: ["patient_intake.read"] },
   { key: "doctor-note", label: "Doctor Clinical Note", icon: "encounter", endpoint: "/encounters", collectionKey: "encounters", empty: "No doctor clinical note yet.", permissions: ["encounter.read"] },
-  { key: "doctor-visit", label: "Doctor Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
+  { key: "doctor-visit", label: "Current Visit", icon: "encounter", empty: "Guided doctor visit workflow.", permissions: ["encounter.read", "encounter.create", "care_assist.read"] },
   { key: "prescriptions", label: "Prescriptions", icon: "prescription", endpoint: "/prescriptions", collectionKey: "prescriptions", empty: "No prescription yet. Add one during or after the visit.", permissions: ["prescription.read"] },
-  { key: "investigations", label: "Investigations", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation yet.", permissions: ["clinical_requests.read", "investigation.read"] },
+  { key: "investigations", label: "Investigations & Results", icon: "investigations", endpoint: "/clinical-requests?patientId=:patientId", collectionKey: "clinicalRequests", empty: "No requested investigation yet.", permissions: ["clinical_requests.read", "investigation.read"] },
+  { key: "womens-health", label: "Women’s Health", icon: "pregnancy", empty: "Women’s health context and episodes.", permissions: ["patient.read"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "ultrasound", label: "Ultrasound", icon: "ultrasound", endpoint: "/ob-ultrasounds", collectionKey: "obUltrasounds", empty: "No ultrasound record yet.", permissions: ["ob_ultrasound.read", "ob_ultrasound.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "pregnancy", label: "Pregnancy", icon: "pregnancy", endpoint: "/pregnancies", collectionKey: "pregnancies", empty: "No pregnancy episode recorded yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
   { key: "mother-baby", label: "Mother-Baby", icon: "pregnancy", empty: "No mother-baby workspace yet.", permissions: ["pregnancy.read", "pregnancy.manage"], roles: ["Owner", "Admin", "Doctor"] },
@@ -172,7 +173,7 @@ const tabs: TabConfig[] = [
   { key: "allergies", label: "Allergies", icon: "consent", empty: "No allergy entry yet.", permissions: ["patient_allergies.read"] },
   { key: "medication-safety", label: "Medication Safety", icon: "ai", empty: "Run a medication safety review when clinically needed.", permissions: ["medications.safety_check"] },
   { key: "ai-snapshot", label: "AI Drafts / Care Assist", icon: "ai", empty: "No management snapshot yet. Doctor review is required.", permissions: ["ai_management.request", "ai_management.read", "care_assist.read"] },
-  { key: "history", label: "Audit / History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
+  { key: "history", label: "History", icon: "doctor", endpoint: "/patients/:patientId/history-sheets", collectionKey: "historySheets", empty: "No structured history sheet yet.", permissions: ["patient.read", "encounter.read"] },
   { key: "more", label: "More", icon: "settings", empty: "More patient file sections." }
 ];
 
@@ -190,7 +191,7 @@ const relatedLoaders: TabConfig[] = [
   { key: "internal-notes", label: "Internal Notes", icon: "doctor", endpoint: "/patients/:patientId/internal-notes", collectionKey: "patientInternalNotes", empty: "No internal notes visible for your role.", permissions: ["patient_internal_note.read"] }
 ];
 
-const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "pregnancy", "gynecology", "infertility", "documents", "billing", "consents"]);
+const patientWorkspaceTabs = new Set(["overview", "history", "doctor-visit", "prescriptions", "investigations", "womens-health", "documents", "timeline"]);
 
 export default function PatientFilePage() {
   void ClinicalPanel;
@@ -508,6 +509,13 @@ export default function PatientFilePage() {
           {active.key === "doctor-note" ? <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} /> : null}
           {active.key === "prescriptions" ? <RelatedPanel config={active} rows={related.prescriptions ?? []} /> : null}
           {active.key === "investigations" ? <InvestigationsPanel related={related} /> : null}
+          {active.key === "womens-health" ? (
+            <section className="womens-health-workspace">
+              <ObDatingReviewPanel patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} />
+              <GynecologyWorkspace patient={patient} visits={(related.gynecology ?? []) as GynecologyVisit[]} />
+              {(patient.patientType === "INFERTILITY" || (infertilityWorkspace.cycles?.length ?? 0) > 0) ? <InfertilityWorkspacePanel patient={patient} workspace={infertilityWorkspace} phases={clinicalPhases} /> : null}
+            </section>
+          ) : null}
           {active.key === "follow-up-hints" ? <RelatedPanel config={active} rows={related["follow-up-hints"] ?? []} /> : null}
           {active.key === "documents" ? <DocumentsPanel related={related} /> : null}
           {active.key === "billing" ? <RelatedPanel config={active} rows={related.billing ?? []} /> : null}
@@ -532,9 +540,6 @@ export default function PatientFilePage() {
             </>
           ) : null}
           {active.key === "ultrasound" ? <UltrasoundWorkspace patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} reports={related.files ?? []} orders={related.orders ?? []} /> : null}
-          {active.key !== "overview" && active.key !== "case-feed" && active.key !== "case-boards" && active.key !== "mother-baby" && active.key !== "medical" && active.key !== "history-sheet" && active.key !== "care-assist" && active.key !== "doctor-visit" && active.key !== "clinical" && active.key !== "timeline" && active.key !== "print-packet" && active.key !== "ai-snapshot" && active.key !== "protocol-atlas" && active.key !== "calculators" && active.key !== "pregnancy" && active.key !== "ultrasound" && active.key !== "medications" && active.key !== "allergies" && active.key !== "herbals" && active.key !== "medication-safety" && active.key !== "prescription-safety" ? (
-            <RelatedPanel config={active} rows={related[active.key] ?? []} />
-          ) : null}
         </>
       ) : !error ? (
         <div className="skeleton" />
