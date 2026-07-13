@@ -26,7 +26,7 @@ type Patient = {
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
-  const [status, setStatus] = useState("Search patient by name, phone, or file number.");
+  const [status, setStatus] = useState("Loading patient files");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const today = new Date().toISOString().slice(0, 10);
@@ -37,21 +37,21 @@ export default function PatientsPage() {
   const [patientStatus, setPatientStatus] = useState("all");
   const [patientType, setPatientType] = useState("all");
   const [phaseType, setPhaseType] = useState("all");
-  const [category, setCategory] = useState("today");
+  const [category, setCategory] = useState("all");
   const [sortMode, setSortMode] = useState("created_newest");
   const [visibleCount, setVisibleCount] = useState(12);
 
   useEffect(() => {
     const text = query.trim();
-    if (text.length < 2) {
-      setPatients([]);
-      setStatus("Search patient by name, phone, or file number.");
-      return;
-    }
     const timer = window.setTimeout(() => void loadPatients(text), 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, patientStatus]);
+
+  useEffect(() => {
+    const savedCategory = localStorage.getItem("prijPatientDirectoryCategory");
+    if (savedCategory) setCategory(savedCategory);
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,17 +69,13 @@ export default function PatientsPage() {
   }, [category, dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
 
   async function loadPatients(search = query.trim()) {
-    if (search.length < 2) {
-      setPatients([]);
-      setStatus("Search patient by name, phone, or file number.");
-      return;
-    }
     const token = sessionStorage.getItem("prijClinicToken");
     setStatus("Loading");
     setError("");
 
     try {
-      const params = new URLSearchParams({ q: search, includeArchived: String(patientStatus === "archived" || patientStatus === "all") });
+      const params = new URLSearchParams({ includeArchived: String(patientStatus === "archived" || patientStatus === "all") });
+      if (search) params.set("q", search);
       const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, {
         credentials: "include",
         headers: token ? { authorization: `Bearer ${token}` } : undefined
@@ -100,6 +96,24 @@ export default function PatientsPage() {
       setStatus("Connection unavailable");
       setError(loadError instanceof Error ? loadError.message : "Unable to load patient files.");
     }
+  }
+
+  function selectCategory(nextCategory: string) {
+    setCategory(nextCategory);
+    setVisibleCount(12);
+    localStorage.setItem("prijPatientDirectoryCategory", nextCategory);
+  }
+
+  function clearFilters() {
+    setQuery("");
+    setCategory("all");
+    setSortMode("created_newest");
+    setDateFilter("all");
+    setPatientStatus("all");
+    setPatientType("all");
+    setPhaseType("all");
+    setVisibleCount(12);
+    localStorage.removeItem("prijPatientDirectoryCategory");
   }
 
   return (
@@ -125,6 +139,7 @@ export default function PatientsPage() {
           <div>
             <h2>Patient directory</h2>
             <p className="muted">{status === "Loaded" ? `${filtered.length} matching patient files` : status}</p>
+            <p className="muted">Search patient by name, phone, or file number.</p>
           </div>
           <button className="button secondary compact" onClick={() => void loadPatients()} type="button">
             <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
@@ -143,7 +158,8 @@ export default function PatientsPage() {
           </label>
           <label>
             Category
-            <select onChange={(event) => { setCategory(event.target.value); setVisibleCount(12); }} value={category}>
+            <select onChange={(event) => selectCategory(event.target.value)} value={category}>
+              <option value="all">All patients</option>
               <option value="today">Today&apos;s patients</option>
               <option value="ob">Obstetric / Pregnancy</option>
               <option value="gyn">Gynecology</option>
@@ -152,11 +168,10 @@ export default function PatientsPage() {
               <option value="high_risk">High-risk</option>
               <option value="needs_review">Needs review</option>
               <option value="follow_up_due">Follow-up due</option>
-              <option value="all">All patients</option>
             </select>
           </label>
           <label>
-            Sort
+            Sort by
             <select onChange={(event) => setSortMode(event.target.value)} value={sortMode}>
               <option value="created_newest">Created newest</option>
               <option value="created_oldest">Created oldest</option>
@@ -166,47 +181,21 @@ export default function PatientsPage() {
               <option value="age_year">Age/year of birth</option>
             </select>
           </label>
-          <label>
-            Date
-            <select onChange={(event) => setDateFilter(event.target.value)} value={dateFilter}>
-              <option value="all">Any date</option>
-              <option value="today">Seen / created today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="exact">Exact date</option>
-              <option value="range">Date range</option>
-            </select>
-          </label>
-          {dateFilter === "exact" ? <label>Exact date<input type="date" value={exactDate} onChange={(event) => setExactDate(event.target.value)} /></label> : null}
-          {dateFilter === "range" ? <label>From<input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label> : null}
-          {dateFilter === "range" ? <label>To<input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label> : null}
-          <label>
-            Status
-            <select onChange={(event) => setPatientStatus(event.target.value)} value={patientStatus}>
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="archived">Archived</option>
-            </select>
-          </label>
-          <label>
-            Patient type
-            <select onChange={(event) => setPatientType(event.target.value)} value={patientType}>
-              <option value="all">All patient types</option>
-              {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label>
-            Current phase
-            <select onChange={(event) => setPhaseType(event.target.value)} value={phaseType}>
-              <option value="all">All phases</option>
-              <option value="infertility">Infertility</option>
-              <option value="pregnancy">Pregnancy</option>
-              <option value="gynecology">Gynecology</option>
-              <option value="postpartum">Postpartum</option>
-              <option value="general">General</option>
-            </select>
-          </label>
         </div>
+
+        <details className="filter-drawer">
+          <summary>More Filters</summary>
+          <div className="toolbar more-filter-grid">
+            <label>Date<select onChange={(event) => setDateFilter(event.target.value)} value={dateFilter}><option value="all">Any date</option><option value="today">Seen / created today</option><option value="yesterday">Yesterday</option><option value="exact">Exact date</option><option value="range">Date range</option></select></label>
+            {dateFilter === "exact" ? <label>Exact date<input type="date" value={exactDate} onChange={(event) => setExactDate(event.target.value)} /></label> : null}
+            {dateFilter === "range" ? <label>From<input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label> : null}
+            {dateFilter === "range" ? <label>To<input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label> : null}
+            <label>Status<select onChange={(event) => setPatientStatus(event.target.value)} value={patientStatus}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
+            <label>Patient type<select onChange={(event) => setPatientType(event.target.value)} value={patientType}><option value="all">All patient types</option>{patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+            <label>Current phase<select onChange={(event) => setPhaseType(event.target.value)} value={phaseType}><option value="all">All phases</option><option value="infertility">Infertility</option><option value="pregnancy">Pregnancy</option><option value="gynecology">Gynecology</option><option value="postpartum">Postpartum</option><option value="general">General</option></select></label>
+          </div>
+        </details>
+        <div className="form-actions"><button className="button secondary compact" type="button" onClick={clearFilters}>Clear filters</button></div>
 
         {error ? <p className="form-error">{error}</p> : null}
         {status === "Login required" ? (
@@ -216,14 +205,7 @@ export default function PatientsPage() {
         ) : null}
 
         {status === "Loading" ? <div className="skeleton" /> : null}
-        {query.trim().length < 2 && status !== "Login required" ? (
-          <div className="empty-state smart-empty-state">
-            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
-            <span>Search patient by name, phone, or file number.</span>
-          </div>
-        ) : null}
-
-        {query.trim().length >= 2 && status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
+        {status !== "Loading" && filtered.length === 0 && status !== "Login required" ? (
           <div className="empty-state smart-empty-state">
             <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
             <span>
