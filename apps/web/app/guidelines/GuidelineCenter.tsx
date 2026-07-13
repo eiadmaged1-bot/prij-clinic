@@ -171,7 +171,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">Guidelines</p>
-                  <h2>Search Guidelines</h2>
+                  <h2>Live Guideline Search</h2>
                 </div>
                 <span className="badge warning">Evidence only</span>
               </div>
@@ -187,7 +187,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
             </section>
             <section className="guideline-actions">
               {cards({ canUpload, canImport, canReview, isOwnerAdmin }).map((card) => (
-                <Link className="guideline-card" href={card.href} key={card.href}>
+                <Link className="guideline-card" href={card.href} key={card.id}>
                   <ThreeDMedicalIcon name={card.icon} size="md" tone="navy" />
                   <strong>{card.title}</strong>
                   <span>{card.copy}</span>
@@ -433,21 +433,21 @@ function cards({
 }) {
   if (!isOwnerAdmin) {
     return [
-      { href: "/guidelines", title: "Guidelines", copy: "Recent indexed evidence-library documents.", icon: "reports" as const },
-      { href: "/guidelines/search", title: "Search", copy: "Find indexed sections with citations.", icon: "search" as const },
-      { href: "/guidelines/search", title: "Browse", copy: "Browse local evidence-library content.", icon: "files" as const },
-      { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
-      { href: "/guidelines", title: "Recent", copy: "Recently indexed guideline documents.", icon: "timeline" as const }
+      { id: "doctor-recent-library", href: "/guidelines", title: "Guidelines", copy: "Recent indexed evidence-library documents.", icon: "reports" as const },
+      { id: "doctor-search", href: "/guidelines/search", title: "Search", copy: "Find indexed sections with citations.", icon: "search" as const },
+      { id: "doctor-browse", href: "/guidelines/search", title: "Browse", copy: "Browse local evidence-library content.", icon: "files" as const },
+      { id: "doctor-ask", href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
+      { id: "doctor-recent", href: "/guidelines", title: "Recent", copy: "Recently indexed guideline documents.", icon: "timeline" as const }
     ];
   }
   return [
-    { href: "/guidelines/imports", title: "Import official guidelines", copy: canImport ? "Run the built-in official source pack from the server CLI." : "Restricted import area.", icon: "reports" as const },
-    { href: "/guidelines/search", title: "Search All Guidelines", copy: "Find indexed sections with citations.", icon: "search" as const },
-    { href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
-    { href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },
-    { href: "/guidelines/sources", title: "Sources Registry", copy: canImport ? "Manage open and restricted sources." : "Review source access types.", icon: "reports" as const },
-    { href: "/guidelines/review", title: "Needs Review", copy: canReview ? "Approve, reject, or archive imports." : "Doctor review queue.", icon: "doctor" as const },
-    { href: "/guidelines/private-vault", title: "Private Vault", copy: "Licensed local uploads stay private.", icon: "consent" as const }
+    { id: "admin-imports", href: "/guidelines/imports", title: "Import official guidelines", copy: canImport ? "Run the built-in official source pack from the server CLI." : "Restricted import area.", icon: "reports" as const },
+    { id: "admin-search", href: "/guidelines/search", title: "Search All Guidelines", copy: "Find indexed sections with citations.", icon: "search" as const },
+    { id: "admin-ask", href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
+    { id: "admin-upload", href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },
+    { id: "admin-sources", href: "/guidelines/sources", title: "Sources Registry", copy: canImport ? "Manage open and restricted sources." : "Review source access types.", icon: "reports" as const },
+    { id: "admin-review", href: "/guidelines/review", title: "Needs Review", copy: canReview ? "Approve, reject, or archive imports." : "Doctor review queue.", icon: "doctor" as const },
+    { id: "admin-vault", href: "/guidelines/private-vault", title: "Private Vault", copy: "Licensed local uploads stay private.", icon: "consent" as const }
   ];
 }
 

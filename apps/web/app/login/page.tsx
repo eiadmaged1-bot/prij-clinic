@@ -2,14 +2,11 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { I18nProvider, useI18n } from "../../i18n/useI18n";
 import { useSession } from "../session";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
-
-const ownerLoginId = "eyad";
-const ownerPassword = "eyad";
 
 const loginText = {
   en: {
@@ -67,10 +64,11 @@ export default function LoginPage() {
 
 function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const session = useSession();
   const { language, textDirection } = useI18n();
   const text = loginText[language];
-  const [email, setEmail] = useState(ownerLoginId);
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,18 +81,15 @@ function LoginContent() {
 
     try {
       await session.login({ identifier: email, password });
-      router.push("/dashboard");
+      const requestedReturnUrl = searchParams.get("returnUrl") ?? sessionStorage.getItem("prijClinicReturnUrl");
+      const returnUrl = requestedReturnUrl?.startsWith("/") && !requestedReturnUrl.startsWith("//") ? requestedReturnUrl : "/dashboard";
+      sessionStorage.removeItem("prijClinicReturnUrl");
+      router.replace(returnUrl);
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : text.connectionProblem);
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  function useOwnerLogin() {
-    setEmail(ownerLoginId);
-    setPassword(ownerPassword);
-    setError("");
   }
 
   async function switchAccount() {
@@ -184,12 +179,6 @@ function LoginContent() {
           {isSubmitting ? text.signingIn : text.signIn}
         </button>
 
-        <details className="subtle-login-details">
-          <summary dir={textDirection}>{text.useOwnerLogin}</summary>
-          <button className="button secondary compact" onClick={useOwnerLogin} type="button">
-            {text.fillOwnerLogin}
-          </button>
-        </details>
       </form>
     </main>
   );

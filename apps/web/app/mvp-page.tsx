@@ -357,9 +357,10 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.replace("/login");
+      const returnUrl = pathname && pathname !== "/login" ? pathname : "/dashboard";
+      router.replace(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
     }
-  }, [router, status]);
+  }, [pathname, router, status]);
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -396,7 +397,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
+    <main className={`app-shell theme-${theme} comfort-${comfort} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "receptionist-shell" : ""}`} data-density={doctorComfortMode ? "large" : comfort}>
       {user ? (
         <>
           <button
@@ -450,13 +451,6 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 )}
               </nav>
             );})}
-            <div className="sidebar-footer">
-              <LanguageSwitcher />
-              <button className="button secondary compact sidebar-logout-button" onClick={() => void signOut()} type="button">
-                <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-                {t("logout")}
-              </button>
-            </div>
           </aside>
         </>
       ) : null}
@@ -477,21 +471,13 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 <ThreeDMedicalIcon name={isReceptionistOnly ? "reception" : "dashboard"} size="sm" tone="slate" />
               </button>
             ) : null}
-            <strong className="mobile-topbar-brand">{isReceptionistOnly ? "Dr Maged Clinics" : OFFICIAL_CLINIC_NAME}</strong>
+            <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
             </div>
           </div>
           <UniversalSearchBox />
-          <div className="topbar-actions">
-            <LanguageSwitcher />
-            {user ? (
-              <button className="button secondary compact topbar-logout-button" onClick={() => void signOut()} type="button">
-                {t("logout")}
-              </button>
-            ) : null}
-          </div>
           <AccountMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
         </header>
         {children}
@@ -535,8 +521,9 @@ function AccountMenu({
         <div className="account-menu-profile">
           <strong>{displayName}</strong>
           <span className="badge">{role}</span>
-          <span className="muted">{user.loginId || user.email}</span>
+          <span className="muted">{user.branchName || "All assigned branches"}</span>
         </div>
+        <LanguageSwitcher />
         {canOpenAdmin ? (
           <Link className="button secondary compact" href="/admin">
             <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />

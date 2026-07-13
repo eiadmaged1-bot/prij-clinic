@@ -66,7 +66,7 @@
   --density-font-scale: 1;
   --density-control-height: 2.75rem;
   --density-card-padding: 1.25rem;
-  --density-sidebar-width: 18rem;
+  --density-sidebar-width: 16rem;
 }
 
 :root[data-density="large"],
@@ -74,7 +74,7 @@
   --density-font-scale: 1.08;
   --density-control-height: 3.25rem;
   --density-card-padding: 1.45rem;
-  --density-sidebar-width: 19.5rem;
+  --density-sidebar-width: 16.25rem;
   --density-space: 1.15rem;
 }
 
@@ -549,7 +549,7 @@ body {
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  --density-sidebar-width: 17.5rem;
+  --density-sidebar-width: 16rem;
 }
 
 .sidebar {
@@ -4303,7 +4303,7 @@ body {
   --density-font-scale: 1.12;
   --density-control-height: 3.35rem;
   --density-card-padding: 1.55rem;
-  --density-sidebar-width: 19.5rem;
+  --density-sidebar-width: 16.25rem;
   --density-space: 1.25rem;
   --background: #f5f8f7;
   --background-soft: #fbfcfb;
@@ -4662,7 +4662,7 @@ body {
   }
 
   .account-menu {
-    display: none;
+    display: block;
   }
 
   .account-menu summary,

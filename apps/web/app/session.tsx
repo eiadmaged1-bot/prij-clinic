@@ -5,6 +5,7 @@ import { apiUnreachableMessage, sameOriginApiProxyPath } from "@/lib/api-base-ur
 
 const tokenKey = "prijClinicToken";
 const sessionMessageKey = "prijClinicSessionMessage";
+const returnUrlKey = "prijClinicReturnUrl";
 const authRequestTimeoutMs = 8_000;
 const authLoginPath = `${sameOriginApiProxyPath}/auth/login`;
 const authMePath = `${sameOriginApiProxyPath}/auth/me`;
@@ -55,6 +56,7 @@ export type SessionUser = {
   displayName: string;
   status: string;
   branchId: string | null;
+  branchName: string | null;
   roles: string[];
   permissions: string[];
   permissionPreset: string;
@@ -75,6 +77,7 @@ type SessionContextValue = {
   isAdmin: boolean;
   login(input: LoginInput): Promise<void>;
   logout(): Promise<void>;
+  expire(returnUrl?: string): void;
   refresh(): Promise<void>;
   clearMessage(): void;
 };
@@ -101,6 +104,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setStatus("unauthenticated");
   }, []);
+
+  const expire = useCallback((returnUrl?: string) => {
+    if (returnUrl && returnUrl.startsWith("/") && !returnUrl.startsWith("//")) {
+      sessionStorage.setItem(returnUrlKey, returnUrl);
+    }
+    clearSession(sessionEndedMessage());
+  }, [clearSession]);
 
   const refresh = useCallback(async () => {
     const storedToken = localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
@@ -214,13 +224,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       ),
       login,
       logout,
+      expire,
       refresh,
       clearMessage() {
         sessionStorage.removeItem(sessionMessageKey);
         setMessage("");
       }
     }),
-    [login, logout, message, refresh, status, token, user]
+    [expire, login, logout, message, refresh, status, token, user]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

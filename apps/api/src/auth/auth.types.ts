@@ -5,6 +5,7 @@ export type AuthUser = {
   displayName: string;
   status: string;
   branchId: string | null;
+  branchName: string | null;
   permissionPreset: string;
   protectedAccount: boolean;
   isSystemOwner: boolean;

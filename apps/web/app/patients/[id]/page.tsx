@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { SafeAiAssistantPanel } from "../../../components/ai-assistant/SafeAiAssistantPanel";
@@ -13,6 +13,7 @@ import { MedicationSafetyTerminal } from "../../../components/medications/Medica
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { AppShell, SafetyAlert } from "../../mvp-page";
+import { useSession } from "../../session";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { visitTypeLabel } from "@/lib/visit-types";
@@ -199,7 +200,9 @@ export default function PatientFilePage() {
   void PatientQuickActions;
   void PatientActionPanel;
   const params = useParams<{ id: string }>();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { expire } = useSession();
   const patientId = params.id;
   const isPreviewMode = searchParams.get("preview") === "queue" || searchParams.get("preview") === "history";
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -245,9 +248,16 @@ export default function PatientFilePage() {
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
       .then(async (response) => {
-        if (response.status === 401) throw new Error("Please sign in before opening patient files.");
+        if (response.status === 401) {
+          setPatient(null);
+          setRelated({});
+          setTimelineItems([]);
+          expire(pathname);
+          return null;
+        }
         if (!response.ok) throw new Error("Could not open this patient file.");
-        setPatient((await response.json()) as Patient);
+        const body = await response.json() as Patient | null;
+        if (body) setPatient(body);
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to open patient file."));
 
@@ -265,7 +275,7 @@ export default function PatientFilePage() {
         setPermissions([]);
         setRoles([]);
       });
-  }, [patientId]);
+  }, [expire, patientId, pathname]);
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -464,15 +474,7 @@ export default function PatientFilePage() {
 
       <SafetyAlert />
 
-      {error ? (
-        <section className="panel">
-          <p className="form-error">{error}</p>
-          <Link className="button" href="/login">
-            <ThreeDMedicalIcon name="doctor" size="sm" />
-            Go to login
-          </Link>
-        </section>
-      ) : null}
+      {error ? <section className="panel"><p className="form-error">{error}</p></section> : null}
 
       {patient ? (
         <>

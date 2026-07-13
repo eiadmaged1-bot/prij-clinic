@@ -108,6 +108,7 @@ export class UsersService {
       displayName: user.displayName,
       status: user.status,
       branchId: user.branchId,
+      branchName: user.branch?.name ?? null,
       permissionPreset: user.permissionPreset,
       protectedAccount: user.protectedAccount,
       isSystemOwner:
