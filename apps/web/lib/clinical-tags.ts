@@ -14,6 +14,10 @@ export type ClinicalTagPatient = {
   tagCategory: string;
   sourceType: string;
   tagDate?: string | null;
+  historyStatus?: string | null;
+  matchingTags?: Array<{ code: string; label: string; date?: string | null; status?: string | null }>;
+  matchingMedications?: Array<{ genericName: string; familyName?: string | null; clinicalGroup?: string | null; status?: string | null }>;
+  lastVisit?: string | null;
 };
 
 export function listClinicalTagDefinitions() {

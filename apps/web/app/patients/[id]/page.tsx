@@ -499,9 +499,11 @@ export default function PatientFilePage() {
           {active.key === "infertility" ? <InfertilityWorkspacePanel patient={patient} workspace={infertilityWorkspace} phases={clinicalPhases} /> : null}
           {active.key === "history" ? (
             <>
-              <MedicalPanel patient={patient} related={related} />
-              <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} />
-              <CareAssistPanel patientId={patient.id} historySheetId={String((related.history ?? [])[0]?.id ?? "") || undefined} />
+              <SmartHistoryOptionChips patient={patient} />
+              <details className="legacy-history-form filter-drawer">
+                <summary>Structured history form</summary>
+                <HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} />
+              </details>
             </>
           ) : null}
           {active.key === "doctor-visit" ? <DoctorVisitFlow patient={patient} related={related} onReload={() => window.location.reload()} /> : null}
@@ -823,17 +825,32 @@ function CaseBoardsPanel({ patient, related }: { patient: Patient; related: Reco
 
 const smartHistoryGroups = [
   {
-    title: "Medical history chips",
+    title: "Presenting complaint",
+    sourceType: "manual",
+    items: [["aub", "AUB"], ["pelvic_pain", "Pelvic pain"], ["amenorrhea", "Amenorrhea"], ["vaginal_discharge", "Vaginal discharge"]]
+  },
+  {
+    title: "Gynecology symptoms",
+    sourceType: "manual",
+    items: [["heavy_menstrual_bleeding", "Heavy menstrual bleeding"], ["intermenstrual_bleeding", "Intermenstrual bleeding"], ["postcoital_bleeding", "Postcoital bleeding"], ["postmenopausal_bleeding", "Postmenopausal bleeding"], ["dysmenorrhea", "Dysmenorrhea"], ["dyspareunia", "Dyspareunia"], ["oligomenorrhea", "Oligomenorrhea"]]
+  },
+  {
+    title: "Gynecology diagnoses",
+    sourceType: "manual",
+    items: [["pcos", "PCOS"], ["fibroid", "Fibroid"], ["endometriosis", "Endometriosis"], ["adenomyosis", "Adenomyosis"], ["ovarian_cyst", "Ovarian cyst"], ["pid", "PID"], ["infertility", "Infertility"]]
+  },
+  {
+    title: "Medical history",
     sourceType: "history_sheet",
     items: [["diabetes", "Diabetes"], ["hypertension", "Hypertension"], ["thyroid_disease", "Thyroid disease"], ["asthma", "Asthma"], ["anemia", "Anemia"], ["pcos", "PCOS"], ["endometriosis", "Endometriosis"], ["recurrent_abortion", "Recurrent abortion"]]
   },
   {
-    title: "Surgical/operation history chips",
+    title: "Operations / procedures",
     sourceType: "operation_history",
-    items: [["cesarean_section", "Cesarean section"], ["dilation_and_curettage", "D&C / Dilation and curettage"], ["hysteroscopy", "Hysteroscopy"], ["laparoscopy", "Laparoscopy"], ["ovarian_cystectomy", "Ovarian cystectomy"], ["myomectomy", "Myomectomy"], ["hysterectomy", "Hysterectomy"], ["cervical_cerclage", "Cervical cerclage"], ["mastectomy", "Mastectomy"], ["appendectomy", "Appendectomy"], ["cholecystectomy", "Cholecystectomy"], ["bariatric_surgery", "Bariatric surgery"]]
+    items: [["cesarean_section", "Cesarean section"], ["dilation_and_curettage", "D&C / Dilation and curettage"], ["hysteroscopy", "Hysteroscopy"], ["laparoscopy", "Laparoscopy"], ["ovarian_cystectomy", "Ovarian cystectomy"], ["myomectomy", "Myomectomy"], ["hysterectomy", "Hysterectomy"], ["salpingectomy", "Salpingectomy"], ["oophorectomy", "Oophorectomy"], ["endometrial_ablation", "Endometrial ablation"], ["cervical_cerclage", "Cervical cerclage"], ["ivf_icsi_procedure", "IVF/ICSI procedure"], ["mastectomy", "Mastectomy"]]
   },
   {
-    title: "Obstetric/delivery chips",
+    title: "Obstetric history",
     sourceType: "previous_pregnancy",
     items: [["normal_vaginal_delivery", "NVD"], ["previous_cesarean_section", "Previous CS"], ["instrumental_delivery", "Instrumental delivery"], ["miscarriage_abortion", "Miscarriage / abortion"], ["ectopic_pregnancy", "Ectopic"], ["molar_pregnancy", "Molar pregnancy"], ["iufd_stillbirth", "IUFD / stillbirth"]]
   }
@@ -841,7 +858,13 @@ const smartHistoryGroups = [
 
 function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [activeGroup, setActiveGroup] = useState<string>(smartHistoryGroups[0].title);
+  const [historyStatus, setHistoryStatus] = useState<"current" | "historical">("current");
+  const [tagDate, setTagDate] = useState("");
+  const [tagYear, setTagYear] = useState("");
   const [details, setDetails] = useState("");
+  const [manualNote, setManualNote] = useState("");
+  const [customTag, setCustomTag] = useState("");
   const [status, setStatus] = useState("");
 
   async function selectTag(code: string, label: string, sourceType: string) {
@@ -856,8 +879,11 @@ function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
         tagCode: code,
         label,
         category: sourceType === "operation_history" ? "surgical_history" : sourceType === "previous_pregnancy" ? "obstetric_history" : "medical_history",
-        sourceType,
-        notes: details || undefined
+        historyStatus,
+        tagDate: tagDate || undefined,
+        tagYear: tagYear ? Number(tagYear) : undefined,
+        detailJson: details ? { details } : undefined,
+        manualNote: manualNote || undefined
       })
     }).catch(() => null);
     setStatus(response?.ok ? `${label} tag saved for review.` : "Could not save this tag. Check role permissions.");
@@ -872,21 +898,23 @@ function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
         </div>
         <span className="badge warning">Doctor review</span>
       </div>
-      <label className="wide">Optional date/year/details<input value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Date/year, details, complications, notes" /></label>
-      {smartHistoryGroups.map((group) => (
-        <div key={group.title}>
-          <h3>{group.title}</h3>
-          <div className="clinical-chip-cloud">
-            {group.items.map(([code, label]) => (
-              <button className={`clinical-chip ${selected.includes(code) ? "active" : ""}`} key={code} type="button" onClick={() => void selectTag(code, label, group.sourceType)}>
-                <strong>{label}</strong>
-                <span>{code}</span>
-              </button>
-            ))}
-          </div>
+      <div className="clinical-history-layout">
+        <nav className="history-category-list" aria-label="History categories">
+          {smartHistoryGroups.map((group) => <button className={activeGroup === group.title ? "active" : ""} key={group.title} onClick={() => setActiveGroup(group.title)} type="button">{group.title}</button>)}
+        </nav>
+        <div>
+          {smartHistoryGroups.filter((group) => group.title === activeGroup).map((group) => <div key={group.title}><h3>{group.title}</h3><div className="clinical-tag-grid">{group.items.map(([code, label]) => <button className={`clinical-tag-card ${selected.includes(code) ? "selected" : ""}`} key={code} type="button" onClick={() => void selectTag(code, label, group.sourceType)}><span>{group.title}</span><strong>{label}</strong></button>)}</div></div>)}
         </div>
-      ))}
-      <p className="form-warning">Cesarean section can appear in surgical and obstetric history; review duplicate context before final interpretation.</p>
+      </div>
+      <div className="form-grid compact-history-details">
+        <label>Status<select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value as "current" | "historical")}><option value="current">Current</option><option value="historical">Historical</option></select></label>
+        <label>Date<input type="date" value={tagDate} onChange={(event) => setTagDate(event.target.value)} /></label>
+        <label>Year<input type="number" min="1900" max="2200" value={tagYear} onChange={(event) => setTagYear(event.target.value)} /></label>
+        <label className="wide">Details<input value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Optional structured detail" /></label>
+        <label className="wide">Manual note<textarea value={manualNote} onChange={(event) => setManualNote(event.target.value)} /></label>
+        <label>Custom tag<input value={customTag} onChange={(event) => setCustomTag(event.target.value)} /></label>
+        <button className="button secondary" disabled={!customTag.trim()} type="button" onClick={() => void selectTag(customTag, customTag, "manual")}>Add custom tag</button>
+      </div>
       {status ? <p className="notice">{status}</p> : null}
     </section>
   );

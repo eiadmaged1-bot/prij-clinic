@@ -5,7 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferencePatient } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { ManualClinicalTagDto } from "./dto";
+import { ManualClinicalTagDto, UpdateClinicalTagDto } from "./dto";
 
 @Injectable()
 export class ClinicalTagsService {
@@ -33,44 +33,53 @@ export class ClinicalTagsService {
 
   async patientsByTag(tag: string | undefined, user: AuthUser) {
     this.assertClinicalSearchRole(user);
-    const query = normalize(tag ?? "");
-    const definitions = await this.search(query, user);
-    const codes = new Set(definitions.map((item) => item.code));
-    if (query && codes.size === 0) codes.add(query);
-
-    const tags = await this.prisma.patientClinicalTag.findMany({
-      where: {
-        ...(codes.size ? { tagCode: { in: [...codes] } } : {}),
-        patient: { ...branchScope(user) }
-      },
+    const terms = splitTerms(tag ?? "");
+    const patients = await this.prisma.patient.findMany({
+      where: { ...branchScope(user) },
       include: {
-        definition: true,
-        patient: {
-          include: {
-            clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1 }
-          }
-        }
+        clinicalTags: { include: { definition: true }, orderBy: { createdAt: "desc" } },
+        medicationHistoryItems: { include: { medicationGeneric: true }, orderBy: { createdAt: "desc" } },
+        clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1 },
+        encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } }
       },
-      orderBy: { createdAt: "desc" },
-      take: 100
+      orderBy: { updatedAt: "desc" },
+      take: 500
     });
+    const matched = patients.flatMap((patient) => {
+      const tagMatches = patient.clinicalTags.map((row) => ({ row, text: tagSearchText(row) }));
+      const medicationMatches = patient.medicationHistoryItems.map((row) => ({ row, text: medicationSearchText(row) }));
+      const matchesEveryTerm = terms.every((term) => tagMatches.some((item) => item.text.includes(term)) || medicationMatches.some((item) => item.text.includes(term)));
+      if (!matchesEveryTerm) return [];
+      const matchingTags = tagMatches.filter((item) => !terms.length || terms.some((term) => item.text.includes(term))).map((item) => item.row);
+      const matchingMedications = medicationMatches.filter((item) => terms.some((term) => item.text.includes(term))).map((item) => item.row);
+      const primary = matchingTags[0] ?? patient.clinicalTags[0];
+      return [{
+        id: primary?.id ?? patient.id,
+        patientId: patient.id,
+        patientName: `${patient.firstName} ${patient.lastName}`.trim(),
+        medicalRecordNumber: patient.medicalRecordNumber,
+        phone: patient.phone,
+        patientType: patient.patientType,
+        currentPhase: patient.clinicalPhases[0] ?? null,
+        tagLabel: primary?.label ?? matchingMedications[0]?.genericNameSnapshot ?? "Medication history",
+        tagCode: primary?.tagCode ?? "medication_history",
+        tagCategory: primary?.category ?? "medication_history",
+        sourceType: primary?.sourceType ?? "medication_history",
+        tagDate: primary?.tagDate ?? null,
+        historyStatus: primary?.historyStatus ?? matchingMedications[0]?.currentOrPast ?? null,
+        matchingTags: matchingTags.map((row) => ({ code: row.tagCode, label: row.label, date: row.tagDate, status: row.historyStatus })),
+        matchingMedications: matchingMedications.map((row) => ({ genericName: row.genericNameSnapshot, familyName: row.familyNameSnapshot, clinicalGroup: row.clinicalGroupSnapshot, status: row.currentOrPast })),
+        lastVisit: patient.encounters[0]?.createdAt ?? null
+      }];
+    }).slice(0, 100);
 
-    await this.audit.record({ actorUserId: user.id, action: "clinical_tags.patient_search", resourceType: "patient_clinical_tag", branchId: user.branchId, severity: "medium", metadataJson: { queryPresent: Boolean(query), resultCount: tags.length } });
+    await this.audit.record({ actorUserId: user.id, action: "clinical_tags.patient_search", resourceType: "patient_clinical_tag", branchId: user.branchId, severity: "medium", metadataJson: { termCount: terms.length, resultCount: matched.length } });
+    return matched;
+  }
 
-    return tags.map((tagRow) => ({
-      id: tagRow.id,
-      patientId: tagRow.patientId,
-      patientName: `${tagRow.patient.firstName} ${tagRow.patient.lastName}`.trim(),
-      medicalRecordNumber: tagRow.patient.medicalRecordNumber,
-      phone: tagRow.patient.phone,
-      patientType: tagRow.patient.patientType,
-      currentPhase: tagRow.patient.clinicalPhases[0] ?? null,
-      tagLabel: tagRow.label,
-      tagCode: tagRow.tagCode,
-      tagCategory: tagRow.category,
-      sourceType: tagRow.sourceType,
-      tagDate: tagRow.tagDate
-    }));
+  async forPatient(patientId: string, user: AuthUser) {
+    await assertCanReferencePatient(this.prisma, patientId, user);
+    return this.prisma.patientClinicalTag.findMany({ where: { patientId }, include: { definition: true }, orderBy: [{ category: "asc" }, { createdAt: "desc" }] });
   }
 
   async manualAdd(patientId: string, dto: ManualClinicalTagDto, user: AuthUser) {
@@ -85,12 +94,34 @@ export class ClinicalTagsService {
       tagDefinitionId: definition?.id,
       sourceType: "manual",
       sourceId: "manual",
+      historyStatus: dto.historyStatus ?? "current",
       tagDate: parseDate(dto.tagDate),
+      tagYear: dto.tagYear ?? null,
+      detailJson: dto.detailJson as Prisma.InputJsonValue | undefined,
+      manualNote: dto.manualNote?.trim() || null,
       notes: dto.notes?.trim() || null,
       createdByUserId: user.id
     });
     await this.audit.record({ actorUserId: user.id, action: "clinical_tag.manual_created", resourceType: "patient_clinical_tag", resourceId: tag.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId, tagCode: tag.tagCode, safety: "search_tag_only" } });
     return tag;
+  }
+
+  async update(patientId: string, tagId: string, dto: UpdateClinicalTagDto, user: AuthUser) {
+    const patient = await assertCanReferencePatient(this.prisma, patientId, user);
+    const existing = await this.prisma.patientClinicalTag.findFirst({ where: { id: tagId, patientId } });
+    if (!existing) throw new BadRequestException("Clinical history tag was not found.");
+    const updated = await this.prisma.patientClinicalTag.update({ where: { id: tagId }, data: { historyStatus: dto.historyStatus, tagDate: dto.tagDate ? parseDate(dto.tagDate) : undefined, tagYear: dto.tagYear, detailJson: dto.detailJson as Prisma.InputJsonValue | undefined, manualNote: dto.manualNote?.trim() } });
+    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.updated", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", metadataJson: { patientId, changedFields: Object.keys(dto) } });
+    return updated;
+  }
+
+  async remove(patientId: string, tagId: string, user: AuthUser) {
+    const patient = await assertCanReferencePatient(this.prisma, patientId, user);
+    const existing = await this.prisma.patientClinicalTag.findFirst({ where: { id: tagId, patientId } });
+    if (!existing) throw new BadRequestException("Clinical history tag was not found.");
+    await this.prisma.patientClinicalTag.delete({ where: { id: tagId } });
+    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.removed", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", reason: "Clinician removed structured history tag", metadataJson: { patientId, tagCode: existing.tagCode } });
+    return { removed: true };
   }
 
   async createFromSource(input: { patientId: string; tagCode: string; label?: string; category?: string; sourceType: string; sourceId?: string | null; tagDate?: Date | null; notes?: string | null; createdByUserId?: string | null }) {
@@ -153,4 +184,18 @@ function parseDate(value?: string) {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) throw new BadRequestException("Invalid tag date.");
   return date;
+}
+
+function splitTerms(value: string) {
+  return value.split(/\s*(?:\+|,)\s*/).map(normalize).filter(Boolean).slice(0, 8);
+}
+
+function tagSearchText(row: { tagCode: string; label: string; category: string; definition?: { aliasesJson: Prisma.JsonValue } | null }) {
+  const aliases = Array.isArray(row.definition?.aliasesJson) ? row.definition.aliasesJson.join(" ") : "";
+  return normalize(`${row.tagCode} ${row.label} ${row.category} ${aliases}`);
+}
+
+function medicationSearchText(row: { genericNameSnapshot: string; familyNameSnapshot: string | null; clinicalGroupSnapshot: string | null; indication: string | null; medicationGeneric?: { className: string | null; familyName: string | null; pharmacologicClass: string | null; aliases: Prisma.JsonValue } | null }) {
+  const aliases = Array.isArray(row.medicationGeneric?.aliases) ? row.medicationGeneric.aliases.join(" ") : "";
+  return normalize(`${row.genericNameSnapshot} ${row.familyNameSnapshot ?? ""} ${row.clinicalGroupSnapshot ?? ""} ${row.indication ?? ""} ${row.medicationGeneric?.className ?? ""} ${row.medicationGeneric?.familyName ?? ""} ${row.medicationGeneric?.pharmacologicClass ?? ""} ${aliases}`);
 }

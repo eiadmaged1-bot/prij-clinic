@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsObject,
@@ -923,8 +924,25 @@ export class PatientMedicationHistoryDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(40)
-  currentOrPast?: string;
+  @MaxLength(120)
+  clinicalGroupSnapshot?: string;
+
+  @IsOptional()
+  @IsIn(["current", "previous", "stopped"])
+  currentOrPast?: "current" | "previous" | "stopped";
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  indication?: string;
+
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  stopDate?: string;
 
   @IsOptional()
   @IsString()

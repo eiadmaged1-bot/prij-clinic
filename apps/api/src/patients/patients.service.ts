@@ -648,7 +648,11 @@ export class PatientsService {
         medicationGenericId: generic?.id ?? null,
         genericNameSnapshot: generic?.genericName ?? dto.genericNameSnapshot.trim(),
         familyNameSnapshot: generic?.familyName ?? clean(dto.familyNameSnapshot),
-        currentOrPast: clean(dto.currentOrPast) ?? "past",
+        clinicalGroupSnapshot: clean(dto.clinicalGroupSnapshot),
+        currentOrPast: dto.currentOrPast ?? "previous",
+        indication: clean(dto.indication),
+        startDate: dto.startDate ? new Date(dto.startDate) : null,
+        stopDate: dto.stopDate ? new Date(dto.stopDate) : null,
         notes: clean(dto.notes)
       }
     });

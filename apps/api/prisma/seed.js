@@ -1733,6 +1733,26 @@ async function seedClinicalTagDefinitions(prisma) {
     ["icsi", "ICSI", ["intracytoplasmic sperm injection"], "infertility"],
     ["iui", "IUI", ["intrauterine insemination"], "infertility"],
     ["ovulation_induction", "Ovulation induction", ["induction of ovulation"], "infertility"]
+    , ["aub", "AUB", ["abnormal uterine bleeding"], "presenting_complaint"]
+    , ["heavy_menstrual_bleeding", "Heavy menstrual bleeding", ["HMB", "menorrhagia"], "gynecology_symptoms"]
+    , ["intermenstrual_bleeding", "Intermenstrual bleeding", ["IMB"], "gynecology_symptoms"]
+    , ["postcoital_bleeding", "Postcoital bleeding", ["PCB"], "gynecology_symptoms"]
+    , ["postmenopausal_bleeding", "Postmenopausal bleeding", ["PMB"], "gynecology_symptoms"]
+    , ["dysmenorrhea", "Dysmenorrhea", ["painful periods"], "gynecology_symptoms"]
+    , ["dyspareunia", "Dyspareunia", ["painful intercourse"], "gynecology_symptoms"]
+    , ["pelvic_pain", "Pelvic pain", ["chronic pelvic pain", "acute pelvic pain"], "gynecology_symptoms"]
+    , ["vaginal_discharge", "Vaginal discharge", [], "gynecology_symptoms"]
+    , ["amenorrhea", "Amenorrhea", ["absent periods"], "gynecology_symptoms"]
+    , ["oligomenorrhea", "Oligomenorrhea", ["infrequent periods"], "gynecology_symptoms"]
+    , ["fibroid", "Fibroid", ["leiomyoma", "uterine fibroid"], "gynecology_diagnoses"]
+    , ["adenomyosis", "Adenomyosis", [], "gynecology_diagnoses"]
+    , ["ovarian_cyst", "Ovarian cyst", ["adnexal cyst"], "gynecology_diagnoses"]
+    , ["pid", "PID", ["pelvic inflammatory disease"], "gynecology_diagnoses"]
+    , ["infertility", "Infertility", ["subfertility"], "obstetric_history"]
+    , ["salpingectomy", "Salpingectomy", ["tube removal"], "operations_procedures"]
+    , ["oophorectomy", "Oophorectomy", ["ovary removal"], "operations_procedures"]
+    , ["endometrial_ablation", "Endometrial ablation", [], "operations_procedures"]
+    , ["ivf_icsi_procedure", "IVF/ICSI procedure", ["IVF", "ICSI", "ART procedure"], "operations_procedures"]
   ];
 
   for (const [code, label, aliasesJson, category] of definitions) {

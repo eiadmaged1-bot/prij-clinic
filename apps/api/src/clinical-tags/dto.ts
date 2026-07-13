@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, MaxLength } from "class-validator";
+import { IsDateString, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class ManualClinicalTagDto {
   @IsString()
@@ -20,7 +20,51 @@ export class ManualClinicalTagDto {
   tagDate?: string;
 
   @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  tagYear?: number;
+
+  @IsOptional()
+  @IsIn(["current", "historical"])
+  historyStatus?: "current" | "historical";
+
+  @IsOptional()
+  @IsObject()
+  detailJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  manualNote?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(1000)
   notes?: string;
+}
+
+export class UpdateClinicalTagDto {
+  @IsOptional()
+  @IsIn(["current", "historical"])
+  historyStatus?: "current" | "historical";
+
+  @IsOptional()
+  @IsDateString()
+  tagDate?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  tagYear?: number;
+
+  @IsOptional()
+  @IsObject()
+  detailJson?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  manualNote?: string;
 }

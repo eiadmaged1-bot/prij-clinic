@@ -795,6 +795,50 @@ body {
   gap: var(--space-4);
 }
 
+.clinical-history-layout {
+  display: grid;
+  grid-template-columns: minmax(210px, 0.32fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.history-category-list,
+.clinical-tag-grid {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.history-category-list button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+}
+
+.history-category-list button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.clinical-tag-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compact-history-details {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 900px) {
+  .clinical-history-layout,
+  .clinical-tag-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1199px) {
   .patient-simple-hero,
   .doctor-comfort-mode .patient-simple-hero {
