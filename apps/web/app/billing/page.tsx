@@ -6,6 +6,7 @@ import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell, SafetyAlert } from "../mvp-page";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 
 type Invoice = {
   id: string;
@@ -64,10 +65,11 @@ export default function BillingPage() {
   const [reports, setReports] = useState<FinanceReports | null>(null);
   const [statement, setStatement] = useState<Record<string, unknown> | null>(null);
   const [patientId, setPatientId] = useState("");
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
 
-  const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
+  const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => ({ "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }), [token]);
 
   useEffect(() => {
@@ -137,7 +139,9 @@ export default function BillingPage() {
         referenceNote: String(form.get("referenceNote") ?? "").trim() || undefined,
         note: String(form.get("note") ?? "").trim() || undefined
       },
-      "Payment recorded."
+      "Payment recorded.",
+      idempotencyKey,
+      regenerateIdempotencyKey
     );
     event.currentTarget.reset();
   }
@@ -154,16 +158,21 @@ export default function BillingPage() {
     setStatement((await response.json()) as Record<string, unknown>);
   }
 
-  async function post(path: string, payload: Record<string, unknown>, success: string) {
+  async function post(path: string, payload: Record<string, unknown>, success: string, idemKey?: string, regenerateKey?: () => void) {
     setMessage("");
     setError("");
+    const fetchHeaders: Record<string, string> = { ...headers };
+    if (idemKey) {
+      fetchHeaders["idempotency-key"] = idemKey;
+    }
     const response = await fetch(`${getApiBaseUrl()}${path}`, {
       method: "POST",
       credentials: "include",
-      headers,
+      headers: fetchHeaders,
       body: JSON.stringify(payload)
     });
     if (!response.ok) {
+      if (regenerateKey) regenerateKey();
       setError("Could not save this finance action. Check permissions and required reason fields.");
       return;
     }

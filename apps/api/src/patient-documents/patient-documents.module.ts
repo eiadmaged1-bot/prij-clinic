@@ -7,10 +7,12 @@ import { RbacModule } from "../rbac/rbac.module";
 import { UsersModule } from "../users/users.module";
 import { PatientDocumentsController } from "./patient-documents.controller";
 import { PatientDocumentsService } from "./patient-documents.service";
+import { LocalEncryptedStorageService } from "./storage/local-encrypted-storage.service";
+import { NotConfiguredDocumentMalwareScanner } from "./storage/document-malware-scanner";
 
 @Module({
   imports: [AuditModule, AuthModule, FilesModule, PrismaModule, RbacModule, UsersModule],
   controllers: [PatientDocumentsController],
-  providers: [PatientDocumentsService]
+  providers: [PatientDocumentsService, LocalEncryptedStorageService, NotConfiguredDocumentMalwareScanner]
 })
 export class PatientDocumentsModule {}

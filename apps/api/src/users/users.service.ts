@@ -54,6 +54,24 @@ export class UsersService {
     });
   }
 
+  async getPreferences(userId: string) {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+      select: preferenceSelect
+    });
+  }
+
+  async updatePreferences(userId: string, preferences: UserPreferencePatch) {
+    return this.prisma.userPreference.upsert({
+      where: { userId },
+      create: { userId, ...preferences },
+      update: preferences,
+      select: preferenceSelect
+    });
+  }
+
   async listAdminUsers() {
     const users = await this.prisma.user.findMany({
       orderBy: { createdAt: "asc" },
@@ -121,6 +139,19 @@ export class UsersService {
     };
   }
 }
+
+const preferenceSelect = {
+  interfaceMode: true,
+  densityMode: true,
+  mobileNavigationMode: true,
+  updatedAt: true
+} as const;
+
+export type UserPreferencePatch = {
+  interfaceMode?: "OPTIMIZED" | "MINIMALISTIC";
+  densityMode?: "COMPACT" | "COMFORTABLE" | "LARGE";
+  mobileNavigationMode?: "AUTO" | "BOTTOM_NAV" | "DRAWER";
+};
 
 function applyPermissionPreset(rolePermissionKeys: Set<string>, preset: string) {
   const permissions = new Set<string>();

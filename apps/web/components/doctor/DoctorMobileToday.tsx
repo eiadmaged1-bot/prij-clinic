@@ -1,0 +1,2 @@
+import Link from "next/link";
+export function DoctorMobileToday({ patients }: { patients: Array<{ id: string; name: string; status: string }> }) { return <section className="doctor-mobile-today"><h1>Today</h1>{patients.map((patient) => <Link className="operational-card" href={`/patients/${patient.id}`} key={patient.id}><strong>{patient.name}</strong><span>{patient.status}</span></Link>)}</section>; }

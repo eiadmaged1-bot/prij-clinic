@@ -1,0 +1,58 @@
+-- CreateEnum
+CREATE TYPE "IdempotencyStatus" AS ENUM ('IN_PROGRESS', 'COMPLETED', 'REJECTED', 'FAILED');
+
+-- DropIndex
+DROP INDEX "IdempotencyRecord_userId_operation_keyHash_key";
+
+-- AlterTable
+ALTER TABLE "IdempotencyRecord" DROP COLUMN "responseBody",
+ADD COLUMN     "scopeKey" TEXT NOT NULL DEFAULT 'GLOBAL',
+DROP COLUMN "status",
+ADD COLUMN     "status" "IdempotencyStatus" NOT NULL DEFAULT 'IN_PROGRESS';
+
+-- CreateTable
+CREATE TABLE "QueueDayCounter" (
+    "id" UUID NOT NULL,
+    "branchId" UUID NOT NULL,
+    "queueDate" DATE NOT NULL,
+    "nextNumber" INTEGER NOT NULL DEFAULT 1,
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL,
+
+    CONSTRAINT "QueueDayCounter_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ActiveQueueTicketLock" (
+    "id" UUID NOT NULL,
+    "branchId" UUID NOT NULL,
+    "patientId" UUID NOT NULL,
+    "queueDate" DATE NOT NULL,
+    "queueTicketId" UUID NOT NULL,
+    "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ActiveQueueTicketLock_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "QueueDayCounter_branchId_queueDate_key" ON "QueueDayCounter"("branchId", "queueDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ActiveQueueTicketLock_queueTicketId_key" ON "ActiveQueueTicketLock"("queueTicketId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ActiveQueueTicketLock_branchId_patientId_queueDate_key" ON "ActiveQueueTicketLock"("branchId", "patientId", "queueDate");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "IdempotencyRecord_userId_scopeKey_operation_keyHash_key" ON "IdempotencyRecord"("userId", "scopeKey", "operation", "keyHash");
+
+-- AddForeignKey
+ALTER TABLE "QueueDayCounter" ADD CONSTRAINT "QueueDayCounter_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ActiveQueueTicketLock" ADD CONSTRAINT "ActiveQueueTicketLock_branchId_fkey" FOREIGN KEY ("branchId") REFERENCES "Branch"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ActiveQueueTicketLock" ADD CONSTRAINT "ActiveQueueTicketLock_patientId_fkey" FOREIGN KEY ("patientId") REFERENCES "Patient"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ActiveQueueTicketLock" ADD CONSTRAINT "ActiveQueueTicketLock_queueTicketId_fkey" FOREIGN KEY ("queueTicketId") REFERENCES "QueueTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE;

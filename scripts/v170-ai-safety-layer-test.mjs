@@ -20,7 +20,7 @@ const dto = read("apps/api/src/ai-drafts/dto.ts");
 const panel = read("apps/web/components/ai-assistant/SafeAiAssistantPanel.tsx");
 const page = read("apps/web/app/ai-assistant/page.tsx");
 const nav = read("apps/web/app/navigation-registry.ts");
-const patientPage = read("apps/web/app/patients/[id]/page.tsx");
+const patientPage = read("apps/web/app/patients/[id]/page.tsx") + read("apps/web/app/patients/[id]/workspace-module-renderer.tsx");
 
 assert(packageJson.scripts["test:v170:ai-safety-layer"] === "node scripts/v170-ai-safety-layer-test.mjs", "v0.17 AI safety layer script is registered");
 assert(controller.includes('@Controller("ai-drafts")') && controller.includes('Get("safety-status")'), "AI safety status endpoint exists on protected AI draft controller");

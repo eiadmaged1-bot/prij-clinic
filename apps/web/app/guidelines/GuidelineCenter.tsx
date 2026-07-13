@@ -50,7 +50,7 @@ type SearchResult = {
 };
 
 export function GuidelineCenter({ view }: GuidelineCenterProps) {
-  const { user, status, token } = useSession();
+  const { user, status } = useSession();
   const canRead = Boolean(user?.permissions.includes("guidelines.read") || user?.permissions.includes("guidelines.search"));
   const canUpload = Boolean(user?.permissions.includes("guidelines.upload"));
   const canImport = Boolean(user?.permissions.includes("guidelines.import"));
@@ -67,10 +67,10 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [message, setMessage] = useState("Ready");
 
   useEffect(() => {
-    if (!token || !canRead) return;
+    if (!canRead) return;
     void loadBasics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, canRead]);
+  }, [canRead]);
 
   async function loadBasics() {
     const [sourceBody, documentBody] = await Promise.all([
@@ -82,7 +82,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   }
 
   async function apiGet(path: string) {
-    const response = await fetch(`${getApiBaseUrl()}${path}`, { headers: token ? { authorization: `Bearer ${token}` } : undefined });
+    const response = await fetch(`${getApiBaseUrl()}${path}`, { credentials: "include" });
     if (!response.ok) return {};
     return response.json();
   }
@@ -101,8 +101,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     const response = await fetch(`${getApiBaseUrl()}/guidelines/ask`, {
       method: "POST",
       headers: {
-        "content-type": "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {})
+        "content-type": "application/json"
       },
       body: JSON.stringify({ question: query })
     });
@@ -115,7 +114,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   async function openSecureFile(document: Document, action: "view" | "download") {
     setMessage(action === "view" ? "Opening secure viewer" : "Preparing secure download");
     const response = await fetch(`${getApiBaseUrl()}/guidelines/documents/${document.id}/${action}`, {
-      headers: token ? { authorization: `Bearer ${token}` } : undefined
+      credentials: "include"
     });
     if (!response.ok) {
       setMessage(action === "download" ? "Download is not allowed for this document" : "Secure viewer access was denied");
@@ -142,8 +141,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     const response = await fetch(`${getApiBaseUrl()}/guidelines/documents/${document.id}/file-access-settings`, {
       method: "PATCH",
       headers: {
-        "content-type": "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {})
+        "content-type": "application/json"
       },
       body: JSON.stringify({ downloadsAllowed })
     });

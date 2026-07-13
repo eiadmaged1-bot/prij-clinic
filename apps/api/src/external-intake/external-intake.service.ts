@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { PatientType, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -52,6 +52,7 @@ export class ExternalIntakeService {
     try {
       submission = await this.prisma.externalPatientSubmission.create({
         data: {
+          id: randomUUID(),
           source: "google_form",
           language: /[\u0600-\u06ff]/.test(dto.fullName) ? "ar" : "en",
           externalSubmissionId: dto.submissionId.trim(),

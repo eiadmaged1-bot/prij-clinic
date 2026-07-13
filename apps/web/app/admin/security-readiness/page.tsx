@@ -33,7 +33,7 @@ const fallbackSections: ReadinessSection[] = [
 ];
 
 export default function SecurityReadinessPage() {
-  const { token, status, isAdmin } = useSession();
+  const { status, isAdmin } = useSession();
   const [readiness, setReadiness] = useState<SecurityReadiness | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,7 @@ export default function SecurityReadinessPage() {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!token || !isAdmin) {
+    if (!isAdmin) {
       setLoading(false);
       setReadiness(null);
       return;
@@ -52,8 +52,7 @@ export default function SecurityReadinessPage() {
       setError("");
       try {
         const response = await fetch(`${apiBaseUrl}/admin/security-readiness`, {
-          credentials: "include",
-          headers: token ? { authorization: `Bearer ${token}` } : undefined
+          credentials: "include"
         });
         if (response.status === 401 || response.status === 403) {
           setError("Owner/Admin access is required to review security readiness.");
@@ -75,7 +74,7 @@ export default function SecurityReadinessPage() {
     }
 
     void loadReadiness();
-  }, [apiBaseUrl, isAdmin, status, token]);
+  }, [apiBaseUrl, isAdmin, status]);
 
   const sections = readiness?.sections ?? fallbackSections;
   const blockers = readiness?.blockers ?? [

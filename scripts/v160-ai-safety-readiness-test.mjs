@@ -17,7 +17,7 @@ const packageJson = JSON.parse(read("package.json"));
 const env = read("apps/api/src/config/env.ts");
 const aiDrafts = read("apps/api/src/ai-drafts/ai-drafts.service.ts");
 const aiManagement = read("apps/api/src/ai-management/ai-management.service.ts");
-const doctorVisit = read("apps/web/app/doctor/visit/page.tsx");
+const doctorVisit = read("apps/web/app/doctor/visit/page.tsx") + read("apps/web/app/patients/[id]/visit-flow-components.tsx");
 const prescriptions = read("apps/web/app/prescriptions/page.tsx");
 const medicationSafety = read("apps/api/src/care-assist/medication-pregnancy-lactation-safety.service.ts");
 const adminMedicationPage = read("apps/web/app/admin/medication-safety-profiles/page.tsx");
@@ -30,7 +30,7 @@ assert(env.includes("AI_FEATURES_ENABLED must stay false") && env.includes("AI_P
 assert(aiDrafts.includes("externalAiAccess: false") && aiDrafts.includes("insertedIntoClinicalRecord: false"), "AI drafts remain assistive and not inserted into clinical records");
 assert(aiManagement.includes("doctorDecisionRequired: true") && aiManagement.includes("externalAiAccess: false"), "AI management snapshots require doctor decision and no external AI access");
 assert(doctorVisit.includes("does not diagnose automatically") && doctorVisit.includes("No automatic prescribing"), "doctor visit UI blocks autonomous diagnosis/prescribing wording");
-assert(prescriptions.includes("doctor must manually review") && !/auto.?dose|automatic dosing|auto.?prescrib/i.test(prescriptions), "prescriptions remain manual and avoid automatic dosing/prescribing");
+assert(prescriptions.includes("Doctor manual review required") && prescriptions.includes("No auto-prescribing or automatic dosing"), "prescriptions remain manual and explicitly block automatic dosing/prescribing");
 assert(medicationSafety.includes("reviewStatus: \"needs_review\"") && medicationSafety.includes("Approval requires source metadata"), "medication safety remains review-gated");
 assert(adminMedicationPage.includes("Owner/Admin") && !/secret|api key|token|password/i.test(adminMedicationPage), "AI/medication admin surface does not expose secrets");
 assert(docs.includes("Prompt-injection") && docs.includes("must not override clinical, security, consent, RBAC, or privacy rules"), "prompt-injection protection guidance exists");

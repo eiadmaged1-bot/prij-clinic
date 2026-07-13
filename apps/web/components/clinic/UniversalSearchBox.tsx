@@ -28,16 +28,18 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
   const flatResults = useMemo(() => sections.flatMap((section) => section.results), [sections]);
 
   useEffect(() => {
-    if (!query.trim()) {
+    if (query.trim().length < 2) {
       setSections([]);
       setLoading(false);
       return;
     }
     const token = sessionStorage.getItem("prijClinicToken");
+    const controller = new AbortController();
     const timeout = window.setTimeout(() => {
       setLoading(true);
       fetch(`${getApiBaseUrl()}/search/live?q=${encodeURIComponent(expandSearchShortcut(query))}&scope=${encodeURIComponent(scope)}`, {
         credentials: "include",
+        signal: controller.signal,
         headers: token ? { authorization: `Bearer ${token}` } : undefined
       })
         .then(async (response) => response.ok ? response.json() : { sections: [] })
@@ -47,8 +49,8 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
         })
         .catch(() => setSections([]))
         .finally(() => setLoading(false));
-    }, 220);
-    return () => window.clearTimeout(timeout);
+    }, 275);
+    return () => { window.clearTimeout(timeout); controller.abort(); };
   }, [query, scope]);
 
   useEffect(() => {
@@ -84,7 +86,7 @@ export function UniversalSearchBox({ scope = "global" }: { scope?: string }) {
       <input
         ref={inputRef}
         value={query}
-        placeholder="Patients, phone, MRN, appointments, invoices, investigations, prescriptions, documents, guidelines"
+        placeholder="Patient name, MRN, phone, appointment, or queue"
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={onKeyDown}
       />

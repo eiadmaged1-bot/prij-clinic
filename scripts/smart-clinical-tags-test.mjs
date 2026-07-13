@@ -8,7 +8,7 @@ const [schema, migration, seed, controller, service, patientUi, searchUi] = awai
   readFile("apps/api/prisma/seed.js", "utf8"),
   readFile("apps/api/src/clinical-tags/clinical-tags.controller.ts", "utf8"),
   readFile("apps/api/src/clinical-tags/clinical-tags.service.ts", "utf8"),
-  readFile("apps/web/app/patients/[id]/page.tsx", "utf8"),
+  readFile("apps/web/app/patients/[id]/patient-components.tsx", "utf8"),
   readFile("apps/web/app/clinical-tags/page.tsx", "utf8")
 ]);
 

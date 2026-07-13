@@ -5,6 +5,8 @@ import { AppShell, SafetyAlert } from "../../mvp-page";
 import { AppThemeId, isThemeId, themes, useTheme } from "../../theme";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { InterfaceModeSettings } from "@/components/settings/InterfaceModeSettings";
+import { DensityModeSettings } from "@/components/settings/DensityModeSettings";
 
 type AppearanceSettings = {
   defaultTheme: AppThemeId;
@@ -131,6 +133,12 @@ export default function AppearancePage() {
 
   return (
     <AppShell>
+      <section className="panel appearance-preferences" aria-labelledby="personal-appearance-title">
+        <p className="eyebrow">Settings / Appearance</p>
+        <h2 id="personal-appearance-title">Personal workspace</h2>
+        <InterfaceModeSettings />
+        <DensityModeSettings />
+      </section>
       <section className="page-header">
         <div className="header-row">
           <div>
@@ -173,7 +181,7 @@ export default function AppearancePage() {
       {message ? <p className="success-message">{message}</p> : null}
 
       <section className="theme-preview-grid" aria-label="Theme choices">
-        {themes.map((appTheme) => (
+        {process.env.NODE_ENV !== "production" ? themes.map((appTheme) => (
           <article className={`theme-preview theme-preview-${appTheme.id} ${selectedTheme === appTheme.id ? "selected" : ""}`} key={appTheme.id}>
             <div className="theme-preview-window">
               <span />
@@ -194,7 +202,7 @@ export default function AppearancePage() {
               </button>
             </div>
           </article>
-        ))}
+        )) : <p className="muted">The official operational theme is locked for production.</p>}
       </section>
 
       <section className="panel">

@@ -1,0 +1,3 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+const logger=fs.readFileSync("apps/api/src/common/logger.interceptor.ts","utf8");for(const term of ["password","authorization","cookie","token","patientName","firstName","lastName","phone","medicalRecordNumber","mrn"])assert.match(logger,new RegExp(term,"i"),`logger redaction lacks ${term}`);assert.doesNotMatch(logger,/originalUrl/);assert.doesNotMatch(logger,/JSON\.stringify\(request\.body\)/);console.log("Structured logging redacts credentials and patient identifiers without logging query-bearing URLs or raw request bodies.");

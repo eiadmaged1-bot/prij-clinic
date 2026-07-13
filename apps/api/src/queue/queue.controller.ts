@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -14,8 +14,8 @@ export class QueueController {
 
   @Post("check-in")
   @Permissions("queue.manage")
-  checkIn(@Body() dto: CheckInDto, @CurrentUser() user: AuthUser) {
-    return this.queue.checkIn(dto, user);
+  checkIn(@Body() dto: CheckInDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.queue.checkIn(dto, user, idempotencyKey);
   }
 
   @Get("today")

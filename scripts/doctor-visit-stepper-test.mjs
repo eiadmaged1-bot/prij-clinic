@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const [page, service, encounters, client] = await Promise.all([
-  readFile("apps/web/app/patients/[id]/page.tsx", "utf8"),
+  readFile("apps/web/app/patients/[id]/visit-flow-components.tsx", "utf8"),
   readFile("apps/api/src/doctor-visit/doctor-visit.service.ts", "utf8"),
   readFile("apps/api/src/encounters/encounters.service.ts", "utf8"),
   readFile("apps/web/lib/doctor-visit.ts", "utf8")

@@ -44,12 +44,12 @@ try {
   const invalidPhone = await send(payload(`${submissionPrefix}-PHONE`, "person@example.test"), { timestamp: nextTimestamp() });
   assert.equal(invalidPhone.status, 400, "invalid phone rejected");
   const invalidPhoneBody = await invalidPhone.json();
-  assert(invalidPhoneBody.fieldErrors?.primaryPhone, "phone validation returns a safe field error");
+  assert(invalidPhoneBody.error?.fieldErrors?.primaryPhone ?? invalidPhoneBody.fieldErrors?.primaryPhone, "phone validation returns a safe field error envelope");
 
   const validPayload = payload(`${submissionPrefix}-VALID`, testPhone);
   const created = await send(validPayload, { timestamp: nextTimestamp() });
-  assert.equal(created.status, 201, "valid signature and payload accepted");
   const createdBody = await created.json();
+  assert.equal(created.status, 201, `valid signature and payload accepted: ${JSON.stringify(createdBody)} ${childOutput.replace(/\s+/g, " ").trim()}`);
   assert(createdBody.intakeId && createdBody.status === "pending_review" && createdBody.duplicate === false, "success response contract");
   assert(!JSON.stringify(createdBody).includes(secret), "response never exposes the secret");
 
@@ -113,7 +113,7 @@ async function send(value, options) {
 async function waitForHealth() {
   for (let attempt = 0; attempt < 80; attempt += 1) {
     if (child?.exitCode !== null) throw new Error("API exited before integration tests started.");
-    try { const response = await fetch(`${baseUrl}/health`); if (response.ok) return; } catch {}
+    try { const response = await fetch(`${baseUrl}/health/live`); if (response.ok) return; } catch {}
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   throw new Error(`API did not become healthy for external intake tests. ${childOutput.replace(/\s+/g, " ").trim()}`);

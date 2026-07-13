@@ -12,6 +12,7 @@ import { CurrentUser } from "./current-user.decorator";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import type { AuthUser, RequestWithUser } from "./auth.types";
 import { AuthService } from "./auth.service";
+import { Throttle } from "@nestjs/throttler";
 
 type LoginBody = {
   email?: unknown;
@@ -29,6 +30,20 @@ type CookieResponse = {
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  private extractSessionCookie(request: RequestWithUser): string | undefined {
+    const cookieHeader = request.headers.cookie;
+    if (!cookieHeader) return undefined;
+
+    const cookies = Object.fromEntries(
+      cookieHeader.split(";").map((cookie: string) => {
+        const [key, ...valueParts] = cookie.trim().split("=");
+        return [key, decodeURIComponent(valueParts.join("="))];
+      })
+    );
+    return cookies.prij_clinic_session;
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post("login")
   async login(
     @Body() body: LoginBody,
@@ -41,26 +56,49 @@ export class AuthController {
       throw new UnauthorizedException("Invalid email or password.");
     }
 
-    const result = await this.auth.login(identifier, body.password, {
+    const { user, sessionToken } = await this.auth.login(identifier, body.password, {
       ipAddress: request.ip,
-      userAgent: request.get("user-agent") ?? null
+      userAgent: request.get("user-agent") ?? null,
+      requestId: request.requestId
     });
 
-    response.cookie("prij_clinic_session", result.token, {
+    const csrfToken = crypto.randomUUID();
+
+    response.cookie("prij_clinic_session", sessionToken, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.APP_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 1000
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
-    return result;
+    response.cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be readable by client JS
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    return { user, csrfToken };
   }
 
   @Get("me")
   @UseGuards(JwtAuthGuard)
-  me(@CurrentUser() user: AuthUser) {
-    return { user };
+  me(
+    @CurrentUser() user: AuthUser,
+    @Res({ passthrough: true }) response: CookieResponse
+  ) {
+    const csrfToken = crypto.randomUUID();
+    response.cookie("csrf-token", csrfToken, {
+      httpOnly: false, // Must be readable by client JS
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/",
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
+    return { user, csrfToken };
   }
 
   @Post("logout")
@@ -70,13 +108,23 @@ export class AuthController {
     @Req() request: RequestWithUser,
     @Res({ passthrough: true }) response: CookieResponse
   ) {
+    const sessionToken = this.extractSessionCookie(request);
+
     await this.auth.logout(user.id, user.branchId, {
       ipAddress: request.ip,
-      userAgent: request.get("user-agent") ?? null
-    });
+      userAgent: request.get("user-agent") ?? null,
+      requestId: request.requestId
+    }, sessionToken);
 
     response.clearCookie("prij_clinic_session", {
       httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.APP_ENV === "production",
+      path: "/"
+    });
+
+    response.clearCookie("csrf-token", {
+      httpOnly: false,
       sameSite: "lax",
       secure: process.env.APP_ENV === "production",
       path: "/"

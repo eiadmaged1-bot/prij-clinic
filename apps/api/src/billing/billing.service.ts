@@ -12,13 +12,15 @@ import {
 } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { IdempotencyService } from "../idempotency/idempotency.service";
 import { CreateInvoiceDto, CreatePaymentDto, ReversePaymentDto, UpdateInvoiceDto, VisitPriceAuditReportQueryDto, VisitPriceAuditSettingsDto, VoidInvoiceDto } from "./dto";
 
 @Injectable()
 export class BillingService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly idempotency: IdempotencyService
   ) {}
 
   async createInvoice(dto: CreateInvoiceDto, user: AuthUser) {
@@ -267,8 +269,51 @@ export class BillingService {
     return invoice;
   }
 
-  async createPayment(dto: CreatePaymentDto, user: AuthUser) {
+  async createPayment(dto: CreatePaymentDto, user: AuthUser, idempotencyKey?: string) {
+    if (!idempotencyKey?.trim()) {
+      return this.createPaymentWithoutIdempotency(dto, user);
+    }
+
     const invoice = await assertCanReferenceInvoice(this.prisma, dto.invoiceId, user);
+    const branchId = invoice.branchId;
+
+    const idempotency = await this.idempotency.beginOrReplay({
+      userId: user.id,
+      branchId,
+      operation: "payment.create",
+      rawKey: idempotencyKey,
+      requestPayload: dto
+    });
+
+    if (idempotency.isReplay) {
+      if (!idempotency.resourceId) {
+        throw new BadRequestException("Payment creation is still in progress.");
+      }
+      return this.prisma.payment.findUnique({ where: { id: idempotency.resourceId }, include: paymentIncludes });
+    }
+
+    try {
+      const payment = await this.createPaymentWithoutIdempotency(dto, user, invoice);
+      await this.idempotency.complete({
+        recordId: idempotency.recordId,
+        responseStatus: 201,
+        resourceType: "payment",
+        resourceId: payment.id
+      });
+      return payment;
+    } catch (error) {
+      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      await this.idempotency.failOrRelease({
+        recordId: idempotency.recordId,
+        safeReason,
+        releaseLock: true
+      });
+      throw error;
+    }
+  }
+
+  private async createPaymentWithoutIdempotency(dto: CreatePaymentDto, user: AuthUser, preloadedInvoice?: any) {
+    const invoice = preloadedInvoice || await assertCanReferenceInvoice(this.prisma, dto.invoiceId, user);
     if (["cancelled", "voided"].includes(invoice.status)) {
       throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
     }
@@ -277,6 +322,17 @@ export class BillingService {
     const paidAt = toDateTime(dto.paidAt) ?? new Date();
 
     const payment = await this.prisma.$transaction(async (tx) => {
+      // 1. Lock the invoice row to prevent payment concurrency bugs
+      const lockedInvoices = await tx.$queryRaw<any[]>`SELECT id, status, "totalAmount", "amountPaid" FROM "Invoice" WHERE id = ${invoice.id}::uuid FOR UPDATE`;
+      if (!lockedInvoices.length) {
+        throw new NotFoundException("Invoice not found.");
+      }
+      const lockedInvoice = lockedInvoices[0];
+
+      if (["cancelled", "voided"].includes(lockedInvoice.status)) {
+        throw new BadRequestException("Payments cannot be recorded for cancelled or voided invoices.");
+      }
+
       const created = await tx.payment.create({
         data: {
           invoiceId: invoice.id,
@@ -292,9 +348,15 @@ export class BillingService {
         include: paymentIncludes
       });
 
+      const currentTotal = money(lockedInvoice.totalAmount);
+      const currentAmountPaid = money(lockedInvoice.amountPaid);
+      if (currentAmountPaid.add(paymentAmount).greaterThan(currentTotal)) {
+        throw new BadRequestException({ code: "PAYMENT_EXCEEDS_BALANCE", message: "Payment exceeds the remaining invoice balance." });
+      }
+
       await tx.invoice.update({
         where: { id: invoice.id },
-        data: paymentRollup(invoice.totalAmount, invoice.amountPaid.add(paymentAmount))
+        data: paymentRollup(currentTotal, currentAmountPaid.add(paymentAmount))
       });
 
       return created;

@@ -11,9 +11,9 @@ assert(session.includes('const authLoginPath = `${sameOriginApiProxyPath}/auth/l
 assert(session.includes('const authLogoutPath = `${sameOriginApiProxyPath}/auth/logout`'), "logout must use same-origin auth/logout");
 assert(session.includes("authRequestTimeoutMs"), "auth reachability must include a timeout path");
 assert(session.includes("authRequestFailed(response)") && session.includes("response.status >= 500"), "5xx auth/proxy failures must be classified as reachability failures");
-assert(session.includes('setMessage(storedToken ? connectionProblemMessage() : "")'), "true auth reachability failures must show the friendly connection message only for an existing stored session");
-assert(session.includes("clearSession(storedToken ? sessionEndedMessage() : undefined)"), "auth/me 401 must only show session-ended when a stored session existed");
-assert(!session.includes("clearSession(response ? sessionEndedMessage() : undefined)"), "auth/me 401 without a stored token must not be treated as an ended session");
+assert(session.includes('credentials: "include"'), "browser auth calls must include the HttpOnly session cookie");
+assert(session.includes("if (response.status === 401)") && session.includes("clearSession();"), "auth/me 401 must clear local session state");
+assert(!session.includes("authorization: `Bearer"), "browser auth calls must not construct reusable Bearer credentials");
 assert(login.includes("session.status === \"unauthenticated\"") || login.includes("premium-login-card"), "normal unauthenticated login form must render");
 assert(login.includes("{session.message ? <p className=\"notice\""), "session-ended notice must be mild, not a blocking login error");
 

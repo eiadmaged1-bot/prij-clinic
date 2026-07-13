@@ -10,6 +10,7 @@ import { DoctorVisitService } from "./doctor-visit.service";
 @Module({
   imports: [AuditModule, AuthModule, PrismaModule, RbacModule, UsersModule],
   controllers: [DoctorVisitController],
-  providers: [DoctorVisitService]
+  providers: [DoctorVisitService],
+  exports: [DoctorVisitService]
 })
 export class DoctorVisitModule {}

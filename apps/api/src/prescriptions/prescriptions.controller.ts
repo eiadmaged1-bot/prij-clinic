@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -20,8 +20,8 @@ export class PrescriptionsController {
 
   @Get()
   @Permissions("prescription.read")
-  async list(@CurrentUser() user: AuthUser) {
-    return { prescriptions: await this.prescriptions.list(user) };
+  async list(@Query("patientId") patientId: string | undefined, @CurrentUser() user: AuthUser) {
+    return { prescriptions: await this.prescriptions.list(user, patientId) };
   }
 
   @Get("templates")

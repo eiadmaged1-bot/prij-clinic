@@ -10,6 +10,9 @@ import { sha256 } from "../files/file-hash";
 import { PatientFileStorageService, safeDisplayFileName } from "../files/patient-file-storage.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { ArchivePatientDocumentDto, CreatePatientDocumentDto, UpdatePatientDocumentDto, UploadPatientDocumentDto, VoidPatientDocumentDto } from "./dto";
+import { detectAndValidateDocument } from "./storage/document-signature";
+import { LocalEncryptedStorageService } from "./storage/local-encrypted-storage.service";
+import { NotConfiguredDocumentMalwareScanner } from "./storage/document-malware-scanner";
 
 const includeDocument = { patient: true } satisfies Prisma.PatientDocumentInclude;
 const ALLOWED_NON_IMAGE_MIME_TYPES = new Set(["application/pdf", "text/plain"]);
@@ -27,7 +30,9 @@ export class PatientDocumentsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly imageSanitizer: ImageSanitizerService,
-    private readonly patientFileStorage: PatientFileStorageService
+    private readonly patientFileStorage: PatientFileStorageService,
+    private readonly encryptedStorage: LocalEncryptedStorageService,
+    private readonly malwareScanner: NotConfiguredDocumentMalwareScanner
   ) {}
 
   async list(patientId: string, user: AuthUser) {
@@ -35,6 +40,9 @@ export class PatientDocumentsService {
     const where: Prisma.PatientDocumentWhereInput = { patientId, ...branchScope(user) };
     if (!user.permissions.includes("patient_document.restricted_read")) {
       where.confidentialityLevel = { not: "restricted" };
+    }
+    if (user.roles.includes("Receptionist")) {
+      where.documentType = { in: ["insurance_document_placeholder", "consent_form"] };
     }
     const documents = await this.prisma.patientDocument.findMany({ where, orderBy: { createdAt: "desc" }, include: includeDocument });
     return documents.map(safeDocument);
@@ -77,7 +85,7 @@ export class PatientDocumentsService {
     return safeDocument(document);
   }
 
-  async createFromUpload(patientId: string, file: UploadedPatientDocumentFile, dto: UploadPatientDocumentDto, user: AuthUser) {
+  async createFromUpload(patientId: string, file: UploadedPatientDocumentFile, dto: UploadPatientDocumentDto, user: AuthUser, requestId?: string) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
     if (!file?.buffer) throw new BadRequestException("Upload a file.");
     if (dto.confidentialityLevel === "restricted" && !user.permissions.includes("patient_document.restricted_read")) {
@@ -85,11 +93,13 @@ export class PatientDocumentsService {
     }
 
     const originalMimeType = clean(file.mimetype) ?? "application/octet-stream";
-    const policy = resolvePatientFileStoragePolicy(dto.storageMode);
-    const isImage = this.imageSanitizer.isImageMimeType(originalMimeType);
+    const detected = detectAndValidateDocument(file.buffer, originalMimeType, file.originalname);
+    const maximum = detected.kind === "image" ? 10 * 1024 * 1024 : 25 * 1024 * 1024;
+    if (file.buffer.length > maximum) throw new BadRequestException({ code: "DOCUMENT_TOO_LARGE", message: "Document exceeds the route limit." });
+    const isImage = detected.kind === "image";
     let bufferForStorage = file.buffer;
     let fileMimeType = originalMimeType;
-    let safeExtension = extensionForMime(originalMimeType);
+    let safeExtension: string = detected.extension;
     let originalSha256Internal = sha256(file.buffer);
     let storedSha256 = originalSha256Internal;
     let imageWidth: number | null = null;
@@ -116,22 +126,19 @@ export class PatientDocumentsService {
       metadataSanitizedAt = new Date();
       removedMetadataTypes.push(...sanitized.removedMetadataTypes);
       ingestWarnings.push(...sanitized.warnings);
-    } else if (!ALLOWED_NON_IMAGE_MIME_TYPES.has(originalMimeType)) {
-      throw new BadRequestException("Unsupported document file type.");
     }
 
-    const prepared = await this.patientFileStorage.prepareForPatientDocument({
-      buffer: bufferForStorage,
-      mimeType: fileMimeType,
-      safeExtension,
-      sha256Override: storedSha256,
-      policy
-    });
-    ingestWarnings.push(...prepared.warnings);
+    const scan = await this.malwareScanner.scan(bufferForStorage);
+    const failClosed = process.env.APP_ENV === "production" || process.env.PATIENT_DOCUMENT_SCAN_FAIL_CLOSED === "true";
+    if (scan.status === "REJECTED") throw new BadRequestException({ code: "DOCUMENT_QUARANTINED", message: "Document was rejected by security scanning." });
+    if (failClosed && scan.status !== "CLEAN") throw new BadRequestException({ code: "DOCUMENT_SCAN_REQUIRED", message: "A clean malware scan is required." });
+
+    const prepared = await this.encryptedStorage.writeQuarantine(bufferForStorage);
 
     const displayFileName = safeDisplayFileName(file.originalname);
-    const document = await this.prisma.patientDocument.create({
-      data: {
+    let document;
+    try {
+      document = await this.prisma.$transaction(tx => tx.patientDocument.create({ data: {
         patientId,
         branchId: patient.branchId,
         linkedReportId: dto.linkedReportId ?? null,
@@ -142,13 +149,13 @@ export class PatientDocumentsService {
         title: dto.title?.trim() || displayFileName,
         documentType: dto.documentType,
         category: dto.category?.trim() || "Uploaded document",
-        storageMode: prismaStorageMode(prepared.storageMode),
+        storageMode: "secure_encrypted_local",
         fileName: displayFileName,
         originalFileName: displayFileName,
         displayFileName,
         fileMimeType,
-        fileSizeBytes: prepared.fileSizeBytes,
-        fileReference: prepared.localDemoFilePath ?? null,
+        fileSizeBytes: prepared.sizeBytes,
+        fileReference: null,
         fileSha256: storedSha256,
         imageWidth,
         imageHeight,
@@ -156,16 +163,35 @@ export class PatientDocumentsService {
         originalSha256Internal,
         exifStripped,
         metadataSanitizedAt,
-        localDemoFilePath: prepared.localDemoFilePath ?? null,
+        localDemoFilePath: null,
+        storageKey: prepared.storageKey,
+        originalFilenameSafe: displayFileName,
+        detectedMimeType: fileMimeType,
+        declaredMimeType: originalMimeType,
+        sha256: storedSha256,
+        encryptionVersion: prepared.encryptionVersion,
+        encryptionKeyId: prepared.encryptionKeyId,
+        scanStatus: scan.status,
+        scanProvider: scan.provider,
+        scanCompletedAt: new Date(),
+        quarantineStatus: "QUARANTINED",
+        createdRequestId: requestId ?? null,
         ingestWarnings: ingestWarnings.length ? ingestWarnings : undefined,
         sourceText: clean(dto.sourceText),
         summaryText: clean(dto.summaryText),
         tagsJson: dto.tagsJson as Prisma.InputJsonValue | undefined,
         confidentialityLevel: dto.confidentialityLevel ?? "normal",
         uploadedByUserId: user.id
-      },
-      include: includeDocument
-    });
+      }, include: includeDocument }));
+    } catch (error) { await this.encryptedStorage.deleteQuarantine(prepared.storageKey); throw error; }
+
+    try {
+      const promotedKey = await this.encryptedStorage.validateAndPromote(prepared.storageKey);
+      document = await this.prisma.patientDocument.update({ where: { id: document.id }, data: { storageKey: promotedKey, quarantineStatus: "PROMOTED" }, include: includeDocument });
+    } catch (error) {
+      await this.prisma.patientDocument.update({ where: { id: document.id }, data: { quarantineStatus: "ORPHANED" } });
+      throw new BadRequestException({ code: "DOCUMENT_QUARANTINED", message: "Document promotion failed and requires reconciliation." });
+    }
 
     await this.audit.record({
       actorUserId: user.id,
@@ -182,7 +208,7 @@ export class PatientDocumentsService {
         storageMode: document.storageMode,
         exifStripped,
         originalSizeBytes: file.size ?? file.buffer.length,
-        storedSizeBytes: prepared.fileSizeBytes,
+        storedSizeBytes: prepared.sizeBytes,
         imageWidth,
         imageHeight,
         removedMetadataTypes,
@@ -193,13 +219,27 @@ export class PatientDocumentsService {
     return safeDocument(document);
   }
 
+  async download(patientId: string, documentId: string, user: AuthUser) {
+    await assertCanReferencePatient(this.prisma, patientId, user);
+    const document = await this.prisma.patientDocument.findFirst({ where: { id: documentId, patientId, ...branchScope(user) } });
+    if (!document) throw new NotFoundException({ code: "DOCUMENT_NOT_FOUND", message: "Document not found." });
+    if (document.confidentialityLevel === "restricted" && !user.permissions.includes("patient_document.restricted_read")) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
+    if (user.roles.includes("Receptionist") && !["insurance_document_placeholder", "consent_form"].includes(document.documentType)) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
+    if (document.status === "archived" || document.status === "voided" || document.quarantineStatus !== "PROMOTED" || !document.storageKey) throw new BadRequestException({ code: "DOCUMENT_NOT_READY", message: "Document is not ready." });
+    const buffer = await this.encryptedStorage.readAuthorized(document.storageKey, document.encryptionKeyId);
+    if (sha256(buffer) !== document.sha256) throw new BadRequestException({ code: "DOCUMENT_INTEGRITY_FAILED", message: "Document integrity check failed." });
+    await this.audit.record({ actorUserId: user.id, action: "patient_document.downloaded", resourceType: "patient_document", resourceId: document.id, branchId: document.branchId, severity: "high", metadataJson: { access: "authorized" } });
+    return { buffer, mimeType: document.detectedMimeType ?? "application/octet-stream", filename: safeDisplayFileName(document.originalFilenameSafe ?? document.displayFileName ?? "document") };
+  }
+
   async get(patientId: string, documentId: string, user: AuthUser) {
     await assertCanReferencePatient(this.prisma, patientId, user);
     const document = await this.prisma.patientDocument.findFirst({ where: { id: documentId, patientId, ...branchScope(user) }, include: includeDocument });
-    if (!document) throw new NotFoundException("Patient document not found.");
+    if (!document) throw new NotFoundException({ code: "DOCUMENT_NOT_FOUND", message: "Patient document not found." });
     if (document.confidentialityLevel === "restricted" && !user.permissions.includes("patient_document.restricted_read")) {
-      throw new ForbiddenException("Restricted document access denied.");
+      throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     }
+    if (user.roles.includes("Receptionist") && !["insurance_document_placeholder", "consent_form"].includes(document.documentType)) throw new ForbiddenException({ code: "DOCUMENT_ACCESS_DENIED", message: "Document access denied." });
     return safeDocument(document);
   }
 
@@ -239,8 +279,8 @@ function clean(value?: string) {
   return value?.trim() || null;
 }
 
-function safeDocument<T extends { originalSha256Internal?: string | null }>(document: T) {
-  const { originalSha256Internal: _originalSha256Internal, ...safe } = document;
+function safeDocument<T extends { originalSha256Internal?: string | null; localDemoFilePath?: string | null; fileReference?: string | null; storageKey?: string | null }>(document: T) {
+  const { originalSha256Internal: _originalSha256Internal, localDemoFilePath: _localDemoFilePath, fileReference: _fileReference, storageKey: _storageKey, ...safe } = document;
   return safe;
 }
 

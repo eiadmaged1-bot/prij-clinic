@@ -21,6 +21,7 @@ export type RequestWithUser = {
   ip?: string;
   method?: string;
   path?: string;
+  requestId?: string;
   get(name: string): string | undefined;
   user?: AuthUser;
 };

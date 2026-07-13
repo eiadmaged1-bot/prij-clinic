@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
-import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { ThreeDMedicalIcon, type IconName } from "../../components/ThreeDMedicalIcon";
 import { ActiveVisitLauncher } from "../../components/clinic/ActiveVisitWorkspace";
 import { CompactKpiCard, PageHeader, PageShell } from "../../components/clinic/desktop-ui";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useSession } from "../session";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { DoctorQuickPatientCreate } from "@/components/patients/DoctorQuickPatientCreate";
+import { PatientSearchMobile } from "@/components/patients/PatientSearchMobile";
 
 type QueueTicket = {
   id: string;
@@ -65,16 +67,42 @@ export default function DoctorModePage() {
   return (
     <AppShell>
       <PageShell className="doctor-desktop-workspace">
-      <PageHeader eyebrow="Doctor workspace" title="Today’s clinical work" description="Current patient, waiting list, appointments, reports, and follow-ups." actions={<><Link className="button" href={nextPatientHref}>Open next patient</Link><Link className="button secondary" href="/patients">Find patient</Link><Link className="button secondary" href="/doctor/waiting">Start new visit</Link></>} />
+      <PageHeader eyebrow="Doctor workspace" title="Todayâ€™s clinical work" description="Current patient, waiting list, appointments, reports, and follow-ups." actions={<><Link className="button" href={nextPatientHref}>Open next patient</Link><Link className="button secondary" href="/patients">Find patient</Link><Link className="button secondary" href="/doctor/waiting">Start new visit</Link></>} />
+
+      <section className="doctor-hero">
+        <div>
+          <p className="eyebrow">Doctor Mode</p>
+          <h1>Today&apos;s visits, made simple</h1>
+          <p className="muted">Open patient, start visit, write note, prescribe, order tests, finish, next patient.</p>
+        </div>
+        <div className="doctor-hero-actions">
+          <a className="button large" data-action-id="patient.search" href="#doctor-patient-search"><ThreeDMedicalIcon name="patients" size="sm" />Search Patient</a>
+          <a className="button secondary large" data-action-id="patient.create" href="#doctor-new-patient">New Patient</a>
+          <Link className="button secondary large" href="/doctor/visit"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Start Visit</Link>
+        </div>
+      </section>
 
       <SafetyAlert />
 
+      <nav className="doctor-mobile-fallback-nav" aria-label="Doctor mobile workflow">
+        <a href="#doctor-today">Today</a><a href="#doctor-patient-search">Search</a><a href="#doctor-new-patient">New Patient</a><Link href="/doctor/visit">Current Visit</Link><Link href="/profile">Account</Link>
+      </nav>
+
+      <PatientSearchMobile />
+      <DoctorQuickPatientCreate />
+
       <section className="compact-kpi-grid doctor-kpi-grid" aria-label="Doctor operational summary">
-        <CompactKpiCard label="Current patient" value={current ? `Queue ${current.queueNumber ?? "—"}` : "None"} />
+        <CompactKpiCard label="Current patient" value={current ? `Queue ${current.queueNumber ?? "â€”"}` : "None"} />
         <CompactKpiCard label="Waiting patients" value={queue.length} />
         <CompactKpiCard label="Appointments" value={appointments.length} />
         <CompactKpiCard label="Reports to review" value={pendingReports} />
         <CompactKpiCard label="Follow-ups" value={followUps} />
+      </section>
+
+      <section className="doctor-today-grid" id="doctor-today">
+        <FocusCard icon="queue" eyebrow="Waiting patients" value={queue.length} text="Patients waiting or moving through the clinic flow." href="/doctor/waiting" action="Open waiting list" />
+        <FocusCard icon="calendar" eyebrow="Today&apos;s patients" value={appointments.length} text="Scheduled visits for today&apos;s clinical work." href="/calendar" action="Open calendar" />
+        <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow for large, readable steps." href="/doctor/visit" action="Open visit" />
       </section>
 
       <section className="panel compact-panel">
@@ -83,10 +111,10 @@ export default function DoctorModePage() {
           <span className="badge">Doctor waiting list</span>
         </div>
         <div className="visit-type-counts" aria-label="Doctor visit type counts">
-          <span>كشف {counts.kashf}</span>
-          <span>إعادة {counts.recheck}</span>
-          <span>استشارة {counts.consultation}</span>
-          <span>مستعجل {counts.urgent_kashf}</span>
+          <span>Ã™Æ’Ã˜Â´Ã™Â {counts.kashf}</span>
+          <span>Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© {counts.recheck}</span>
+          <span>Ã˜Â§Ã˜Â³Ã˜ÂªÃ˜Â´Ã˜Â§Ã˜Â±Ã˜Â© {counts.consultation}</span>
+          <span>Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â¹Ã˜Â¬Ã™â€ž {counts.urgent_kashf}</span>
         </div>
       </section>
 
@@ -134,5 +162,17 @@ export default function DoctorModePage() {
 
       </PageShell>
     </AppShell>
+  );
+}
+
+function FocusCard({ icon, eyebrow, value, text, href, action }: { icon: IconName; eyebrow: string; value: string | number; text: string; href: string; action: string }) {
+  return (
+    <article className="doctor-focus-card">
+      <ThreeDMedicalIcon name={icon} size="lg" />
+      <span className="eyebrow">{eyebrow}</span>
+      <strong>{value}</strong>
+      <p className="muted">{text}</p>
+      <Link className="button compact secondary" href={href}>{action}</Link>
+    </article>
   );
 }

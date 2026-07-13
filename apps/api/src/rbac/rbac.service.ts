@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PasswordService } from "../auth/password.service";
+import { SessionService } from "../auth/session.service";
 import { PrismaService } from "../prisma/prisma.service";
 import {
   AccountStatusChangeDto,
@@ -67,7 +68,8 @@ export class RbacService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly passwords: PasswordService
+    private readonly passwords: PasswordService,
+    private readonly sessions: SessionService
   ) {}
 
   async listRoles() {
@@ -231,6 +233,10 @@ export class RbacService {
       metadataJson: { changedFields: Object.keys(dto).filter((key) => key !== "reason"), role: dto.role, permissionPreset: updated.permissionPreset }
     });
 
+    if (role || dto.permissionPreset) {
+      await this.sessions.revokeAllUserSessions(id, "Account roles or permissions updated.");
+    }
+
     return { account: toAccountSummary(updated) };
   }
 
@@ -294,6 +300,8 @@ export class RbacService {
       reason: dto.reason.trim(),
       metadataJson: { loginId: updated.loginId }
     });
+
+    await this.sessions.revokeAllUserSessions(id, "Account password was reset by administrator.");
 
     return { account: toAccountSummary(updated), temporaryPassword: dto.temporaryPassword };
   }
@@ -379,6 +387,8 @@ export class RbacService {
       reason: dto.reason.trim(),
       metadataJson: { permissionPreset: dto.permissionPreset, allowedPermissions: requested }
     });
+
+    await this.sessions.revokeAllUserSessions(id, "Account detailed permissions updated.");
 
     return { account: toAccountSummary(updated) };
   }
@@ -719,6 +729,10 @@ export class RbacService {
       reason: reason.trim(),
       metadataJson: { previousStatus: existing.status, newStatus: status, loginId: updated.loginId }
     });
+
+    if (status === "disabled") {
+      await this.sessions.revokeAllUserSessions(id, "Account deactivated.");
+    }
 
     return { account: toAccountSummary(updated) };
   }

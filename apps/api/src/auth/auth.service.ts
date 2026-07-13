@@ -4,10 +4,12 @@ import { AuditService } from "../audit/audit.service";
 import { UsersService } from "../users/users.service";
 import { AppJwtService } from "./jwt.service";
 import { PasswordService } from "./password.service";
+import { SessionService } from "./session.service";
 
 type RequestMetadata = {
   ipAddress?: string | null;
   userAgent?: string | null;
+  requestId?: string | null;
 };
 
 @Injectable()
@@ -17,7 +19,8 @@ export class AuthService {
     private readonly users: UsersService,
     private readonly passwords: PasswordService,
     private readonly jwt: AppJwtService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly sessionService: SessionService
   ) {}
 
   async login(identifier: string, password: string, metadata: RequestMetadata) {
@@ -32,7 +35,8 @@ export class AuthService {
         severity: "medium",
         metadataJson: { reason: "invalid_credentials", identifier: normalizedIdentifier },
         ipAddress: metadata.ipAddress,
-        userAgent: metadata.userAgent
+        userAgent: metadata.userAgent,
+        requestId: metadata.requestId
       });
       throw new UnauthorizedException("Invalid email or password.");
     }
@@ -51,7 +55,8 @@ export class AuthService {
         severity: "high",
         metadataJson: { reason: "account_locked" },
         ipAddress: metadata.ipAddress,
-        userAgent: metadata.userAgent
+        userAgent: metadata.userAgent,
+        requestId: metadata.requestId
       });
       throw new UnauthorizedException("Invalid email or password.");
     }
@@ -78,7 +83,8 @@ export class AuthService {
         severity: lockedUntil ? "high" : "medium",
         metadataJson: { reason: "invalid_credentials", failedLoginCount },
         ipAddress: metadata.ipAddress,
-        userAgent: metadata.userAgent
+        userAgent: metadata.userAgent,
+        requestId: metadata.requestId
       });
       throw new UnauthorizedException("Invalid email or password.");
     }
@@ -93,7 +99,9 @@ export class AuthService {
     });
     const updatedUser = await this.users.findByIdForAuth(user.id);
     const safeUser = this.users.toSafeUser(updatedUser);
-    const token = this.jwt.sign({ id: safeUser.id, email: safeUser.email });
+
+    // Create opaque server-side session
+    const sessionToken = await this.sessionService.createSession(user.id, metadata);
 
     await this.audit.record({
       actorUserId: safeUser.id,
@@ -103,13 +111,18 @@ export class AuthService {
       severity: "low",
       metadataJson: { email: safeUser.email },
       ipAddress: metadata.ipAddress,
-      userAgent: metadata.userAgent
+      userAgent: metadata.userAgent,
+      requestId: metadata.requestId
     });
 
-    return { user: safeUser, token };
+    return { user: safeUser, sessionToken };
   }
 
-  async logout(userId: string | undefined, branchId: string | null | undefined, metadata: RequestMetadata) {
+  async logout(userId: string | undefined, branchId: string | null | undefined, metadata: RequestMetadata, sessionToken?: string) {
+    if (sessionToken) {
+      await this.sessionService.revokeSession(sessionToken, "logout");
+    }
+
     await this.audit.record({
       actorUserId: userId,
       action: "auth.logout",
@@ -117,7 +130,8 @@ export class AuthService {
       branchId,
       severity: "low",
       ipAddress: metadata.ipAddress,
-      userAgent: metadata.userAgent
+      userAgent: metadata.userAgent,
+      requestId: metadata.requestId
     });
   }
 }

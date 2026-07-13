@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef, Global } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module";
 import { PrismaModule } from "../prisma/prisma.module";
 import { UsersModule } from "../users/users.module";
@@ -8,10 +8,13 @@ import { AppJwtService } from "./jwt.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { PasswordService } from "./password.service";
 
+import { SessionService } from "./session.service";
+
+@Global()
 @Module({
-  imports: [AuditModule, PrismaModule, UsersModule],
+  imports: [forwardRef(() => AuditModule), PrismaModule, UsersModule],
   controllers: [AuthController],
-  providers: [AuthService, AppJwtService, JwtAuthGuard, PasswordService],
-  exports: [AppJwtService, JwtAuthGuard, PasswordService]
+  providers: [AuthService, AppJwtService, JwtAuthGuard, PasswordService, SessionService],
+  exports: [AppJwtService, JwtAuthGuard, PasswordService, SessionService]
 })
 export class AuthModule {}

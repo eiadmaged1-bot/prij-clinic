@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { loadTypeScript } from './document-test-loader.mjs';
+const { detectAndValidateDocument } = loadTypeScript('apps/api/src/patient-documents/storage/document-signature.ts');
+const jpeg = Buffer.from([0xff,0xd8,0xff,0xdb,0xff,0xd9]);
+const png = Buffer.concat([Buffer.from([137,80,78,71,13,10,26,10]), Buffer.from('IEND')]);
+const webp = Buffer.alloc(12); webp.write('RIFF'); webp.writeUInt32LE(4, 4); webp.write('WEBP', 8);
+const pdf = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF');
+for (const [buffer, mime, name] of [[jpeg,'image/jpeg','a.jpg'],[png,'image/png','a.png'],[webp,'image/webp','a.webp'],[pdf,'application/pdf','a.pdf']]) assert.equal(detectAndValidateDocument(buffer, mime, name).mimeType, mime);
+for (const args of [[Buffer.alloc(0),'application/pdf','a.pdf'],[Buffer.from('MZ executable'),'application/pdf','a.pdf'],[pdf,'image/jpeg','a.jpg'],[pdf,'application/pdf','payload.exe.pdf'],[Buffer.from('%PDF-1.7'),'application/pdf','a.pdf']]) assert.throws(() => detectAndValidateDocument(...args));
+console.log('Document magic-byte, MIME, extension, empty, masquerade, double-extension, and truncation tests passed.');

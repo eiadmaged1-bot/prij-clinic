@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ClinicTimeModule } from "./clinic-time/clinic-time.module";
 import { AiDraftsModule } from "./ai-drafts/ai-drafts.module";
 import { AiManagementModule } from "./ai-management/ai-management.module";
 import { AuditModule } from "./audit/audit.module";
@@ -19,6 +20,7 @@ import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
 import { ExternalIntakeModule } from "./external-intake/external-intake.module";
 import { GynecologyModule } from "./gynecology/gynecology.module";
+import { IdempotencyModule } from "./idempotency/idempotency.module";
 import { GuidelinesModule } from "./guidelines/guidelines.module";
 import { HealthModule } from "./health/health.module";
 import { InvestigationsModule } from "./investigations/investigations.module";
@@ -41,11 +43,25 @@ import { ReferenceModule } from "./reference/reference.module";
 import { SearchModule } from "./search/search.module";
 import { StaffChatModule } from "./staff-chat/staff-chat.module";
 import { UsersModule } from "./users/users.module";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { CsrfGuard } from "./auth/csrf.guard";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { LoggerInterceptor } from "./common/logger.interceptor";
+import { AuditController } from "./audit/audit.controller";
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        name: "default",
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
     PrismaModule,
+    ClinicTimeModule,
     HealthModule,
+    IdempotencyModule,
     GuidelinesModule,
     UsersModule,
     AuthModule,
@@ -86,6 +102,23 @@ import { UsersModule } from "./users/users.module";
     ProtocolAtlasModule,
     AiManagementModule,
     StaffChatModule
+  ],
+  controllers: [
+    AuditController
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: LoggerInterceptor,
+    }
   ]
 })
 export class AppModule {}

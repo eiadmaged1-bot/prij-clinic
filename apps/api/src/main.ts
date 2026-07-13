@@ -4,6 +4,8 @@ import { AppModule } from "./app.module";
 import { loadRootEnv, validateRuntimeEnv } from "./config/env";
 import { createCorsOptions } from "./config/cors-origins";
 import { securityHeadersMiddleware } from "./config/security-headers";
+import { RequestIdMiddleware } from "./common/middleware/request-id.middleware";
+import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 
 async function bootstrap() {
   loadRootEnv();
@@ -14,6 +16,9 @@ async function bootstrap() {
   const host = process.env.API_HOST;
 
   app.use(securityHeadersMiddleware);
+
+  app.use(new RequestIdMiddleware().use);
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   app.useGlobalPipes(
     new ValidationPipe({

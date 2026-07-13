@@ -13,24 +13,36 @@ const authLogoutPath = `${sameOriginApiProxyPath}/auth/logout`;
 
 function connectionProblemMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "توجد مشكلة في الاتصال. تأكد أن سيرفر العيادة يعمل ثم حاول مرة أخرى."
+    ? "ØªÙˆØ¬Ø¯ Ù…Ø´ÙƒÙ„Ø© ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„. ØªØ£ÙƒØ¯ Ø£Ù† Ø³ÙŠØ±ÙØ± Ø§Ù„Ø¹ÙŠØ§Ø¯Ø© ÙŠØ¹Ù…Ù„ Ø«Ù… Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."
     : apiUnreachableMessage;
 }
 
 function sessionEndedMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
+    ? "Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."
     : "Your session ended. Please sign in again.";
 }
 
 function invalidLoginMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "بيانات الموظف أو كلمة المرور غير صحيحة."
+    ? "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ÙˆØ¸Ù Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± ØµØ­ÙŠØ­Ø©."
     : "Invalid staff ID/email or password.";
 }
 
 function authRequestFailed(response: Response) {
   return response.status >= 500;
+}
+
+async function parseErrorEnvelope(response: Response, defaultMessage: string): Promise<string> {
+  try {
+    const data = await response.clone().json();
+    if (data?.error?.message) {
+      return data.error.requestId ? `${data.error.message} (Ref: ${data.error.requestId})` : data.error.message;
+    }
+  } catch {
+    // Ignore JSON parse errors for non-JSON responses
+  }
+  return defaultMessage;
 }
 
 async function fetchAuth(url: typeof authLoginPath | typeof authMePath | typeof authLogoutPath, init?: RequestInit) {
@@ -71,7 +83,6 @@ type LoginInput = {
 
 type SessionContextValue = {
   user: SessionUser | null;
-  token: string | null;
   status: "loading" | "authenticated" | "unauthenticated";
   message: string;
   isAdmin: boolean;
@@ -86,13 +97,15 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<SessionContextValue["status"]>("loading");
   const [message, setMessage] = useState("");
 
   const clearSession = useCallback((nextMessage?: string) => {
+    // Remove tokens left by pre-cookie releases; browser auth is cookie-only.
     localStorage.removeItem(tokenKey);
     sessionStorage.removeItem(tokenKey);
+    // Also remove csrf token
+    document.cookie = "csrf-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     if (nextMessage) {
       sessionStorage.setItem(sessionMessageKey, nextMessage);
       setMessage(nextMessage);
@@ -100,7 +113,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem(sessionMessageKey);
       setMessage("");
     }
-    setToken(null);
     setUser(null);
     setStatus("unauthenticated");
   }, []);
@@ -113,38 +125,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const refresh = useCallback(async () => {
-    const storedToken = localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
-    setToken(storedToken);
-    if (storedToken) {
-      sessionStorage.setItem(tokenKey, storedToken);
-    }
+    localStorage.removeItem(tokenKey);
+    sessionStorage.removeItem(tokenKey);
 
     const response = await fetchAuth(authMePath, {
-      credentials: "include",
-      headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
+      credentials: "include"
     });
 
     if (!response || authRequestFailed(response)) {
-      setToken(null);
       setUser(null);
       setStatus("unauthenticated");
-      setMessage(storedToken ? connectionProblemMessage() : "");
+      const msg = response ? await parseErrorEnvelope(response, connectionProblemMessage()) : connectionProblemMessage();
+      setMessage(msg);
       return;
     }
 
     if (response.status === 401) {
-      clearSession(storedToken ? sessionEndedMessage() : undefined);
+      clearSession();
       return;
     }
 
     if (!response.ok) {
-      clearSession(storedToken ? sessionEndedMessage() : undefined);
+      const msg = await parseErrorEnvelope(response, sessionEndedMessage());
+      clearSession(msg);
       return;
     }
 
     const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
     if (!data?.user) {
-      setToken(null);
       setUser(null);
       setStatus("unauthenticated");
       setMessage(connectionProblemMessage());
@@ -160,6 +168,39 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setMessage(sessionStorage.getItem(sessionMessageKey) ?? "");
     void refresh();
+
+    // Patch fetch to automatically append x-csrf-token for mutations
+    if (typeof window !== "undefined") {
+      const originalFetch = window.fetch;
+      window.fetch = async (...args) => {
+        let [resource, config] = args;
+
+        let method = "GET";
+        if (resource instanceof Request) {
+          method = resource.method.toUpperCase();
+        } else if (config && config.method) {
+          method = config.method.toUpperCase();
+        }
+
+        if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+          const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
+          if (match && match[1]) {
+            const csrfToken = match[1];
+            if (resource instanceof Request) {
+              resource.headers.set("x-csrf-token", csrfToken);
+            } else {
+              config = config || {};
+              config.headers = {
+                ...config.headers,
+                "x-csrf-token": csrfToken
+              };
+              args[1] = config;
+            }
+          }
+        }
+        return originalFetch(...args);
+      };
+    }
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
@@ -175,45 +216,44 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (response.status === 401) {
-      throw new Error(invalidLoginMessage());
+      const msg = await parseErrorEnvelope(response, invalidLoginMessage());
+      throw new Error(msg);
     }
 
     if (authRequestFailed(response)) {
-      throw new Error(connectionProblemMessage());
+      const msg = await parseErrorEnvelope(response, connectionProblemMessage());
+      throw new Error(msg);
     }
 
     if (!response.ok) {
-      throw new Error(invalidLoginMessage());
+      const msg = await parseErrorEnvelope(response, invalidLoginMessage());
+      throw new Error(msg);
     }
 
-    const data = (await response.json().catch(() => null)) as { token?: string; user?: SessionUser } | null;
-    if (!data?.token || !data.user) {
+    const data = (await response.json().catch(() => null)) as { user?: SessionUser } | null;
+    if (!data?.user) {
       throw new Error(connectionProblemMessage());
     }
 
-    localStorage.setItem(tokenKey, data.token);
-    sessionStorage.setItem(tokenKey, data.token);
+    localStorage.removeItem(tokenKey);
+    sessionStorage.removeItem(tokenKey);
     sessionStorage.removeItem(sessionMessageKey);
     setMessage("");
-    setToken(data.token);
     setUser(data.user);
     setStatus("authenticated");
   }, []);
 
   const logout = useCallback(async () => {
-    const storedToken = token ?? localStorage.getItem(tokenKey) ?? sessionStorage.getItem(tokenKey);
     await fetchAuth(authLogoutPath, {
       method: "POST",
-      credentials: "include",
-      headers: storedToken ? { authorization: `Bearer ${storedToken}` } : undefined
+      credentials: "include"
     });
     clearSession();
-  }, [clearSession, token]);
+  }, [clearSession]);
 
   const value = useMemo<SessionContextValue>(
     () => ({
       user,
-      token,
       status,
       message,
       isAdmin: Boolean(
@@ -231,7 +271,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setMessage("");
       }
     }),
-    [expire, login, logout, message, refresh, status, token, user]
+    [expire, login, logout, message, refresh, status, user]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

@@ -123,7 +123,7 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
       <div className="section-heading">
         <div>
           <h2>Safe AI Assistant</h2>
-          <p className="muted">Draft only · Doctor approval required · Local/private</p>
+          <p className="muted">Draft - doctor review required · External AI is disabled · Local/private</p>
         </div>
         {!fixedPatientId ? <Link className="button secondary compact" href="/ai-drafts">Open draft review list</Link> : null}
       </div>

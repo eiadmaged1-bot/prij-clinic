@@ -397,6 +397,7 @@ const rolePermissionKeys = {
   ],
   Doctor: [
     "patient.read",
+    "patient.create",
     "patients.read",
     "patients.manage",
     "patient.consent_read",

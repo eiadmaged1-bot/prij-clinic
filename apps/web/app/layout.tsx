@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme";
 import { OFFICIAL_APP_DESCRIPTION, OFFICIAL_CLINIC_NAME } from "@/lib/brand";
+import { InterfaceModeProvider } from "@/lib/interface-mode";
 
 export const metadata: Metadata = {
   title: OFFICIAL_CLINIC_NAME,
@@ -19,7 +20,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <SessionProvider>{children}</SessionProvider>
+          <SessionProvider><InterfaceModeProvider>{children}</InterfaceModeProvider></SessionProvider>
         </ThemeProvider>
       </body>
     </html>

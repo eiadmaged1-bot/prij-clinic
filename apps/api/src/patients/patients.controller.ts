@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -6,6 +6,7 @@ import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import {
   CreatePatientDto,
+  DuplicatePatientCandidatesDto,
   CreateClinicalPhaseDto,
   CreateEstradiolResultDto,
   CreateFollicularMonitoringVisitDto,
@@ -30,28 +31,55 @@ import {
   UpdatePatientDto
 } from "./dto";
 import { PatientsService } from "./patients.service";
+import { PatientSearchService } from "./services/patient-search.service";
+import { PatientLookupService } from "./services/patient-lookup.service";
 
 @Controller("patients")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PatientsController {
-  constructor(private readonly patients: PatientsService) {}
+  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService, private readonly lookup: PatientLookupService) {}
 
   @Post()
   @Permissions("patient.create")
-  create(@Body() dto: CreatePatientDto, @CurrentUser() user: AuthUser) {
-    return this.patients.create(dto, user);
+  create(@Body() dto: CreatePatientDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.create(dto, user, idempotencyKey);
+  }
+
+  @Post("create-and-start-visit")
+  @Permissions("patient.create", "encounter.create")
+  createAndStartVisit(@Body() dto: CreatePatientDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createAndStartVisit(dto, user, idempotencyKey);
+  }
+
+  @Get("duplicate-candidates")
+  @Permissions("patient.read")
+  duplicateCandidates(@Query() query: DuplicatePatientCandidatesDto, @CurrentUser() user: AuthUser) {
+    return this.patients.duplicateCandidates(query, user);
   }
 
   @Get()
   @Permissions("patient.read")
-  async list(@CurrentUser() user: AuthUser, @Query() query: Record<string, string | undefined>) {
-    return { patients: await this.patients.list(user, query) };
+  async list(
+    @CurrentUser() user: AuthUser,
+    @Query("q") query?: string,
+    @Query("search") search?: string,
+    @Query("mode") mode?: string,
+    @Query("includeArchived") includeArchived?: string
+  ) {
+    return { patients: await this.search.list(user, { query: query ?? search, mode, includeArchived }) };
   }
 
   @Get(":id")
   @Permissions("patient.read")
   get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.patients.get(id, user);
+    return this.lookup.get(id, user);
+  }
+
+  @Get(":id/workspace-summary")
+  @Header("Cache-Control", "private, no-store, max-age=0")
+  @Permissions("patient.read")
+  workspaceSummary(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.lookup.workspaceSummary(id, user);
   }
 
   @Get(":id/qr")
@@ -62,8 +90,8 @@ export class PatientsController {
 
   @Get(":id/timeline")
   @Permissions("patient.read")
-  timeline(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.patients.timeline(id, user);
+  timeline(@Param("id") id: string, @Query("limit") limit: string | undefined, @Query("cursor") cursor: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.timeline(id, user, { limit, cursor });
   }
 
   @Get(":id/follow-up-hints")

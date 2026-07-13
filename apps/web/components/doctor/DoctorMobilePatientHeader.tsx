@@ -1,0 +1,1 @@
+export function DoctorMobilePatientHeader({ name, summary }: { name: string; summary: string }) { return <header className="doctor-mobile-patient-header"><strong>{name}</strong><span>{summary}</span></header>; }

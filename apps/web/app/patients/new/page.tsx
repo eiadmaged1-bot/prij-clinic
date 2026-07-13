@@ -9,6 +9,7 @@ import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { patientTypeOptions } from "@/lib/patient-labels";
 import type { VisitTypeValue } from "@/lib/visit-types";
 
@@ -59,6 +60,7 @@ function NewPatientContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -115,6 +117,7 @@ function NewPatientContent() {
         credentials: "include",
         headers: {
           "content-type": "application/json",
+          "idempotency-key": idempotencyKey,
           ...(token ? { authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify(payload)
@@ -123,6 +126,7 @@ function NewPatientContent() {
       if (response.status === 401) throw new Error(copy.signInRequired);
 
       if (!response.ok) {
+        regenerateIdempotencyKey();
         const body = await response.json().catch(() => null) as { message?: string } | null;
         throw new Error(body?.message || copy.createFailed);
       }

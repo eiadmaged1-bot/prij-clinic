@@ -13,7 +13,7 @@ import { RolesGuard } from "./roles.guard";
 @Module({
   imports: [AuditModule, AuthModule, PrismaModule, UsersModule],
   controllers: [AdminController],
-  providers: [AppJwtService, JwtAuthGuard, PermissionsGuard, RbacService, RolesGuard],
+  providers: [PermissionsGuard, RbacService, RolesGuard],
   exports: [PermissionsGuard, RbacService, RolesGuard]
 })
 export class RbacModule {}
