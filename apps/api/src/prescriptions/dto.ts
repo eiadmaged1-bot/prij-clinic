@@ -20,6 +20,16 @@ export class PrescriptionItemDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
+  strengthText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  dosageForm?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   dose?: string;
 

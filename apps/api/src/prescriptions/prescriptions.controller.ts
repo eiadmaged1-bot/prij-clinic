@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -42,6 +42,18 @@ export class PrescriptionsController {
     return this.prescriptions.updateTemplate(id, dto, user);
   }
 
+  @Post("templates/:id/duplicate")
+  @Permissions("prescription_templates.manage")
+  duplicateTemplate(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.duplicateTemplate(id, user);
+  }
+
+  @Delete("templates/:id")
+  @Permissions("prescription_templates.manage")
+  archiveTemplate(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.archiveTemplate(id, user);
+  }
+
   @Get("shortcuts")
   @Permissions("doctor_medication_shortcuts.read")
   async listShortcuts(@CurrentUser() user: AuthUser) {
@@ -58,6 +70,12 @@ export class PrescriptionsController {
   @Permissions("doctor_medication_shortcuts.manage")
   updateShortcut(@Param("id") id: string, @Body() dto: DoctorMedicationShortcutDto, @CurrentUser() user: AuthUser) {
     return this.prescriptions.updateShortcut(id, dto, user);
+  }
+
+  @Delete("shortcuts/:id")
+  @Permissions("doctor_medication_shortcuts.manage")
+  archiveShortcut(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.archiveShortcut(id, user);
   }
 
   @Get(":id")

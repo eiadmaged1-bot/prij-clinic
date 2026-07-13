@@ -218,6 +218,33 @@ export class PrescriptionsService {
     return template;
   }
 
+  async duplicateTemplate(id: string, user: AuthUser) {
+    const existing = await this.prisma.prescriptionTemplate.findFirst({ where: { id, active: true, OR: [{ ownerUserId: null }, { ownerUserId: user.id }] } });
+    if (!existing) throw new NotFoundException("Prescription template not found.");
+    const template = await this.prisma.prescriptionTemplate.create({
+      data: {
+        ownerUserId: user.id,
+        title: `${existing.title} copy`,
+        category: existing.category,
+        diagnosisOrUseCase: existing.diagnosisOrUseCase,
+        itemsJson: existing.itemsJson as Prisma.InputJsonValue,
+        notes: existing.notes,
+        createdByUserId: user.id,
+        updatedByUserId: user.id
+      }
+    });
+    await this.audit.record({ actorUserId: user.id, action: "prescription_template.duplicated", resourceType: "prescription_template", resourceId: template.id, severity: "medium", metadataJson: { sourceId: id } });
+    return template;
+  }
+
+  async archiveTemplate(id: string, user: AuthUser) {
+    const existing = await this.prisma.prescriptionTemplate.findFirst({ where: { id, ownerUserId: user.id } });
+    if (!existing) throw new NotFoundException("Doctor-owned prescription template not found.");
+    const template = await this.prisma.prescriptionTemplate.update({ where: { id }, data: { active: false, updatedByUserId: user.id } });
+    await this.audit.record({ actorUserId: user.id, action: "prescription_template.archived", resourceType: "prescription_template", resourceId: id, severity: "medium" });
+    return template;
+  }
+
   async listShortcuts(user: AuthUser) {
     return this.prisma.doctorMedicationShortcut.findMany({
       where: { doctorUserId: user.id, active: true },
@@ -257,6 +284,14 @@ export class PrescriptionsService {
     return shortcut;
   }
 
+  async archiveShortcut(id: string, user: AuthUser) {
+    const existing = await this.prisma.doctorMedicationShortcut.findFirst({ where: { id, doctorUserId: user.id } });
+    if (!existing) throw new NotFoundException("Medication shortcut not found.");
+    const shortcut = await this.prisma.doctorMedicationShortcut.update({ where: { id }, data: { active: false } });
+    await this.audit.record({ actorUserId: user.id, action: "doctor_medication_shortcut.archived", resourceType: "doctor_medication_shortcut", resourceId: id, severity: "medium" });
+    return shortcut;
+  }
+
   private handlePrismaReferenceError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       throw new BadRequestException("Referenced patient, encounter, or doctor was not found.");
@@ -285,8 +320,8 @@ async function resolvePrescriptionItem(prisma: PrismaService, item: Prescription
       genericName: generic.genericName,
       brandName: null,
       tradeName: null,
-      strengthText: null,
-      dosageForm: null
+      strengthText: clean(item.strengthText),
+      dosageForm: clean(item.dosageForm)
     };
   }
 
@@ -337,6 +372,8 @@ async function resolvePrescriptionItem(prisma: PrismaService, item: Prescription
 function toItemCreate(item: PrescriptionItemDto) {
   return {
     medicationName: item.medicationName.trim(),
+    strengthText: clean(item.strengthText),
+    dosageForm: clean(item.dosageForm),
     dose: clean(item.dose),
     route: clean(item.route),
     frequency: clean(item.frequency),
