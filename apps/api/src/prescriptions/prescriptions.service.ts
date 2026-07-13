@@ -35,7 +35,7 @@ export class PrescriptionsService {
           notes: clean(dto.notes),
           items: { create: await this.resolveItems(dto.items) }
         },
-        include: { items: true, patient: true, encounter: true }
+        include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
       });
 
       await this.audit.record({
@@ -58,7 +58,7 @@ export class PrescriptionsService {
       where: prescriptionScope(user),
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { items: true, patient: true, encounter: true }
+      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
     await this.audit.record({
@@ -76,7 +76,7 @@ export class PrescriptionsService {
   async get(id: string, user: AuthUser) {
     const prescription = await this.prisma.prescription.findFirst({
       where: { id, ...patientBranchScope(user), ...doctorScope(user) },
-      include: { items: true, patient: true, encounter: true }
+      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
     if (!prescription) {
@@ -115,7 +115,7 @@ export class PrescriptionsService {
             }
           : {})
       },
-      include: { items: true, patient: true, encounter: true }
+      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
     await this.audit.record({
@@ -152,6 +152,13 @@ export class PrescriptionsService {
       metadataJson: { patientId: prescription.patientId, itemCount: prescription.items.length }
     });
 
+    return prescription;
+  }
+
+  async getPrintView(id: string, user: AuthUser) {
+    const prescription = await this.get(id, user);
+    if (prescription.status !== "signed") throw new BadRequestException("Doctor review and signature are required before printing.");
+    await this.audit.record({ actorUserId: user.id, action: "prescription.print_viewed", resourceType: "prescription", resourceId: id, severity: "high", metadataJson: { itemCount: prescription.items.length } });
     return prescription;
   }
 

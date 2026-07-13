@@ -143,6 +143,13 @@ export default function PrescriptionsPage() {
     if (response.ok) { setTemplateTitle(""); setEditingTemplateId(""); void load(); }
   }
 
+  async function preparePrint() {
+    if (!printReady) return;
+    const response = await apiRequest(`/prescriptions/${savedPrescriptionId}/sign`, "PATCH");
+    if (!response.ok) { setStatus("Could not approve this prescription for printing."); return; }
+    window.open(`/prescriptions/${savedPrescriptionId}/print`, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <AppShell>
       <section className="page-header">
@@ -151,7 +158,7 @@ export default function PrescriptionsPage() {
             <p className="eyebrow">Doctor prescription center</p>
             <h1>Printable Prescription</h1>
           </div>
-          <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => window.open(`/prescriptions/${savedPrescriptionId}/print`, "_blank", "noopener,noreferrer")}>
+          <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => void preparePrint()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
             Print
           </button>
@@ -206,7 +213,7 @@ export default function PrescriptionsPage() {
               <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add medication</button>
               <button className="button secondary" type="button" onClick={() => setStatus(patientId && encounterId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient and active visit to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
               <button className="button" type="submit">Save draft</button>
-              <button className="button secondary" type="button" disabled={!printReady} onClick={() => window.open(`/prescriptions/${savedPrescriptionId}/print`, "_blank", "noopener,noreferrer")}>Print A5</button>
+              <button className="button secondary" type="button" disabled={!printReady} onClick={() => void preparePrint()}>Review, sign and print A5</button>
             </div>
           </form>
         </section>

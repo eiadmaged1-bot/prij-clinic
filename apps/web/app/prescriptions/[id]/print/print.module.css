@@ -1,0 +1,113 @@
+@page {
+  size: A5 portrait;
+  margin: 0;
+}
+
+.screenToolbar {
+  align-items: center;
+  background: #f7f2e8;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  min-height: 56px;
+  padding: 8px;
+}
+
+.screenToolbar button {
+  background: #0f766e;
+  border: 0;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  min-height: 38px;
+  padding: 0 18px;
+}
+
+.paper {
+  background-color: #fff;
+  background-position: top left;
+  background-repeat: repeat-y;
+  background-size: 148mm 210mm;
+  box-sizing: border-box;
+  color: #102a2a;
+  font-family: Arial, "Noto Sans Arabic", sans-serif;
+  margin: 12px auto;
+  min-height: 210mm;
+  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+  position: relative;
+  width: 148mm;
+}
+
+.patientRow {
+  border-bottom: 0.2mm solid #bad0cb;
+  display: grid;
+  font-size: 10pt;
+  gap: 2mm 5mm;
+  grid-template-columns: 2fr 1fr 1fr;
+  padding-bottom: 3mm;
+}
+
+.patientRow strong,
+.patientRow span { overflow-wrap: anywhere; }
+
+.medications {
+  display: grid;
+  gap: 3mm;
+  margin-top: 7mm;
+}
+
+.medication {
+  break-inside: avoid;
+  border-bottom: 0.2mm solid #dfe9e6;
+  display: grid;
+  gap: 1.5mm;
+  padding: 0 0 3mm;
+}
+
+.medicationHeader {
+  display: flex;
+  font-size: 12pt;
+  gap: 2mm;
+}
+
+.directions,
+.instructions,
+.notes { font-size: 9.5pt; line-height: 1.45; }
+
+.footer {
+  break-inside: avoid;
+  display: grid;
+  gap: 8mm;
+  grid-template-columns: 1fr 48mm;
+  margin-top: 9mm;
+}
+
+.signature {
+  border-top: 0.2mm solid #789a92;
+  min-height: 20mm;
+  padding-top: 2mm;
+  text-align: center;
+}
+
+.error {
+  background: #fff;
+  color: #5f2828;
+  margin: 30px auto;
+  max-width: 520px;
+  padding: 24px;
+}
+
+@media print {
+  :global(html),
+  :global(body) {
+    background: #fff !important;
+    height: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 148mm;
+  }
+
+  .screenToolbar { display: none !important; }
+  .paper { margin: 0; }
+}
+

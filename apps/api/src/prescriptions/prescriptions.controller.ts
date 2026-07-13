@@ -78,6 +78,12 @@ export class PrescriptionsController {
     return this.prescriptions.archiveShortcut(id, user);
   }
 
+  @Get(":id/print")
+  @Permissions("prescription.read")
+  getPrintView(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.prescriptions.getPrintView(id, user);
+  }
+
   @Get(":id")
   @Permissions("prescription.read")
   get(@Param("id") id: string, @CurrentUser() user: AuthUser) {
