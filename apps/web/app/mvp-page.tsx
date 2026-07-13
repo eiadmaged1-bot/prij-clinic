@@ -478,7 +478,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             </div>
           </div>
           <UniversalSearchBox />
-          <AccountMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
+          <UserMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
         </header>
         {children}
       </div>
@@ -486,7 +486,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   );
 }
 
-function AccountMenu({
+export function UserMenu({
   user,
   canOpenAdmin,
   onLogout

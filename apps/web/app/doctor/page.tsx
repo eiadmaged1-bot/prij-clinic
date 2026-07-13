@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
 import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { ActiveVisitLauncher } from "../../components/clinic/ActiveVisitWorkspace";
+import { CompactKpiCard, PageHeader, PageShell } from "../../components/clinic/desktop-ui";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useSession } from "../session";
 import { visitTypeCounts, visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
@@ -31,6 +32,7 @@ export default function DoctorModePage() {
   const { user } = useSession();
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [pendingReports, setPendingReports] = useState<number | string>("-");
   const [status, setStatus] = useState("Loading");
 
   useEffect(() => {
@@ -39,13 +41,18 @@ export default function DoctorModePage() {
 
     Promise.all([
       fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/appointments`, { credentials: "include", headers })
+      fetch(`${getApiBaseUrl()}/appointments`, { credentials: "include", headers }),
+      fetch(`${getApiBaseUrl()}/dashboard/summary`, { credentials: "include", headers })
     ])
-      .then(async ([queueResponse, appointmentResponse]) => {
+      .then(async ([queueResponse, appointmentResponse, summaryResponse]) => {
         const queueData = queueResponse.ok ? await queueResponse.json() : { queueTickets: [] };
         const appointmentData = appointmentResponse.ok ? await appointmentResponse.json() : { appointments: [] };
         setQueue((queueData.queueTickets ?? []).slice(0, 6));
         setAppointments((appointmentData.appointments ?? []).slice(0, 6));
+        if (summaryResponse.ok) {
+          const summary = await summaryResponse.json() as { operational?: { pendingReports?: number } };
+          setPendingReports(summary.operational?.pendingReports ?? 0);
+        }
         setStatus("Ready");
       })
       .catch(() => setStatus("Could not load today's work"));
@@ -53,28 +60,23 @@ export default function DoctorModePage() {
 
   const current = queue.find((ticket) => ticket.status === "called");
   const counts = visitTypeCounts(queue);
+  const followUps = appointments.filter((appointment) => /follow|recheck/i.test(appointment.appointmentType ?? "")).length;
+  const nextPatientHref = current?.patientId ? `/patients/${current.patientId}` : queue[0]?.patientId ? `/patients/${queue[0].patientId}` : "/doctor/waiting";
   const canStartVisit = hasAnyRolePermission(user?.roles ?? [], Action.VISIT_START) || (user?.roles ?? []).some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
   return (
     <AppShell>
-      <section className="doctor-hero">
-        <div>
-          <p className="eyebrow">Doctor Mode</p>
-          <h1>Today&apos;s visits, made simple</h1>
-          <p className="muted">Open patient, start visit, write note, prescribe, order tests, finish, next patient.</p>
-        </div>
-        <div className="doctor-hero-actions">
-          <Link className="button large" href="/patients"><ThreeDMedicalIcon name="patients" size="sm" />Open Patient</Link>
-          <Link className="button secondary large" href="/doctor/waiting"><ThreeDMedicalIcon name="encounter" size="sm" tone="navy" />Choose patient to start</Link>
-        </div>
-      </section>
+      <PageShell className="doctor-desktop-workspace">
+      <PageHeader eyebrow="Doctor workspace" title="Today’s clinical work" description="Current patient, waiting list, appointments, reports, and follow-ups." actions={<><Link className="button" href={nextPatientHref}>Open next patient</Link><Link className="button secondary" href="/patients">Find patient</Link><Link className="button secondary" href="/doctor/waiting">Start new visit</Link></>} />
 
       <SafetyAlert />
 
-      <section className="doctor-today-grid">
-        <FocusCard icon="queue" eyebrow="Waiting patients" value={queue.length} text="Patients waiting or moving through the clinic flow." href="/doctor/waiting" action="Open waiting list" />
-        <FocusCard icon="calendar" eyebrow="Today&apos;s patients" value={appointments.length} text="Scheduled visits for today&apos;s clinical work." href="/calendar" action="Open calendar" />
-        <FocusCard icon="prescription" eyebrow="Next action" value="Write note" text="Use the doctor visit flow from a locked patient context." href="/doctor/waiting" action="Choose patient" />
+      <section className="compact-kpi-grid doctor-kpi-grid" aria-label="Doctor operational summary">
+        <CompactKpiCard label="Current patient" value={current ? `Queue ${current.queueNumber ?? "—"}` : "None"} />
+        <CompactKpiCard label="Waiting patients" value={queue.length} />
+        <CompactKpiCard label="Appointments" value={appointments.length} />
+        <CompactKpiCard label="Reports to review" value={pendingReports} />
+        <CompactKpiCard label="Follow-ups" value={followUps} />
       </section>
 
       <section className="panel compact-panel">
@@ -164,6 +166,7 @@ export default function DoctorModePage() {
           ))}
         </div>
       </section>
+      </PageShell>
     </AppShell>
   );
 }

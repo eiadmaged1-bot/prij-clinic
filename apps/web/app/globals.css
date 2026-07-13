@@ -523,6 +523,223 @@ body {
   overflow-x: hidden;
 }
 
+.page-shell {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--space-4);
+  width: min(100%, 1600px);
+  margin-inline: auto;
+}
+
+.page-shell > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.desktop-page-header {
+  min-height: 88px;
+}
+
+.desktop-page-header h1,
+.patient-identity-bar h1 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1.15;
+}
+
+.compact-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.doctor-kpi-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.compact-kpi-card {
+  display: grid;
+  align-content: center;
+  gap: var(--space-1);
+  min-height: 104px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-warm-sm);
+  padding: var(--space-4);
+}
+
+.compact-kpi-card > span,
+.compact-kpi-card > small {
+  color: var(--muted);
+}
+
+.compact-kpi-card > strong {
+  color: var(--foreground);
+  font-size: 1.55rem;
+}
+
+.compact-kpi-card.tone-accent {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.compact-kpi-card.tone-owner {
+  border-color: #c9ad68;
+}
+
+.section-card,
+.patient-identity-bar {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-warm-sm);
+  padding: var(--space-4);
+}
+
+.desktop-tabs,
+.segmented-control,
+.action-toolbar,
+.identity-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.desktop-tabs button,
+.segmented-control button {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--muted-strong);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: var(--space-2) var(--space-3);
+  white-space: nowrap;
+}
+
+.desktop-tabs button.active,
+.segmented-control button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.patient-identity-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 132px;
+}
+
+.clinical-tag-card {
+  display: grid;
+  gap: var(--space-1);
+  min-height: 88px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  font: inherit;
+  padding: var(--space-3);
+  text-align: start;
+}
+
+.clinical-tag-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.filter-drawer {
+  margin-block: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.filter-drawer > summary {
+  cursor: pointer;
+  font-weight: 750;
+  padding: var(--space-3) var(--space-4);
+}
+
+.filter-drawer-content,
+.filter-drawer > .toolbar {
+  border-top: 1px solid var(--border);
+  padding: var(--space-4);
+}
+
+.split-pane {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--space-4);
+}
+
+.clinical-stepper {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clinical-stepper button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font: inherit;
+  padding: var(--space-2);
+}
+
+.clinical-stepper .active button,
+.clinical-stepper .completed button {
+  border-color: var(--accent);
+}
+
+.data-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3);
+  text-align: start;
+  vertical-align: top;
+}
+
+@media (max-width: 900px) {
+  .compact-kpi-grid,
+  .doctor-kpi-grid,
+  .split-pane,
+  .clinical-stepper {
+    grid-template-columns: 1fr;
+  }
+
+  .patient-identity-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
 :root[data-theme="prij-heritage"] {
   --background: var(--pc-paper);
   --background-soft: #fbf8f3;

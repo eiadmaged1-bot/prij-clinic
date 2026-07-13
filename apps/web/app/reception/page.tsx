@@ -111,7 +111,7 @@ function ReceptionHomeContent() {
         <div className="section-heading compact-section-heading">
           <h2>{copy.queueNow}</h2>
         </div>
-        <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgentWaiting.length}</p>
+        <p className="queue-compact-line queue-indicator-row">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgentWaiting.length}</p>
         <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {nextPatient ? patientLabel(nextPatient.patient) : copy.noPatientWaiting}</p>
       </section>
 

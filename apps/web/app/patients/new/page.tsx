@@ -241,15 +241,14 @@ function NewPatientContent() {
             <VisitTypeSelector value={visitType} onChange={setVisitType} />
           </div> : null}
 
-          {!isDoctor ? <label className="wide toggle-row sensitive-bottom-checkbox">
-            <input
-              checked={form.sexualActivityStatus === "not_sexually_active"}
-              onChange={(event) => update("sexualActivityStatus", event.target.checked ? "not_sexually_active" : "unknown")}
-              type="checkbox"
-            />
-            {copy.notSexuallyActive}
-            <span className="muted">{copy.uncheckedUnknown}</span>
-          </label> : null}
+          {!isDoctor ? <details className="wide notes-collapsible">
+            <summary>Sensitive clinical details</summary>
+            <label className="toggle-row sensitive-bottom-checkbox">
+              <input checked={form.sexualActivityStatus === "not_sexually_active"} onChange={(event) => update("sexualActivityStatus", event.target.checked ? "not_sexually_active" : "unknown")} type="checkbox" />
+              Not sexually active / Virgin
+              <span className="muted">{copy.uncheckedUnknown}</span>
+            </label>
+          </details> : null}
 
           {duplicateWarnings.length ? (
             <div className="alert warning wide" data-testid="duplicate-patient-warning">
