@@ -46,3 +46,7 @@ export function createDoctorVisitFollowUp(patientId: string, encounterId: string
 export function getDoctorVisitPacket(patientId: string, encounterId: string) {
   return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}/packet`);
 }
+
+export function completeDoctorVisit(encounterId: string) {
+  return request<Record<string, unknown>>(`/encounters/${encodeURIComponent(encounterId)}/sign`, { method: "PATCH", body: JSON.stringify({}) });
+}

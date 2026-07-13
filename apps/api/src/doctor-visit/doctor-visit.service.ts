@@ -60,7 +60,7 @@ export class DoctorVisitService {
 
     await this.audit.record({
       actorUserId: user.id,
-      action: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED",
+      action: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "doctor_visit.started",
       resourceType: "encounter",
       resourceId: stampedEncounter.id,
       branchId: patient.branchId,
@@ -72,6 +72,7 @@ export class DoctorVisitService {
         startedByUserId: stampedEncounter.startedByUserId,
         doctorDisplayNameSnapshot: stampedEncounter.doctorDisplayNameSnapshot,
         doctorColorSnapshot: stampedEncounter.doctorColorSnapshot
+        , legacyEvent: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED"
       }
     });
 
@@ -206,7 +207,7 @@ export class DoctorVisitService {
 }
 
 function visitWorkflow() {
-  return ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Packet"];
+  return ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"];
 }
 
 function patientSummary(patient: { id: string; branchId: string | null; medicalRecordNumber: string; firstName: string; lastName: string; dateOfBirth: Date | null; sex: string | null; patientType: string }) {

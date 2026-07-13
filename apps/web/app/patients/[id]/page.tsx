@@ -17,7 +17,7 @@ import { useSession } from "../../session";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { visitTypeLabel } from "@/lib/visit-types";
-import { createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
+import { completeDoctorVisit, createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { patientQrSvgDataUri } from "@/lib/patient-qr";
 import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
@@ -1204,6 +1204,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
   const encounterId = String(visit?.encounter?.id ?? "");
   const latestHistorySheetId = String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined;
   const terminalMedication = hoveredMedication ?? selectedMedication;
+  const visitSteps = visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"];
+  const activeStepIndex = Math.max(0, visitSteps.indexOf(activeStep));
+  const encounterReady = Boolean(String(visit?.encounter?.chiefComplaint ?? "").trim() && String(visit?.encounter?.assessmentText ?? "").trim() && String(visit?.encounter?.planText ?? "").trim());
 
   useEffect(() => {
     void getCurrentDoctorVisit(patient.id)
@@ -1288,15 +1291,22 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
     if (!encounterId) return;
     await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string });
     setStatus("Follow-up task added.");
-    setActiveStep("Packet");
+    setActiveStep("Review and Print");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
   async function loadPacket() {
     if (!encounterId) return;
     setVisit(await getDoctorVisitPacket(patient.id, encounterId));
-    setActiveStep("Packet");
+    setActiveStep("Review and Print");
     setStatus("Visit packet refreshed.");
+  }
+
+  async function completeVisit() {
+    if (!encounterId || !encounterReady) return;
+    await completeDoctorVisit(encounterId);
+    setStatus("Visit completed and signed. Future changes require an audited amendment.");
+    setVisit(await getDoctorVisitPacket(patient.id, encounterId));
   }
 
   const visitSignature = visit?.encounter?.doctorSignature as TimelineItem["doctorSignature"] | undefined;
@@ -1311,9 +1321,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <button className="button" type="button" onClick={() => void startVisit()}>Start Visit</button>
       </div>
       <div className="workflow-band" aria-label="Doctor visit workflow stepper">
-        {(visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Packet"]).map((step) => (
-          <button className={activeStep === step || (step === "Print Packet" && activeStep === "Packet") ? "active" : ""} key={step} onClick={() => setActiveStep(step === "Print Packet" ? "Packet" : step)} type="button">
-            {step === "Print Packet" ? "Packet" : step}
+        {visitSteps.map((step, index) => (
+          <button className={`${activeStep === step ? "active" : ""} ${index < activeStepIndex ? "completed" : ""}`.trim()} key={step} onClick={() => setActiveStep(step)} type="button">
+            {step}
           </button>
         ))}
       </div>
@@ -1322,15 +1332,18 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
       <p className="muted">{status}</p>
       {!encounterId ? <p className="warning-text">Start a visit before adding encounter, prescription, investigation, or follow-up items.</p> : null}
 
-      <div className="doctor-friendly-grid">
+      <div className="visit-step-navigation"><button className="button secondary compact" disabled={activeStepIndex === 0} onClick={() => setActiveStep(visitSteps[activeStepIndex - 1] ?? visitSteps[0] ?? "History")} type="button">Previous</button><span>Step {activeStepIndex + 1} of {visitSteps.length}</span><button className="button secondary compact" disabled={activeStepIndex >= visitSteps.length - 1} onClick={() => setActiveStep(visitSteps[activeStepIndex + 1] ?? visitSteps.at(-1) ?? "History")} type="button">Next</button></div>
+
+      {activeStep === "History" ? <div className="doctor-friendly-grid active-visit-step">
         <section className="panel">
           <div className="section-heading"><h3>History</h3><span className="badge">Step 1</span></div>
           <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload) => { await submitVisitAction(patient.id, endpoint, payload); onReload(); }} status={status} />
         </section>
-        <CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} />
-      </div>
+      </div> : null}
 
-      <form className="panel form-grid" onSubmit={(event) => void saveEncounter(event)}>
+      {activeStep === "Care Assist" ? <div className="active-visit-step"><CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} /></div> : null}
+
+      {activeStep === "Encounter" ? <form className="panel form-grid active-visit-step" onSubmit={(event) => void saveEncounter(event)}>
         <div className="section-heading"><h3>Encounter Draft</h3><span className="badge warning">Doctor review required</span></div>
         <label>Chief complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label>
         <label>HPI<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
@@ -1338,9 +1351,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
         <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
         <button className="button" type="submit" disabled={!encounterId}>Save encounter and continue</button>
-      </form>
+      </form> : null}
 
-      <div className="doctor-friendly-grid">
+      {activeStep === "Prescription" ? <div className="doctor-friendly-grid active-visit-step">
         <form className="panel form-grid" onSubmit={(event) => void addPrescription(event)}>
           <div className="section-heading"><h3>Prescription Draft</h3><span className="badge warning">Generic-first</span></div>
           <label>Search generic medication<input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Search generic name or class" /></label>
@@ -1361,9 +1374,9 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
         <div className="doctor-advanced-tool">
           <MedicationSafetyTerminal medication={terminalMedication} title="Medication Safety Terminal" />
         </div>
-      </div>
+      </div> : null}
 
-      <div className="doctor-friendly-grid">
+      {activeStep === "Investigations" ? <div className="doctor-friendly-grid active-visit-step">
         <form className="panel form-grid" onSubmit={(event) => void addInvestigation(event)}>
           <div className="section-heading"><h3>Investigations</h3><span className="badge">Request only</span></div>
           <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={setSelectedInvestigation} />
@@ -1383,27 +1396,28 @@ function DoctorVisitFlow({ patient, related, onReload }: { patient: Patient; rel
           {hint ? <p className="notice">{hint}</p> : <p className="muted">No note selected.</p>}
           <button className="button" type="button" disabled={!hint} onClick={() => insertHintIntoPlan(hint, setStatus)}>Insert selected note into draft</button>
         </section>
-      </div>
+      </div> : null}
 
-      <form className="panel form-grid" onSubmit={(event) => void addFollowUp(event)}>
+      {activeStep === "Follow-up" ? <form className="panel form-grid active-visit-step" onSubmit={(event) => void addFollowUp(event)}>
         <div className="section-heading"><h3>Follow-up</h3><span className="badge">Manual task</span></div>
         <label>Follow-up date<input name="dueAt" type="date" /></label>
         <label>Task title<input name="title" placeholder="Follow-up visit" /></label>
         <label>Note<textarea name="note" /></label>
         <p className="muted">Manual follow-up only. Treatment instructions are not generated automatically.</p>
         <button className="button" type="submit" disabled={!encounterId}>Save follow-up and continue</button>
-      </form>
+      </form> : null}
 
-      <section className="panel printable-summary">
+      {activeStep === "Review and Print" ? <section className="panel printable-summary active-visit-step">
         <div className="section-heading no-print">
           <h3>Print Packet</h3>
           <div className="form-actions">
             <button className="button secondary" type="button" disabled={!encounterId} onClick={() => void loadPacket()}>Refresh packet</button>
             <button className="button" type="button" disabled={!encounterId} onClick={() => window.print()}>Print packet</button>
+            <button className="button" type="button" disabled={!encounterId || !encounterReady || String(visit?.encounter?.status ?? "draft") !== "draft"} onClick={() => void completeVisit()}>Complete Visit</button>
           </div>
         </div>
         <VisitPacketPreview visit={visit} patient={patient} />
-      </section>
+      </section> : null}
     </section>
   );
 }
