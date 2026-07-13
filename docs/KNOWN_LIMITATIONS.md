@@ -1,47 +1,12 @@
 # Known Limitations
 
-## v1.3.9 Known Limitations
-
-- Smart tags are searchable data, not clinical diagnoses.
-- External intake creates or attaches patients only after review, but field-level merge tooling is intentionally conservative.
-- CRL/raw biometry can be recorded, but no unvalidated CRL dating equation is invented.
-- EDD Calendar shows locked or reviewed EDD only; unreviewed candidates are not presented as final.
-- Queue counts are live today-only counts when the selected schedule date is today.
-
-External AI remains disabled by default.
-
-AI cannot autonomously diagnose, prescribe, dose, rank treatments, or update final clinical records without doctor approval.
-
-Guideline importer supports the built-in official/open source pack and manual licensed upload. Non-downloadable or unclear sources remain link-only or need manual upload. Imported PDFs are not committed.
-
-Libya medication rows remain hidden/import-pending until an official source is uploaded or imported and reviewed.
-
-Medication interaction checks are assistive. Unknown means no verified source record is loaded, not that a pair is safe.
-
-The Next.js development issue overlay can appear only on the dev server. Use the production-like build/start path in `docs/LOCAL_TAILSCALE_QA.md` for visual mobile QA screenshots.
-
-Public tunnel workflows are QA/testing only. Do not use real patient data through ngrok, Cloudflare Quick Tunnel, or any public URL until deployment, privacy, backup, access-control, and security signoff is complete.
-
-Public login depends on the local dev stack running: web on port 3000, API internal on port 3001, and `/api/backend/health` returning healthy through the web origin. Use one public tunnel to port 3000 only; never tunnel port 3001 for this app.
-
-Public QA command flow:
-
-```powershell
-npm run dev:stop
-docker compose up -d postgres
-npm run prisma:repair
-npm run prisma:seed
-npm run dev
-ngrok http 3000
-```
-
-Open `https://<public-ngrok-url>/login`, check `https://<public-ngrok-url>/api/backend/health`, then login with local QA credentials only.
-
-Cloudflare Quick Tunnel URLs are temporary random `trycloudflare.com` subdomains. A stable public route requires an owned domain added to Cloudflare or an equivalent deployment setup.
-# v1.3.8 Known Limitations
-
-- Infertility workflow stores structured induction/monitoring data but does not provide treatment suggestions.
-- Investigation templates are generic request bundles and are not decision-support or automatic workups.
-- Owner visit-price audit is separate from normal billing and does not replace cashier reconciliation.
-- Clinical phase summaries are compact and need richer transition UX in a later sprint.
-- Mobile QA still requires real device/ngrok verification before release signoff.
+- This sprint is not a production-readiness or medical-safety claim. Deployment, privacy, backup/restore, access-control, and clinical governance signoff remain required before real PHI/PII use.
+- Medication content is incomplete. Current rows are demo/reference fixtures unless a provenance-backed source is imported and reviewed; missing interaction data never means a combination is safe.
+- Medication search and Care Assist are reference aids only. They do not diagnose, prescribe, choose treatment, choose a dose, or update final records autonomously.
+- A5 print architecture and safe-area configuration are functional, but no final approved clinic background/template asset was found. Exact placement remains a clinic-approval TODO.
+- Calendar day/week/month controls are present, but the current data query remains anchored to the selected date; full range aggregation is future work.
+- Investigation favorites are doctor-controlled request bundles, not suggested workups or clinical decision support.
+- Smart tags are structured history/search metadata, not diagnoses. Search access is scoped and audited.
+- Google Form intake never auto-merges. Reviewers still need conservative field-by-field verification before creating or matching a patient.
+- Public tunnels are temporary QA tools only. Use synthetic data, tunnel web port 3000 only, and route API calls through `/api/backend/...`.
+- Browser print headers/footers such as URL/title are controlled by the print dialog and must be disabled by the operator; application chrome itself is excluded from the print route.

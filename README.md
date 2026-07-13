@@ -1,5 +1,22 @@
 # Dr Maged Attia Clinics
 
+## Current sprint: Desktop UX reconstruction and clinical workflow recovery
+
+The current branch reconstructs the Doctor, Receptionist, and Owner desktop shells; adds a compact tabbed patient workspace, structured searchable history tags, a seven-step doctor visit, investigation favorites, doctor-controlled prescription shortcuts/templates, dedicated A5 printing, medication reference/import recovery, and a signed Google Form intake receiver.
+
+This is development and QA work, not a production-readiness claim. Clinical assistance remains draft-only, signed encounters require audited amendment, imported medication rows default to `needs_review`, and no feature autonomously diagnoses, prescribes, selects a dose, or finalizes a clinical record. Public traffic must use the web proxy at `/api/backend/...`; never expose API port 3001.
+
+Sprint documentation:
+
+- `docs/CURRENT_STATUS.md`
+- `docs/DESIGN_SYSTEM.md`
+- `docs/SMART_CLINICAL_TAGS.md`
+- `docs/DOCTOR_VISIT_WORKFLOW.md`
+- `docs/PRESCRIPTION_PRINT_A5.md`
+- `docs/MEDICATION_REFERENCE_AND_IMPORT.md`
+- `docs/GOOGLE_FORM_INTAKE_API_CONTRACT.md`
+- `docs/MANUAL_QA_REPORT.md`
+
 ## v1.3.9 Clinical Tags + EDD Calendar + Google Form Intake
 
 v1.3.9 removes demo workflow clutter from real UI, keeps permanent Patient QR, improves Arabic/English shell labels, adds OB G/P/A/L steppers, previous delivery mode history, smart clinical tags, Owner/Admin/Doctor cohort search, reviewed/locked EDD workflow, EDD Clinical Calendar, token-protected Google Form intake, and an External Intake Inbox.

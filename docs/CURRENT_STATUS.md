@@ -1,49 +1,33 @@
 # Current Status
 
-## v1.4.0 Current Status
+## Desktop UX reconstruction sprint
 
-v1.4.0 mobile clinic productization is in progress on `fix/v1.4.0-mobile-clinic-productization`.
+Branch: `fix/v1.4.2-doctor-core-merged-lock`.
 
-Implemented in this pass: mobile-first top bar with clinic name/language/logout, icon-only secondary navigation trigger, corrected Arabic visit labels in 2x2 order, new-patient DOB/year fallback and clear save actions, reception search-first dashboard, explicit Patient QR camera start with manual fallback and confirmation card, queue next-patient logic with urgent priority ordering, search/category/sort/load-more patient directory, search-first draft-only AI assistant, expanded investigation master categories, and category-based Smart Clinical Search.
+Implemented:
 
-Safety remains unchanged: no DB reset/drop, no migration deletion, no fake patient seed, no automatic diagnosis/prescribing, no external intake or AI draft auto-finalization, and clinical AI remains draft-only for doctor review.
+- Responsive role shell with a fixed desktop sidebar, mobile drawer, compact account menu, safe session-expiry handling, and friendly patient-workspace failures.
+- Unique Guideline action-card IDs and React keys.
+- Shared restrained desktop design components and tokens, compact role dashboards, one queue workspace, role-filtered reports, calendar filters/tabs, and safer staff messaging states.
+- Patient directory defaults to All patients and exposes advanced filters only on demand.
+- Compact patient identity header with focused Overview, History, Current Visit, Prescriptions, Investigations & Results, Women’s Health, Documents, and Timeline tabs.
+- Audited structured history tags and multi-term Smart Clinical Search.
+- Seven-step doctor visit with draft persistence, validation, doctor review, signature, and audited amendment boundaries.
+- Categorized investigation ordering, selected-request basket, custom favorite sets, and separate catalog administration.
+- Doctor-owned medication shortcuts and prescription templates applied only as editable drafts.
+- Signed, review-gated A5 prescription print route with English/Arabic support and navigation-free print CSS.
+- Medication reference search/profile recovery plus Owner/Admin dry-run import, duplicate validation, provenance, review queue, and safe archive.
+- HMAC-protected, replay-resistant, idempotent Google Form intake with pending review and no automatic patient merge.
 
-## v1.3.9 Current Status
+Observed medication reference baseline during this sprint: 35 generic rows, 53 family rows, 1 product row, 15 market variants, and 30 source rows. The 15 market variants are demo/reference fixtures; no imported official production catalog was claimed.
 
-v1.3.9 implements clinical tag search, EDD month calendar, reviewed Google Form intake, and workflow cleanup.
+Safety status:
 
-Implemented: Open/Close Day Checklist deletion, waiting-time alert deletion, temporary Queue Ticket QR deletion, Patient QR preservation, guided staff help deletion, copyable message template deletion, improved Arabic/English shell labels, G/P/A/L steppers, structured previous delivery mode history, smart history option chips, seeded clinical tag definitions, Owner/Admin/Doctor cohort search, reviewed/locked EDD workflow, EDD Clinical Calendar, token-protected Google Form webhook, and External Intake Inbox.
+- No autonomous diagnosis, prescription, dosing, treatment ranking, or final clinical update.
+- AI clinical content remains assistive and draft-only until doctor approval.
+- Signed clinical records remain immutable except through audited amendment paths.
+- Imported medication records default to `needs_review`.
+- External intake remains pending and untrusted until an authorized reviewer acts; matching never auto-merges.
+- No database reset/drop or migration deletion was performed.
 
-Safety remains unchanged: Google Form submissions are pending/untrusted until review; no external submission directly mutates final patient records; no external AI calls were added; clinical outputs remain draft/review-only.
-
-v1.3.7 public login real-device hotfix is implemented on the feature branch.
-
-The browser calls the same-origin `/api/backend` path for login/session and normal API calls. The route-handler proxy forwards those requests internally to the API service on port 3001, using `PRIJ_API_INTERNAL_ORIGIN` when set and `http://localhost:3001` by default. The public browser `Origin` is not forwarded into the internal API request, so ngrok and other public web hosts do not trip the API CORS guard.
-
-Public mobile QA needs only one public URL to port 3000. Never tunnel port 3001 for this app. Localhost, LAN, Tailscale, ngrok, Cloudflare Quick Tunnel, and future domain/VPS patterns use the same browser-facing API path.
-
-Login Arabic/English labels and friendly connection/session messages are locked to the selected language without flipping the login layout. Invalid credentials remain a credential error; unauthenticated `auth/me` is a quiet logged-out state; network, timeout, malformed auth success, and 5xx remain friendly connection problems.
-
-Clean public QA command flow:
-
-```powershell
-npm run dev:stop
-docker compose up -d postgres
-npm run prisma:repair
-npm run prisma:seed
-npm run dev
-ngrok http 3000
-```
-
-Then open `https://<public-ngrok-url>/login`, verify `https://<public-ngrok-url>/api/backend/health`, and login with local QA credentials only.
-
-v1.3.3 workflow compression, guideline import fixes, receptionist no-menu cockpit, always-visible logout, role navigation, demo/test filtering, receptionist check-in signature, doctor visit signature, case library, staff chat, Pharmacology safety foundation, and Guideline Library import foundation remain in place.
-
-External AI remains disabled by default. No autonomous diagnosis, prescribing, dosing, treatment ranking, or automatic clinical finalization is allowed.
-# v1.3.8 Current Status
-
-v1.3.8 adds infertility workflow foundations, clinical phases, organized investigations, mobile drawer/footer fixes, and owner-only visit price audit endpoints.
-
-Implemented: `INFERTILITY` patient type, clinical phase API/UI badges, Infertility tab, ovulation induction cycle records, AMH, follicular monitoring, E2 serial results, investigation categories/favorites/high priority/templates, global language/logout shell footer, fixed Arabic visit labels, and reception-visible Not sexually active checkbox.
-
-Safety remains unchanged: no real patient data, no external AI, no automatic diagnosis, no automatic prescribing, no automatic dosing, and doctor review remains mandatory.
+Automated checks are being completed on this branch. Manual multi-resolution and public-tunnel results are recorded separately in `docs/MANUAL_QA_REPORT.md`; unverified items are not represented as passing.

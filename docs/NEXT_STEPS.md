@@ -1,43 +1,10 @@
 # Next Steps
 
-## v1.4.0 Next Steps
+1. Complete and record the final build, security, clinical, RBAC, visual, and persistence test matrix.
+2. Complete Doctor, Receptionist, and Owner desktop QA at 1366×768, 1440×900, 1920×1080, and 2560×1440.
+3. Validate the existing single web tunnel at `/api/backend/...`, including a signed synthetic external-intake dry run. Never expose port 3001.
+4. Obtain clinic approval for exact A5 background artwork and field coordinates, then configure the existing safe-area constants without stretching the asset.
+5. Review and approve medication sources before any imported row can be treated as a verified reference. `needs_review` is not a clinical-safety approval.
+6. Review the exact Google Form contract with the clinic. Only after approval, implement Gemini/Apps Script sender code using Script Properties, test with synthetic data, and then separately approve trigger activation.
 
-- Complete browser QA at 320, 375, 390, 430, 768, 834, 1024, 1366, 1440, and 1920 px.
-- Finish deeper page-specific cleanup for guideline detail views, protocol atlas linking, owner service duplicate merge actions, account hard-delete/archive backend wiring, and external intake field-by-field approval UX.
-- Add running-stack Playwright tests for QR resolution, queue mutations, investigation deactivation audit, account archive/delete dependency checks, and external intake approval/rejection.
-- Keep medication safety approval wording as "Approved for reference list" only; never imply clinical safety.
-- Do not expose API port 3001 publicly; public mobile QA must continue through the web app same-origin proxy.
-
-## v1.3.9 Next Steps
-
-- Run real-device QA for Arabic navigation, mobile drawer footer, G/P/A/L steppers, pregnancy tab, Clinical Tag Search, EDD Calendar, and External Intake Inbox.
-- Add richer duplicate merge tooling for reviewed external intake submissions.
-- Add deeper clinical tag grouping, tag archive/deactivate UI, and high-risk pregnancy tag workflows.
-- Add month/week EDD exports after role and privacy review.
-- Add end-to-end browser tests for Google Form review actions against a running local stack.
-
-Run real device QA on same-PC localhost, LAN, Tailscale, and one temporary public tunnel to port 3000.
-
-For public QA, use `npm run dev`, then run `ngrok http 3000` or `cloudflared tunnel --url http://localhost:3000`. Do not expose API port 3001 publicly.
-
-Confirm `http://localhost:3000/api/backend/health` before opening the public URL on a phone.
-
-Use `npm run guidelines:import:official` to import the built-in official/open guideline source pack, then confirm recent indexed documents and search results. Imported PDFs must stay in private gitignored storage.
-
-Load verified medication interaction sources before relying on source-specific interaction citations.
-
-Continue manual QA for receptionist queue flow, doctor visit flow, RBAC, audit logs, and AI draft approval.
-
-Continue checking that compressed mobile navigation, cockpit-only receptionist flow, Patient File tabs, Queue Board, and Today's Desk stay compact on real devices.
-
-Before any real PHI/PII use through a public URL, complete deployment/security signoff and add access protection such as Cloudflare Access.
-# v1.3.8 Next Steps
-
-Recommended next sprint: v1.3.9 Clinical Phase Deepening + Owner Reporting QA.
-
-Focus:
-- Browser/manual QA for all role-specific mobile workflows.
-- Richer phase transition UI for infertility-to-pregnancy linking.
-- Investigation catalog seed enrichment for all required categories.
-- Owner audit dashboard visual polish and report export governance.
-- More end-to-end tests around actual API writes for infertility cycles and owner-only pricing denial.
+Do not activate a Google Form trigger before contract approval. Do not store the HMAC secret in sheet cells. Do not use real patient information during QA or tunnel testing.

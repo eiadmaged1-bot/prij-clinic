@@ -1,6 +1,6 @@
 # Doctor Visit Workflow
 
-The patient workspace now includes a Doctor Visit tab with these steps:
+The active patient visit uses one expanded step at a time:
 
 1. History
 2. Care Assist
@@ -8,8 +8,12 @@ The patient workspace now includes a Doctor Visit tab with these steps:
 4. Prescription
 5. Investigations
 6. Follow-up
-7. Print Packet
+7. Review and Print
 
-Start Visit creates or reopens a draft encounter for the patient. The doctor can save chief complaint, HPI, examination notes, impression, and plan as draft fields. Signing remains limited to the existing safe sign workflow.
+The active patient and visit status remain visible. Save and continue, Previous, and Next preserve draft progress, while completed steps can be revisited before finalization. Required validation blocks completion when required encounter or review fields are missing.
 
-Prescription entry is generic-first. Investigation requests are request/documentation only, not interpretation. Follow-up creates a manual patient task.
+Care Assist is collapsible and explicitly requires doctor review. Its empty state does not infer findings, and it cannot autonomously write a diagnosis, assessment, treatment, medication, dose, or final clinical record.
+
+Encounter fields include chief complaint, HPI, examination, assessment, and plan. Completion/signature uses the existing permission and audit controls. Once signed, an encounter is immutable through normal editing and requires an audited amendment path.
+
+Prescription templates and medication shortcuts are doctor-owned starting points. Applying one creates an editable draft for the selected patient; the doctor must review patient context and required alerts before saving or printing. Investigation sets similarly create requests, not clinical recommendations.
