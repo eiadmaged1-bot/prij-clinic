@@ -166,7 +166,7 @@ Replace `submittedAt` with the current time and use `X-Prij-Dry-Run: true`.
 Store these values in Apps Script Properties, not in code or spreadsheet cells:
 
 - `PRIJ_INTAKE_WEBHOOK_URL`: approved public `/api/backend/external-intake/google-form` URL.
-- `PRIJ_INTAKE_SHARED_SECRET`: clinic-provided shared secret.
+- `PRIJ_EXTERNAL_INTAKE_SECRET`: clinic-provided shared secret.
 
 The Apps Script must construct the payload, call `JSON.stringify` once, calculate the Unix timestamp, sign `timestamp + "." + body`, and send that exact body. Log only response status, submission ID, and retry state; never log the secret or full submission.
 

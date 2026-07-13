@@ -14,13 +14,13 @@ async function main() {
   record.pass("3D medical icon system includes required modules");
 
   const doctorSource = await readFile("apps/web/app/doctor/page.tsx", "utf8");
-  for (const label of ["Doctor Mode", "Today&apos;s visits", "Open Patient", "Start Visit", "Waiting patients"]) {
+  for (const label of ["Doctor workspace", "Current patient", "Open next patient", "Find patient", "Start new visit", "Waiting patients", "Reports to review", "Follow-ups"]) {
     if (!doctorSource.includes(label)) throw new Error(`Doctor dashboard missing label: ${label}`);
   }
-  record.pass("doctor-friendly simple mode is implemented");
+  record.pass("compact doctor operational dashboard is implemented");
 
-  const visitSource = await readFile("apps/web/app/doctor/visit/page.tsx", "utf8");
-  for (const step of ["Complaint", "History", "Examination", "Impression", "Prescription", "Orders", "Follow-up", "Finish Visit"]) {
+  const visitSource = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
+  for (const step of ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"]) {
     if (!visitSource.includes(step)) throw new Error(`Guided visit step missing: ${step}`);
   }
   record.pass("guided visit workflow steps are implemented");
@@ -87,9 +87,7 @@ async function main() {
   }
   record.pass("AI Snapshot panel safety wording remains visible");
 
-  const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
-  const admin = adminLogin.token;
-  if (!admin) throw new Error("eyad login did not return token.");
+  const admin = await login(demoUsers.owner);
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");
   record.pass("admin tools remain protected from non-admin users");

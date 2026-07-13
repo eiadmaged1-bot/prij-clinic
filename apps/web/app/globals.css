@@ -922,7 +922,7 @@ body {
 }
 
 .mobile-topbar-brand {
-  display: inline-flex;
+  display: none;
   max-width: min(52vw, 28rem);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1909,8 +1909,10 @@ details.form-fieldset summary {
 .metric-card {
   display: grid;
   gap: 0.5rem;
-  aspect-ratio: 1 / 0.82;
-  min-height: 6.5rem;
+  aspect-ratio: auto;
+  height: 104px;
+  min-height: 104px;
+  max-height: 112px;
   align-content: space-between;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -4385,6 +4387,15 @@ button.obgyn-template-card {
 @media print {
 body {
     background: #ffffff;
+  }
+
+  html:has([data-prescription-print-page]),
+  body:has([data-prescription-print-page]) {
+    background: #fff !important;
+    height: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 148mm;
   }
 
   .sidebar,

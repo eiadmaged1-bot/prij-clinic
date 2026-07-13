@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
@@ -15,8 +15,6 @@ const loginText = {
     password: "Password",
     signIn: "Sign in",
     signingIn: "Signing in",
-    useOwnerLogin: "Use owner login",
-    fillOwnerLogin: "Fill owner login",
     connectionProblem: "Connection problem. Please check that the clinic server is running, then try again.",
     currentSession: "Current session",
     alreadyLoggedInAs: "Already logged in as",
@@ -57,7 +55,9 @@ function LoginLanguageSwitcher() {
 export default function LoginPage() {
   return (
     <I18nProvider>
-      <LoginContent />
+      <Suspense fallback={<main className="login-page"><p className="muted">Preparing secure sign in…</p></main>}>
+        <LoginContent />
+      </Suspense>
     </I18nProvider>
   );
 }
@@ -103,11 +103,8 @@ function LoginContent() {
       <main className="page centered">
         <section className="login-panel login-card-single">
           <span hidden>{text.signIn}</span>
-          <span hidden>{text.useOwnerLogin}</span>
           <span hidden>{text.open}</span>
           <span hidden>{text.switchAccount}</span>
-          <span hidden>Use Owner Login</span>
-          <span hidden>Use Owner Login</span>
           <div>
             <p className="eyebrow">{text.staffAccess}</p>
             <h1>{OFFICIAL_CLINIC_NAME}</h1>
@@ -127,7 +124,6 @@ function LoginContent() {
           <span hidden>Go to Dashboard</span>
           <span hidden>Go to Accounts</span>
           <span hidden>Log out and switch account</span>
-          <span hidden>Use Owner Login</span>
           <div>
             <p className="eyebrow">{text.currentSession}</p>
             <h1>{text.alreadyLoggedInAs} {session.user.displayName}</h1>
@@ -151,7 +147,6 @@ function LoginContent() {
   return (
     <main className="page centered premium-login-page">
       <form className="login-panel premium-login-card premium-depth-card" onSubmit={submit}>
-        <span hidden>Use Owner Login</span>
         <div className="login-language-row">
           <span className="eyebrow">{OFFICIAL_CLINIC_NAME}</span>
           <LoginLanguageSwitcher />

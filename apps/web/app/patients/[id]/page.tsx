@@ -1094,43 +1094,6 @@ function MiniCount({ label, value, tone = "" }: { label: string; value: number; 
   );
 }
 
-function MedicalPanel({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
-  const medicationCount = related.medications?.length ?? 0;
-  const allergyCount = related.allergies?.length ?? 0;
-  const pregnancyCount = related.pregnancy?.length ?? 0;
-  const reportCount = related.files?.length ?? 0;
-
-  return (
-    <section className="doctor-friendly-grid">
-      <article className="panel">
-        <div className="section-heading">
-          <div>
-            <h2>Medical summary</h2>
-            <p className="muted">A clean overview for the doctor before opening detailed tabs.</p>
-          </div>
-          <ThreeDMedicalIcon name="doctor" size="sm" />
-        </div>
-        <dl className="profile-grid">
-          <div><dt>Patient type</dt><dd>{patient.patientType ?? "General"}</dd></div>
-          <div><dt>Pregnancy records</dt><dd>{pregnancyCount}</dd></div>
-          <div><dt>Medication entries</dt><dd>{medicationCount}</dd></div>
-          <div><dt>Allergy entries</dt><dd>{allergyCount}</dd></div>
-          <div><dt>Reports</dt><dd>{reportCount}</dd></div>
-          <div className="wide"><dt>Doctor note</dt><dd>{patient.notes || "No medical note saved yet."}</dd></div>
-        </dl>
-      </article>
-      <article className="panel next-step-card">
-        <ThreeDMedicalIcon name="prescription" size="lg" />
-        <h2>Medication context</h2>
-        <p className="muted">Medication and allergy information is reviewed from its own tab. Market strength and form stay reference metadata only.</p>
-        <button className="button secondary" type="button" onClick={() => document.querySelector<HTMLButtonElement>('[data-tab-key="medications"]')?.click()}>
-          Open medications
-        </button>
-      </article>
-    </section>
-  );
-}
-
 function ClinicalPanel({ patient, visits }: { patient: Patient; visits: GynecologyVisit[] }) {
   const cards: Array<[string, string, string, IconName]> = [
     [`/patients/${patient.id}`, "Start Visit", "Open the guided visit workflow from the Doctor Visit tab.", "encounter"],

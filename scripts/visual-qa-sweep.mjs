@@ -43,12 +43,12 @@ const blockedWords = [
 ];
 
 const requiredText = {
-  "/login": ["Dr Maged Attia Clinics", "Sign in", "Use Owner Login"],
+  "/login": ["Dr Maged Attia Clinics", "Sign in"],
   "/dashboard": ["Clinic Home", "Quick actions"],
-  "/doctor": ["Doctor Mode", "Open Patient", "Start Visit", "Waiting patients"],
-  "/doctor/visit": ["Guided Visit", "Save Draft"],
-  "/patients": ["Patient files", "New Patient File", "Search patient files"],
-  "/patients/new": ["New patient file", "Save and open patient file"],
+  "/doctor": ["Doctor workspace", "Open next patient", "Find patient", "Start new visit", "Waiting patients"],
+  "/doctor/visit": ["Patient context is required"],
+  "/patients": ["Patient files", "New Patient File", "Search patient by name"],
+  "/patients/new": ["New Patient", "Save file only"],
   "/admin": ["Owner Control Center", "Access Overview"],
   "/admin/appearance": ["Appearance", "Set as default"],
   "/admin/accounts": ["Accounts", "Create account", "Permission"],
@@ -87,7 +87,7 @@ function assertLayout(page, html) {
   const hasMainLayout = /app-shell|login-shell|hero-shell|page centered/.test(html);
   if (!hasMainLayout) throw new Error(`${page} did not render the expected main layout.`);
 
-  if (page !== "/login" && !/nav-item|Doctor Mode|Patient files/.test(html)) {
+  if (page !== "/login" && !/nav-item|Doctor workspace|Patient files/.test(html)) {
     throw new Error(`${page} did not render visible navigation.`);
   }
 
@@ -99,9 +99,7 @@ function assertLayout(page, html) {
 async function main() {
   await waitForApi();
 
-  const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
-  const adminToken = adminLogin.token;
-  if (!adminToken) throw new Error("Local owner login did not return a token.");
+  const adminToken = await login(demoUsers.owner);
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");
@@ -149,14 +147,10 @@ async function main() {
   record.pass("protocol and AI safety screens avoid code-like text");
 
   const doctorHtml = await fetchHtml("/doctor");
-  for (const label of ["Open Patient", "Start Visit", "Waiting patients"]) {
-    if (!visibleText(doctorHtml).includes(label)) throw new Error(`Doctor Mode missing ${label}.`);
+  for (const label of ["Open next patient", "Find patient", "Start new visit", "Waiting patients", "Reports to review", "Follow-ups"]) {
+    if (!visibleText(doctorHtml).includes(label)) throw new Error(`Doctor workspace missing ${label}.`);
   }
-  if (!/medical-icon/.test(doctorHtml)) throw new Error("Doctor Mode did not render medical icons.");
-  for (const label of ["OB/GYN Templates", "New pregnancy booking", "Ultrasound visit"]) {
-    if (!visibleText(doctorHtml).includes(label)) throw new Error(`Doctor Mode missing OB/GYN template label ${label}.`);
-  }
-  record.pass("doctor mode cards and icon labels are visible");
+  record.pass("doctor operational cards and primary actions are visible");
 
   const patientHtml = await fetchHtml(`/patients/${patient.id}`);
   for (const label of ["Patient file", "New Encounter"]) {
@@ -164,24 +158,13 @@ async function main() {
   }
   const patientSource = `${await readFile("apps/web/app/patients/[id]/page.tsx", "utf8")}\n${await readFile("apps/web/app/navigation-registry.ts", "utf8")}`;
   for (const label of [
-    "Summary",
-    "Medical",
-    "Clinical",
-    "Appointments",
-    "Encounters",
+    "Overview",
+    "History",
+    "Current Visit",
     "Prescriptions",
-    "Orders",
-    "Reports",
-    "Pregnancy",
-    "Ultrasound",
-    "Billing",
-    "Consents",
-    "AI Drafts",
-    "Protocol Atlas",
-    "Calculators",
-    "Medications",
-    "Allergies",
-    "Medication Safety",
+    "Investigations & Results",
+    "Women’s Health",
+    "Documents",
     "Timeline",
     "Pregnancy Overview",
     "Antenatal Visits",
@@ -201,7 +184,7 @@ async function main() {
   }
   record.pass("patient file tabs and primary actions are visible");
 
-  for (const forbidden of ["Pregnancy/OB", "General Gynecology", "AI Snapshot", "Billing/Finance", "Raw JSON", "Prisma", "JWT", "RBAC"]) {
+  for (const forbidden of ["Raw JSON", "Prisma", "JWT", "RBAC"]) {
     if (patientSource.includes(forbidden)) throw new Error(`Patient workspace contains outdated or technical wording: ${forbidden}.`);
   }
   record.pass("patient workspace avoids outdated and code-like labels");

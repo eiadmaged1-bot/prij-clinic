@@ -6,7 +6,7 @@ Pharmacology search supports generic name, brand/trade name, ingredient, family/
 
 Profiles display only stored source-backed fields: generic/brands, class, form/strength, warnings, pregnancy/lactation reference fields, interactions, allergy context, source, review status, last review, and country availability. Missing data is shown as unavailable/unknown and never interpreted as safe.
 
-Observed sprint baseline: 35 generic rows, 53 family rows, 1 product row, 15 market variants, and 30 source rows. The 15 variants are demo/reference fixtures; no official production catalog was inferred from them.
+Observed sprint baseline: 35 generic rows, 53 family rows, 1 product row, 15 market variants, 30 drug-market source rows, and 7 medication-data source rows. All 15 variants are demo/reference fixtures; non-demo/official variants, verified official rows, import runs, and open review items remain 0.
 
 ## Owner/Admin import
 

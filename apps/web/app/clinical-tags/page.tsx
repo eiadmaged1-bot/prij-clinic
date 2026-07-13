@@ -47,7 +47,6 @@ export default function ClinicalTagsPage() {
 
   useEffect(() => {
     void listClinicalTagDefinitions().catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const sortedPatients = useMemo(() => sortRows(patients, sortMode), [patients, sortMode]);

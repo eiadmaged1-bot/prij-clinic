@@ -19,7 +19,7 @@ Implemented:
 - Medication reference search/profile recovery plus Owner/Admin dry-run import, duplicate validation, provenance, review queue, and safe archive.
 - HMAC-protected, replay-resistant, idempotent Google Form intake with pending review and no automatic patient merge.
 
-Observed medication reference baseline during this sprint: 35 generic rows, 53 family rows, 1 product row, 15 market variants, and 30 source rows. The 15 market variants are demo/reference fixtures; no imported official production catalog was claimed.
+Observed medication reference baseline during this sprint: 35 generic rows, 53 family rows, 1 medication product row, 15 market variants, 30 drug-market source rows, and 7 medication-data source rows. All 15 market variants are demo/reference fixtures; non-demo/official variants remain 0.
 
 Safety status:
 
@@ -30,4 +30,4 @@ Safety status:
 - External intake remains pending and untrusted until an authorized reviewer acts; matching never auto-merges.
 - No database reset/drop or migration deletion was performed.
 
-Automated checks are being completed on this branch. Manual multi-resolution and public-tunnel results are recorded separately in `docs/MANUAL_QA_REPORT.md`; unverified items are not represented as passing.
+The final local build/test matrix and 12-case multi-resolution desktop role QA pass. Public-tunnel QA is partial because the configured tunnel returns 404 for same-origin health; exact evidence and blocked checks are recorded in `docs/MANUAL_QA_REPORT.md`.

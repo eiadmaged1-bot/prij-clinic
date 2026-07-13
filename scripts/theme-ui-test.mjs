@@ -14,10 +14,13 @@ async function main() {
   record.pass("theme registry includes required appearances");
 
   const loginSource = await readFile("apps/web/app/login/page.tsx", "utf8");
-  if (!loginSource.includes('ownerLoginId = "eyad"') || !loginSource.includes('ownerPassword = "eyad"') || !loginSource.includes("Use Owner Login")) {
-    throw new Error("Login page does not expose local owner login shortcut.");
+  if (!loginSource.includes('autoComplete="username"') || !loginSource.includes('autoComplete="current-password"')) {
+    throw new Error("Login page does not expose the normal secure credential form.");
   }
-  record.pass("login page renders local owner login shortcut");
+  if (/owner(?:LoginId|Password)\s*=|Use Owner Login|Fill owner login/.test(loginSource)) {
+    throw new Error("Login page embeds an owner credential shortcut.");
+  }
+  record.pass("login page uses normal credentials without an embedded owner shortcut");
 
   const dashboardSource = await readFile("apps/web/app/dashboard/page.tsx", "utf8");
   for (const label of ["My Apps", "All Apps", "Patients", "Appointments", "Queue", "AI Draft Review", "Owner portal", "Clinic Command"]) {
@@ -49,9 +52,7 @@ async function main() {
   }
   record.pass("patient tabs are registered independently of theme");
 
-  const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
-  const admin = adminLogin.token;
-  if (!admin) throw new Error("eyad login did not return token.");
+  const admin = await login(demoUsers.owner);
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/settings/appearance", reception), 403, "non-admin appearance settings");

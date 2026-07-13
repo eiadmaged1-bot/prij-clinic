@@ -42,17 +42,15 @@ export default function DoctorModePage() {
     Promise.all([
       fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers }),
       fetch(`${getApiBaseUrl()}/appointments`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/dashboard/summary`, { credentials: "include", headers })
+      fetch(`${getApiBaseUrl()}/reports`, { credentials: "include", headers })
     ])
-      .then(async ([queueResponse, appointmentResponse, summaryResponse]) => {
+      .then(async ([queueResponse, appointmentResponse, reportsResponse]) => {
         const queueData = queueResponse.ok ? await queueResponse.json() : { queueTickets: [] };
         const appointmentData = appointmentResponse.ok ? await appointmentResponse.json() : { appointments: [] };
+        const reportsData = reportsResponse.ok ? await reportsResponse.json() as { reports?: Array<{ reviewedAt?: string | null }> } : { reports: [] };
         setQueue((queueData.queueTickets ?? []).slice(0, 6));
         setAppointments((appointmentData.appointments ?? []).slice(0, 6));
-        if (summaryResponse.ok) {
-          const summary = await summaryResponse.json() as { operational?: { pendingReports?: number } };
-          setPendingReports(summary.operational?.pendingReports ?? 0);
-        }
+        setPendingReports((reportsData.reports ?? []).filter((report) => !report.reviewedAt).length);
         setStatus("Ready");
       })
       .catch(() => setStatus("Could not load today's work"));

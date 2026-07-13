@@ -98,16 +98,6 @@
 }
 
 @media print {
-  :global(html),
-  :global(body) {
-    background: #fff !important;
-    height: auto;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 148mm;
-  }
-
   .screenToolbar { display: none !important; }
   .paper { margin: 0; }
 }
-
