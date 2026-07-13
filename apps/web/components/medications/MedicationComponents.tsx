@@ -18,8 +18,10 @@ import {
   type DrugMarketProduct
 } from "../../lib/drug-market";
 
-export function MedicationSearchBox() {
-  const [query, setQuery] = useState("");
+export function MedicationSearchBox({ queryValue, onQueryChange, onSelect, onAddToPrescription }: { queryValue?: string; onQueryChange?: (value: string) => void; onSelect?: (result: MedicationResult) => void; onAddToPrescription?: (result: MedicationResult) => void } = {}) {
+  const [localQuery, setLocalQuery] = useState("");
+  const query = queryValue ?? localQuery;
+  const setQuery = (value: string) => { if (onQueryChange) onQueryChange(value); else setLocalQuery(value); };
   const [results, setResults] = useState<MedicationResult[]>([]);
   const [status, setStatus] = useState("Ready");
 
@@ -57,13 +59,13 @@ export function MedicationSearchBox() {
       <p className="muted">{status}</p>
       {query.trim().length < 2 ? <p className="notice">Search medication by generic name, brand/trade alias, class/family, or function.</p> : null}
       <div className="dense-card-list">
-        {results.map((result) => <MedicationResultCard key={`${result.type}-${result.id}`} result={result} />)}
+        {results.map((result) => <MedicationResultCard key={`${result.type}-${result.id}`} result={result} onSelect={onSelect} onAddToPrescription={onAddToPrescription} />)}
       </div>
     </section>
   );
 }
 
-export function MedicationResultCard({ result }: { result: MedicationResult }) {
+export function MedicationResultCard({ result, onSelect, onAddToPrescription }: { result: MedicationResult; onSelect?: (result: MedicationResult) => void; onAddToPrescription?: (result: MedicationResult) => void }) {
   return (
     <article className="data-row dense">
       <div className="data-row-header">
@@ -78,13 +80,12 @@ export function MedicationResultCard({ result }: { result: MedicationResult }) {
         <div><dt>Lactation</dt><dd>{result.verificationStatus === "verified" ? "Reviewed source available" : "Review required"}</dd></div>
         <div><dt>Strength and form</dt><dd>{[result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Market variant only when listed"}</dd></div>
       </dl>
-      <button className="button secondary compact" type="button">Add to prescription</button>
-      {result.type === "generic_medication" ? <PregnancyLactationSafetyProfile medicationGenericId={result.id} /> : null}
+      <div className="form-actions"><button className="button secondary compact" type="button" onClick={() => onSelect?.(result)}>View profile</button>{onAddToPrescription ? <button className="button secondary compact" type="button" onClick={() => onAddToPrescription(result)}>Add to prescription</button> : null}</div>
     </article>
   );
 }
 
-export function DrugFamilyBrowser() {
+export function DrugFamilyBrowser({ onChoose }: { onChoose?: (family: string) => void } = {}) {
   const [families, setFamilies] = useState<Array<{ id: string; code: string; displayName: string; verificationStatus: string }>>([]);
   const [selected, setSelected] = useState<{ id: string; code: string; displayName: string; verificationStatus: string } | null>(null);
   useEffect(() => { void listDrugFamilies().then(setFamilies).catch(() => setFamilies([])); }, []);
@@ -96,24 +97,35 @@ export function DrugFamilyBrowser() {
         <div className="compact-panel" key={group}>
           <h3>{group}</h3>
           <div className="chip-list">
-            {rows.map((family) => <button className="badge clickable-chip" key={family.id} type="button" onClick={() => setSelected(family)}>{family.displayName}</button>)}
+            {rows.map((family) => <button className="badge clickable-chip" key={family.id} type="button" onClick={() => { setSelected(family); onChoose?.(family.displayName); }}>{family.displayName}</button>)}
           </div>
         </div>
       ))}
-      {selected ? <article className="compact-panel"><div className="section-heading"><h3>{selected.displayName}</h3><span className="badge">{medicationStatusLabel(selected.verificationStatus)}</span></div><p className="muted">Related medication family. Use as a search filter only; do not auto-prescribe.</p><Link className="button secondary compact" href={`/medications/search?q=${encodeURIComponent(selected.displayName)}`}>Use in medication search</Link></article> : null}
+      {selected ? <article className="compact-panel"><div className="section-heading"><h3>{selected.displayName}</h3><span className="badge">{medicationStatusLabel(selected.verificationStatus)}</span></div><p className="muted">Related medication family. Use as a search filter only; do not auto-prescribe.</p>{onChoose ? <button className="button secondary compact" type="button" onClick={() => onChoose(selected.displayName)}>Use in medication search</button> : <Link className="button secondary compact" href={`/medications?q=${encodeURIComponent(selected.displayName)}`}>Use in medication search</Link>}</article> : null}
     </section>
   );
 }
 
-export function MedicationProfileCard() {
-  return <section className="panel"><h2>Medication Profile</h2><p className="muted">Profiles show labels and review flags only after source verification. They do not provide self-use directions.</p></section>;
+export function MedicationProfileCard({ medication }: { medication?: MedicationResult | null }) {
+  if (!medication) return <section className="panel"><h2>Medication Profile</h2><p className="muted">Select a medication to view its clinical reference profile.</p></section>;
+  return <section className="panel"><div className="section-heading"><h2>{medication.genericName || medication.tradeName || "Medication profile"}</h2><span className="badge">{medicationStatusLabel(medication.reviewStatus || medication.verificationStatus)}</span></div><dl>
+    <div><dt>Generic</dt><dd>{medication.genericName || "Not listed"}</dd></div>
+    <div><dt>Brands</dt><dd>{medication.tradeName || medication.brandName || "No reviewed brand listed"}</dd></div>
+    <div><dt>Family / class</dt><dd>{[medication.family, medication.className, medication.pharmacologicClass].filter(Boolean).join(" · ") || "Not listed"}</dd></div>
+    <div><dt>Form / strength</dt><dd>{[medication.strengthText, medication.dosageForm, medication.route].filter(Boolean).join(" · ") || "Select a reviewed product variant when available"}</dd></div>
+    <div><dt>Country availability</dt><dd>{medication.countryCode || "No reviewed market availability listed"}</dd></div>
+    <div><dt>Warnings and interactions</dt><dd>No verified interaction statement is shown unless source-reviewed data is available. Doctor review required.</dd></div>
+    <div><dt>Source</dt><dd>{medication.source || "Curated reference; source review required"}</dd></div>
+    <div><dt>Last reviewed</dt><dd>{medication.lastReviewed ? formatDate(medication.lastReviewed) : "Not reviewed"}</dd></div>
+  </dl>{medication.type === "generic_medication" ? <PregnancyLactationSafetyProfile medicationGenericId={medication.id} /> : <p className="muted">Pregnancy, lactation, and allergy profiles require a linked generic reference.</p>}</section>;
 }
 
-export function MedicationSafetyPanel({ patientId }: { patientId?: string }) {
+export function MedicationSafetyPanel({ patientId, medication }: { patientId?: string; medication?: MedicationResult | null }) {
   const [status, setStatus] = useState("No check run");
   async function runCheck() {
+    if (!patientId || !medication) { setStatus("Select a patient and medication before running a safety check."); return; }
     try {
-      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Herbal supplement review item", family: "herbal/supplement" }] }) as { alerts?: Array<{ severity: string }> };
+      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: medication.genericName || medication.tradeName || "", family: medication.family || "" }] }) as { alerts?: Array<{ severity: string }> };
       setStatus(`Draft safety review created with ${result.alerts?.length ?? 0} alert(s)`);
     } catch {
       setStatus("Safety review requires Doctor, Admin, or Owner access");
@@ -123,17 +135,18 @@ export function MedicationSafetyPanel({ patientId }: { patientId?: string }) {
     <section className="panel">
       <div className="section-heading"><h2>Medication Safety</h2><SafetyAlertBadge severity="major" /></div>
       <p className="muted">Draft alerts support clinician review only. They never edit or sign a prescription.</p>
-      <button className="button" onClick={runCheck} type="button">Run Safety Check</button>
+      <button className="button" disabled={!patientId || !medication} onClick={runCheck} type="button">Run Safety Check</button>
       <p className="muted">{status}</p>
     </section>
   );
 }
 
-export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
+export function PrescriptionSafetyPanel({ patientId, prescriptionId }: { patientId?: string; prescriptionId?: string }) {
   const [status, setStatus] = useState("No prescription check run");
   async function runCheck() {
+    if (!patientId || !prescriptionId) { setStatus("Save a patient-linked prescription draft before running this check."); return; }
     try {
-      const result = await runMedicationSafetyCheck({ patientId, medications: [{ displayName: "Prescription review item", family: "prescription draft" }] }) as { alerts?: Array<{ severity: string }> };
+      const result = await runMedicationSafetyCheck({ patientId, prescriptionId }) as { alerts?: Array<{ severity: string }> };
       setStatus(`Draft prescription safety review created with ${result.alerts?.length ?? 0} alert(s)`);
     } catch {
       setStatus("Prescription safety review requires clinical access");
@@ -144,7 +157,7 @@ export function PrescriptionSafetyPanel({ patientId }: { patientId?: string }) {
       <div className="section-heading"><h2>Prescription Safety</h2><SafetyAlertBadge severity="major" /></div>
       <p className="muted">Prescription checks are draft safety support for the doctor. They do not prescribe, sign, or change final prescriptions.</p>
       <p className="warning-text">Pregnancy and lactation profile flags are reference metadata only. They never populate medication instructions or treatment details.</p>
-      <button className="button" onClick={runCheck} type="button">Run Prescription Check</button>
+      <button className="button" disabled={!patientId || !prescriptionId} onClick={runCheck} type="button">Run Prescription Check</button>
       <p className="muted">{status}</p>
     </section>
   );

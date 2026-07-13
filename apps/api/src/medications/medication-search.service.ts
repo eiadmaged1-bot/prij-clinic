@@ -10,14 +10,20 @@ export class MedicationSearchService {
     const normalized = normalizeMedicationSearch(query);
     const contains = normalized || "__empty__";
 
-    const [families, ingredients, products, herbals, marketVariants] = await Promise.all([
+    const [generics, families, ingredients, products, herbals, marketVariants] = await Promise.all([
+      this.prisma.medicationGeneric.findMany({
+        where: { isActive: true },
+        include: { tags: { include: { tag: true } }, safetyProfile: true },
+        orderBy: { genericName: "asc" },
+        take: 500
+      }),
       this.prisma.drugFamily.findMany({
         where: { normalizedSearchText: { contains, mode: "insensitive" } },
         take,
         orderBy: { displayName: "asc" }
       }),
       this.prisma.medicationIngredient.findMany({
-        where: { normalizedSearchText: { contains, mode: "insensitive" } },
+        where: { OR: [{ normalizedSearchText: { contains, mode: "insensitive" } }, { therapeuticClass: { contains, mode: "insensitive" } }, { pharmacologicClass: { contains, mode: "insensitive" } }, { atcCode: { contains, mode: "insensitive" } }] },
         include: { familyMemberships: { include: { family: true } } },
         take,
         orderBy: { genericName: "asc" }
@@ -35,6 +41,7 @@ export class MedicationSearchService {
       }),
       this.prisma.drugMarketVariant.findMany({
         where: {
+          isDemo: false,
           OR: [
             { tradeName: { contains, mode: "insensitive" } },
             { genericName: { contains, mode: "insensitive" } },
@@ -42,6 +49,7 @@ export class MedicationSearchService {
             { dosageForm: { contains, mode: "insensitive" } },
             { route: { contains, mode: "insensitive" } },
             { registrationNumber: { contains, mode: "insensitive" } },
+            { countryCode: { contains, mode: "insensitive" } },
             { product: { normalizedSearchText: { contains, mode: "insensitive" } } }
           ]
         },
@@ -51,9 +59,38 @@ export class MedicationSearchService {
       })
     ]);
 
+    const matchingGenerics = generics.filter((generic) => {
+      const searchText = normalizeMedicationSearch([
+        generic.genericName,
+        generic.familyName,
+        generic.className,
+        generic.pharmacologicClass,
+        generic.parentClass,
+        ...(Array.isArray(generic.aliases) ? generic.aliases.map(String) : []),
+        ...generic.tags.flatMap((membership) => [membership.tag.name, ...(Array.isArray(membership.tag.aliases) ? membership.tag.aliases.map(String) : [])])
+      ].filter(Boolean).join(" "));
+      return normalized.length >= 2 && searchText.includes(normalized);
+    }).slice(0, take);
+
     return {
       query,
       results: [
+        ...matchingGenerics.map((generic) => ({
+          type: "generic_medication",
+          id: generic.id,
+          genericName: generic.genericName,
+          brandName: null,
+          tradeName: null,
+          family: generic.familyName,
+          className: generic.className,
+          pharmacologicClass: generic.pharmacologicClass,
+          verificationStatus: generic.reviewStatus,
+          source: generic.sourceType,
+          reviewStatus: generic.safetyProfile?.reviewStatus ?? generic.reviewStatus,
+          lastReviewed: generic.safetyProfile?.reviewedAt ?? generic.safetyProfile?.lastCheckedAt ?? null,
+          pregnancyProfile: generic.safetyProfile?.legacyPregnancyCategory ?? null,
+          lactationProfile: generic.safetyProfile?.lactationRiskLevel ?? null
+        })),
         ...families.map((family) => ({
           type: "family",
           id: family.id,
@@ -104,6 +141,8 @@ export class MedicationSearchService {
           dosageForm: variant.dosageForm,
           strengthText: variant.strengthText,
           countryCode: variant.countryCode,
+          source: variant.sourceId ? "source_tracked" : null,
+          lastReviewed: variant.updatedAt,
           verificationStatus: variant.verificationStatus
         })),
         ...herbals.map((herbal) => ({

@@ -37,8 +37,10 @@ export default function PrescriptionsPage() {
     const params = new URLSearchParams(window.location.search);
     const routePatientId = params.get("patientId");
     const routeVisitId = params.get("visitId") ?? params.get("encounterId");
+    const routeMedication = params.get("medication")?.trim();
     if (routePatientId) setPatientId(routePatientId);
     if (routeVisitId) setEncounterId(routeVisitId);
+    if (routeMedication) setItems([{ ...emptyItem, medicationName: routeMedication }]);
     void load();
   }, []);
 

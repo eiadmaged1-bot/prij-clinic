@@ -33,6 +33,12 @@ export type MedicationResult = {
   dosageForm?: string | null;
   strengthText?: string | null;
   verificationStatus?: string | null;
+  reviewStatus?: string | null;
+  source?: string | null;
+  lastReviewed?: string | null;
+  countryCode?: string | null;
+  pregnancyProfile?: string | null;
+  lactationProfile?: string | null;
 };
 
 export function searchMedications(query: string) {
