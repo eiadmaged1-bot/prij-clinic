@@ -36,7 +36,7 @@ const [countries, sources, products, availabilities, importRuns, snapshots, revi
   prisma.drugMarketSource.findMany({ where: sourceIds.length ? { OR: [{ id: { in: sourceIds } }, { sourceType: "official_upload" }] } : { sourceType: "official_upload" }, orderBy: { code: "asc" } }),
   prisma.drugMarketProduct.findMany({ where: { id: { in: productIds } }, orderBy: { tradeName: "asc" } }),
   prisma.drugMarketAvailability.findMany({ where: { productId: { in: productIds } }, orderBy: [{ countryCode: "asc" }, { productId: "asc" }] }),
-  prisma.drugMarketImportRun.findMany({ where: importRunIds.length ? { id: { in: importRunIds } } : { id: "__none__" }, orderBy: { startedAt: "asc" } }),
+  prisma.drugMarketImportRun.findMany({ where: { id: { in: importRunIds } }, orderBy: { startedAt: "asc" } }),
   prisma.officialMedicationSourceSnapshot.findMany({ where: { OR: [{ importRunId: { in: importRunIds } }, { sourceId: { in: sourceIds } }] }, orderBy: { fetchedAt: "asc" } }),
   prisma.drugMarketManualReviewQueue.findMany({ where: { OR: [{ variantId: { in: variants.map((row) => row.id) } }, { productId: { in: productIds } }] }, orderBy: { createdAt: "asc" } }),
   prisma.drugMarketMergeCandidate.findMany({ where: { OR: [{ primaryProductId: { in: productIds } }, { candidateProductId: { in: productIds } }] }, orderBy: { createdAt: "asc" } })

@@ -16,35 +16,67 @@ export class DrugMarketImportService {
     private readonly badges: DrugMarketBadgeService
   ) {}
 
-  async importRows(dto: { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string }, user: AuthUser) {
+  async previewRows(dto: ImportRowsDto, user: AuthUser) {
+    const source = await this.resolveSource(dto.sourceCode);
+    assertAllowedSourcePolicy(source);
+    const rows = mappedRows(dto);
+    if (!rows.length) throw new BadRequestException("The import file does not contain any rows.");
+    if (rows.length > 10000) throw new BadRequestException("Dry run is limited to 10,000 rows per batch.");
+    const seen = new Set<string>();
+    const errors: Array<{ rowNumber: number; message: string }> = [];
+    const preview: Array<Record<string, string | null>> = [];
+    let duplicateCount = 0;
+    for (const [index, row] of rows.entries()) {
+      try {
+        const normalized = normalizeRow(row, source.importerKey ?? "generic-official-json", source.countryCode ?? row.countryCode);
+        if (!normalized.tradeName && !normalized.genericName) throw new Error("Trade name or generic name is required.");
+        if (!normalized.countryCode) throw new Error("Country is required.");
+        const hash = sourceHash(normalized);
+        const databaseDuplicate = await this.prisma.drugMarketVariant.findUnique({ where: { countryCode_sourceRowHash: { countryCode: normalized.countryCode, sourceRowHash: hash } }, select: { id: true } });
+        if (seen.has(hash) || databaseDuplicate) duplicateCount += 1;
+        seen.add(hash);
+        if (preview.length < 20) preview.push({ tradeName: normalized.tradeName || null, genericName: normalized.genericName || null, countryCode: normalized.countryCode, strengthText: normalized.strengthText || null, dosageForm: normalized.dosageForm || null });
+      } catch (error) {
+        errors.push({ rowNumber: index + 1, message: error instanceof Error ? error.message : "Row validation failed." });
+      }
+    }
+    await this.audit.record({ actorUserId: user.id, action: "drug_market.import_dry_run", resourceType: "drug_market_import_preview", severity: "high", metadataJson: { sourceCode: source.code, rowCount: rows.length, errorCount: errors.length, duplicateCount } });
+    return { dryRun: true, rowCount: rows.length, validCount: rows.length - errors.length, errorCount: errors.length, duplicateCount, needsReviewCount: rows.length - errors.length, preview, errors: errors.slice(0, 100) };
+  }
+
+  async importRows(dto: ImportRowsDto, user: AuthUser) {
     const source = dto.sourceCode
       ? await this.prisma.drugMarketSource.findUnique({ where: { code: dto.sourceCode } })
       : await this.prisma.drugMarketSource.findUnique({ where: { code: "LOCAL_MANUAL" } });
     if (!source) throw new BadRequestException("Approved source is required.");
     assertAllowedSourcePolicy(source);
 
-    const job = await this.prisma.drugMarketImportJob.create({
-      data: { sourceId: source.id, status: "imported", fileName: dto.fileName ?? "manual rows", rowCount: dto.rows?.length ?? 0, requestedByUserId: user.id }
-    });
+    const rows = mappedRows(dto);
+    if (!rows.length) throw new BadRequestException("The import file does not contain any rows.");
+    if (rows.length > 10000) throw new BadRequestException("Imports are limited to 10,000 rows per batch.");
     const run = await this.prisma.drugMarketImportRun.create({
       data: {
         sourceId: source.id,
         status: "running",
         dryRun: false,
-        rowCount: dto.rows?.length ?? 0,
-        totalRowsSeen: dto.rows?.length ?? 0,
+        rowCount: rows.length,
+        totalRowsSeen: rows.length,
+        sourceUrl: cleanText(dto.sourceUrl),
         sourceFileName: dto.fileName ?? "manual rows",
         sourceFetchedAt: new Date(),
         parserName: source.importerKey ?? "generic-official-json",
-        parserVersion: "v0.8",
+        parserVersion: cleanText(dto.sourceVersion) ?? "manual-import-v1",
         createdByUserId: user.id
       }
+    });
+    const job = await this.prisma.drugMarketImportJob.create({
+      data: { sourceId: source.id, importRunId: run.id, status: "imported", fileName: dto.fileName ?? "manual rows", rowCount: rows.length, requestedByUserId: user.id }
     });
     let importedCount = 0;
     let errorCount = 0;
     let needsReviewCount = 0;
 
-    for (const [index, row] of (dto.rows ?? []).entries()) {
+    for (const [index, row] of rows.entries()) {
       try {
         const normalized = normalizeRow(row, source.importerKey ?? "generic-official-json", source.countryCode ?? row.countryCode);
         if (!normalized.tradeName && !normalized.genericName) throw new Error("Trade name or generic name is required.");
@@ -81,7 +113,7 @@ export class DrugMarketImportService {
       data: {
         status: errorCount ? "needs_review" : "imported",
         message: errorCount ? "Import completed with row warnings. Review required." : "Import completed. Rows remain review-gated until verified.",
-        parserConfidence: dto.rows?.length ? (dto.rows.reduce((sum, row) => sum + confidenceForRow(row), 0) / dto.rows.length) : null,
+        parserConfidence: rows.length ? (rows.reduce((sum, row) => sum + confidenceForRow(row), 0) / rows.length) : null,
         rowsImported: importedCount,
         rowsNeedsReview: needsReviewCount,
         rowsFailed: errorCount,
@@ -110,6 +142,19 @@ export class DrugMarketImportService {
     return updated;
   }
 
+  async archiveImportJob(id: string, user: AuthUser) {
+    const job = await this.prisma.drugMarketImportJob.findUnique({ where: { id } });
+    if (!job?.importRunId) throw new BadRequestException("This import batch cannot be safely archived.");
+    const result = await this.prisma.$transaction(async (tx) => {
+      const variants = await tx.drugMarketVariant.updateMany({ where: { importRunId: job.importRunId, verificationStatus: "needs_review" }, data: { verificationStatus: "retired" } });
+      await tx.drugMarketImportRun.update({ where: { id: job.importRunId! }, data: { status: "archived", message: "Unverified imported rows were archived. Verified rows were preserved." } });
+      await tx.drugMarketImportJob.update({ where: { id }, data: { status: "archived", summaryText: "Unverified rows archived; verified rows preserved." } });
+      return { archivedRows: variants.count, preservedVerifiedRows: true };
+    });
+    await this.audit.record({ actorUserId: user.id, action: "drug_market.import_batch_archived", resourceType: "drug_market_import_job", resourceId: id, severity: "high", metadataJson: result });
+    return result;
+  }
+
   async runConnector(connectorId: string, dryRun: boolean, user: AuthUser) {
     const connector = await this.prisma.drugMarketSourceConnector.findUnique({ where: { id: connectorId } });
     if (!connector) throw new BadRequestException("Connector not found.");
@@ -129,6 +174,25 @@ export class DrugMarketImportService {
     await this.audit.record({ actorUserId: user.id, action: dryRun ? "drug_market.connector_dry_run" : "drug_market.connector_run", resourceType: "drug_market_import_run", resourceId: run.id, severity: "high" });
     return run;
   }
+
+  private async resolveSource(sourceCode?: string) {
+    const source = sourceCode
+      ? await this.prisma.drugMarketSource.findUnique({ where: { code: sourceCode } })
+      : await this.prisma.drugMarketSource.findUnique({ where: { code: "LOCAL_MANUAL" } });
+    if (!source) throw new BadRequestException("Approved source is required.");
+    return source;
+  }
+}
+
+type ImportRowsDto = { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string; sourceUrl?: string; sourceVersion?: string; columnMapping?: Record<string, string> };
+
+function mappedRows(dto: ImportRowsDto) {
+  const mapping = dto.columnMapping ?? {};
+  return (dto.rows ?? []).map((row) => {
+    const mapped = { ...row };
+    for (const [target, sourceColumn] of Object.entries(mapping)) if (sourceColumn && row[sourceColumn] !== undefined) mapped[target] = String(row[sourceColumn]);
+    return mapped;
+  });
 }
 
 function normalizeRow(row: Record<string, string>, parserName: string, defaultCountry?: string | null) {
@@ -177,9 +241,7 @@ async function upsertProduct(prisma: PrismaService, row: ReturnType<typeof norma
 }
 
 async function upsertVariant(prisma: PrismaService, productId: string, sourceId: string, importRunId: string, row: ReturnType<typeof normalizeRow>) {
-  const sourceRowHash = createHash("sha256")
-    .update(`${row.countryCode}|${row.tradeName}|${row.genericName}|${row.strengthText}|${row.dosageForm}|${row.registrationNumber ?? ""}`)
-    .digest("hex");
+  const sourceRowHash = sourceHash(row);
   const strength = parseStrengthText(row.strengthText);
   const existing = await prisma.drugMarketVariant.findUnique({ where: { countryCode_sourceRowHash: { countryCode: row.countryCode, sourceRowHash } } });
   if (existing?.verificationStatus === "verified") {
@@ -253,6 +315,16 @@ async function upsertVariant(prisma: PrismaService, productId: string, sourceId:
       isDemo: false
     }
   });
+}
+
+function sourceHash(row: ReturnType<typeof normalizeRow>) {
+  return createHash("sha256")
+    .update(`${row.countryCode}|${row.tradeName}|${row.genericName}|${row.strengthText}|${row.dosageForm}|${row.registrationNumber ?? ""}`)
+    .digest("hex");
+}
+
+function cleanText(value?: string) {
+  return value?.trim() || null;
 }
 
 function parsePriceAmount(value?: string | null) {

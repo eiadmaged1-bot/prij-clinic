@@ -1544,6 +1544,7 @@ model DrugMarketImportJob {
   importedCount     Int      @default(0)
   errorCount        Int      @default(0)
   requestedByUserId String?  @db.Uuid
+  importRunId       String?  @db.Uuid
   summaryText       String?
   createdAt         DateTime @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime @updatedAt @db.Timestamptz(3)
@@ -1551,6 +1552,7 @@ model DrugMarketImportJob {
   errors DrugMarketImportRowError[]
 
   @@index([sourceId])
+  @@index([importRunId])
   @@index([status])
   @@index([createdAt])
 }

@@ -91,7 +91,11 @@ export class DrugMarketController {
 
   @Post("import/upload")
   @Permissions("drug_market.import")
-  upload(@Body() dto: { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string }, @CurrentUser() user: AuthUser) { return this.importService.importRows(dto, user); }
+  upload(@Body() dto: { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string; sourceUrl?: string; sourceVersion?: string; columnMapping?: Record<string, string> }, @CurrentUser() user: AuthUser) { return this.importService.importRows(dto, user); }
+
+  @Post("import/preview")
+  @Permissions("drug_market.import")
+  previewUpload(@Body() dto: { sourceCode?: string; rows?: Array<Record<string, string>>; fileName?: string; sourceUrl?: string; sourceVersion?: string; columnMapping?: Record<string, string> }, @CurrentUser() user: AuthUser) { return this.importService.previewRows(dto, user); }
 
   @Post("import/sfda")
   @Permissions("drug_market.import")
@@ -112,6 +116,10 @@ export class DrugMarketController {
   @Get("import/jobs/:id/errors")
   @Permissions("drug_market.import")
   importJobErrors(@Param("id") id: string) { return this.market.importJobErrors(id); }
+
+  @Post("import/jobs/:id/archive")
+  @Permissions("drug_market.import")
+  archiveImportJob(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.importService.archiveImportJob(id, user); }
 
   @Post("automation/connectors/:id/run")
   @Permissions("drug_market.automation")

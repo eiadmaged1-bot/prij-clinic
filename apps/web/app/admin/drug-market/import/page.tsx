@@ -1,5 +1,6 @@
 import { AppShell, SafetyAlert } from "../../../mvp-page";
 import { acceptedFileTypes, inboxRelativePath, loadOfficialMedicationImportStatus } from "../../../../server/official-medication-import-status";
+import { MedicationImportWorkspace } from "../../../../components/medications/MedicationImportWorkspace";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function AdminDrugMarketImportPage() {
       </section>
 
       <SafetyAlert />
+      <MedicationImportWorkspace />
 
       <section className="content-grid">
         <div className="metric-card">
