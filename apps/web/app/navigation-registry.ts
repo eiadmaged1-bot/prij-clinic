@@ -53,6 +53,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/ai-assistant", label: "AI Tools", icon: "ai", group: "Knowledge", adminOnly: true },
   { href: "/admin/accounts", label: "Users & Roles", icon: "reception", group: "Admin", adminOnly: true },
   { href: "/admin/services", label: "Services", icon: "billing", group: "Admin", adminOnly: true },
+  { href: "/admin/investigations", label: "Investigation Catalog", icon: "investigations", group: "Admin", adminOnly: true },
   { href: "/admin/settings", label: "Clinic Settings", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/admin/security-readiness", label: "Security", icon: "settings", group: "Admin", adminOnly: true },
   { href: "/admin/appearance", label: "Appearance", icon: "settings", group: "Admin", adminOnly: true },

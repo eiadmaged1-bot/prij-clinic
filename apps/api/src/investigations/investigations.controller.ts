@@ -1,10 +1,17 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CancelClinicalRequestDto, CreateClinicalRequestDto, CreateInvestigationOrderDto, UpdateInvestigationOrderStatusDto } from "./dto";
+import {
+  CancelClinicalRequestDto,
+  CreateClinicalRequestDto,
+  CreateInvestigationOrderDto,
+  InvestigationCatalogItemDto,
+  InvestigationFavoriteSetDto,
+  UpdateInvestigationOrderStatusDto
+} from "./dto";
 import { InvestigationsService } from "./investigations.service";
 
 @Controller("investigations")
@@ -34,6 +41,54 @@ export class InvestigationsController {
   @Permissions("investigation.read")
   unfavoriteCatalogItem(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.investigations.unfavoriteCatalogItem(id, user);
+  }
+
+  @Get("favorite-sets")
+  @Permissions("investigation.read")
+  listFavoriteSets(@CurrentUser() user: AuthUser) {
+    return this.investigations.listFavoriteSets(user);
+  }
+
+  @Post("favorite-sets")
+  @Permissions("investigation.read")
+  createFavoriteSet(@Body() dto: InvestigationFavoriteSetDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.createFavoriteSet(dto, user);
+  }
+
+  @Patch("favorite-sets/:id")
+  @Permissions("investigation.read")
+  updateFavoriteSet(@Param("id") id: string, @Body() dto: InvestigationFavoriteSetDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.updateFavoriteSet(id, dto, user);
+  }
+
+  @Post("favorite-sets/:id/duplicate")
+  @Permissions("investigation.read")
+  duplicateFavoriteSet(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.duplicateFavoriteSet(id, user);
+  }
+
+  @Delete("favorite-sets/:id")
+  @Permissions("investigation.read")
+  archiveFavoriteSet(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.archiveFavoriteSet(id, user);
+  }
+
+  @Get("admin/catalog")
+  @Permissions("investigations.manage_catalog")
+  listAdminCatalog(@Query("q") q: string | undefined) {
+    return this.investigations.listAdminCatalog(q);
+  }
+
+  @Post("admin/catalog")
+  @Permissions("investigations.manage_catalog")
+  createCatalogItem(@Body() dto: InvestigationCatalogItemDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.createCatalogItem(dto, user);
+  }
+
+  @Patch("admin/catalog/:id")
+  @Permissions("investigations.manage_catalog")
+  updateCatalogItem(@Param("id") id: string, @Body() dto: InvestigationCatalogItemDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.updateCatalogItem(id, dto, user);
   }
 
   @Get("orders")

@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, IsArray, IsEnum, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator";
 import { InvestigationCategory, InvestigationOrderStatus, InvestigationPriority } from "@prisma/client";
 
 export class InvestigationOrderItemDto {
@@ -33,6 +33,10 @@ export class CreateInvestigationOrderDto {
   @MaxLength(1000)
   notes?: string;
 
+  @IsOptional()
+  @IsDateString()
+  requestedFollowUpDate?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
@@ -48,6 +52,65 @@ export class UpdateInvestigationOrderStatusDto {
   @IsString()
   @MaxLength(500)
   reason?: string;
+}
+
+export class InvestigationFavoriteSetDto {
+  @IsString()
+  @MaxLength(120)
+  name!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  defaultVisitType?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID("4", { each: true })
+  investigationCatalogItemIds!: string[];
+}
+
+export class InvestigationCatalogItemDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  code?: string;
+
+  @IsString()
+  @MaxLength(180)
+  name!: string;
+
+  @IsString()
+  @MaxLength(120)
+  category!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  subcategory?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  clinicalGroup?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  modality?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  aliases?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
 }
 
 export class CancelClinicalRequestDto {
@@ -92,6 +155,10 @@ export class CreateClinicalRequestDto {
   @IsString()
   @MaxLength(1000)
   requestNote?: string;
+
+  @IsOptional()
+  @IsDateString()
+  requestedFollowUpDate?: string;
 
   @IsArray()
   @ArrayMinSize(1)

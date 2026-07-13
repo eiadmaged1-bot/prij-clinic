@@ -123,6 +123,7 @@ model User {
   createdFollicularMonitoringVisits  FollicularMonitoringVisit[] @relation("FollicularMonitoringCreatedBy")
   createdEstradiolResults            EstradiolResult[]           @relation("EstradiolResultsCreatedBy")
   investigationFavorites             InvestigationFavorite[]
+  investigationFavoriteSets          InvestigationFavoriteSet[]
   updatedVisitPriceSettings          VisitPriceAuditSetting[]    @relation("VisitPriceSettingsUpdatedBy")
   createdPatientClinicalTags         PatientClinicalTag[]        @relation("PatientClinicalTagsCreatedBy")
   reviewedExternalSubmissions        ExternalPatientSubmission[] @relation("ExternalSubmissionsReviewedBy")
@@ -1728,6 +1729,7 @@ model InvestigationCatalogItem {
 
   patientInvestigationHistory PatientInvestigationHistoryItem[]
   favorites InvestigationFavorite[]
+  favoriteSetItems InvestigationFavoriteSetItem[]
 
   @@index([category])
   @@index([subcategory])
@@ -1750,6 +1752,34 @@ model InvestigationFavorite {
 
   @@unique([userId, investigationCatalogItemId])
   @@index([investigationCatalogItemId])
+}
+
+model InvestigationFavoriteSet {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @db.Uuid
+  name             String
+  defaultVisitType String?
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  user  User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items InvestigationFavoriteSetItem[]
+
+  @@index([userId, active])
+}
+
+model InvestigationFavoriteSetItem {
+  id                         String @id @default(uuid()) @db.Uuid
+  favoriteSetId              String @db.Uuid
+  investigationCatalogItemId String @db.Uuid
+  position                   Int
+
+  favoriteSet              InvestigationFavoriteSet @relation(fields: [favoriteSetId], references: [id], onDelete: Cascade)
+  investigationCatalogItem InvestigationCatalogItem @relation(fields: [investigationCatalogItemId], references: [id], onDelete: Restrict)
+
+  @@unique([favoriteSetId, investigationCatalogItemId])
+  @@index([favoriteSetId, position])
 }
 
 model OperationCatalogItem {
@@ -1896,6 +1926,7 @@ model InvestigationOrder {
   orderSource        InvestigationOrderSource   @default(doctor)
   orderType          InvestigationCategory      @default(laboratory)
   clinicalQuestion   String?
+  requestedFollowUpDate DateTime?              @db.Date
   diagnosisText      String?
   status             InvestigationOrderStatus   @default(requested)
   priority           InvestigationPriority      @default(routine)
@@ -1928,6 +1959,7 @@ model InvestigationOrder {
   @@index([orderType])
   @@index([status])
   @@index([billingStatus])
+  @@index([requestedFollowUpDate])
 }
 
 model InvestigationOrderItem {

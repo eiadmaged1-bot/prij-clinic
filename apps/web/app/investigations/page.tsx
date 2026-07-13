@@ -9,51 +9,11 @@ import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
 type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean; isHighPriority?: boolean };
 type InvestigationTemplate = { name: string; category: string; subcategory?: string; items: string[] };
+type FavoriteSet = { id: string; name: string; defaultVisitType?: string | null; items: Array<{ investigationCatalogItem: CatalogItem }> };
 type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
 type Patient = PatientPickerPatient;
 
-const masterLabCategories = [
-  "Routine / Basic Women Health Labs",
-  "General Emergency / Inpatient Obs-Gyn Labs",
-  "Preconception Labs",
-  "Early Pregnancy / Booking Visit Labs",
-  "Prenatal Genetic / Fetal Screening Labs",
-  "Second / Third Trimester Routine Pregnancy Labs",
-  "Rh Isoimmunization / Alloimmunization",
-  "Hypertension / Preeclampsia / HELLP Labs",
-  "Gestational Diabetes / Diabetes in Pregnancy",
-  "Hyperemesis Gravidarum Labs",
-  "Intrahepatic Cholestasis of Pregnancy",
-  "Obstetric Hemorrhage / APH / PPH / Abruption",
-  "Preterm Labor / PPROM Labs",
-  "Pregnancy Infections / TORCH-type Evaluation",
-  "Anemia in Pregnancy / Gynecology",
-  "Abnormal Uterine Bleeding / Heavy Menstrual Bleeding",
-  "Amenorrhea / Oligomenorrhea",
-  "PCOS / Hyperandrogenism",
-  "Infertility / Subfertility",
-  "Recurrent Pregnancy Loss",
-  "Menopause / POI / Bone Health",
-  "Vaginal Discharge / Vaginitis / Cervicitis",
-  "PID / Pelvic Pain",
-  "UTI / Pyelonephritis in Women",
-  "Galactorrhea / Breast Endocrine Symptoms",
-  "Breast Infection / Mastitis / Abscess",
-  "Breast Cancer Labs",
-  "Cervical Cancer / Cervical Precancer Labs",
-  "Endometrial Cancer / Endometrial Hyperplasia Labs",
-  "Ovarian Cancer / Adnexal Mass Labs",
-  "Gestational Trophoblastic Disease / Molar Pregnancy",
-  "Vulvar / Vaginal Cancer Labs",
-  "Endometriosis / Adenomyosis",
-  "Fibroids / Polyps",
-  "Ectopic Pregnancy / Early Pregnancy Loss",
-  "Contraception-related Labs",
-  "Pre-operative Gynecology / Obstetric Surgery Labs",
-  "Autoimmune / Thrombophilia / High-risk Women's Health",
-  "Sexual Health / STI Screening",
-  "Preventive Women's Health / Metabolic Category"
-];
+const masterLabCategories = ["Routine labs", "Pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Ultrasound", "Radiology", "Pathology", "Preoperative", "Other"];
 
 export default function InvestigationsPage() {
   const [query, setQuery] = useState("");
@@ -62,12 +22,17 @@ export default function InvestigationsPage() {
   const [favorites, setFavorites] = useState<CatalogItem[]>([]);
   const [highPriority, setHighPriority] = useState<CatalogItem[]>([]);
   const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
+  const [favoriteSets, setFavoriteSets] = useState<FavoriteSet[]>([]);
   const [selected, setSelected] = useState<CatalogItem[]>([]);
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const patients: Patient[] = [];
   const [patientId, setPatientId] = useState("");
   const [encounterId, setEncounterId] = useState("");
   const [requestNote, setRequestNote] = useState("");
+  const [indications, setIndications] = useState<Record<string, string>>({});
+  const [priority, setPriority] = useState("routine");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [setName, setSetName] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("Ready");
 
@@ -94,6 +59,7 @@ export default function InvestigationsPage() {
     setFavorites((data.favorites ?? []) as CatalogItem[]);
     setHighPriority((data.highPriority ?? []) as CatalogItem[]);
     setTemplates((data.templates ?? []) as InvestigationTemplate[]);
+    setFavoriteSets((data.favoriteSets ?? []) as FavoriteSet[]);
   }, [category]);
 
   useEffect(() => {
@@ -115,12 +81,15 @@ export default function InvestigationsPage() {
     const response = await apiPost("/clinical-requests", {
       patientId: patientId.trim(),
       encounterId: encounterId.trim(),
+      priority,
+      requestedFollowUpDate: followUpDate || undefined,
       requestNote,
-      items: selected.map((item) => ({ title: item.name, catalogItemId: item.id.startsWith("template-") ? undefined : item.id, requestType: item.category, requestNote }))
+      items: selected.map((item) => ({ title: item.name, catalogItemId: item.id.startsWith("template-") ? undefined : item.id, requestType: item.category, requestNote: indications[item.id] || requestNote }))
     });
     setStatus(response.ok ? "Clinical request saved with follow-up hint." : "Could not save clinical request.");
     if (response.ok) {
       setSelected([]);
+      setIndications({});
       setQuery("");
       void loadRequests();
     }
@@ -140,6 +109,40 @@ export default function InvestigationsPage() {
   function addTemplate(template: InvestigationTemplate) {
     const additions = template.items.map((name) => ({ id: `template-${template.name}-${name}`, name, category: template.category, subcategory: template.subcategory }));
     setSelected((current) => [...current, ...additions.filter((item) => !current.some((existing) => existing.name === item.name))]);
+  }
+
+  function applyFavoriteSet(favoriteSet: FavoriteSet) {
+    setSelected((current) => [...current, ...favoriteSet.items.map((item) => item.investigationCatalogItem).filter((item) => !current.some((existing) => existing.id === item.id))]);
+  }
+
+  async function saveFavoriteSet() {
+    if (!setName.trim() || selected.some((item) => item.id.startsWith("template-"))) {
+      setStatus("Name the set and select catalog investigations only.");
+      return;
+    }
+    const response = await apiPost("/investigations/favorite-sets", { name: setName.trim(), investigationCatalogItemIds: selected.map((item) => item.id) });
+    setStatus(response.ok ? "Favorite set saved." : "Could not save favorite set.");
+    if (response.ok) { setSetName(""); void searchCatalog(query); }
+  }
+
+  async function favoriteSetAction(id: string, actionName: "duplicate" | "archive") {
+    const response = actionName === "archive" ? await apiRequest(`/investigations/favorite-sets/${id}`, "DELETE") : await apiPost(`/investigations/favorite-sets/${id}/duplicate`, {});
+    setStatus(response.ok ? `Favorite set ${actionName === "archive" ? "archived" : "duplicated"}.` : "Could not update favorite set.");
+    if (response.ok) void searchCatalog(query);
+  }
+
+  function moveSelected(index: number, direction: -1 | 1) {
+    setSelected((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      const selectedItem = next[index];
+      const targetItem = next[target];
+      if (!selectedItem || !targetItem) return current;
+      next[index] = targetItem;
+      next[target] = selectedItem;
+      return next;
+    });
   }
 
   return (
@@ -166,10 +169,11 @@ export default function InvestigationsPage() {
             </div>
             <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound, histopathology" /></label>
             <div className="investigation-category-sidebar wide" aria-label="Investigation category filters">
-              {[...new Set([...categories, ...masterLabCategories])].map((item) => (
-                <button className={category === item ? "active" : ""} key={item} type="button" onClick={() => setCategory((current) => current === item ? "" : item)}>{item}</button>
+              {masterLabCategories.map((item) => (
+                <button className={query === item ? "active" : ""} key={item} type="button" onClick={() => { setCategory(""); setQuery((current) => current === item ? "" : item); }}>{item}</button>
               ))}
             </div>
+            {categories.length ? <label className="wide">Catalog category<select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
             {category ? (
               <div className="wide selected-patient-card">
                 <strong>{category}</strong>
@@ -183,6 +187,21 @@ export default function InvestigationsPage() {
             <div className="wide template-list">
               {templates.map((template) => <button className="picker-row" key={template.name} type="button" onClick={() => addTemplate(template)}><strong>{template.name}</strong><span>{template.category}</span></button>)}
             </div>
+            <section className="wide compact-panel" aria-label="Saved investigation sets">
+              <div className="section-heading compact-section-heading"><h3>My investigation sets</h3><span className="badge">{favoriteSets.length}</span></div>
+              <div className="dense-card-list">
+                {favoriteSets.map((favoriteSet) => (
+                  <div className="data-row" key={favoriteSet.id}>
+                    <button className="picker-row" type="button" onClick={() => applyFavoriteSet(favoriteSet)}><strong>{favoriteSet.name}</strong><span>{favoriteSet.items.length} investigations · apply set</span></button>
+                    <div className="form-actions">
+                      <button className="button secondary compact" type="button" onClick={() => void favoriteSetAction(favoriteSet.id, "duplicate")}>Duplicate</button>
+                      <button className="button secondary compact" type="button" onClick={() => void favoriteSetAction(favoriteSet.id, "archive")}>Archive</button>
+                    </div>
+                  </div>
+                ))}
+                {!favoriteSets.length ? <p className="muted">Save the current basket to create a reusable set.</p> : null}
+              </div>
+            </section>
             <div className="data-list">
               {catalog.slice(0, 10).map((item) => (
                 <div className="data-row" key={item.id}>
@@ -195,29 +214,27 @@ export default function InvestigationsPage() {
               {!query.trim() && !category ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
               {category && catalog.length === 0 ? <p className="empty-state compact smart-empty-state">No investigations in this category yet.</p> : null}
             </div>
-            <div className="selected-request-chips wide" data-selected-request-chips>
+            <div className="selected-request-chips wide" data-selected-request-chips aria-label="Selected investigation request basket">
               {selected.length ? selected.map((item) => (
-                <span className="request-chip" key={item.id}>
-                  <strong>{item.name}</strong>
-                  <em>{item.modality ?? item.category}</em>
-                  <button type="button" aria-label={`Remove ${item.name}`} onClick={() => setSelected((current) => current.filter((selectedItem) => selectedItem.id !== item.id))}>x</button>
-                </span>
+                <article className="request-chip investigation-basket-row" key={item.id}>
+                  <strong>{item.name}</strong><em>{item.modality ?? item.category}</em>
+                  <input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" />
+                  <span className="form-actions">
+                    <button type="button" aria-label={`Move ${item.name} up`} onClick={() => moveSelected(selected.indexOf(item), -1)}>↑</button>
+                    <button type="button" aria-label={`Move ${item.name} down`} onClick={() => moveSelected(selected.indexOf(item), 1)}>↓</button>
+                    <button type="button" aria-label={`Remove ${item.name}`} onClick={() => setSelected((current) => current.filter((selectedItem) => selectedItem.id !== item.id))}>×</button>
+                  </span>
+                </article>
               )) : <span className="empty-state compact smart-empty-state">No requests selected</span>}
             </div>
-            <label>Clinical note per request<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
+            <label>Overall clinical note<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
+            <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label>
+            <label>Follow-up date<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label>
+            <div className="form-actions wide"><input aria-label="Favorite set name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="New favorite set name" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveFavoriteSet()}>Save as set</button></div>
             <button className="button" type="submit" disabled={!patientId || !encounterId || selected.length === 0}>Attach to locked visit</button>
             <button className="button secondary" type="button" disabled={!patientId || !encounterId || selected.length === 0} onClick={() => window.print()}>Print</button>
           </form>
         </article>
-        <details className="panel">
-          <div className="section-heading"><h2>Investigation Catalog Management</h2><span className="badge">Owner/Admin/Doctor</span></div>
-          <p className="muted">One-click deactivate hides items from future ordering and preserves old records. Every change must be audited by the API.</p>
-          <div className="form-actions">
-            <button className="button secondary compact" type="button">Deactivate selected</button>
-            <button className="button secondary compact" type="button">Inactive tab / restore</button>
-            <span className="badge">Deactivated. Undo</span>
-          </div>
-        </details>
         <article className="panel">
           <div className="section-heading"><h2>Result Follow-up</h2><span className="badge">{requests.length}</span></div>
           <div className="data-list">
@@ -278,11 +295,15 @@ async function apiGet(endpoint: string) {
 }
 
 async function apiPost(endpoint: string, payload: Record<string, unknown>) {
+  return apiRequest(endpoint, "POST", payload);
+}
+
+async function apiRequest(endpoint: string, method: "POST" | "DELETE", payload?: Record<string, unknown>) {
   const token = sessionStorage.getItem("prijClinicToken");
   return fetch(`${getApiBaseUrl()}${endpoint}`, {
-    method: "POST",
+    method,
     credentials: "include",
     headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify(payload)
+    body: payload ? JSON.stringify(payload) : undefined
   }).catch(() => new Response(null, { status: 500 }));
 }
