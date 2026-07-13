@@ -98,7 +98,7 @@ export class AppointmentsService {
     const appointment = await this.prisma.appointment.update({
       where: { id },
       data,
-      include: { patient: true }
+      include: { patient: true, doctor: { select: { id: true, displayName: true } }, branch: { select: { id: true, name: true } } }
     });
 
     await this.audit.record({

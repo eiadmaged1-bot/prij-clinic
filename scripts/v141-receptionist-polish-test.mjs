@@ -33,10 +33,15 @@ forbid("old receptionist nav", "apps/web/app/mvp-page.tsx", [
 ]);
 
 check("topbar controls", "apps/web/app/mvp-page.tsx", [
-  "Dr Maged Clinics",
-  "LanguageSwitcher",
-  "topbar-logout-button",
+  "<UserMenu",
+  "export function UserMenu",
+  "account-summary-copy",
   "receptionist-menu-button"
+]);
+
+forbid("topbar duplicate controls", "apps/web/app/mvp-page.tsx", [
+  'className="topbar-logout-button"',
+  'className="sidebar-logout-button"'
 ]);
 
 check("arabic globals", "apps/web/i18n/ar.ts", [
@@ -83,7 +88,8 @@ forbid("reception no finance or completed", "apps/web/app/reception/page.tsx", [
 ]);
 
 check("queue compact", "apps/web/app/clinic-operations-page.tsx", [
-  "!isReceptionistOnly && mode !== \"queue\"",
+  'mode === "queue" ? <QueueBoard',
+  "onRefresh={load}",
   "! [\"cancelled\", \"completed\"].includes(ticket.status)".replace("! ", "!"),
   "queue-compact-line",
   "visitTypeLabelLocal(ticket.visitType)",

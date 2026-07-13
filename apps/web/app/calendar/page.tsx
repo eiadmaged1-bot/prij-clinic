@@ -10,7 +10,7 @@ import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string; patientType?: string; currentPhase?: { phaseType?: string } | null };
-type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient | null };
+type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; doctorId?: string | null; branchId?: string | null; doctor?: { id: string; displayName: string } | null; branch?: { id: string; name: string } | null; patient?: Patient | null };
 type QueueTicket = { id: string; patientId: string; status: string; visitType?: string | null; checkedInAt?: string | null; patient?: Patient | null };
 type EddEntry = {
   patientId: string;
@@ -42,6 +42,11 @@ function CalendarContent() {
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [eddEntries, setEddEntries] = useState<EddEntry[]>([]);
   const [status, setStatus] = useState("Loading");
+  const [activeTab, setActiveTab] = useState<"appointments" | "edd">("appointments");
+  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("day");
+  const [doctorFilter, setDoctorFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const { user } = useSession();
   const { language } = useI18n();
   const copy = calendarCopy[language];
@@ -69,7 +74,10 @@ function CalendarContent() {
     void load();
   }, [load]);
 
-  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
+  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient) && (!doctorFilter || appointment.doctorId === doctorFilter) && (!branchFilter || appointment.branchId === branchFilter) && (!statusFilter || appointment.status === statusFilter));
+  const doctorOptions = [...new Map(appointments.filter((appointment) => appointment.doctor).map((appointment) => [appointment.doctor!.id, appointment.doctor!])).values()];
+  const branchOptions = [...new Map(appointments.filter((appointment) => appointment.branch).map((appointment) => [appointment.branch!.id, appointment.branch!])).values()];
+  const statusOptions = [...new Set(appointments.map((appointment) => appointment.status).filter(Boolean))];
   const visibleQueue = queue.filter((ticket) => !isTrainingPatient(ticket.patient));
   const activeQueue = visibleQueue.filter((ticket) => ticket.status !== "cancelled");
   const cancelledQueue = visibleQueue.filter((ticket) => ticket.status === "cancelled");
@@ -91,6 +99,19 @@ function CalendarContent() {
             <button className="button secondary compact" type="button" onClick={() => void load()}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{copy.refresh}</button>
           </div>
         </div>
+      </section>
+
+      <section className="patient-tabs simple" aria-label="Calendar sections">
+        <button className={`tab-button ${activeTab === "appointments" ? "active" : ""}`} type="button" onClick={() => setActiveTab("appointments")}>Appointments</button>
+        {!isReceptionistOnly ? <button className={`tab-button ${activeTab === "edd" ? "active" : ""}`} type="button" onClick={() => setActiveTab("edd")}>EDD</button> : null}
+      </section>
+
+      {activeTab === "appointments" ? <>
+      <section className="toolbar compact-toolbar" aria-label="Calendar filters">
+        <div className="segmented-control">{(["day", "week", "month"] as const).map((view) => <button className={calendarView === view ? "active" : ""} key={view} type="button" onClick={() => setCalendarView(view)}>{view[0]?.toUpperCase()}{view.slice(1)}</button>)}</div>
+        <label>Doctor<select value={doctorFilter} onChange={(event) => setDoctorFilter(event.target.value)}><option value="">All</option>{doctorOptions.map((value) => <option key={value.id} value={value.id}>{value.displayName}</option>)}</select></label>
+        <label>Branch<select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}><option value="">All</option>{branchOptions.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>
+        <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All</option>{statusOptions.map((value) => <option key={value} value={value}>{friendlyStatus(value, copy)}</option>)}</select></label>
       </section>
 
       <section className="panel compact-panel today-summary-card">
@@ -120,7 +141,7 @@ function CalendarContent() {
                 <p className="muted">{appointment.appointmentType ?? copy.clinicVisit} | {appointment.patient?.patientType ?? copy.patient} | {appointment.patient?.currentPhase?.phaseType ?? copy.noActivePhase}</p>
                 <div className="form-actions">
                   <Link className="button secondary compact" href={`/patients/${appointment.patientId}`}>{isReceptionistOnly ? copy.openReceptionProfile : copy.openPatientFile}</Link>
-                  {isReceptionistOnly ? <button className="button secondary compact" type="button">{copy.checkInPatient}</button> : <Link className="button compact" href={`/doctor/visit?patientId=${appointment.patientId}`}>Start visit</Link>}
+                  {isReceptionistOnly ? <Link className="button secondary compact" href="/reception">{copy.checkInPatient}</Link> : <Link className="button compact" href={`/doctor/visit?patientId=${appointment.patientId}`}>Start visit</Link>}
                 </div>
               </article>
             ))}
@@ -132,19 +153,14 @@ function CalendarContent() {
           {!isToday ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>{copy.todayOnlyNote}</span></p> : null}
           {isToday && activeQueue.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>{copy.noPatientsWaiting}</span></p> : null}
           <div className="data-list">
-            {activeQueue.map((ticket) => (
+            {activeQueue.slice(0, 6).map((ticket) => (
               <article className="data-row" key={ticket.id}>
                 <div className="data-row-header">
                   <strong>{patientName(ticket.patient)}</strong>
                   <span className="badge">{friendlyStatus(ticket.status, copy)}</span>
                 </div>
                 <p className="muted">{visitTypeLabel(ticket.visitType)} | {ticket.checkedInAt ? time(ticket.checkedInAt) : copy.checkedInToday}</p>
-                <div className="form-actions">
-                  <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{isReceptionistOnly ? copy.openReceptionProfile : copy.openPatientFile}</Link>
-                  <button className="button secondary compact" type="button">{copy.call}</button>
-                  <button className="button secondary compact" type="button">{copy.markUrgent}</button>
-                  <button className="button secondary compact" type="button">{copy.removeWithReason}</button>
-                </div>
+                <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{isReceptionistOnly ? copy.openReceptionProfile : copy.openPatientFile}</Link>
               </article>
             ))}
           </div>
@@ -163,8 +179,9 @@ function CalendarContent() {
           ) : null}
         </article>
       </section>
+      </> : null}
 
-      {!isReceptionistOnly ? <section className="page-header secondary-page-header">
+      {!isReceptionistOnly && activeTab === "edd" ? <section className="page-header secondary-page-header">
         <div className="header-row">
           <div>
             <p className="eyebrow">EDD Clinical Calendar</p>
@@ -178,7 +195,7 @@ function CalendarContent() {
         </div>
       </section> : null}
 
-      {!isReceptionistOnly ? <section className="panel">
+      {!isReceptionistOnly && activeTab === "edd" ? <section className="panel">
         <div className="section-heading"><h2>Locked/reviewed EDD entries</h2><span className="badge">{eddEntries.length}</span></div>
         {eddEntries.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="pregnancy" size="sm" tone="slate" /><span>No locked or reviewed EDD records for this month.</span></p> : null}
         <div className="data-list">

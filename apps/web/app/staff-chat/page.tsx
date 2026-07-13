@@ -83,7 +83,7 @@ export default function StaffChatPage() {
             {conversations.map((conversation) => (
               <button className={`picker-row ${active?.id === conversation.id ? "active" : ""}`} type="button" key={conversation.id} onClick={() => void openConversation(conversation)}>
                 <strong>{conversation.title}</strong>
-                <span>{conversation.latestMessage?.body ?? "No messages yet"}</span>
+                <span>{conversation.latestMessage?.body ?? "No messages yet"}</span><span>{conversation.unreadCount ? `${conversation.unreadCount} unread · ` : ""}{new Date(conversation.updatedAt).toLocaleString()}</span>
               </button>
             ))}
           </div>
@@ -92,7 +92,7 @@ export default function StaffChatPage() {
             {staff.map((member) => (
               <button className="picker-row" type="button" key={member.id} onClick={() => void openDirect(member.id)}>
                 <strong><span className="doctor-color-dot" style={{ background: member.doctorColor ?? "#64748B" }} />{member.displayName}</strong>
-                <span>{member.roles.join(", ")}</span>
+                <span>{member.roles.join(", ")} · {member.branchName || "Assigned branches"}</span>
               </button>
             ))}
           </div>
@@ -115,7 +115,7 @@ export default function StaffChatPage() {
             ))}
           </div>
           <form className="staff-chat-compose" onSubmit={submit}>
-            <label>Message<textarea value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder="Write an internal staff message" /></label>
+            <label>Message<textarea disabled={!active} value={body} onChange={(event) => setBody(event.target.value)} maxLength={2000} placeholder={active ? "Write an internal staff message" : "Select a conversation first"} /></label>
             <button className="button" type="submit" disabled={!active || !body.trim()}>Send</button>
           </form>
         </section>

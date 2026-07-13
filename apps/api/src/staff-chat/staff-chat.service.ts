@@ -20,10 +20,10 @@ export class StaffChatService {
         ...branchScope(user),
         userRoles: { some: { role: { name: { in: allowedRoles } } } }
       },
-      select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true, userRoles: { select: { role: { select: { name: true } } } } },
+      select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true, branch: { select: { name: true } }, userRoles: { select: { role: { select: { name: true } } } } },
       orderBy: { displayName: "asc" }
     });
-    return { staff: users.map((staff) => ({ ...staff, roles: staff.userRoles.map((role) => role.role.name), userRoles: undefined })) };
+    return { staff: users.map((staff) => ({ ...staff, branchName: staff.branch?.name ?? null, branch: undefined, roles: staff.userRoles.map((role) => role.role.name), userRoles: undefined })) };
   }
 
   async conversations(user: AuthUser) {
@@ -36,7 +36,9 @@ export class StaffChatService {
       orderBy: { updatedAt: "desc" },
       take: 50
     });
-    return { conversations: conversations.map((conversation) => summarizeConversation(conversation, user.id)) };
+    const receipts = await this.prisma.staffMessageReceipt.findMany({ where: { userId: user.id, seenAt: null, message: { conversationId: { in: conversations.map((conversation) => conversation.id) }, senderUserId: { not: user.id } } }, select: { message: { select: { conversationId: true } } } });
+    const unreadByConversation = receipts.reduce((counts, receipt) => counts.set(receipt.message.conversationId, (counts.get(receipt.message.conversationId) ?? 0) + 1), new Map<string, number>());
+    return { conversations: conversations.map((conversation) => ({ ...summarizeConversation(conversation, user.id), unreadCount: unreadByConversation.get(conversation.id) ?? 0 })) };
   }
 
   async unreadCount(user: AuthUser) {

@@ -15,8 +15,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export type StaffDirectoryUser = { id: string; displayName: string; roles: string[]; doctorColor?: string | null };
-export type StaffConversation = { id: string; title: string; patientId?: string | null; updatedAt: string; latestMessage?: StaffMessage | null };
+export type StaffDirectoryUser = { id: string; displayName: string; roles: string[]; branchName?: string | null; doctorColor?: string | null };
+export type StaffConversation = { id: string; title: string; patientId?: string | null; updatedAt: string; unreadCount?: number; latestMessage?: StaffMessage | null };
 export type StaffMessage = { id: string; senderUserId: string; senderName: string; body: string; createdAt: string; seenStatus: string; patientId?: string | null };
 
 export function listStaffDirectory() {

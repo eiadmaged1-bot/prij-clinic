@@ -51,13 +51,16 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
   const { language } = useI18n();
   const copy = operationsCopy[language];
   const roles = user?.roles ?? [];
+  const permissions = user?.permissions ?? [];
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
+  const canViewFinance = permissions.some((permission) => ["billing.read", "billing.report", "billing.manage"].includes(permission));
+  const reportRole = hasRole(roles, ["Owner", "Admin"]) ? "owner" : isReceptionistOnly ? "reception" : "doctor";
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
   const load = useCallback(async () => {
     setStatus("Loading");
-    const shouldLoadFinance = !isReceptionistOnly && mode !== "queue";
+    const shouldLoadFinance = canViewFinance && mode !== "queue";
     const shouldLoadOrders = mode !== "queue";
     const [appointmentResponse, queueResponse, invoiceResponse, orderResponse, dashboardResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers }),
@@ -72,7 +75,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
     setOrders(orderResponse?.ok ? ((await orderResponse.json()) as { investigationOrders?: InvestigationOrder[] }).investigationOrders ?? [] : []);
     setDashboard(dashboardResponse?.ok ? await dashboardResponse.json() as DashboardSummary : {});
     setStatus("Ready");
-  }, [headers, isReceptionistOnly, mode, today]);
+  }, [canViewFinance, headers, mode, today]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -100,7 +103,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
         {mode !== "reports" && mode !== "queue" ? <p className="muted">{description}</p> : null}
       </section>
       <SafetyAlert />
-      {mode === "queue" ? <QueueBoard queue={visibleQueue} today={today} copy={copy} /> : (
+      {mode === "queue" ? <QueueBoard queue={visibleQueue} copy={copy} onRefresh={load} /> : (
         <section className="compact-metric-grid">
           <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
           <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
@@ -112,7 +115,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
       {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} isReceptionistOnly={isReceptionistOnly} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
-      {mode === "reports" ? <DailyReports appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} /> : null}
+      {mode === "reports" ? <DailyReports appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} orders={orders} dashboard={dashboard} status={status} reportRole={reportRole} canViewFinance={canViewFinance} /> : null}
     </>
   );
 }
@@ -125,7 +128,7 @@ function CalendarLoop({ appointments, queue, invoices, isReceptionistOnly }: { a
   return <section className="content-grid"><DailyList title="Today schedule" actionLabel={isReceptionistOnly ? "Open reception profile" : "Open patient"} rows={appointments.map((appointment) => row(appointment.id, appointment.patientId, patient(appointment.patient), appointment.status, [time(appointment.startAt), appointment.appointmentType, paymentBadge(invoices, appointment.patientId)].filter(Boolean).join(" | "), invoices))} /><FlowPanel appointments={appointments} queue={queue} /></section>;
 }
 
-function QueueBoard({ queue, today, copy }: { queue: QueueTicket[]; today: string; copy: OperationsCopy }) {
+function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: OperationsCopy; onRefresh(): Promise<void> }) {
   const waiting = queue
     .filter((ticket) => ticket.status === "waiting")
     .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime());
@@ -134,12 +137,13 @@ function QueueBoard({ queue, today, copy }: { queue: QueueTicket[]; today: strin
   const cancelledQueue = queue.filter((ticket) => ticket.status === "cancelled");
   const urgent = activeQueue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const rows = [...waiting, ...activeQueue.filter((ticket) => ticket.status !== "waiting")];
+  async function callPatient(ticketId: string) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/queue/${ticketId}/call`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
+    if (response?.ok) await onRefresh();
+  }
   return (
     <section className="queue-board-compact">
-      <div className="toolbar compact-toolbar">
-        <label>{copy.date}<input type="date" defaultValue={today} /></label>
-        <button className="button secondary compact" type="button" onClick={() => window.location.reload()}>{copy.refresh}</button>
-      </div>
       <section className="panel compact-panel today-summary-card">
         <div className="section-heading compact-section-heading"><h2>{copy.queueList}</h2></div>
         <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgent.length}</p>
@@ -156,9 +160,7 @@ function QueueBoard({ queue, today, copy }: { queue: QueueTicket[]; today: strin
               </div>
               <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{copy.openReceptionProfile}</Link>
-                <button className="button secondary compact" type="button">{copy.callPatient}</button>
-                <button className="button secondary compact" type="button">{copy.markUrgent}</button>
-                <button className="button secondary compact" type="button">{copy.removeWithReason}</button>
+                {ticket.status === "waiting" ? <button className="button secondary compact" type="button" onClick={() => void callPatient(ticket.id)}>{copy.callPatient}</button> : null}
               </div>
             </article>
           ))}
@@ -192,10 +194,10 @@ function DocumentTimelinePlaceholder() {
   return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Documents and results</h2><span className="badge">Metadata protected</span></div><ul className="feature-list"><li>Patient file document tabs show category, status, uploaded user, created date, and linked visit or order when available.</li><li>Local image uploads keep metadata stripping and unsafe file checks.</li><li>Normal UI hides raw storage paths and internal hashes.</li></ul></article><article className="panel"><div className="section-heading"><h2>Timeline entry types</h2><span className="badge">Patient-specific</span></div><p className="muted">Report metadata, document uploads, investigation results, and reviewed entries are consolidated inside each patient timeline.</p></article></section>;
 }
 
-function DailyReports({ appointments, queue, invoices, orders, dashboard, status }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[]; orders: InvestigationOrder[]; dashboard: DashboardSummary; status: string }) {
+function DailyReports({ appointments, queue, invoices, orders, dashboard, status, reportRole, canViewFinance }: { appointments: Appointment[]; queue: QueueTicket[]; invoices: Invoice[]; orders: InvestigationOrder[]; dashboard: DashboardSummary; status: string; reportRole: "owner" | "reception" | "doctor"; canViewFinance: boolean }) {
   const issuedInvoices = invoices.filter((invoice) => ["issued", "partially_paid", "paid"].includes(String(invoice.status))).length;
   const outstanding = invoices.reduce((sum, invoice) => sum + Number(invoice.balanceAmount ?? 0), 0);
-  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Daily clinic summary</h2><span className="badge">{status}</span></div><dl className="profile-grid"><div><dt>Appointments</dt><dd>{appointments.length}</dd></div><div><dt>Check-ins</dt><dd>{queue.length}</dd></div><div><dt>Queue waiting</dt><dd>{queue.filter((ticket) => ticket.status === "waiting").length}</dd></div><div><dt>Visits completed</dt><dd>{queue.filter((ticket) => ticket.status === "completed").length}</dd></div><div><dt>Invoices issued</dt><dd>{issuedInvoices}</dd></div><div><dt>Payments collected</dt><dd>{dashboard.billing?.paymentsToday ?? "0.00"}</dd></div><div><dt>Outstanding balances</dt><dd>{outstanding.toFixed(2)}</dd></div><div><dt>Investigations requested</dt><dd>{orders.length}</dd></div><div><dt>Pending results</dt><dd>{dashboard.workflow?.pendingResultReview ?? orders.filter((order) => order.status !== "reviewed").length}</dd></div><div><dt>Follow-ups due</dt><dd>{dashboard.workflow?.followUpsDue ?? 0}</dd></div></dl></article><article className="panel"><div className="section-heading"><h2>Owner daily summary</h2><span className="badge">Business</span></div><ul className="feature-list"><li>Manual payments collected today: {dashboard.billing?.paymentsToday ?? "0.00"}.</li><li>Open invoices needing follow-up: {dashboard.billing?.openInvoices ?? invoices.filter((invoice) => invoice.status !== "paid").length}.</li><li>No insurance, ledger, or payment gateway export is generated.</li></ul></article><article className="panel"><div className="section-heading"><h2>Reception daily summary</h2><span className="badge">Operations</span></div><ul className="feature-list"><li>Appointments: {appointments.length}; check-ins: {queue.length}.</li><li>Waiting or called patients: {queue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length}.</li><li>Payment status is visible as an operational note only.</li></ul></article><article className="panel"><div className="section-heading"><h2>Doctor daily summary</h2><span className="badge">Clinical workflow</span></div><ul className="feature-list"><li>Completed visits: {queue.filter((ticket) => ticket.status === "completed").length}.</li><li>Pending investigations or results: {orders.filter((order) => order.status !== "reviewed").length}.</li><li>Billing does not automate diagnosis, prescribing, or dosing.</li></ul></article></section>;
+  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Daily clinic summary</h2><span className="badge">{status}</span></div><dl className="profile-grid"><div><dt>Appointments</dt><dd>{appointments.length}</dd></div><div><dt>Check-ins</dt><dd>{queue.length}</dd></div><div><dt>Queue waiting</dt><dd>{queue.filter((ticket) => ticket.status === "waiting").length}</dd></div><div><dt>Visits completed</dt><dd>{queue.filter((ticket) => ticket.status === "completed").length}</dd></div>{canViewFinance ? <><div><dt>Invoices issued</dt><dd>{issuedInvoices}</dd></div><div><dt>Payments collected</dt><dd>{dashboard.billing?.paymentsToday ?? "0.00"}</dd></div><div><dt>Outstanding balances</dt><dd>{outstanding.toFixed(2)}</dd></div></> : null}<div><dt>Investigations requested</dt><dd>{orders.length}</dd></div><div><dt>Pending results</dt><dd>{dashboard.workflow?.pendingResultReview ?? orders.filter((order) => order.status !== "reviewed").length}</dd></div><div><dt>Follow-ups due</dt><dd>{dashboard.workflow?.followUpsDue ?? 0}</dd></div></dl></article>{reportRole === "owner" ? <article className="panel"><div className="section-heading"><h2>Owner daily summary</h2><span className="badge">Business</span></div><ul className="feature-list">{canViewFinance ? <><li>Manual payments collected today: {dashboard.billing?.paymentsToday ?? "0.00"}.</li><li>Open invoices needing follow-up: {dashboard.billing?.openInvoices ?? invoices.filter((invoice) => invoice.status !== "paid").length}.</li></> : <li>Finance summary is not available for this permission set.</li>}<li>No insurance, ledger, or payment gateway export is generated.</li></ul></article> : null}{reportRole === "reception" ? <article className="panel"><div className="section-heading"><h2>Reception daily summary</h2><span className="badge">Operations</span></div><ul className="feature-list"><li>Appointments: {appointments.length}; check-ins: {queue.length}.</li><li>Waiting or called patients: {queue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length}.</li></ul></article> : null}{reportRole === "doctor" ? <article className="panel"><div className="section-heading"><h2>Doctor daily summary</h2><span className="badge">Clinical workflow</span></div><ul className="feature-list"><li>Completed visits: {queue.filter((ticket) => ticket.status === "completed").length}.</li><li>Pending investigations or results: {orders.filter((order) => order.status !== "reviewed").length}.</li></ul></article> : null}</section>;
 }
 
 function FlowPanel({ appointments, queue }: { appointments: Appointment[]; queue: QueueTicket[] }) {
