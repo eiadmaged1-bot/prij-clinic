@@ -22,4 +22,5 @@ assert.match(ui, /Red flags and escalation[\s\S]*Assessment and differential[\s\
 assert.match(ui, /external genital skin, mucosa, groin fold, axilla, inner thigh, and facial skin/, "sensitive-area anatomy must be differentiated");
 assert.match(service, /تصبغات[\s\S]*منطقة حساسة/, "Arabic dermatology aliases must remain Unicode");
 assert.match(ui, /No universal treatment is implied/, "UI must not present universal treatment");
+assert.match(ui, /dir="auto"[\s\S]*بحث الأمراض الجلدية/, "Dermatology search must preserve Arabic input and RTL direction");
 console.log("v1.4.5 dermatology and patient finding checks passed");

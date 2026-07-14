@@ -36,7 +36,7 @@ export function PharmacologyWorkspace() {
   return <section className="pharmacology-workspace">
     <form className="panel pharmacology-search-sticky" onSubmit={(event) => event.preventDefault()}>
       <label htmlFor="pharmacology-search"><strong>Pharmacology search</strong></label>
-      <div className="inline-form"><input id="pharmacology-search" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search generic medicine, family, mechanism, target, spectrum, indication, adverse effect, renal/hepatic property…" /><button className="button" type="submit">Search</button></div>
+      <div className="inline-form"><input dir="auto" id="pharmacology-search" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search generic medicine, family, mechanism, spectrum… · ابحث بالاسم العلمي أو العائلة أو الآلية…" /><button className="button" type="submit">Search · بحث</button></div>
       <p className="muted">{status}</p>
     </form>
     {results.length ? <p className="warning-text">Local susceptibility/culture review remains required. Spectrum terms never imply guaranteed susceptibility.</p> : null}
