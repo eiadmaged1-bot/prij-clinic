@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { getPharmacologyProfile, searchPharmacology, type PharmacologyProfile, type PharmacologySearchResult } from "@/lib/medications";
+import { type FormEvent, useEffect, useRef, useState } from "react";
+import { calculateMedicationFormula, getPharmacologyProfile, searchPharmacology, type ApprovedDoseFormula, type MedicationFormulaResult, type PharmacologyProfile, type PharmacologySearchResult } from "@/lib/medications";
 
 type SummaryLevel = "Quick" | "Clinical" | "Full source";
 const profileSections = ["Clinical overview", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/Hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/Lactation", "Monitoring", "Calculators", "Sources"] as const;
@@ -57,11 +57,62 @@ export function PharmacologyWorkspace() {
 }
 
 function ProfileSectionContent({ profile, section, level }: { profile: PharmacologyProfile; section: typeof profileSections[number]; level: SummaryLevel }) {
+  if (section === "Calculators") return <MedicationCalculators formulas={profile.calculators ?? []} />;
   const limit = level === "Quick" ? 6 : level === "Clinical" ? 12 : 50;
   const items = sectionItems(profile, section).slice(0, limit);
   if (!items.length) return <p className="muted">No source-reviewed {section.toLowerCase()} content is available.</p>;
-  return <div className="profile-section-content"><ul>{items.map((item, index) => <li key={`${section}-${index}`}>{item}</li>)}</ul>{section === "Calculators" ? <p className="warning-text">Calculators remain collapsed and cannot prescribe. Verified inputs and doctor confirmation are required.</p> : null}{profile.spectrum?.length && section === "Clinical overview" ? <p className="warning-text">Local susceptibility/culture review remains required.</p> : null}</div>;
+  return <div className="profile-section-content"><ul>{items.map((item, index) => <li key={`${section}-${index}`}>{item}</li>)}</ul>{profile.spectrum?.length && section === "Clinical overview" ? <p className="warning-text">Local susceptibility/culture review remains required.</p> : null}</div>;
 }
+
+function MedicationCalculators({ formulas }: { formulas: ApprovedDoseFormula[] }) {
+  const [openFormula, setOpenFormula] = useState<string | null>(null);
+  if (!formulas.length) return <p className="muted">No source-approved calculator is available for this generic medicine.</p>;
+  return <div className="profile-section-content medication-calculator-list">
+    <p className="warning-text">Calculation support only. Verify every input and source; doctor confirmation is required. Results never auto-prescribe.</p>
+    {formulas.map((formula) => <section className="medication-calculator" key={formula.stableId}>
+      <button aria-expanded={openFormula === formula.stableId} type="button" onClick={() => setOpenFormula((current) => current === formula.stableId ? null : formula.stableId)}><span>{formula.name}</span><span>{openFormula === formula.stableId ? "−" : "+"}</span></button>
+      {openFormula === formula.stableId ? <MedicationCalculatorForm formula={formula} /> : null}
+    </section>)}
+  </div>;
+}
+
+function MedicationCalculatorForm({ formula }: { formula: ApprovedDoseFormula }) {
+  const version = formula.versions[0];
+  const fields = version?.inputSchemaJson.fields ?? [];
+  const [result, setResult] = useState<MedicationFormulaResult | null>(null);
+  const [status, setStatus] = useState("");
+  if (!version) return <p className="muted">No approved version is available.</p>;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setResult(null); setStatus("Calculating with the approved formula version…");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const input = Object.fromEntries(fields.flatMap((field) => {
+      const raw = String(data.get(field.name) ?? "").trim();
+      const entries: Array<[string, unknown]> = raw ? [[field.name, field.type === "number" ? Number(raw) : raw]] : [];
+      if (field.observedAtField) { const observedAt = String(data.get(field.observedAtField) ?? "").trim(); if (observedAt) entries.push([field.observedAtField, observedAt]); }
+      return entries;
+    }));
+    try { setResult(await calculateMedicationFormula(formula.stableId, input)); setStatus("Calculated. Review the formula, rounding, limitations, and source before use."); }
+    catch { setStatus("Calculation was not completed. Check all required inputs and approved ranges, then retry."); }
+  }
+
+  return <form className="medication-calculator-form" onSubmit={(event) => void submit(event)}>
+    <div className="form-grid">{fields.map((field) => <label key={field.name}>{field.label ?? label(field.name)} {field.unit ? `(${field.unit})` : ""}
+      {field.type === "select" ? <select name={field.name} required={field.required !== false} defaultValue=""><option value="" disabled>Select</option>{field.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input name={field.name} type="number" required={field.required !== false} min={field.min} max={field.max} step="any" />}
+      {field.observedAtField ? <span className="calculator-observed-at"><span>Observed at</span><input name={field.observedAtField} type="datetime-local" required /></span> : null}
+    </label>)}</div>
+    <button className="button compact" type="submit">Calculate draft result</button>
+    <p className="muted" role="status">{status}</p>
+    {result ? <dl className="calculator-governance-result">
+      <div><dt>Result</dt><dd>{result.finalValue} {result.outputUnit}</dd></div><div><dt>Pre-rounding</dt><dd>{result.preRoundingValue}</dd></div><div><dt>Rounding</dt><dd>{result.roundingMethod}</dd></div><div><dt>Formula</dt><dd>{result.formula}</dd></div>
+      <div><dt>Version</dt><dd>{result.version} · {result.approvalStatus}</dd></div><div><dt>Reviewed by</dt><dd>{result.reviewer.displayName}</dd></div><div className="wide"><dt>Validated population</dt><dd>{result.population}</dd></div><div className="wide"><dt>Exclusions</dt><dd>{displayStructured(result.exclusions)}</dd></div><div className="wide"><dt>Limitations</dt><dd>{result.limitations}</dd></div><div className="wide"><dt>Source</dt><dd>{result.source.organization} · {result.source.title} {result.source.versionLabel ?? ""}</dd></div>
+      {result.warnings.length ? <div className="wide"><dt>Warnings</dt><dd>{result.warnings.join(" ")}</dd></div> : null}
+    </dl> : null}
+  </form>;
+}
+
+function displayStructured(value: unknown) { if (Array.isArray(value)) return value.map(String).join("; "); if (value && typeof value === "object") return Object.entries(value as Record<string, unknown>).map(([key, item]) => `${label(key)}: ${String(item)}`).join("; "); return String(value || "None recorded"); }
 
 function sectionItems(profile: PharmacologyProfile, section: typeof profileSections[number]) {
   if (section === "Clinical overview") return [`Review status: ${profile.reviewStatus}`, `Family: ${profile.family || "Not linked"}`, `Class: ${profile.pharmacologicClass || profile.className || "Not reviewed"}`];
@@ -74,7 +125,7 @@ function sectionItems(profile: PharmacologyProfile, section: typeof profileSecti
   if (section === "Interactions") return flattenRecords(profile.interactions);
   if (section === "Pregnancy/Lactation") return flattenRecords(profile.pregnancyLactation);
   if (section === "Monitoring") return flattenRecords(profile.monitoring);
-  if (section === "Calculators") return flattenRecords(profile.calculators);
+  if (section === "Calculators") return [];
   if (section === "Sources") return flattenRecords(profile.sources);
   return [];
 }

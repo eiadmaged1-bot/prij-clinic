@@ -6081,12 +6081,25 @@ select {
 .pharmacology-accordion > section { border-bottom: 1px solid #dfe7e9; }
 .pharmacology-accordion > section > button { display: flex; width: 100%; min-height: 48px; align-items: center; justify-content: space-between; border: 0; background: transparent; font-weight: 700; text-align: start; }
 .profile-section-content { padding: 0 8px 12px; }
+.medication-calculator { margin-top: 8px; border: 1px solid #dfe7e9; border-radius: 10px; }
+.medication-calculator > button { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 0; background: #f7fafb; font-weight: 700; text-align: start; }
+.medication-calculator-form { padding: 12px; }
+.medication-calculator-form .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.calculator-observed-at { display: grid; gap: 4px; margin-top: 6px; font-size: .85rem; }
+.calculator-governance-result { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.calculator-governance-result > div { padding: 8px; border-radius: 8px; background: #f7fafb; }
+.calculator-governance-result dt { font-size: .78rem; color: var(--muted); }
+.calculator-governance-result dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+.calculator-governance-result .wide { grid-column: 1 / -1; }
 
 @media (max-width: 700px) {
   .pharmacology-result-list { grid-template-columns: 1fr; }
   .pharmacology-quick-card { min-height: 0; }
   .pharmacology-profile-backdrop { align-items: flex-end; }
   .pharmacology-profile-panel { width: 100%; height: min(86vh, 820px); padding: 14px; border-radius: 18px 18px 0 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .medication-calculator-form .form-grid,
+  .calculator-governance-result { grid-template-columns: 1fr; }
+  .calculator-governance-result .wide { grid-column: auto; }
 }
 
 @media (max-width: 900px) {

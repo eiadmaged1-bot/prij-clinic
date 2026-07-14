@@ -7,14 +7,56 @@ import { PrismaService } from "../prisma/prisma.service";
 import { CalculateDto, ReviewCalculationDto } from "./dto/calculate.dto";
 import { VoidCalculationDto } from "./dto/void-calculation.dto";
 import { FormulaEngineService } from "./formula-engine.service";
+import { MedicationFormulaEngineService } from "./medication-formula-engine.service";
 
 @Injectable()
 export class CalculatorsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly engine: FormulaEngineService,
+    private readonly medicationFormulaEngine: MedicationFormulaEngineService,
     private readonly audit: AuditService
   ) {}
+
+  async calculateMedicationFormula(stableId: string, input: Record<string, unknown>, user: AuthUser) {
+    const formula = await this.prisma.doseFormula.findUnique({
+      where: { stableId },
+      include: { versions: { where: { approvalStatus: "approved" }, include: { source: true, reviewer: { select: { id: true, displayName: true } } }, orderBy: { version: "desc" }, take: 1 } }
+    });
+    const version = formula?.versions[0];
+    if (!formula?.active || !version) throw new NotFoundException("No approved active formula version is available.");
+    const calculated = this.medicationFormulaEngine.calculate(version, input);
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "MEDICATION_FORMULA_CALCULATED",
+      resourceType: "dose_formula",
+      resourceId: formula.id,
+      severity: "high",
+      metadataJson: { stableId: formula.stableId, formulaVersion: version.version, approvalStatus: version.approvalStatus }
+    });
+    return {
+      stableId: formula.stableId,
+      name: formula.name,
+      calculatorType: formula.calculatorType,
+      version: version.version,
+      expression: version.expression,
+      formula: calculated.formulaDisplay,
+      input,
+      outputUnit: version.outputUnit,
+      preRoundingValue: calculated.preRoundingValue,
+      roundingMethod: version.roundingMethod,
+      finalValue: calculated.finalValue,
+      population: version.populationText,
+      exclusions: version.exclusionsJson,
+      limitations: version.limitationsText,
+      warnings: calculated.warnings,
+      source: { title: version.source.title, organization: version.source.organization, versionLabel: version.source.versionLabel, sourceUrl: version.source.sourceUrl },
+      reviewer: version.reviewer,
+      approvalStatus: version.approvalStatus,
+      doctorConfirmationRequired: true,
+      prescriptionInsertionPerformed: false
+    };
+  }
 
   async listFormulas() {
     const formulas = await this.prisma.calculatorFormula.findMany({

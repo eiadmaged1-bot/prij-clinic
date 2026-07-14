@@ -7,11 +7,12 @@ import { UsersModule } from "../users/users.module";
 import { AdminCalculatorsController, CalculatorsController } from "./calculators.controller";
 import { CalculatorsService } from "./calculators.service";
 import { FormulaEngineService } from "./formula-engine.service";
+import { MedicationFormulaEngineService } from "./medication-formula-engine.service";
 import { ObDatingService } from "./ob-dating.service";
 
 @Module({
   imports: [PrismaModule, AuditModule, AuthModule, RbacModule, UsersModule],
   controllers: [CalculatorsController, AdminCalculatorsController],
-  providers: [CalculatorsService, FormulaEngineService, ObDatingService]
+  providers: [CalculatorsService, FormulaEngineService, MedicationFormulaEngineService, ObDatingService]
 })
 export class CalculatorsModule {}

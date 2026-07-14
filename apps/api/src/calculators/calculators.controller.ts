@@ -7,6 +7,7 @@ import { Permissions } from "../rbac/require-permissions.decorator";
 import { CalculatorsService } from "./calculators.service";
 import { CalculateDto, ReviewCalculationDto } from "./dto/calculate.dto";
 import { ObDatingCalculateDto } from "./dto/ob-dating-calculate.dto";
+import { MedicationFormulaCalculateDto } from "./dto/medication-formula-calculate.dto";
 import { ChangeLockedDatingDto, SetBestDatingDto } from "./dto/set-best-dating.dto";
 import { VoidCalculationDto } from "./dto/void-calculation.dto";
 import { ObDatingService } from "./ob-dating.service";
@@ -35,6 +36,12 @@ export class CalculatorsController {
   @Permissions("calculator.calculate")
   calculate(@Body() dto: CalculateDto, @CurrentUser() user: AuthUser) {
     return this.calculators.calculate(dto, user);
+  }
+
+  @Post("medication/:stableId/calculate")
+  @Permissions("calculator.calculate")
+  calculateMedicationFormula(@Param("stableId") stableId: string, @Body() dto: MedicationFormulaCalculateDto, @CurrentUser() user: AuthUser) {
+    return this.calculators.calculateMedicationFormula(stableId, dto.input, user);
   }
 
   @Get("history")

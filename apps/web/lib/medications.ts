@@ -53,7 +53,10 @@ export function listDrugFamilies() {
 }
 
 export type PharmacologySearchResult = { id: string; genericName: string; family?: string | null; pharmacologicClass?: string | null; reviewStatus: string; mainUse: string; keyCaution: string; clearance: string; matchReason: string; spectrumMatches?: Array<{ label: string; coverage: string }>; profileCompleteness: number };
-export type PharmacologyProfile = PharmacologySearchResult & Record<string, unknown> & { className?: string | null; aliases?: Array<{ alias: string; scopeType: string }>; mechanism?: string[]; pharmacodynamics?: string[]; pharmacokinetics?: Array<Record<string, unknown>>; adverseEffects?: Array<Record<string, unknown>>; contraindications?: Array<Record<string, unknown>>; cautions?: Array<Record<string, unknown>>; interactions?: Array<Record<string, unknown>>; monitoring?: Array<Record<string, unknown>>; pregnancyLactation?: Array<Record<string, unknown>>; renal?: Array<Record<string, unknown>>; hepatic?: Array<Record<string, unknown>>; spectrum?: Array<Record<string, unknown>>; calculators?: Array<Record<string, unknown>>; sources?: Array<Record<string, unknown>>; doctorReviewRequired: boolean };
+export type FormulaInputField = { name: string; label?: string; type: "number" | "select"; unit?: string; required?: boolean; min?: number; max?: number; options?: string[]; observedAtField?: string };
+export type ApprovedDoseFormula = { stableId: string; name: string; calculatorType: string; versions: Array<{ version: number; expression: string; outputUnit: string; inputSchemaJson: { fields?: FormulaInputField[] }; validRangeJson: unknown; populationText: string; exclusionsJson: unknown; approvalStatus: "approved"; roundingMethod: string; limitationsText: string; source: { title: string; organization: string; versionLabel?: string | null; sourceUrl?: string | null } }> };
+export type MedicationFormulaResult = { stableId: string; name: string; version: number; expression: string; formula: string; input: Record<string, unknown>; outputUnit: string; preRoundingValue: number; roundingMethod: string; finalValue: number; population: string; exclusions: unknown; limitations: string; warnings: string[]; source: { title: string; organization: string; versionLabel?: string | null; sourceUrl?: string | null }; reviewer: { displayName: string }; approvalStatus: string; doctorConfirmationRequired: true; prescriptionInsertionPerformed: false };
+export type PharmacologyProfile = PharmacologySearchResult & Record<string, unknown> & { className?: string | null; aliases?: Array<{ alias: string; scopeType: string }>; mechanism?: string[]; pharmacodynamics?: string[]; pharmacokinetics?: Array<Record<string, unknown>>; adverseEffects?: Array<Record<string, unknown>>; contraindications?: Array<Record<string, unknown>>; cautions?: Array<Record<string, unknown>>; interactions?: Array<Record<string, unknown>>; monitoring?: Array<Record<string, unknown>>; pregnancyLactation?: Array<Record<string, unknown>>; renal?: Array<Record<string, unknown>>; hepatic?: Array<Record<string, unknown>>; spectrum?: Array<Record<string, unknown>>; calculators?: ApprovedDoseFormula[]; sources?: Array<Record<string, unknown>>; doctorReviewRequired: boolean };
 
 export function searchPharmacology(query: string) {
   return request<{ query: string; expandedConcepts: string[]; results: PharmacologySearchResult[]; groupedResults: Array<{ family: string; generics: PharmacologySearchResult[] }>; genericFirst: boolean; tradeNamesAreAliasesOnly: boolean; susceptibilityReviewRequired: boolean }>(`/pharmacology/search?q=${encodeURIComponent(query)}`);
@@ -61,6 +64,10 @@ export function searchPharmacology(query: string) {
 
 export function getPharmacologyProfile(id: string) {
   return request<PharmacologyProfile>(`/pharmacology/generics/${encodeURIComponent(id)}`);
+}
+
+export function calculateMedicationFormula(stableId: string, input: Record<string, unknown>) {
+  return request<MedicationFormulaResult>(`/calculators/medication/${encodeURIComponent(stableId)}/calculate`, { method: "POST", body: JSON.stringify({ input }) });
 }
 
 export function getMedicationIngredient(id: string) {
