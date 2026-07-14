@@ -6,6 +6,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { normalizeMedicationSearch } from "./normalize-medication-search";
 import { Prisma } from "@prisma/client";
 import { CreatePharmacologySummaryDto } from "./pharmacology-profile.dto";
+import { CreateDermatologyFindingDto } from "./dermatology.dto";
 
 @Injectable()
 export class MedicationsService {
@@ -13,6 +14,30 @@ export class MedicationsService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService
   ) {}
+
+  async searchDermatology(query: string) {
+    const normalized = normalizeMedicationSearch(query).trim();
+    if (normalized.length < 2) return { query, results: [], doctorReviewRequired: true };
+    const concepts = dermatologyConcepts(normalized);
+    const conditions = await this.prisma.dermatologyCondition.findMany({ where: { OR: concepts.flatMap((term) => [{ stableCode: { contains: term, mode: "insensitive" as const } }, { nameEn: { contains: term, mode: "insensitive" as const } }, { nameAr: { contains: term, mode: "insensitive" as const } }, { aliasesJson: { string_contains: term } }]) }, include: { genericOptions: { where: { reviewStatus: "approved" }, include: { medication: true, source: true } } }, take: 30 });
+    return { query, expandedConcepts: concepts, results: conditions.map((condition) => ({ ...condition, assessmentFirst: true, noAutomaticDiagnosisOrTreatment: true })), doctorReviewRequired: true };
+  }
+
+  async dermatologyCondition(id: string) {
+    const condition = await this.prisma.dermatologyCondition.findUnique({ where: { id }, include: { source: true, genericOptions: { where: { reviewStatus: "approved" }, include: { medication: true, source: true } } } });
+    if (!condition) throw new NotFoundException("Dermatology condition not found.");
+    return { ...condition, assessmentFirst: true, doctorReviewRequired: true, noAutomaticDiagnosisOrTreatment: true };
+  }
+
+  async createClinicalFinding(patientId: string, dto: CreateDermatologyFindingDto, user: AuthUser) {
+    const patient = await assertCanReferencePatient(this.prisma, patientId, user);
+    const encounter = await this.prisma.encounter.findFirst({ where: { id: dto.encounterId, patientId } });
+    if (!encounter) throw new BadRequestException("The source encounter does not belong to this patient.");
+    if (dto.conditionId && !await this.prisma.dermatologyCondition.findUnique({ where: { id: dto.conditionId } })) throw new BadRequestException("Dermatology condition not found.");
+    const finding = await this.prisma.patientClinicalFinding.create({ data: { patientId, encounterId: dto.encounterId, conditionId: dto.conditionId, stableTag: dto.stableTag.trim(), detailsJson: dto.details as never, bodyArea: dto.bodyArea?.trim() || null, status: dto.status ?? "active", confirmation: "doctor_confirmed", nextAction: dto.nextAction?.trim() || null, followUpText: dto.followUp?.trim() || null, createdByUserId: user.id } });
+    await this.audit.record({ actorUserId: user.id, action: "PATIENT_CLINICAL_FINDING_CREATED", resourceType: "patient_clinical_finding", resourceId: finding.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId, encounterId: dto.encounterId, stableTag: finding.stableTag, status: finding.status, bodyAreaPresent: Boolean(finding.bodyArea), doctorConfirmed: true } });
+    return finding;
+  }
 
   listFamilies() {
     return this.prisma.drugFamily.findMany({ where: { genericMemberships: { some: {} } }, include: { genericMemberships: { include: { medication: true } } }, orderBy: { displayName: "asc" } });
@@ -435,6 +460,19 @@ function expandPharmacologyConcepts(query: string) {
     ["anaerobic", "anaerobe", "لاهوائي"], ["atypical", "atypicals"], ["mrsa"], ["enterococcus", "enterococcal"],
     ["pseudomonas", "antipseudomonal"], ["renal", "kidney", "كلوي", "الكلى"], ["hepatic", "liver", "كبدي", "الكبد"],
     ["pregnancy", "pregnant", "الحمل", "حامل"], ["lactation", "breastfeeding", "الرضاعة"]
+  ].map((group) => group.map(normalizeMedicationSearch));
+  const expanded = groups.find((group) => group.some((alias) => alias === normalized || alias.includes(normalized) || normalized.includes(alias)));
+  return [...new Set([normalized, ...(expanded ?? [])])].filter(Boolean);
+}
+
+function dermatologyConcepts(query: string) {
+  const normalized = normalizeMedicationSearch(query);
+  const groups = [
+    ["hyperpigmentation", "pigmentation", "تصبغات", "فرط التصبغ"],
+    ["sensitive area", "sensitive-area", "منطقة حساسة", "المناطق الحساسة"],
+    ["acne", "حب الشباب"], ["melasma", "كلف"], ["dermatitis", "eczema", "التهاب الجلد", "اكزيما"],
+    ["psoriasis", "صدفية"], ["rosacea", "وردية"], ["urticaria", "شرى"], ["alopecia", "تساقط الشعر"],
+    ["hirsutism", "شعرانية"], ["intertrigo", "التهاب الثنيات"], ["vulvar dermatology", "جلد الفرج"]
   ].map((group) => group.map(normalizeMedicationSearch));
   const expanded = groups.find((group) => group.some((alias) => alias === normalized || alias.includes(normalized) || normalized.includes(alias)));
   return [...new Set([normalized, ...(expanded ?? [])])].filter(Boolean);

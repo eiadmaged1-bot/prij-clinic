@@ -6091,6 +6091,9 @@ select {
 .calculator-governance-result dt { font-size: .78rem; color: var(--muted); }
 .calculator-governance-result dd { margin: 3px 0 0; overflow-wrap: anywhere; }
 .calculator-governance-result .wide { grid-column: 1 / -1; }
+.dermatology-priority-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.dermatology-priority-grid button { min-height: 44px; padding: 9px; border: 1px solid #d4e0e2; border-radius: 10px; background: #fff; overflow-wrap: normal; word-break: normal; }
+.dermatology-condition > section { margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2eaec; }
 
 @media (max-width: 700px) {
   .pharmacology-result-list { grid-template-columns: 1fr; }
@@ -6100,6 +6103,7 @@ select {
   .medication-calculator-form .form-grid,
   .calculator-governance-result { grid-template-columns: 1fr; }
   .calculator-governance-result .wide { grid-column: auto; }
+  .dermatology-priority-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {

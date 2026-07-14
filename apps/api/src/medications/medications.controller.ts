@@ -8,6 +8,7 @@ import { MedicationSafetyService } from "./medication-safety.service";
 import { MedicationSearchService } from "./medication-search.service";
 import { MedicationsService } from "./medications.service";
 import { CreatePharmacologySummaryDto } from "./pharmacology-profile.dto";
+import { CreateDermatologyFindingDto } from "./dermatology.dto";
 
 @Controller()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -119,6 +120,18 @@ export class MedicationsController {
   pharmacologyCoverage() {
     return this.medications.pharmacologyCoverage();
   }
+
+  @Get("dermatology/search")
+  @Permissions("medications.search")
+  dermatologySearch(@Query("q") q: string | undefined) { return this.medications.searchDermatology(q ?? ""); }
+
+  @Get("dermatology/conditions/:id")
+  @Permissions("medications.read")
+  dermatologyCondition(@Param("id") id: string) { return this.medications.dermatologyCondition(id); }
+
+  @Post("patients/:id/clinical-findings")
+  @Permissions("clinical_tags.write")
+  createClinicalFinding(@Param("id") id: string, @Body() dto: CreateDermatologyFindingDto, @CurrentUser() user: AuthUser) { return this.medications.createClinicalFinding(id, dto, user); }
 
   @Get("medications/ingredients/:id/label-sections")
   @Permissions("medications.read")

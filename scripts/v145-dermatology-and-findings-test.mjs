@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+const schema = read("apps/api/prisma/schema.prisma");
+const migration = read("apps/api/prisma/migrations/20260714231500_dermatology_clinical_findings/migration.sql");
+const service = read("apps/api/src/medications/medications.service.ts");
+const controller = read("apps/api/src/medications/medications.controller.ts");
+const ui = read("apps/web/components/medications/DermatologyWorkspace.tsx");
+
+assert.match(schema, /model DermatologyCondition[\s\S]*stableCode[\s\S]*nameAr[\s\S]*redFlagsJson[\s\S]*reviewStatus/);
+assert.match(schema, /model DermatologyGenericOption[\s\S]*bodyAreaSuitabilityJson[\s\S]*pregnancyLactationText[\s\S]*sourceId/);
+assert.match(schema, /model PatientClinicalFinding[\s\S]*patientId[\s\S]*encounterId[\s\S]*stableTag[\s\S]*bodyArea[\s\S]*confirmation[\s\S]*nextAction[\s\S]*followUpText/);
+assert.match(migration, /CREATE TABLE "DermatologyCondition"[\s\S]*CREATE TABLE "PatientClinicalFinding"/, "migration must be additive and forward-only");
+assert.doesNotMatch(migration, /DROP TABLE|TRUNCATE|DELETE FROM/, "migration must preserve existing clinical data");
+assert.match(service, /genericOptions:\s*\{ where:\s*\{ reviewStatus:\s*"approved" \}/, "normal results must expose only approved generic options");
+assert.match(service, /assessmentFirst:\s*true[\s\S]*noAutomaticDiagnosisOrTreatment:\s*true/, "search must remain assistive and assessment-first");
+assert.match(service, /encounterId:\s*dto\.encounterId, patientId/, "finding must be bound to its source encounter and patient");
+assert.match(service, /PATIENT_CLINICAL_FINDING_CREATED/, "finding creation must be audited");
+assert.match(controller, /@Permissions\("clinical_tags\.write"\)/, "patient finding writes must be RBAC protected");
+assert.match(ui, /Red flags and escalation[\s\S]*Assessment and differential[\s\S]*Non-drug care[\s\S]*Reviewed generic options/, "red flags and assessment must precede options");
+assert.match(ui, /external genital skin, mucosa, groin fold, axilla, inner thigh, and facial skin/, "sensitive-area anatomy must be differentiated");
+assert.match(service, /تصبغات[\s\S]*منطقة حساسة/, "Arabic dermatology aliases must remain Unicode");
+assert.match(ui, /No universal treatment is implied/, "UI must not present universal treatment");
+console.log("v1.4.5 dermatology and patient finding checks passed");

@@ -76,6 +76,7 @@ model User {
   roleGrants                         RolePermission[]               @relation("RolePermissionsCreatedBy")
   auditLogs                          AuditLog[]                     @relation("AuditLogsActor")
   createdPatients                    Patient[]                      @relation("PatientsCreatedBy")
+  createdClinicalFindings            PatientClinicalFinding[]
   doctorAppointments                 Appointment[]                  @relation("AppointmentsDoctor")
   createdAppointments                Appointment[]                  @relation("AppointmentsCreatedBy")
   doctorEncounters                   Encounter[]                    @relation("EncountersDoctor")
@@ -344,6 +345,7 @@ model Patient {
   investigationResults        InvestigationResult[]
   patientDocuments            PatientDocument[]
   referrals                   Referral[]
+  clinicalFindings            PatientClinicalFinding[]
   patientTasks                PatientTask[]
   patientInternalNotes        PatientInternalNote[]
   pregnancies                 Pregnancy[]
@@ -619,13 +621,14 @@ model Encounter {
   createdAt                 DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt                 DateTime        @updatedAt @db.Timestamptz(3)
 
-  branch                Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
-  patient               Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  appointment           Appointment?           @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
-  doctor                User                   @relation("EncountersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
-  startedByUser         User?                  @relation("EncountersStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
-  signedByUser          User?                  @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
-  voidedByUser          User?                  @relation("EncountersVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
+  branch                Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  patient               Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  appointment           Appointment?             @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  doctor                User                     @relation("EncountersDoctor", fields: [doctorId], references: [id], onDelete: Restrict)
+  startedByUser         User?                    @relation("EncountersStartedBy", fields: [startedByUserId], references: [id], onDelete: SetNull)
+  clinicalFindings      PatientClinicalFinding[]
+  signedByUser          User?                    @relation("EncountersSignedBy", fields: [signedByUserId], references: [id], onDelete: SetNull)
+  voidedByUser          User?                    @relation("EncountersVoidedBy", fields: [voidedByUserId], references: [id], onDelete: SetNull)
   prescriptions         Prescription[]
   investigationOrders   InvestigationOrder[]
   patientIntakes        PatientIntake[]
@@ -1156,6 +1159,7 @@ model MedicationGeneric {
   hepaticGuidance            HepaticGuidance[]
   antimicrobialSpectra       AntimicrobialSpectrum[]
   doseFormulas               DoseFormula[]
+  dermatologyOptions         DermatologyGenericOption[]
 
   @@index([genericName])
   @@index([familyName])
@@ -1301,6 +1305,8 @@ model PharmacologySource {
   antimicrobialSpectra     AntimicrobialSpectrum[]
   formulaVersions          FormulaVersion[]
   reviewRecords            ReviewRecord[]
+  dermatologyConditions    DermatologyCondition[]
+  dermatologyOptions       DermatologyGenericOption[]
 
   @@index([organization, reviewStatus])
   @@index([provenanceType])
@@ -1589,6 +1595,75 @@ model ReviewRecord {
   @@index([resourceType, resourceId])
   @@index([sourceId])
   @@index([reviewerUserId, reviewedAt])
+}
+
+model DermatologyCondition {
+  id                   String                     @id @default(uuid()) @db.Uuid
+  stableCode           String                     @unique
+  nameEn               String
+  nameAr               String?
+  aliasesJson          Json
+  likelyCategoriesJson Json
+  differentialJson     Json
+  redFlagsJson         Json
+  nonDrugCareJson      Json
+  reviewStatus         String                     @default("needs_review")
+  sourceId             String?                    @db.Uuid
+  createdAt            DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime                   @updatedAt @db.Timestamptz(3)
+  source               PharmacologySource?        @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  genericOptions       DermatologyGenericOption[]
+  patientFindings      PatientClinicalFinding[]
+
+  @@index([reviewStatus])
+  @@index([sourceId])
+}
+
+model DermatologyGenericOption {
+  id                      String               @id @default(uuid()) @db.Uuid
+  conditionId             String               @db.Uuid
+  medicationGenericId     String               @db.Uuid
+  bodyAreaSuitabilityJson Json
+  pregnancyLactationText  String?
+  adverseEffectsJson      Json
+  monitoringJson          Json
+  followUpText            String?
+  reviewStatus            String               @default("needs_review")
+  sourceId                String               @db.Uuid
+  createdAt               DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(3)
+  condition               DermatologyCondition @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  medication              MedicationGeneric    @relation(fields: [medicationGenericId], references: [id], onDelete: Restrict)
+  source                  PharmacologySource   @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([conditionId, medicationGenericId, sourceId])
+  @@index([medicationGenericId, reviewStatus])
+  @@index([sourceId])
+}
+
+model PatientClinicalFinding {
+  id              String                @id @default(uuid()) @db.Uuid
+  patientId       String                @db.Uuid
+  encounterId     String                @db.Uuid
+  conditionId     String?               @db.Uuid
+  stableTag       String
+  detailsJson     Json
+  bodyArea        String?
+  status          String                @default("active")
+  confirmation    String                @default("doctor_confirmed")
+  nextAction      String?
+  followUpText    String?
+  createdByUserId String                @db.Uuid
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
+  patient         Patient               @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  encounter       Encounter             @relation(fields: [encounterId], references: [id], onDelete: Restrict)
+  condition       DermatologyCondition? @relation(fields: [conditionId], references: [id], onDelete: SetNull)
+  createdBy       User                  @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, status])
+  @@index([encounterId])
+  @@index([stableTag])
 }
 
 model MedicationIngredient {
