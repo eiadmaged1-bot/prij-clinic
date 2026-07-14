@@ -31,6 +31,7 @@ export function PharmacologyWorkspace() {
   }
 
   function closeProfile() { setSelected(null); setOpenSection(null); window.requestAnimationFrame(() => searchRef.current?.focus()); }
+  const groupedResults = results.reduce<Record<string, PharmacologySearchResult[]>>((groups, result) => { (groups[result.family || "Other generics"] ??= []).push(result); return groups; }, {});
 
   return <section className="pharmacology-workspace">
     <form className="panel pharmacology-search-sticky" onSubmit={(event) => event.preventDefault()}>
@@ -38,11 +39,13 @@ export function PharmacologyWorkspace() {
       <div className="inline-form"><input id="pharmacology-search" ref={searchRef} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search generic medicine, family, mechanism, target, spectrum, indication, adverse effect, renal/hepatic property…" /><button className="button" type="submit">Search</button></div>
       <p className="muted">{status}</p>
     </form>
-    <div className="pharmacology-result-list">{results.map((result) => <article className="panel pharmacology-quick-card" key={result.id}>
+    {results.length ? <p className="warning-text">Local susceptibility/culture review remains required. Spectrum terms never imply guaranteed susceptibility.</p> : null}
+    <div className="pharmacology-result-list">{Object.entries(groupedResults).map(([family, generics]) => <section className="pharmacology-family-group" key={family}><h2>{family}</h2>{generics.map((result) => <article className="panel pharmacology-quick-card" key={result.id}>
       <div className="section-heading"><div><h2>{result.genericName}</h2><p className="muted">{result.family || "Family not linked"} · {result.pharmacologicClass || "Class not reviewed"}</p></div><span className="badge warning">{result.reviewStatus}</span></div>
       <dl><div><dt>Main use</dt><dd>{result.mainUse}</dd></div><div><dt>Key caution</dt><dd>{result.keyCaution}</dd></div><div><dt>Clearance</dt><dd>{result.clearance}</dd></div><div><dt>Why matched</dt><dd>{result.matchReason}</dd></div></dl>
+      {result.spectrumMatches?.length ? <div className="spectrum-match-list">{result.spectrumMatches.map((match) => <span className="badge" key={match.label}>{match.label}: {match.coverage}</span>)}</div> : null}
       <button className="button secondary compact" type="button" onClick={() => void openProfile(result)}>Open profile</button>
-    </article>)}</div>
+    </article>)}</section>)}</div>
     {selected ? <div className="pharmacology-profile-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeProfile(); }}><aside className="pharmacology-profile-panel" role="dialog" aria-modal="true" aria-label={`${selected.genericName} pharmacology profile`}>
       <header><div><p className="eyebrow">Generic medication profile</p><h2>{selected.genericName}</h2><p className="muted">{selected.family || "Family not linked"} · {selected.pharmacologicClass || selected.className || "Class not reviewed"}</p></div><button className="button secondary compact" type="button" onClick={closeProfile} aria-label="Close profile">Close</button></header>
       <nav className="summary-level-switch" aria-label="Summary level">{(["Quick", "Clinical", "Full source"] as SummaryLevel[]).map((item) => <button className={level === item ? "active" : ""} key={item} type="button" onClick={() => setLevel(item)}>{item}</button>)}</nav>

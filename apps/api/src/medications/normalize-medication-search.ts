@@ -4,6 +4,8 @@ export function normalizeMedicationSearch(value: string | null | undefined) {
     .normalize("NFKD")
     .replace(/[^\p{L}\p{N}%/.\s-]+/gu, " ")
     .replace(/[-_]+/g, " ")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ى/g, "ي")
     .replace(/\s+/g, " ")
     .trim();
 

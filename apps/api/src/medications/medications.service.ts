@@ -24,6 +24,7 @@ export class MedicationsService {
   async searchPharmacology(query: string) {
     const normalized = normalizeMedicationSearch(query);
     if (normalized.length < 2) return { query, results: [] };
+    const concepts = expandPharmacologyConcepts(query);
     const medications = await this.prisma.medicationGeneric.findMany({
       where: { isActive: true },
       include: pharmacologyInclude,
@@ -39,11 +40,12 @@ export class MedicationsService {
         ["monitoring", evidence.monitoring.map((item) => item.parameter).join(" ")], ["renal/hepatic", `${evidence.renal.map((item) => item.adjustmentStatus).join(" ")} ${evidence.hepatic.map((item) => item.adjustmentStatus).join(" ")}`],
         ["antimicrobial spectrum", spectrumSearchText(evidence.spectrum)]
       ] as const;
-      const matches = matchFields.filter(([, value]) => normalizeMedicationSearch(value).includes(normalized));
+      const matches = matchFields.filter(([, value]) => concepts.some((concept) => normalizeMedicationSearch(value).includes(concept)));
       if (!matches.length) return [];
-      return [{ id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, mainUse: "No reviewed indication summary available.", keyCaution: evidence.adverseEffects.slice(0, 3).map((item) => item.name).join(" · ") || "No reviewed caution summary available.", clearance: evidence.renal[0]?.primaryElimination || evidence.hepatic[0]?.primaryMetabolism || "No reviewed clearance summary available.", matchReason: `Matched ${matches.map(([field]) => field).join(", ")}`, profileCompleteness: evidence.profileCompleteness }];
+      return [{ id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, mainUse: "No reviewed indication summary available.", keyCaution: evidence.adverseEffects.slice(0, 3).map((item) => item.name).join(" · ") || "No reviewed caution summary available.", clearance: evidence.renal[0]?.primaryElimination || evidence.hepatic[0]?.primaryMetabolism || "No reviewed clearance summary available.", matchReason: `Matched ${matches.map(([field]) => field).join(", ")} via ${concepts.join(" / ")}`, spectrumMatches: spectrumMatches(evidence.spectrum, concepts), profileCompleteness: evidence.profileCompleteness }];
     });
-    return { query, results: results.slice(0, 50), genericFirst: true, tradeNamesAreAliasesOnly: true };
+    const groupedResults = Object.entries(results.reduce<Record<string, typeof results>>((groups, result) => { (groups[result.family || "Other generics"] ??= []).push(result); return groups; }, {})).map(([family, generics]) => ({ family, generics }));
+    return { query, expandedConcepts: concepts, results: results.slice(0, 50), groupedResults, genericFirst: true, tradeNamesAreAliasesOnly: true, susceptibilityReviewRequired: true };
   }
 
   async pharmacologyProfile(id: string) {
@@ -388,4 +390,27 @@ function jsonStrings(value: Prisma.JsonValue) {
 
 function spectrumSearchText(rows: PharmacologyMedication["antimicrobialSpectra"]) {
   return rows.map((row) => `gram positive ${row.gramPositive} gram +ve g+ve جرام موجب gram negative ${row.gramNegative} anaerobic ${row.anaerobic} atypical ${row.atypical} pseudomonas antipseudomonal ${row.pseudomonas} mrsa ${row.mrsa} enterococcus ${row.enterococcus} esbl ${row.esblRelevance} intracellular ${row.intracellular} ${row.resistanceLimitations}`).join(" ");
+}
+
+const allowedCoverage = new Set(["strong", "variable", "limited", "usually inactive", "resistance-dependent", "unknown/unverified"]);
+
+function spectrumMatches(rows: PharmacologyMedication["antimicrobialSpectra"], concepts: string[]) {
+  const labels = [["Gram-positive", "gram positive", "gram +ve", "g+ve", "جرام موجب", "gramPositive"], ["Gram-negative", "gram negative", "جرام سالب", "gramNegative"], ["Anaerobic", "anaerobic", "لاهوائي", "anaerobic"], ["Atypical", "atypical", "atypical"], ["Pseudomonas", "pseudomonas", "antipseudomonal", "pseudomonas"], ["MRSA", "mrsa", "mrsa"], ["Enterococcus", "enterococcus", "enterococcus"], ["ESBL relevance", "esbl", "esblRelevance"], ["Intracellular", "intracellular", "intracellular"]] as const;
+  return rows.flatMap((row) => labels.flatMap(([label, ...aliases]) => concepts.some((concept) => aliases.slice(0, -1).some((alias) => normalizeMedicationSearch(alias).includes(concept) || concept.includes(normalizeMedicationSearch(alias)))) ? [{ label, coverage: safeCoverage(String(row[aliases.at(-1) as keyof typeof row] ?? "unknown/unverified")) }] : []));
+}
+
+function safeCoverage(value: string) { const normalized = value.toLowerCase().trim(); return allowedCoverage.has(normalized) ? normalized : "unknown/unverified"; }
+
+function expandPharmacologyConcepts(query: string) {
+  const normalized = normalizeMedicationSearch(query);
+  const groups = [
+    ["bronchodilator", "bronchodilation", "saba", "laba", "lama", "beta2 agonist", "موسع قصبي", "موسعات الشعب الهوائية"],
+    ["gram positive", "gram +ve", "g+ve", "جرام موجب"],
+    ["gram negative", "gram -ve", "g-ve", "جرام سالب"],
+    ["anaerobic", "anaerobe", "لاهوائي"], ["atypical", "atypicals"], ["mrsa"], ["enterococcus", "enterococcal"],
+    ["pseudomonas", "antipseudomonal"], ["renal", "kidney", "كلوي", "الكلى"], ["hepatic", "liver", "كبدي", "الكبد"],
+    ["pregnancy", "pregnant", "الحمل", "حامل"], ["lactation", "breastfeeding", "الرضاعة"]
+  ].map((group) => group.map(normalizeMedicationSearch));
+  const expanded = groups.find((group) => group.some((alias) => alias === normalized || alias.includes(normalized) || normalized.includes(alias)));
+  return [...new Set([normalized, ...(expanded ?? [])])].filter(Boolean);
 }
