@@ -1083,14 +1083,11 @@ export function PatientQrModal({ patient, onClose }: { patient: Patient; onClose
 
 export function MorePatientSections({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
     const sections: Array<[string, string]> = [
-            ["billing", "Billing"],
-            ["follow-up-hints", "Follow-up"],
-            ["medications", "Medications"],
-            ["allergies", "Allergies"],
-            ["medication-safety", "Medication Safety"],
-            ["ai-snapshot", "AI Drafts"],
-            ["history", "Audit / History"],
-            ["gynecology", "Gynecology"]
+            ["pregnancy", "Women’s Health"],
+            ["documents", "Documents"],
+            ["prescriptions", "Previous Prescriptions"],
+            ["investigations", "Results"],
+            ["billing", "Administrative details"]
           ];
     return <section className="panel compact-panel"><div className="section-heading"><h2>More patient sections</h2><span className="badge">Comfort tabs</span></div><div className="dense-card-list">{sections.map(([key, label]) => <button className="picker-row" key={key} type="button" onClick={() => setActiveTab(key)}><strong>{label}</strong><span>Open {label.toLowerCase()}</span></button>)}</div></section>;
 }

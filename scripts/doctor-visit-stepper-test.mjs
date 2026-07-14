@@ -8,11 +8,11 @@ const [page, service, encounters, client] = await Promise.all([
   readFile("apps/web/lib/doctor-visit.ts", "utf8")
 ]);
 
-const steps = ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"];
-for (const step of steps) assert(service.includes(`\"${step}\"`), `visit workflow missing ${step}`);
-for (const step of steps.slice(0, -1)) assert(page.includes(`activeStep === \"${step}\"`), `step must render conditionally: ${step}`);
-assert(page.includes('activeStep === "Review and Print"'), "review and print must render conditionally");
-assert(page.includes("Previous") && page.includes("Next") && page.includes("Save encounter and continue"), "stepper navigation and save-and-continue must exist");
+const steps = ["History", "Examination", "Assessment", "Plan", "Review"];
+for (const step of steps) assert(page.includes(`\"${step}\"`), `guided visit workflow missing ${step}`);
+for (const step of steps) assert(page.includes(`activeStep === \"${step}\"`), `step must render conditionally: ${step}`);
+for (const section of ["Prescription", "Investigations", "Follow-up"]) assert(page.includes(`\"${section}\"`), `plan section missing ${section}`);
+assert(page.includes("Previous") && page.includes("Next") && page.includes("Save assessment and continue"), "stepper navigation and save-and-continue must exist");
 assert(page.includes("encounterReady") && page.includes("Complete Visit") && page.includes("disabled={!encounterId || !encounterReady"), "visit completion must require clinician-authored encounter fields");
 assert(client.includes('/encounters/${encodeURIComponent(encounterId)}/sign'), "completion must use the audited sign endpoint");
 assert(encounters.includes('existing.status === "signed"') && encounters.includes("cannot be edited"), "signed encounter must be immutable");

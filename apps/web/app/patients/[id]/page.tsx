@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { PregnancyDatingCard } from "../../../components/patients/PregnancyDatingCard";
 import { patientWorkspaceRegistry, visiblePatientWorkspaceItems } from "../../../components/patients/patient-workspace-registry";
-import { DoctorMobilePatientHeader } from "../../../components/doctor/DoctorMobilePatientHeader";
 import { DoctorMobileVisitFooter } from "../../../components/doctor/DoctorMobileVisitFooter";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { useSession } from "../../session";
@@ -317,62 +316,21 @@ export default function PatientFilePage() {
 
   return (
     <AppShell>
-      {interfaceMode === "MINIMALISTIC" && patient ? <DoctorMobilePatientHeader name={`${patient.firstName} ${patient.lastName}`} summary={`${ageLabel} · ${patient.medicalRecordNumber}`} /> : null}
-      <section className="patient-simple-hero">
-        <div className="patient-avatar">
-          <ThreeDMedicalIcon name="patients" size="lg" />
+      <section className="patient-context-bar" aria-label="Current patient context">
+        <div className="patient-context-identity">
+          <strong>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</strong>
+          <span>{patient ? `MRN ${patient.medicalRecordNumber} · ${ageLabel}` : "Loading patient details"}</span>
         </div>
-        <div>
-          <p className="eyebrow">Patient file workspace</p>
-          <h1>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</h1>
-          <p className="muted">{patient ? `${ageLabel} | File ${patient.medicalRecordNumber} | ${patient.phone || patient.email || "No contact saved"}` : "Loading patient details"}</p>
-          <div className="workflow-band">
-            <span>{patient?.status ? patient.status.replaceAll("_", " ") : "Opening"}</span>
-            <span>{patientTypeLabel(patient?.patientType)}</span>
-            <span>{currentPhase ? phaseTypeLabel(currentPhase.phaseType) : "No active phase"}</span>
-            {patient?.sexualActivityStatus === "not_sexually_active" ? <span>Virgin / Not sexually active</span> : null}
-            {activePregnancyCount ? <span>Pregnant</span> : null}
-            {pendingResultCount ? <span>Pending results</span> : null}
-            {openFollowUpCount ? <span>Follow-up due</span> : null}
-            {unpaidInvoiceCount ? <span>Unpaid / balance</span> : null}
-            <span>Allergy review</span>
-            <span>Current medications</span>
-            <span>Last visit: {timelineItems[0]?.dateTime ? formatDateTime(timelineItems[0].dateTime) : "Not recorded"}</span>
-            <span>Next appointment: {String((related.appointments ?? [])[0]?.startAt ? formatDateTime(String((related.appointments ?? [])[0]?.startAt)) : "Not booked")}</span>
-          </div>
-          {permissions.includes("patient.update") ? (
-            <label className="inline-edit-control">
-              Patient type
-              <select value={patient?.patientType ?? "GENERAL"} onChange={(event) => void updatePatientType(event.target.value)}>
-                {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </label>
-          ) : null}
+        <div className="patient-context-signals" aria-label="Patient safety context">
+          <span>{currentPhase ? phaseTypeLabel(currentPhase.phaseType) : "No active phase"}</span>
+          <span className="warning">Allergies: review</span>
+          {activePregnancyCount ? <span className="warning">Pregnancy</span> : null}
+          {pendingResultCount ? <span>Results pending</span> : null}
+          <span>{actionStatus || "Draft not changed"}</span>
         </div>
-        <div className="patient-primary-actions">
-          <AppActionButton actionId="encounter.create" userPermissions={permissions} userRoles={roles} className="button large" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>
-            <ThreeDMedicalIcon name="encounter" size="sm" />
-            New Encounter
-          </AppActionButton>
-          <AppActionButton actionId="prescription.create" userPermissions={permissions} userRoles={roles} className="button secondary large" type="button" onClick={() => setActiveTab("prescriptions")} disabled={!patient}>
-            <ThreeDMedicalIcon name="prescription" size="sm" tone="slate" />
-            Prescription
-          </AppActionButton>
-          <AppActionButton actionId="investigation.create" userPermissions={permissions} userRoles={roles} className="button secondary large" type="button" onClick={() => setActiveTab("investigations")} disabled={!patient}>
-            <ThreeDMedicalIcon name="investigations" size="sm" tone="slate" />
-            Request Investigation
-          </AppActionButton>
-          <Link className="button secondary large" href="/calendar">
-            <ThreeDMedicalIcon name="calendar" size="sm" tone="slate" />
-            Book Follow-up
-          </Link>
-          <button className="button secondary large" type="button" onClick={() => setActiveTab("more")} disabled={!patient}>
-            <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-            More
-          </button>
-          <button className="button secondary compact icon-only-button" type="button" onClick={() => setQrOpen(true)} disabled={!patient} aria-label="Show patient QR" title="Show patient QR">
-            <ThreeDMedicalIcon name="search" size="sm" tone="slate" />
-          </button>
+        <div className="patient-context-actions">
+          <AppActionButton actionId="encounter.create" userPermissions={permissions} userRoles={roles} className="button compact" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>Start / Resume Visit</AppActionButton>
+          <button className="button secondary compact" type="button" onClick={() => setActiveTab("more")} disabled={!patient}>More</button>
         </div>
       </section>
 
@@ -435,7 +393,10 @@ export default function PatientFilePage() {
       ) : !error ? (
         <div className="skeleton" />
       ) : null}
-      {interfaceMode === "MINIMALISTIC" && patient && activeTab === "doctor-visit" ? <DoctorMobileVisitFooter status={actionStatus.startsWith("Saving") ? "Saving" : actionStatus.startsWith("Saved") ? "Saved" : "Saved"} onAction={(action) => { if (action === "rx") setActiveTab("prescriptions"); else if (action === "requests") setActiveTab("investigations"); else if (action === "finish" && window.confirm("Finish and sign this visit?")) setActionStatus("Saved"); else if (action === "save") setActionStatus("Saving"); }} /> : null}
+      {interfaceMode === "MINIMALISTIC" && patient && activeTab === "doctor-visit" ? <DoctorMobileVisitFooter status={actionStatus.startsWith("Saving") ? "Saving" : actionStatus.startsWith("Saved") ? "Saved" : "Saved"} onAction={(action) => {
+        window.dispatchEvent(new CustomEvent("patient-visit:navigate", { detail: action }));
+        if (action === "save") setActionStatus("Saving…");
+      }} /> : null}
     </AppShell>
   );
 }

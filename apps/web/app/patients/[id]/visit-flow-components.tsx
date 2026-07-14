@@ -18,10 +18,11 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
   const [selectedInvestigation, setSelectedInvestigation] = useState<ReferenceResult | null>(null);
   const [hint, setHint] = useState("");
   const [activeStep, setActiveStep] = useState("History");
+  const [activePlanSection, setActivePlanSection] = useState("Prescription");
   const encounterId = String(visit?.encounter?.id ?? "");
   const latestHistorySheetId = String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined;
   const terminalMedication = hoveredMedication ?? selectedMedication;
-  const visitSteps = visit?.workflow ?? ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"];
+  const visitSteps = ["History", "Examination", "Assessment", "Plan", "Review"];
   const activeStepIndex = Math.max(0, visitSteps.indexOf(activeStep));
   const encounterReady = Boolean(String(visit?.encounter?.chiefComplaint ?? "").trim() && String(visit?.encounter?.assessmentText ?? "").trim() && String(visit?.encounter?.planText ?? "").trim());
 
@@ -33,6 +34,19 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       })
       .catch(() => setStatus("Doctor visit requires clinical access."));
   }, [patient.id]);
+
+  useEffect(() => {
+    const navigate = (event: Event) => {
+      const action = (event as CustomEvent<string>).detail;
+      const index = visitSteps.indexOf(activeStep);
+      if (action === "back") setActiveStep(visitSteps[Math.max(0, index - 1)] ?? "History");
+      if (action === "next") setActiveStep(visitSteps[Math.min(visitSteps.length - 1, index + 1)] ?? "Review");
+      if (action === "review") setActiveStep("Review");
+      if (action === "save") setStatus("Use the active section save action to persist this doctor-reviewed draft.");
+    };
+    window.addEventListener("patient-visit:navigate", navigate);
+    return () => window.removeEventListener("patient-visit:navigate", navigate);
+  }, [activeStep]);
 
   useEffect(() => {
     if (!medicationQuery.trim()) {
@@ -64,7 +78,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     if (!encounterId) return;
     const payload = values(event.currentTarget, ["chiefComplaint", "historyText", "examText", "assessmentText", "planText"]) as Record<string, string>;
     await updateDoctorVisit(patient.id, encounterId, payload);
-    setActiveStep("Prescription");
+    setActiveStep(activeStep === "Examination" ? "Assessment" : "Plan");
     setStatus("Encounter draft saved.");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
@@ -84,7 +98,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       }]
     });
     setStatus("Prescription draft updated with generic medication.");
-    setActiveStep("Investigations");
+    setActivePlanSection("Investigations");
     setVisit(await getCurrentDoctorVisit(patient.id));
     form.reset();
   }
@@ -99,7 +113,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       items: [{ category: selectedInvestigation.category ?? "laboratory", testName: selectedInvestigation.label, instructions: payload.instructions }]
     });
     setStatus("Investigation request added.");
-    setActiveStep("Follow-up");
+    setActivePlanSection("Follow-up");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
@@ -108,14 +122,14 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     if (!encounterId) return;
     await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string });
     setStatus("Follow-up task added.");
-    setActiveStep("Review and Print");
+    setActiveStep("Review");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
   async function loadPacket() {
     if (!encounterId) return;
     setVisit(await getDoctorVisitPacket(patient.id, encounterId));
-    setActiveStep("Review and Print");
+    setActiveStep("Review");
     setStatus("Visit packet refreshed.");
   }
 
@@ -132,8 +146,8 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     <section className="panel doctor-visit-flow">
       <div className="section-heading">
         <div>
-          <h2>Doctor Visit Flow</h2>
-          <p className="muted">History, Care Assist, encounter draft, generic prescription, investigations, follow-up, and print packet. The app does not diagnose automatically. No automatic prescribing.</p>
+          <h2>Guided Visit</h2>
+          <p className="muted">One clinical section is shown at a time. Clinical decisions and completion remain with the doctor.</p>
         </div>
         <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
           {encounterId ? <AppActionButton actionId="encounter.void" userPermissions={permissions} userRoles={roles} className="button secondary danger" type="button" onClick={async () => {
@@ -167,19 +181,24 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
         </section>
       </div> : null}
 
-      {activeStep === "Care Assist" ? <div className="active-visit-step"><CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} /></div> : null}
-
-      {activeStep === "Encounter" ? <form className="panel form-grid active-visit-step" onSubmit={(event) => void saveEncounter(event)}>
-        <div className="section-heading"><h3>Encounter Draft</h3><span className="badge warning">Doctor review required</span></div>
-        <label>Chief complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label>
-        <label>HPI<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
+      {activeStep === "Examination" ? <form className="panel form-grid active-visit-step" onSubmit={(event) => void saveEncounter(event)}>
+        <div className="section-heading"><h3>Examination</h3><span className="badge warning">Doctor authored</span></div>
         <label>Examination notes<textarea name="examText" defaultValue={String(visit?.encounter?.examText ?? "")} /></label>
-        <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
-        <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
-        <button className="button" type="submit" disabled={!encounterId}>Save encounter and continue</button>
+        <button className="button" type="submit" disabled={!encounterId}>Save examination and continue</button>
       </form> : null}
 
-      {activeStep === "Prescription" ? <div className="doctor-friendly-grid active-visit-step">
+      {activeStep === "Assessment" ? <div className="doctor-friendly-grid active-visit-step"><form className="panel form-grid" onSubmit={(event) => void saveEncounter(event)}>
+        <div className="section-heading"><h3>Assessment</h3><span className="badge warning">Doctor review required</span></div>
+        <label>Chief complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label>
+        <label>History of presenting concern<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
+        <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
+        <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
+        <button className="button" type="submit" disabled={!encounterId}>Save assessment and continue</button>
+      </form><CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} /></div> : null}
+
+      {activeStep === "Plan" ? <div className="active-visit-step">
+        <div className="visit-plan-tabs" aria-label="Plan sections">{["Prescription", "Investigations", "Follow-up"].map((section) => <button className={activePlanSection === section ? "active" : ""} key={section} onClick={() => setActivePlanSection(section)} type="button">{section}</button>)}</div>
+      {activePlanSection === "Prescription" ? <div className="doctor-friendly-grid">
         <form className="panel form-grid" onSubmit={(event) => void addPrescription(event)}>
           <div className="section-heading"><h3>Prescription Draft</h3><span className="badge warning">Generic-first</span></div>
           <label>Search generic medication<input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Search generic name or class" /></label>
@@ -202,7 +221,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
         </div>
       </div> : null}
 
-      {activeStep === "Investigations" ? <div className="doctor-friendly-grid active-visit-step">
+      {activePlanSection === "Investigations" ? <div className="doctor-friendly-grid">
         <form className="panel form-grid" onSubmit={(event) => void addInvestigation(event)}>
           <div className="section-heading"><h3>Investigations</h3><span className="badge">Request only</span></div>
           <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={setSelectedInvestigation} />
@@ -224,7 +243,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
         </section>
       </div> : null}
 
-      {activeStep === "Follow-up" ? <form className="panel form-grid active-visit-step" onSubmit={(event) => void addFollowUp(event)}>
+      {activePlanSection === "Follow-up" ? <form className="panel form-grid" onSubmit={(event) => void addFollowUp(event)}>
         <div className="section-heading"><h3>Follow-up</h3><span className="badge">Manual task</span></div>
         <label>Follow-up date<input name="dueAt" type="date" /></label>
         <label>Task title<input name="title" placeholder="Follow-up visit" /></label>
@@ -232,8 +251,9 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
         <p className="muted">Manual follow-up only. Treatment instructions are not generated automatically.</p>
         <button className="button" type="submit" disabled={!encounterId}>Save follow-up and continue</button>
       </form> : null}
+      </div> : null}
 
-      {activeStep === "Review and Print" ? <section className="panel printable-summary active-visit-step">
+      {activeStep === "Review" ? <section className="panel printable-summary active-visit-step">
         <div className="section-heading no-print">
           <h3>Print Packet</h3>
           <div className="form-actions">
