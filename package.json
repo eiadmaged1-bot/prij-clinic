@@ -353,6 +353,7 @@
     "test:v146:history-sections": "node scripts/v146-history-sections-test.mjs",
     "test:v146:prescription": "node scripts/v146-prescription-recovery-test.mjs",
     "test:v146:hydration-errors": "node scripts/v146-hydration-error-test.mjs",
+    "test:v146:credential-safety": "node scripts/v146-guideline-credential-safety-test.mjs",
     "test:v145:doctor-dashboard": "node scripts/v145-doctor-mobile-dashboard-test.mjs",
     "test:v1444:arabic-rtl": "node scripts/v1444-arabic-rtl-test.mjs",
     "test:prescription-print": "node scripts/prescription-print-test.mjs",

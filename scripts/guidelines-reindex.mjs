@@ -12,9 +12,12 @@ for (const document of documents.documents ?? []) {
 console.log(`Reindex complete. Documents: ${count}`);
 
 async function login() {
+  const identifier = process.env.GUIDELINE_IMPORT_LOGIN?.trim();
+  const password = process.env.GUIDELINE_IMPORT_PASSWORD;
+  if (!identifier || !password) throw new Error("GUIDELINE_IMPORT_LOGIN and GUIDELINE_IMPORT_PASSWORD are required.");
   const body = await apiJson("POST", "/auth/login", null, {
-    identifier: process.env.GUIDELINE_IMPORT_LOGIN || "eyad",
-    password: process.env.GUIDELINE_IMPORT_PASSWORD || "eyad"
+    identifier,
+    password
   });
   return body.token;
 }
