@@ -328,7 +328,9 @@ async function resolvePrescriptionItem(prisma: PrismaService, item: Prescription
       brandName: null,
       tradeName: null,
       strengthText: clean(item.strengthText),
-      dosageForm: clean(item.dosageForm)
+      dosageForm: clean(item.dosageForm),
+      entrySource: "catalog",
+      verificationStatus: generic.reviewStatus
     };
   }
 
@@ -351,7 +353,9 @@ async function resolvePrescriptionItem(prisma: PrismaService, item: Prescription
       brandName: variant.product.tradeName,
       tradeName: variant.tradeName,
       strengthText: variant.strengthText,
-      dosageForm: variant.dosageForm
+      dosageForm: variant.dosageForm,
+      entrySource: "catalog",
+      verificationStatus: variant.verificationStatus
     };
   }
 
@@ -369,7 +373,9 @@ async function resolvePrescriptionItem(prisma: PrismaService, item: Prescription
       brandName: product.brandName,
       tradeName: product.brandName,
       strengthText: product.strengthText,
-      dosageForm: product.dosageForm
+      dosageForm: product.dosageForm,
+      entrySource: "catalog",
+      verificationStatus: product.verificationStatus
     };
   }
 
@@ -381,6 +387,12 @@ function toItemCreate(item: PrescriptionItemDto) {
     medicationName: item.medicationName.trim(),
     strengthText: clean(item.strengthText),
     dosageForm: clean(item.dosageForm),
+    brandName: clean(item.optionalBrandOrTradeName),
+    tradeName: clean(item.optionalBrandOrTradeName),
+    quantityText: clean(item.quantityText),
+    dispensingUnit: clean(item.dispensingUnit),
+    entrySource: item.manualEntry ? "manual" : "unclassified",
+    verificationStatus: item.manualEntry ? "unverified" : "review_required",
     dose: clean(item.dose),
     route: clean(item.route),
     frequency: clean(item.frequency),

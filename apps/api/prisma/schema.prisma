@@ -1059,6 +1059,10 @@ model PrescriptionItem {
   strengthText        String?
   dosageForm          String?
   medicationGenericId String? @db.Uuid
+  quantityText         String?
+  dispensingUnit       String?
+  entrySource          String  @default("unclassified")
+  verificationStatus   String  @default("review_required")
 
   prescription      Prescription       @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medicationGeneric MedicationGeneric? @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)

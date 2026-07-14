@@ -1483,6 +1483,57 @@ body {
   gap: 0.65rem;
 }
 
+.prescription-center-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.compact-editor-drawer {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: clip;
+}
+
+.compact-editor-drawer > summary {
+  display: flex;
+  min-height: 4.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  cursor: pointer;
+  list-style: none;
+  padding: var(--space-3) var(--space-4);
+}
+
+.compact-editor-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.compact-editor-drawer > summary > span:first-child {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.compact-editor-drawer > summary small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-editor-drawer[open] > summary {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.compact-medication-fields {
+  padding: var(--space-4);
+}
+
 .compact-toolbar {
   margin-bottom: 0.75rem;
 }
