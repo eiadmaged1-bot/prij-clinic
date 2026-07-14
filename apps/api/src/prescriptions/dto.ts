@@ -54,6 +54,11 @@ export class PrescriptionItemDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(40)
+  doseUnit?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   route?: string;
 
@@ -66,6 +71,15 @@ export class PrescriptionItemDto {
   @IsString()
   @MaxLength(120)
   duration?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  prn?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(240)
+  customReason?: string;
 
   @IsOptional()
   @IsString()

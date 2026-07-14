@@ -9,10 +9,10 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Shortcut = { id: string; displayName: string; genericName: string; defaultDoseText?: string | null; defaultTimingText?: string | null; defaultDurationText?: string | null; defaultInstructions?: string | null };
 type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; itemsJson?: PrescriptionItem[] };
-type PrescriptionItem = { medicationName: string; medicationGenericId?: string; medicationProductId?: string; drugMarketVariantId?: string; optionalBrandOrTradeName?: string; strengthText?: string; dosageForm?: string; quantityText?: string; dispensingUnit?: string; dose?: string; route?: string; frequency?: string; duration?: string; instructions?: string; notes?: string; manualEntry?: boolean };
+type PrescriptionItem = { medicationName: string; medicationGenericId?: string; medicationProductId?: string; drugMarketVariantId?: string; optionalBrandOrTradeName?: string; strengthText?: string; dosageForm?: string; quantityText?: string; dispensingUnit?: string; dose?: string; doseUnit?: string; route?: string; frequency?: string; duration?: string; prn?: boolean; customReason?: string; instructions?: string; notes?: string; manualEntry?: boolean };
 type MedicationResult = { type: string; id: string; productId?: string; genericName?: string | null; brandName?: string | null; tradeName?: string | null; strengthText?: string | null; dosageForm?: string | null };
 
-const emptyItem: PrescriptionItem = { medicationName: "", strengthText: "", dosageForm: "", quantityText: "", dispensingUnit: "", dose: "", route: "", frequency: "", duration: "", instructions: "", notes: "", manualEntry: true };
+const emptyItem: PrescriptionItem = { medicationName: "", strengthText: "", dosageForm: "", quantityText: "", dispensingUnit: "", dose: "", doseUnit: "", route: "", frequency: "", duration: "", prn: false, customReason: "", instructions: "", notes: "", manualEntry: true };
 
 export default function PrescriptionsPage() {
   const [active, setActive] = useState("templates");
@@ -97,9 +97,12 @@ export default function PrescriptionsPage() {
       quantityText: item.quantityText?.trim(),
       dispensingUnit: item.dispensingUnit?.trim(),
       dose: item.dose?.trim(),
+      doseUnit: item.doseUnit?.trim(),
       route: item.route?.trim(),
       frequency: item.frequency?.trim(),
       duration: item.duration?.trim(),
+      prn: item.prn === true,
+      customReason: item.customReason?.trim(),
       instructions: item.instructions?.trim(),
       manualEntry: item.manualEntry
     })).filter((item) => item.medicationName);
@@ -153,7 +156,7 @@ export default function PrescriptionsPage() {
     setSavedPrescriptionId("");
   }
 
-  const readyItems = items.filter((item) => item.medicationName.trim() && item.dose?.trim() && item.frequency?.trim() && item.duration?.trim());
+  const readyItems = items.filter((item) => item.medicationName.trim() && item.strengthText?.trim() && item.dosageForm?.trim() && item.dose?.trim() && item.doseUnit?.trim() && item.route?.trim() && item.frequency?.trim() && item.duration?.trim() && item.quantityText?.trim() && (!item.manualEntry || item.customReason?.trim()));
   const printReady = Boolean(patientId && encounterId && savedPrescriptionId && readyItems.length === items.length && identityConfirmed && doctorReviewed && alertsHandled);
 
   function addCatalogMedication(result: MedicationResult) {
@@ -167,7 +170,11 @@ export default function PrescriptionsPage() {
       drugMarketVariantId: result.type === "market_variant" ? result.id : undefined,
       manualEntry: false
     };
-    setItems((current) => current.length === 1 && !current[0]?.medicationName ? [item] : [...current, item]);
+    setItems((current) => {
+      const duplicate = current.some((entry) => (item.medicationGenericId && entry.medicationGenericId === item.medicationGenericId) || (entry.medicationName.trim().toLocaleLowerCase() === item.medicationName.trim().toLocaleLowerCase() && (entry.strengthText ?? "") === (item.strengthText ?? "") && (entry.dosageForm ?? "") === (item.dosageForm ?? "")));
+      if (duplicate) { setStatus("That medication, strength, and form is already selected."); return current; }
+      return current.length === 1 && !current[0]?.medicationName ? [item] : [...current, item];
+    });
     setMedicationQuery("");
     setMedicationResults([]);
   }
@@ -217,9 +224,9 @@ export default function PrescriptionsPage() {
       <section className="patient-tabs simple">
         {([
           ...(lockedContext ? [["builder", "Patient Prescription"]] : []),
-          ["templates", "Saved Prescription Templates"],
-          ["shortcuts", "My Saved Medications"],
-          ["recent", "Recent Patient Prescriptions"]
+          ["templates", "Templates"],
+          ["shortcuts", "Saved meds"],
+          ["recent", "Recent"]
         ] as const).map(([key, label]) => <button className={`tab-button ${active === key ? "active" : ""}`} key={key} onClick={() => setActive(key)} type="button">{label}</button>)}
       </section>
 
@@ -254,11 +261,14 @@ export default function PrescriptionsPage() {
                   <label>Quantity<input value={item.quantityText ?? ""} onChange={(event) => updateItem(index, "quantityText", event.target.value, setItems)} placeholder="1" /></label>
                   <label>Dispensing unit<input value={item.dispensingUnit ?? ""} onChange={(event) => updateItem(index, "dispensingUnit", event.target.value, setItems)} placeholder="box or strip" /></label>
                   <label>Dose<input value={item.dose ?? ""} onChange={(event) => updateItem(index, "dose", event.target.value, setItems)} /></label>
+                  <label>Dose unit<input value={item.doseUnit ?? ""} onChange={(event) => updateItem(index, "doseUnit", event.target.value, setItems)} placeholder="mg, mL, tablet" /></label>
                   <label>Route<input value={item.route ?? ""} onChange={(event) => updateItem(index, "route", event.target.value, setItems)} /></label>
                   <label>Frequency<input value={item.frequency ?? ""} onChange={(event) => updateItem(index, "frequency", event.target.value, setItems)} /></label>
                   <label>Duration<input value={item.duration ?? ""} onChange={(event) => updateItem(index, "duration", event.target.value, setItems)} /></label>
+                  <label className="checkbox-row"><input type="checkbox" checked={item.prn === true} onChange={(event) => updateItem(index, "prn", event.target.checked, setItems)} />PRN / when needed</label>
+                  {item.manualEntry ? <label className="wide">Reason for custom or unlisted medication<input value={item.customReason ?? ""} onChange={(event) => updateItem(index, "customReason", event.target.value, setItems)} required /></label> : null}
                   <label className="wide">Additional instructions<input value={item.instructions ?? ""} onChange={(event) => updateItem(index, "instructions", event.target.value, setItems)} /></label>
-                  <div className="form-actions wide"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => [...current.slice(0, index + 1), { ...item }, ...current.slice(index + 1)])}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button></div>
+                  <div className="form-actions wide"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => { if (window.confirm("Add a distinct formulation, route, or treatment phase?")) setItems((current) => [...current.slice(0, index + 1), { ...item } as PrescriptionItem, ...current.slice(index + 1)]); }}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button></div>
                 </div>
               </details>
             ))}
@@ -266,7 +276,7 @@ export default function PrescriptionsPage() {
             <section className="panel compact-panel wide prescription-review-panel"><h3>Doctor review</h3><label className="checkbox-row"><input type="checkbox" checked={identityConfirmed} onChange={(event) => setIdentityConfirmed(event.target.checked)} />Patient identity confirmed.</label><label className="checkbox-row"><input type="checkbox" checked={alertsHandled} onChange={(event) => setAlertsHandled(event.target.checked)} />Allergies, current medications, pregnancy and lactation reviewed.</label><label className="checkbox-row"><input type="checkbox" checked={doctorReviewed} onChange={(event) => setDoctorReviewed(event.target.checked)} />Dose, route, frequency, duration and instructions verified by the doctor.</label></section>
             <div className="form-actions wide"><input aria-label="Prescription template name" value={templateTitle} onChange={(event) => setTemplateTitle(event.target.value)} placeholder="Template name" /><button className="button secondary" type="button" onClick={() => void saveCurrentTemplate()}>{editingTemplateId ? "Save template changes" : "Save current rows as template"}</button>{editingTemplateId ? <button className="button secondary" type="button" onClick={() => { setEditingTemplateId(""); setTemplateTitle(""); }}>Cancel template edit</button> : null}</div>
             <div className="form-actions">
-              <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add custom medication</button>
+              <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>More options · Add custom medication</button>
               <button className="button secondary" type="button" onClick={() => setStatus(patientId && encounterId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient and active visit to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
               <button className="button" type="submit">Save draft</button>
               <button className="button secondary" type="button" disabled={!printReady} onClick={() => void preparePrint()}>Review, sign and print A5</button>
@@ -332,7 +342,7 @@ function RecordList({ rows }: { rows: Record<string, unknown>[] }) {
   return <section className="panel"><div className="section-heading"><h2>Recent Patient Prescriptions</h2><span className="badge">{rows.length}</span></div><div className="data-list">{rows.map((row, index) => <article className="data-row" key={String(row.id ?? index)}><div className="data-row-header"><strong>{String(row.notes ?? "Prescription")}</strong><span className="badge">{String(row.status ?? "draft")}</span></div><p className="muted">Patient-linked prescription history. Review manually before continuing.</p></article>)}</div></section>;
 }
 
-function updateItem(index: number, key: keyof PrescriptionItem, value: string, setItems: (updater: (current: PrescriptionItem[]) => PrescriptionItem[]) => void) {
+function updateItem(index: number, key: keyof PrescriptionItem, value: string | boolean, setItems: (updater: (current: PrescriptionItem[]) => PrescriptionItem[]) => void) {
   setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
 }
 

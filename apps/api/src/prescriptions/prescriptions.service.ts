@@ -312,6 +312,9 @@ export class PrescriptionsService {
 }
 
 async function resolvePrescriptionItem(prisma: PrismaService, item: PrescriptionItemDto) {
+  if (item.manualEntry && !item.customReason?.trim()) {
+    throw new BadRequestException("A reason is required for a custom or unlisted medication.");
+  }
   const base = toItemCreate(item);
   if (item.medicationGenericId) {
     const generic = await prisma.medicationGeneric.findFirst({
@@ -394,9 +397,12 @@ function toItemCreate(item: PrescriptionItemDto) {
     entrySource: item.manualEntry ? "manual" : "unclassified",
     verificationStatus: item.manualEntry ? "unverified" : "review_required",
     dose: clean(item.dose),
+    doseUnit: clean(item.doseUnit),
     route: clean(item.route),
     frequency: clean(item.frequency),
     duration: clean(item.duration),
+    prn: item.prn === true,
+    customReason: clean(item.customReason),
     instructions: clean(item.instructions)
   };
 }

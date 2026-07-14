@@ -1095,6 +1095,7 @@ model PrescriptionItem {
   prescriptionId      String  @db.Uuid
   medicationName      String
   dose                String?
+  doseUnit            String?
   route               String?
   frequency           String?
   duration            String?
@@ -1109,6 +1110,8 @@ model PrescriptionItem {
   medicationGenericId String? @db.Uuid
   quantityText        String?
   dispensingUnit      String?
+  prn                 Boolean @default(false)
+  customReason        String?
   entrySource         String  @default("unclassified")
   verificationStatus  String  @default("review_required")
 
