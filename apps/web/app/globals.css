@@ -5945,6 +5945,10 @@ select {
   gap: 16px;
   grid-template-columns: minmax(0, 7fr) minmax(320px, 5fr);
 }
+.guideline-viewer-grid { align-items: start; display: grid; gap: 16px; grid-template-columns: minmax(230px, 3fr) minmax(0, 9fr); }
+.guideline-viewer-grid aside { position: sticky; top: 16px; }
+.guideline-readable-text { line-height: 1.7; max-width: 80ch; min-height: 240px; white-space: pre-wrap; }
+@media (max-width: 800px) { .guideline-viewer-grid { grid-template-columns: 1fr; } .guideline-viewer-grid aside { position: static; } }
 .investigation-catalog-layout.library-context { grid-template-columns: minmax(0, 7fr) minmax(300px, 5fr); }
 .patient-context-bar {
   align-items: center;

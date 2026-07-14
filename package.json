@@ -323,6 +323,7 @@
     "test:investigation-workflow": "node scripts/investigation-workflow-test.mjs",
     "test:v1444:investigation-print": "node scripts/v1444-investigation-print-test.mjs",
     "test:v1444:patient-import": "node scripts/v1444-patient-import-test.mjs",
+    "test:v1444:guidelines": "node scripts/v1444-guideline-viewer-test.mjs",
     "test:prescription-print": "node scripts/prescription-print-test.mjs",
     "test:medication-reference": "node scripts/medication-reference-test.mjs",
     "test:medication-import": "node scripts/medication-import-test.mjs",
