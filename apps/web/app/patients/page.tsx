@@ -7,6 +7,7 @@ import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { ageLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
+import { useSession } from "../session";
 
 type Patient = {
   id: string;
@@ -25,6 +26,7 @@ type Patient = {
 };
 
 export default function PatientsPage() {
+  const { user } = useSession();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [status, setStatus] = useState("Loading patient files");
   const [error, setError] = useState("");
@@ -124,10 +126,10 @@ export default function PatientsPage() {
             <p className="eyebrow">Registration</p>
             <h1>Patient files</h1>
           </div>
-          <Link className="button" href="/patients/new">
+          <div className="form-actions">{user?.roles.some((role) => ["Owner", "Admin"].includes(role)) ? <Link className="button secondary" href="/patients/import">Import CSV/XLSX</Link> : null}<Link className="button" href="/patients/new">
             <ThreeDMedicalIcon name="patients" size="sm" />
             New Patient File
-          </Link>
+          </Link></div>
         </div>
         <p className="muted">Find or create a patient file, then continue from the patient workspace.</p>
       </section>

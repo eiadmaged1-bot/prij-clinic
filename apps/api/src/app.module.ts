@@ -28,6 +28,7 @@ import { InvestigationResultsModule } from "./investigation-results/investigatio
 import { PatientsModule } from "./patients/patients.module";
 import { PatientDocumentsModule } from "./patient-documents/patient-documents.module";
 import { PatientIntakeModule } from "./patient-intake/patient-intake.module";
+import { PatientImportModule } from "./patient-import/patient-import.module";
 import { PatientInternalNotesModule } from "./patient-internal-notes/patient-internal-notes.module";
 import { PatientTasksModule } from "./patient-tasks/patient-tasks.module";
 import { MedicationsModule } from "./medications/medications.module";
@@ -69,6 +70,7 @@ import { AuditController } from "./audit/audit.controller";
     AuditModule,
     PatientsModule,
     PatientIntakeModule,
+    PatientImportModule,
     ConsentsModule,
     ConsentTemplatesModule,
     AppointmentsModule,

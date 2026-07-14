@@ -132,6 +132,7 @@ model User {
   updatedVisitPriceSettings          VisitPriceAuditSetting[]       @relation("VisitPriceSettingsUpdatedBy")
   createdPatientClinicalTags         PatientClinicalTag[]           @relation("PatientClinicalTagsCreatedBy")
   reviewedExternalSubmissions        ExternalPatientSubmission[]    @relation("ExternalSubmissionsReviewedBy")
+  patientImportBatches               PatientImportBatch[]
   authSessions                       AuthSession[]
   idempotencyRecords                 IdempotencyRecord[]
 
@@ -354,6 +355,7 @@ model Patient {
   clinicalTags                PatientClinicalTag[]
   externalSubmissionsCreated  ExternalPatientSubmission[]       @relation("ExternalSubmissionCreatedPatient")
   externalSubmissionsAttached ExternalPatientSubmission[]       @relation("ExternalSubmissionAttachedPatient")
+  patientImportRows          PatientImportRow[]
   medicationSafetyChecks      MedicationSafetyCheck[]
   calculations                PatientCalculation[]
   datingAssessments           PregnancyDatingAssessment[]
@@ -1841,6 +1843,50 @@ model InvestigationFavoriteSet {
 
   @@index([userId, active])
   @@index([scope, branchId, active])
+}
+
+model PatientImportBatch {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileName         String
+  fileHash         String
+  fileType         String
+  encoding         String?
+  status           String   @default("previewed")
+  mappingJson      Json
+  rowCount         Int      @default(0)
+  importedCount    Int      @default(0)
+  skippedCount     Int      @default(0)
+  failedCount      Int      @default(0)
+  createdByUserId String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  completedAt      DateTime? @db.Timestamptz(3)
+
+  createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  rows      PatientImportRow[]
+
+  @@index([createdByUserId, createdAt])
+  @@index([fileHash])
+  @@index([status])
+}
+
+model PatientImportRow {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId          String   @db.Uuid
+  rowNumber        Int
+  status           String
+  normalizedJson   Json
+  warningsJson     Json?
+  duplicateJson    Json?
+  createdPatientId String?  @db.Uuid
+  errorCode        String?
+  importedAt       DateTime? @db.Timestamptz(3)
+
+  batch          PatientImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdPatient Patient?           @relation(fields: [createdPatientId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, rowNumber])
+  @@index([status])
+  @@index([createdPatientId])
 }
 
 model InvestigationFavoriteSetItem {
