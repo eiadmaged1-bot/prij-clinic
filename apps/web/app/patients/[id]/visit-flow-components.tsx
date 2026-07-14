@@ -88,7 +88,6 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     if (!encounterId) return;
     const payload = values(event.currentTarget, ["chiefComplaint", "historyText", "examText", "assessmentText", "planText"]) as Record<string, string>;
     await updateDoctorVisit(patient.id, encounterId, payload);
-    setActiveStep(activeStep === "Examination" ? "Assessment" : "Plan");
     setStatus("Encounter draft saved.");
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
@@ -164,7 +163,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     <section className="panel doctor-visit-flow">
       <div className="section-heading">
         <div>
-          <h2>Guided Visit</h2>
+          <h2>Visit</h2>
           <p className="muted">One clinical section is shown at a time. Clinical decisions and completion remain with the doctor.</p>
         </div>
         <div className="actions" style={{ display: "flex", gap: "0.5rem" }}>
@@ -178,23 +177,17 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
           <button className="button" type="button" onClick={() => void startVisit()} disabled={Boolean(encounterId)}>Start Visit</button>
         </div>
       </div>
-      <div className="workflow-band" aria-label="Doctor visit workflow stepper">
-        {visitSteps.map((step, index) => (
-          <button className={`${activeStep === step ? "active" : ""} ${index < activeStepIndex ? "completed" : ""}`.trim()} key={step} onClick={() => setActiveStep(step)} type="button">
-            {step}
-          </button>
-        ))}
-      </div>
-      {encounterId ? <p className="notice">Active visit banner: draft visit is open for this patient.</p> : null}
+      {encounterId ? <span className="badge warning">Draft</span> : null}
       {visitSignature?.doctorName ? <DoctorSignatureBadge signature={visitSignature} /> : null}
       <p className="muted">{status}</p>
       {!encounterId ? <p className="warning-text">Start a visit before adding encounter, prescription, investigation, or follow-up items.</p> : null}
 
-      <div className="visit-step-navigation"><button className="button secondary compact" type="button" disabled={activeStepIndex === 0} onClick={() => setActiveStep(visitSteps[activeStepIndex - 1] ?? visitSteps[0] ?? "History")}>Previous</button><span>Step {activeStepIndex + 1} of {visitSteps.length}</span><button className="button secondary compact" type="button" disabled={activeStepIndex >= visitSteps.length - 1} onClick={() => setActiveStep(visitSteps[activeStepIndex + 1] ?? visitSteps.at(-1) ?? "History")}>Next</button></div>
+      <div className="visit-progress-header"><strong>Step {activeStepIndex + 1} of {visitSteps.length} · {activeStep}</strong><div className="form-actions"><button className="button secondary compact" type="button" disabled={activeStepIndex === 0} onClick={() => setActiveStep(visitSteps[activeStepIndex - 1] ?? "History")}>Back</button><span className="badge">Saved</span><button className="button secondary compact" type="button" disabled={activeStepIndex >= visitSteps.length - 1} onClick={() => setActiveStep(visitSteps[activeStepIndex + 1] ?? "Review")}>Next</button></div></div>
 
       {activeStep === "History" ? <div className="doctor-friendly-grid active-visit-step">
         <section className="panel">
           <div className="section-heading"><h3>History</h3><span className="badge">Step 1</span></div>
+          <form className="form-grid" onSubmit={(event) => void saveEncounter(event)}><fieldset className="obgyn-fieldset wide"><legend>Presenting complaint</legend><label>Complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label><label>History of presenting concern<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label></fieldset><button className="button" type="submit" disabled={!encounterId}>Save presenting complaint</button></form>
           <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload, idempotencyKey) => { await submitVisitAction(patient.id, endpoint, payload, idempotencyKey); onReload(); }} status={status} />
         </section>
       </div> : null}
@@ -207,14 +200,12 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
 
       {activeStep === "Assessment" ? <div className="doctor-friendly-grid active-visit-step"><form className="panel form-grid" onSubmit={(event) => void saveEncounter(event)}>
         <div className="section-heading"><h3>Assessment</h3><span className="badge warning">Doctor review required</span></div>
-        <label>Chief complaint<input name="chiefComplaint" defaultValue={String(visit?.encounter?.chiefComplaint ?? "")} /></label>
-        <label>History of presenting concern<textarea name="historyText" defaultValue={String(visit?.encounter?.historyText ?? "")} /></label>
         <label>Doctor impression<textarea name="assessmentText" defaultValue={String(visit?.encounter?.assessmentText ?? "")} /></label>
-        <label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label>
-        <button className="button" type="submit" disabled={!encounterId}>Save assessment and continue</button>
+        <button className="button" type="submit" disabled={!encounterId}>Save assessment</button>
       </form><CareAssistPanel patientId={patient.id} historySheetId={latestHistorySheetId} encounterId={encounterId || undefined} prescriptionId={String((visit?.prescriptions ?? [])[0]?.id ?? "") || undefined} investigationOrderId={String((visit?.investigationOrders ?? [])[0]?.id ?? "") || undefined} /></div> : null}
 
       {activeStep === "Plan" ? <div className="active-visit-step">
+        <form className="panel form-grid" onSubmit={(event) => void saveEncounter(event)}><label>Doctor plan<textarea id="doctor-visit-planText" name="planText" defaultValue={String(visit?.encounter?.planText ?? "")} /></label><button className="button" type="submit" disabled={!encounterId}>Save plan summary</button></form>
         <div className="visit-plan-tabs" aria-label="Plan sections">{["Prescription", "Investigations", "Follow-up"].map((section) => <button className={activePlanSection === section ? "active" : ""} key={section} onClick={() => setActivePlanSection(section)} type="button">{section}</button>)}</div>
       {activePlanSection === "Prescription" ? <div className="doctor-friendly-grid">
         <form className="panel form-grid" onSubmit={(event) => event.preventDefault()}>

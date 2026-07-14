@@ -31,7 +31,8 @@ export const patientWorkspaceRegistry: PatientWorkspaceItem[] = [
 ];
 
 export function visiblePatientWorkspaceItems(input: { mode: InterfaceMode; mobile: boolean; permissions: string[]; roles: string[] }) {
-  return patientWorkspaceRegistry.filter((entry) => (input.mode === "OPTIMIZED" ? entry.optimizedVisible : entry.minimalisticVisible) && (input.mobile ? entry.mobileVisible : entry.desktopVisible) && (!entry.requiredPermissions.length || entry.requiredPermissions.some((permission) => input.permissions.includes(permission))) && (!entry.roles?.length || entry.roles.some((role) => input.roles.includes(role)))).sort((a, b) => a.priority - b.priority);
+  const primaryOrder = new Map(["overview", "doctor-visit", "history", "timeline", "more"].map((key, index) => [key, index]));
+  return patientWorkspaceRegistry.filter((entry) => (entry.key === "history" || (input.mode === "OPTIMIZED" ? entry.optimizedVisible : entry.minimalisticVisible)) && (input.mobile ? entry.mobileVisible : entry.desktopVisible) && (!entry.requiredPermissions.length || entry.requiredPermissions.some((permission) => input.permissions.includes(permission))) && (!entry.roles?.length || entry.roles.some((role) => input.roles.includes(role)))).sort((a, b) => (primaryOrder.get(a.key) ?? a.priority + 100) - (primaryOrder.get(b.key) ?? b.priority + 100));
 }
 
 export function patientWorkspaceItem(key: string) { return patientWorkspaceRegistry.find((entry) => entry.key === key); }

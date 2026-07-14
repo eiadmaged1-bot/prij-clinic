@@ -6243,6 +6243,7 @@ select {
 .selected-basket-row-actions button { min-height: 34px; }
 .selected-basket-sticky-actions { align-items: center; background: color-mix(in srgb, var(--surface, #fff) 94%, transparent); border-top: 1px solid var(--border); bottom: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0; position: sticky; z-index: 4; }
 .selected-basket-sticky-actions > span { font-weight: 750; margin-inline-end: auto; }
+.visit-progress-header { align-items: center; background: var(--surface, #fff); border-block: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; padding-block: 10px; position: sticky; top: var(--patient-context-offset, 0); z-index: 3; }
 .investigation-basket-row { align-items: center; display: grid; gap: 10px; grid-template-columns: minmax(170px, 1fr) minmax(180px, 1fr) auto; }
 .investigation-basket-row > div:first-child { display: grid; gap: 3px; }
 @media (max-width: 980px) {
