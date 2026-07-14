@@ -52,6 +52,7 @@ function CalendarContent() {
   const copy = calendarCopy[language];
   const roles = user?.roles ?? [];
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
+  const isDoctorOnly = hasRole(roles, ["Doctor"]) && !hasRole(roles, ["Owner", "Admin"]);
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const isToday = selectedDate === today;
@@ -92,7 +93,7 @@ function CalendarContent() {
         <div className="header-row">
           <div>
             <p className="eyebrow">{copy.eyebrow}</p>
-            <h1>{copy.title}</h1>
+            <h1>{isDoctorOnly ? copy.doctorTitle : copy.title}</h1>
           </div>
           <div className="topbar-actions">
             <label className="inline-filter">{copy.scheduleDate}<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label>
@@ -107,24 +108,15 @@ function CalendarContent() {
       </section>
 
       {activeTab === "appointments" ? <>
+      <div className="segmented-control calendar-range-tabs">{(["day", "week", "month"] as const).map((view) => <button className={calendarView === view ? "active" : ""} key={view} type="button" onClick={() => setCalendarView(view)}>{view[0]?.toUpperCase()}{view.slice(1)}</button>)}</div>
+      <details className="filter-drawer calendar-filter-drawer">
+        <summary>Filters</summary>
       <section className="toolbar compact-toolbar" aria-label="Calendar filters">
-        <div className="segmented-control">{(["day", "week", "month"] as const).map((view) => <button className={calendarView === view ? "active" : ""} key={view} type="button" onClick={() => setCalendarView(view)}>{view[0]?.toUpperCase()}{view.slice(1)}</button>)}</div>
         <label>Doctor<select value={doctorFilter} onChange={(event) => setDoctorFilter(event.target.value)}><option value="">All</option>{doctorOptions.map((value) => <option key={value.id} value={value.id}>{value.displayName}</option>)}</select></label>
         <label>Branch<select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}><option value="">All</option>{branchOptions.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>
         <label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All</option>{statusOptions.map((value) => <option key={value} value={value}>{friendlyStatus(value, copy)}</option>)}</select></label>
       </section>
-
-      <section className="panel compact-panel today-summary-card">
-        <div className="section-heading compact-section-heading"><h2>{copy.todaySummary}</h2><span className="badge">{status}</span></div>
-        <dl className="compact-summary-list">
-          <div><dt>{copy.scheduled}</dt><dd>{visibleAppointments.length}</dd></div>
-          <div><dt>{copy.checkedIn}</dt><dd>{checkedIn}</dd></div>
-          <div><dt>{copy.waiting}</dt><dd>{waiting}</dd></div>
-          <div><dt>{copy.urgent}</dt><dd>{urgent}</dd></div>
-          {!isReceptionistOnly ? <div><dt>{copy.completed}</dt><dd>{completed}</dd></div> : null}
-          <div><dt>{copy.cancelled}</dt><dd>{cancelledQueue.length}</dd></div>
-        </dl>
-      </section>
+      </details>
 
       <section className="content-grid calendar-clean-grid">
         <article className="panel">
@@ -178,6 +170,17 @@ function CalendarContent() {
             </details>
           ) : null}
         </article>
+      </section>
+      <section className="panel compact-panel today-summary-card">
+        <div className="section-heading compact-section-heading"><h2>{copy.todaySummary}</h2><span className="badge">{status}</span></div>
+        <dl className="compact-summary-list">
+          <div><dt>{copy.scheduled}</dt><dd>{visibleAppointments.length}</dd></div>
+          <div><dt>{copy.checkedIn}</dt><dd>{checkedIn}</dd></div>
+          <div><dt>{copy.waiting}</dt><dd>{waiting}</dd></div>
+          <div><dt>{copy.urgent}</dt><dd>{urgent}</dd></div>
+          {!isReceptionistOnly ? <div><dt>{copy.completed}</dt><dd>{completed}</dd></div> : null}
+          <div><dt>{copy.cancelled}</dt><dd>{cancelledQueue.length}</dd></div>
+        </dl>
       </section>
       </> : null}
 
@@ -257,6 +260,7 @@ const calendarCopy = {
   en: {
     eyebrow: "Reception",
     title: "Appointments & Queue",
+    doctorTitle: "Doctor Schedule & Waiting List",
     scheduleDate: "Schedule date",
     refresh: "Refresh",
     loading: "Loading",
@@ -291,6 +295,7 @@ const calendarCopy = {
   ar: {
     eyebrow: "الاستقبال",
     title: "المواعيد والانتظار",
+    doctorTitle: "جدول الطبيب وقائمة الانتظار",
     scheduleDate: "تاريخ اليوم",
     refresh: "تحديث",
     loading: "تحميل",
