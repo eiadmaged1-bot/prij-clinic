@@ -1,3 +1,3 @@
-export type SaveStatus = "Saving" | "Saved" | "Offline draft" | "Sync failed";
+export type SaveStatus = "Saving" | "Saved" | "Offline draft" | "Sync pending" | "Sync failed";
 export type VisitNavigationAction = "back" | "save" | "next" | "review";
 export function DoctorMobileVisitFooter({ status, onAction }: { status: SaveStatus; onAction(action: VisitNavigationAction): void }) { return <footer className="doctor-mobile-visit-footer"><output data-save-status={status}>{status}</output><div><button onClick={() => onAction("back")} type="button">Back</button><button onClick={() => onAction("save")} type="button">Save draft</button><button onClick={() => onAction("next")} type="button">Next</button><button onClick={() => onAction("review")} type="button">Review</button></div></footer>; }

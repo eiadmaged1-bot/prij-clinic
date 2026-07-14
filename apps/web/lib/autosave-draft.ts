@@ -80,7 +80,20 @@ export function useAutosaveDraft<T extends Record<string, unknown>>(input: {
     return () => window.removeEventListener("beforeunload", persistBeforeUnload);
   }, [enabled, input.entityType, input.key, input.patientId, input.payload, serialized]);
 
-  return { state, updatedAt };
+  async function retry() {
+    setState("saving");
+    try {
+      const record = await saveLocalDraft({ key: input.key, entityType: input.entityType, patientId: input.patientId, payload: input.payload, updatedAt: new Date().toISOString() });
+      setUpdatedAt(record.updatedAt);
+      setState(navigator.onLine ? "saved-local" : "offline-local");
+      return true;
+    } catch {
+      setState("failed");
+      return false;
+    }
+  }
+
+  return { state, updatedAt, retry };
 }
 
 export function useOfflineSyncQueue(apiBaseUrl: string, token?: string | null) {
@@ -138,6 +151,38 @@ export async function saveLocalDraft<T>(record: LocalDraftRecord<T>) {
     localStorage.setItem(fallbackKey(record.key), JSON.stringify(record));
   }
   return record;
+}
+
+export async function loadLocalDraft<T>(key: string): Promise<LocalDraftRecord<T> | null> {
+  try {
+    const db = await openDraftDb();
+    const record = await new Promise<LocalDraftRecord<T> | undefined>((resolve, reject) => {
+      const tx = db.transaction(storeName, "readonly");
+      const request = tx.objectStore(storeName).get(key);
+      request.onsuccess = () => resolve(request.result as LocalDraftRecord<T> | undefined);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    return record ?? null;
+  } catch {
+    const raw = localStorage.getItem(fallbackKey(key));
+    return raw ? JSON.parse(raw) as LocalDraftRecord<T> : null;
+  }
+}
+
+export async function deleteLocalDraft(key: string) {
+  try {
+    const db = await openDraftDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(storeName, "readwrite");
+      tx.objectStore(storeName).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } finally {
+    localStorage.removeItem(fallbackKey(key));
+  }
 }
 
 export async function enqueueOfflineOperation<T>(operation: Omit<OfflineQueueOperation<T>, "operationId" | "idempotencyKey" | "createdAt" | "retryCount" | "status"> & { operationId?: string; idempotencyKey?: string }) {
@@ -240,10 +285,10 @@ export async function syncPendingOperations(apiBaseUrl: string, token?: string |
 }
 
 export function autosaveLabel(state: AutosaveState) {
-  if (state === "saving") return "Saving...";
+  if (state === "saving") return "Saving…";
   if (state === "saved-local") return "Saved locally";
-  if (state === "offline-local") return "Offline - saved on this device";
-  if (state === "failed") return "Sync failed - retrying";
+  if (state === "offline-local") return "Offline — saved locally";
+  if (state === "failed") return "Save failed — Retry";
   return "Draft ready";
 }
 

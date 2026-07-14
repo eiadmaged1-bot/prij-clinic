@@ -16,6 +16,7 @@ import { useInterfaceMode } from "@/lib/interface-mode";
 import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
 import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
 import { AppActionButton } from "@/components/actions/AppActionButton";
+import { autosaveLabel, loadLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
 import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel, formatDateTime } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
 
@@ -91,15 +92,42 @@ export default function PatientFilePage() {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [errorKind, setErrorKind] = useState<"none" | "network" | "timeout" | "session">("none");
   const [actionStatus, setActionStatus] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [draftFields, setDraftFields] = useState<Record<string, string>>({});
+  const draftKey = `patient-visit:${patientId}`;
+  const autosave = useAutosaveDraft({ key: draftKey, entityType: "patient_visit_draft", patientId, payload: draftFields, enabled: activeTab === "doctor-visit" && Object.keys(draftFields).length > 0 });
+  const autosaveStatus = autosave.state === "saved-local" && autosave.updatedAt ? `Saved at ${new Date(autosave.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : autosaveLabel(autosave.state);
 
   useEffect(() => {
     const refresh = () => setRefreshVersion((version) => version + 1);
     window.addEventListener("patient-workspace:refresh", refresh);
     return () => window.removeEventListener("patient-workspace:refresh", refresh);
   }, []);
+
+  useEffect(() => {
+    void loadLocalDraft<Record<string, string>>(draftKey).then((record) => { if (record?.payload) setDraftFields(record.payload); });
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (activeTab !== "doctor-visit") return;
+    const restore = window.setTimeout(() => {
+      Object.entries(draftFields).forEach(([name, value]) => {
+        const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(`.doctor-visit-flow [name="${CSS.escape(name)}"]`);
+        if (field && !field.value) field.value = value;
+      });
+    }, 0);
+    const capture = (event: Event) => {
+      const field = event.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+      if (!field.name || !field.closest(".doctor-visit-flow")) return;
+      setDraftFields((current) => ({ ...current, [field.name]: field.value }));
+    };
+    document.addEventListener("input", capture);
+    document.addEventListener("change", capture);
+    return () => { window.clearTimeout(restore); document.removeEventListener("input", capture); document.removeEventListener("change", capture); };
+  }, [activeTab, draftFields]);
 
   useEffect(() => {
     const requested = searchParams.get("module") ?? searchParams.get("tab");
@@ -142,6 +170,11 @@ export default function PatientFilePage() {
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
     const controller = new AbortController();
+    let disposed = false;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 15000);
+    setError("");
+    setErrorKind("none");
     fetch(`${getApiBaseUrl()}/patients/${patientId}/workspace-summary`, {
       credentials: "include",
       signal: controller.signal,
@@ -152,6 +185,8 @@ export default function PatientFilePage() {
           setPatient(null);
           setRelated({});
           setTimelineItems([]);
+          setDraftFields({});
+          setErrorKind("session");
           expire(pathname);
           return;
         }
@@ -162,7 +197,12 @@ export default function PatientFilePage() {
         setClinicalPhases(summary.activeClinicalPhase ? [{ id: "summary", status: "active", ...summary.activeClinicalPhase }] : []);
         setRelated({ appointments: [summary.todayAppointment, summary.nextAppointment].filter(Boolean) as unknown as Record<string, unknown>[], queue: summary.currentQueueTicket ? [summary.currentQueueTicket as unknown as Record<string, unknown>] : [], results: Array.from({ length: summary.pendingResultCount ?? 0 }, () => ({ reviewStatus: "pending_review" })), tasks: summary.pendingFollowUp ? [summary.pendingFollowUp as unknown as Record<string, unknown>] : [], billing: summary.balanceState ? [summary.balanceState as unknown as Record<string, unknown>] : [] });
       })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Unable to open patient file."));
+      .catch((loadError) => {
+        if (disposed) return;
+        if (loadError instanceof Error && loadError.name === "AbortError" && !timedOut) return;
+        setErrorKind(timedOut ? "timeout" : "network");
+        setError(timedOut ? "The patient file took too long to respond." : "The patient file is temporarily unavailable.");
+      });
 
     fetch(`${getApiBaseUrl()}/auth/me`, {
       credentials: "include",
@@ -179,8 +219,8 @@ export default function PatientFilePage() {
         setPermissions([]);
         setRoles([]);
       });
-    return () => controller.abort();
-  }, [expire, patientId, pathname]);
+    return () => { disposed = true; window.clearTimeout(timeout); controller.abort(); };
+  }, [draftKey, expire, patientId, pathname, refreshVersion]);
 
   useEffect(() => {
     if (!roleContextReady || !canAccessActiveTab) return;
@@ -326,7 +366,8 @@ export default function PatientFilePage() {
           <span className="warning">Allergies: review</span>
           {activePregnancyCount ? <span className="warning">Pregnancy</span> : null}
           {pendingResultCount ? <span>Results pending</span> : null}
-          <span>{actionStatus || "Draft not changed"}</span>
+          <span data-autosave-state={autosave.state}>{autosaveStatus}</span>
+          {autosave.state === "failed" ? <button className="button secondary compact" type="button" onClick={() => void autosave.retry()}>Retry save</button> : null}
         </div>
         <div className="patient-context-actions">
           <AppActionButton actionId="encounter.create" userPermissions={permissions} userRoles={roles} className="button compact" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>Start / Resume Visit</AppActionButton>
@@ -351,10 +392,10 @@ export default function PatientFilePage() {
       {error ? (
         <section className="panel">
           <p className="form-error">{error}</p>
-          <Link className="button" href="/login">
-            <ThreeDMedicalIcon name="doctor" size="sm" />
-            Go to login
-          </Link>
+          <div className="form-actions">
+            {errorKind !== "session" ? <button className="button" type="button" onClick={() => setRefreshVersion((version) => version + 1)}>Retry</button> : null}
+            {errorKind === "session" ? <Link className="button" href={`/login?returnUrl=${encodeURIComponent(pathname)}`}><ThreeDMedicalIcon name="doctor" size="sm" />Reauthenticate</Link> : null}
+          </div>
         </section>
       ) : null}
 
@@ -393,9 +434,12 @@ export default function PatientFilePage() {
       ) : !error ? (
         <div className="skeleton" />
       ) : null}
-      {interfaceMode === "MINIMALISTIC" && patient && activeTab === "doctor-visit" ? <DoctorMobileVisitFooter status={actionStatus.startsWith("Saving") ? "Saving" : actionStatus.startsWith("Saved") ? "Saved" : "Saved"} onAction={(action) => {
+      {interfaceMode === "MINIMALISTIC" && patient && activeTab === "doctor-visit" ? <DoctorMobileVisitFooter status={autosave.state === "saving" ? "Saving" : autosave.state === "offline-local" ? "Offline draft" : autosave.state === "failed" ? "Sync failed" : autosave.state === "saved-local" ? "Sync pending" : "Saved"} onAction={(action) => {
         window.dispatchEvent(new CustomEvent("patient-visit:navigate", { detail: action }));
-        if (action === "save") setActionStatus("Saving…");
+        if (action === "save") {
+          document.querySelector<HTMLFormElement>(".doctor-visit-flow .active-visit-step form, .doctor-visit-flow form.active-visit-step")?.requestSubmit();
+          setActionStatus("Saving…");
+        }
       }} /> : null}
     </AppShell>
   );

@@ -319,6 +319,7 @@
     "test:desktop-design-system": "node scripts/desktop-design-system-test.mjs",
     "test:patient-workspace": "node scripts/patient-workspace-reconstruction-test.mjs",
     "test:v145:patient-workspace": "node scripts/v145-patient-workspace-test.mjs",
+    "test:v145:patient-autosave": "node scripts/v145-patient-autosave-session-test.mjs",
     "test:smart-tags": "node scripts/smart-clinical-tags-test.mjs",
     "test:v145:smart-history": "node scripts/v145-smart-history-corrections-test.mjs",
     "test:doctor-visit": "node scripts/doctor-visit-stepper-test.mjs",
