@@ -48,6 +48,14 @@ type SearchResult = {
   snippet: string;
   citationLabel: string;
   accessLevel: string;
+  status: string;
+  reviewStatus: string;
+  publicationDate?: string | null;
+  pageStart: number;
+  pageEnd?: number;
+  citedBullets: string[];
+  clinicalSubtopic: string;
+  matchReason: string;
 };
 
 export function GuidelineCenter({ view }: GuidelineCenterProps) {
@@ -64,6 +72,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState("");
   const [citations, setCitations] = useState<Array<{ citationLabel: string; title: string }>>([]);
+  const [synthesis, setSynthesis] = useState<{ status: string; agreement: Array<{ bullet: string; documentId: string; page: number }>; differences: string; evidenceGaps: string } | null>(null);
   const [message, setMessage] = useState("Ready");
 
   useEffect(() => {
@@ -90,8 +99,13 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Searching local library");
-    const body = await apiGet(`/guidelines/search?q=${encodeURIComponent(query)}`);
+    const form = new FormData(event.currentTarget);
+    const params = new URLSearchParams({ q: query });
+    for (const name of ["organization", "specialty", "year", "region", "status", "sourceKind", "clinicalArea"]) { const value = String(form.get(name) ?? "").trim(); if (value) params.set(name, value); }
+    if (form.get("synthesis") === "on") params.set("synthesis", "true");
+    const body = await apiGet(`/guidelines/search?${params.toString()}`);
     setResults(body.results ?? []);
+    setSynthesis(body.synthesis ?? null);
     setMessage((body.results ?? []).length ? "Results ready" : "No source found in your local library");
   }
 
@@ -190,7 +204,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
             )}
           </>
         ) : null}
-        {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} /> : null}
+        {view === "search" ? <SearchPanel query={query} setQuery={setQuery} submitSearch={submitSearch} results={results} synthesis={synthesis} /> : null}
         {view === "ask" ? <AskPanel query={query} setQuery={setQuery} submitAsk={submitAsk} answer={answer} citations={citations} /> : null}
         {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
         {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
@@ -234,23 +248,28 @@ function SearchPanel(props: {
   setQuery: (value: string) => void;
   submitSearch: (event: FormEvent<HTMLFormElement>) => void;
   results: SearchResult[];
+  synthesis: { status: string; agreement: Array<{ bullet: string; documentId: string; page: number }>; differences: string; evidenceGaps: string } | null;
 }) {
+  const groups = props.results.reduce<Record<string, SearchResult[]>>((all, result) => { (all[result.clinicalSubtopic] ??= []).push(result); return all; }, {});
   return (
     <section className="panel">
-      <form className="guideline-search" onSubmit={props.submitSearch}>
-        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search local guideline text" />
+      <form className="guideline-search guideline-search-sticky" onSubmit={props.submitSearch}>
+        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search guidelines in English or Arabic (for example PCO or تكيس المبايض)" />
         <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
+        <details className="filter-drawer"><summary>Filters</summary><div className="guideline-filter-grid"><label>Organization<input name="organization" /></label><label>Specialty<input name="specialty" /></label><label>Year<input name="year" inputMode="numeric" /></label><label>Region<input name="region" /></label><label>Status<select name="status"><option value="">All</option><option value="ACTIVE">Current</option><option value="NEEDS_REVIEW">Needs review</option><option value="SUPERSEDED">Superseded</option><option value="ARCHIVED">Archived</option></select></label><label>Source<select name="sourceKind"><option value="">Official or custom</option><option value="official">Official</option><option value="custom">Custom</option></select></label><label>Clinical area<select name="clinicalArea"><option value="">All areas</option>{["pregnancy", "infertility", "gynecology", "oncology", "medication", "investigation", "procedure"].map((area) => <option key={area} value={area}>{area}</option>)}</select></label><label className="checkbox-row"><input name="synthesis" type="checkbox" />Cited cross-document synthesis</label></div></details>
       </form>
+      {props.synthesis ? <article className="notice"><div className="section-heading"><strong>Cross-document synthesis</strong><span className="badge warning">Doctor review required</span></div><h3>Agreement</h3><ul>{props.synthesis.agreement.map((item) => <li key={`${item.documentId}-${item.page}`}>{item.bullet} <Link href={`/guidelines/${item.documentId}?page=${item.page}`}>p. {item.page}</Link></li>)}</ul><h3>Differences</h3><p>{props.synthesis.differences}</p><h3>Evidence gaps</h3><p>{props.synthesis.evidenceGaps}</p></article> : null}
       <div className="data-list">
-        {props.results.map((result) => (
+        {Object.entries(groups).map(([group, results]) => <section className="guideline-result-group" key={group}><h2>{group}</h2>{results.map((result) => (
           <article className="data-row" key={result.chunkId}>
-            <div className="data-row-header"><strong>{result.title}</strong><span className="badge">{result.accessLevel}</span></div>
+            <div className="data-row-header"><strong>{result.title}</strong><span className="badge">{result.status}</span></div>
             <p>{result.snippet}</p>
-            <p className="muted">{result.organization} - {result.versionLabel ?? "current"} - {result.sectionHeading}</p>
-            <span className="badge accent">{result.citationLabel}</span>
-            <Link className="button secondary compact" href={`/guidelines/${result.documentId}`}>Open cited document</Link>
+            {result.citedBullets.length ? <ul>{result.citedBullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
+            <p className="muted">{result.organization} · {result.versionLabel ?? result.publicationDate?.slice(0, 4) ?? "Version not recorded"} · {result.sectionHeading} · Page {result.pageStart}</p>
+            <p className="muted">Why matched: {result.matchReason}</p>
+            <div className="form-actions"><Link className="button secondary compact" href={`/guidelines/${result.documentId}?tab=summary`}>Open summary</Link><Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open exact PDF page</Link></div>
           </article>
-        ))}
+        ))}</section>)}
         {!props.results.length ? <Empty text="No matching source found in your local guideline library." /> : null}
       </div>
     </section>

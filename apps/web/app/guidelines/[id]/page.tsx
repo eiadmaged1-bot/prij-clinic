@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AppShell } from "../../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
@@ -16,6 +16,7 @@ type MobileTab = "PDF" | "Clinical Summary" | "Sections" | "Sources";
 
 export default function GuidelineViewerPage() {
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const [document, setDocument] = useState<Document | null>(null);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -39,9 +40,11 @@ export default function GuidelineViewerPage() {
   }, [params.id]);
 
   useEffect(() => {
-    const remembered = Number(localStorage.getItem(`guideline:last-page:${params.id}`));
+    const requested = Number(searchParams.get("page"));
+    const remembered = requested > 0 ? requested : Number(localStorage.getItem(`guideline:last-page:${params.id}`));
     if (Number.isInteger(remembered) && remembered > 0) setPage(remembered);
-  }, [params.id]);
+    if (searchParams.get("tab") === "summary") setMobileTab("Clinical Summary");
+  }, [params.id, searchParams]);
 
   useEffect(() => { localStorage.setItem(`guideline:last-page:${params.id}`, String(page)); }, [page, params.id]);
 

@@ -519,29 +519,30 @@ export class GuidelinesService {
   async search(query: SearchGuidelinesDto, user: AuthUser, mode: SearchMode = "SEARCH_ONLY") {
     const q = query.q?.trim() ?? "";
     const limit = Math.min(Math.max(Number(query.limit) || 8, 1), 20);
-    const terms = keywords(q);
+    const terms = expandGuidelineConcepts(q);
+    const requestedYear = Number(query.year);
     const chunks = await this.prisma.guidelineChunk.findMany({
       where: {
-        ...(terms.length
-          ? {
-              AND: terms.map((term) => ({
-                normalizedText: { contains: term, mode: "insensitive" as const }
-              }))
-            }
-          : {}),
         document: {
           ...this.documentAccessWhere(user),
           ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
           ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
           ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
-          ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : {})
+          ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : {}),
+          ...(query.reviewStatus ? { reviewStatus: query.reviewStatus } : {}),
+          ...(Number.isInteger(requestedYear) ? { publicationDate: { gte: new Date(`${requestedYear}-01-01T00:00:00.000Z`), lt: new Date(`${requestedYear + 1}-01-01T00:00:00.000Z`) } } : {}),
+          ...(query.region || query.sourceKind ? { source: {
+            ...(query.region ? { countryOrRegion: { contains: query.region, mode: "insensitive" as const } } : {}),
+            ...(query.sourceKind === "official" ? { sourceType: "OPEN_PUBLIC" as const } : query.sourceKind === "custom" ? { sourceType: "LICENSED_UPLOAD" as const } : {})
+          } } : {})
         }
       },
-      include: { section: true, document: { include: { source: true } } },
+      include: { section: true, document: { include: { source: true, summaries: { where: { status: { in: ["CLINIC_APPROVED", "NEEDS_REVIEW"] } }, orderBy: { createdAt: "desc" }, take: 2, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: true } } } } } } },
       take: 500,
       orderBy: { createdAt: "desc" }
     });
     const ranked = chunks
+      .filter((chunk) => !query.clinicalArea || normalizeText(`${chunk.document.specialty} ${chunk.document.topic} ${chunk.document.subtopic ?? ""} ${chunk.section?.heading ?? ""} ${chunk.text}`).includes(normalizeText(query.clinicalArea)))
       .map((chunk) => ({ chunk, score: rankChunk(chunk, terms, query) }))
       .filter((item) => (terms.length ? item.score > 0 : true))
       .sort((a, b) => b.score - a.score)
@@ -566,7 +567,16 @@ export class GuidelinesService {
       severity: "medium",
       metadataJson: { resultCount: ranked.length, answerMode: mode, externalAiAccess: false }
     });
-    return { results: ranked };
+    const groupedMap = ranked.reduce<Record<string, typeof ranked>>((groups, result) => { (groups[result.clinicalSubtopic] ??= []).push(result); return groups; }, {});
+    const groupedResults = Object.entries(groupedMap).map(([clinicalSubtopic, results]) => ({ clinicalSubtopic, results }));
+    const synthesis = query.synthesis === "true" && ranked.length ? {
+      status: "DOCTOR_REVIEW_REQUIRED",
+      agreement: ranked.slice(0, 3).map((result) => ({ bullet: result.citedBullets[0] ?? result.snippet.slice(0, 220), documentId: result.documentId, page: result.pageStart })),
+      differences: "Compare population, version, region, and recommendation wording in each cited source.",
+      evidenceGaps: "No inference is made where the indexed sources do not provide a page-cited statement.",
+      sourceLinks: ranked.slice(0, 5).map((result) => ({ documentId: result.documentId, page: result.pageStart }))
+    } : null;
+    return { results: ranked, groupedResults, synthesis, doctorReviewRequired: true, expandedConcepts: terms, noSourceFound: ranked.length === 0 };
   }
 
   async ask(dto: AskGuidelineDto, user: AuthUser) {
@@ -1065,46 +1075,54 @@ function reviewDecisionToStatus(decision: GuidelineReviewDecisionValue): Guideli
   return "NEEDS_REVIEW";
 }
 
+type SearchChunk = {
+  id: string; text: string; normalizedText: string; citationLabel: string; pageStart: number | null; pageEnd: number | null;
+  section: { heading: string } | null;
+  document: {
+    id: string; title: string; organization: string; versionLabel: string | null; publicationDate: Date | null; guidelineStatus: GuidelineStatus; reviewStatus: string; accessLevel: GuidelineAccessLevel; specialty: string; topic: string; subtopic: string | null;
+    source: { name: string; countryOrRegion: string | null; sourceType: string };
+    summaries: Array<{ status: string; sections: Array<{ heading: string; bulletsJson: Prisma.JsonValue; citations: Array<{ bulletIndex: number; pageStart: number; pageEnd: number | null }> }> }>;
+  };
+};
+
 function rankChunk(
-  chunk: { normalizedText: string; document: { guidelineStatus: GuidelineStatus; specialty: string; topic: string } },
+  chunk: SearchChunk,
   terms: string[],
   query: SearchGuidelinesDto
 ) {
   let score = 0;
   let matches = 0;
+  const summaryText = summaryBullets(chunk).join(" ");
+  const metadataText = normalizeText(`${chunk.document.title} ${chunk.document.organization} ${chunk.document.specialty} ${chunk.document.topic} ${chunk.document.subtopic ?? ""} ${chunk.section?.heading ?? ""}`);
+  const combined = `${chunk.normalizedText} ${metadataText} ${normalizeText(summaryText)}`;
+  const exactQuery = normalizeText(query.q ?? "");
   for (const term of terms) {
-    if (chunk.normalizedText.includes(term)) {
+    if (combined.includes(term)) {
       matches += 1;
       score += 3;
     }
   }
   if (terms.length && matches === 0) return 0;
+  if (exactQuery && combined.includes(exactQuery)) score += 12;
+  if (exactQuery && metadataText.includes(exactQuery)) score += 6;
   if (query.specialty && chunk.document.specialty === query.specialty.toLowerCase()) score += 4;
   if (query.topic && chunk.document.topic === query.topic.toLowerCase()) score += 4;
-  if (chunk.document.guidelineStatus === "ACTIVE") score += 2;
+  if (chunk.document.guidelineStatus === "ACTIVE") score += 6;
   if (chunk.document.guidelineStatus === "NEEDS_REVIEW") score += 1;
+  if (chunk.document.summaries.some((summary) => summary.status === "CLINIC_APPROVED")) score += 5;
+  if (/recommend|management|treatment|what not/i.test(chunk.section?.heading ?? "")) score += 4;
+  if (chunk.document.publicationDate) score += Math.max(0, chunk.document.publicationDate.getUTCFullYear() - 2015) / 10;
+  if (query.clinicalArea && combined.includes(normalizeText(query.clinicalArea))) score += 4;
   return score;
 }
 
 function formatSearchResult(
-  chunk: {
-    id: string;
-    text: string;
-    citationLabel: string;
-    section: { heading: string } | null;
-    document: {
-      id: string;
-      title: string;
-      organization: string;
-      versionLabel: string | null;
-      publicationDate: Date | null;
-      guidelineStatus: GuidelineStatus;
-      accessLevel: GuidelineAccessLevel;
-      source: { name: string };
-    };
-  },
+  chunk: SearchChunk,
   score: number
 ) {
+  const citedBullets = summaryBullets(chunk).slice(0, 4);
+  const summaryCitation = chunk.document.summaries.flatMap((summary) => summary.sections).flatMap((section) => section.citations)[0];
+  const pageStart = chunk.pageStart ?? summaryCitation?.pageStart ?? 1;
   return {
     chunkId: chunk.id,
     documentId: chunk.document.id,
@@ -1113,12 +1131,50 @@ function formatSearchResult(
     versionLabel: chunk.document.versionLabel,
     publicationDate: chunk.document.publicationDate,
     status: chunk.document.guidelineStatus,
+    reviewStatus: chunk.document.reviewStatus,
+    region: chunk.document.source.countryOrRegion,
+    sourceKind: chunk.document.source.sourceType === "OPEN_PUBLIC" ? "official" : "custom",
     sectionHeading: chunk.section?.heading ?? "Guideline section",
     snippet: chunk.text.slice(0, 650),
+    citedBullets,
+    pageStart,
+    pageEnd: chunk.pageEnd ?? summaryCitation?.pageEnd ?? pageStart,
+    clinicalSubtopic: classifyGuidelineSubtopic(`${chunk.section?.heading ?? ""} ${chunk.text}`),
+    matchReason: citedBullets.length ? "Matched reviewed summary and indexed source text" : "Matched original indexed PDF text or metadata",
     citationLabel: chunk.citationLabel,
     accessLevel: chunk.document.accessLevel,
     score
   };
+}
+
+function summaryBullets(chunk: SearchChunk) {
+  return chunk.document.summaries.flatMap((summary) => summary.sections.flatMap((section) => Array.isArray(section.bulletsJson) ? section.bulletsJson.filter((bullet): bullet is string => typeof bullet === "string") : []));
+}
+
+function expandGuidelineConcepts(query: string) {
+  const normalized = normalizeText(query);
+  const concepts = [
+    ["pco", "pcos", "polycystic ovary syndrome", "polycystic ovarian syndrome", "تكيس المبايض", "متلازمة تكيس المبايض"],
+    ["hyperpigmentation", "pigmentation", "تصبغات", "فرط التصبغ"],
+    ["sensitive area", "sensitive areas", "منطقة حساسة", "المناطق الحساسة"],
+    ["pregnancy", "pregnant", "الحمل", "حامل"],
+    ["infertility", "subfertility", "تأخر الانجاب", "العقم"]
+  ].map((aliases) => aliases.map(normalizeText));
+  const matched = concepts.find((aliases) => aliases.some((alias) => alias === normalized || alias.includes(normalized) || normalized.includes(alias)));
+  return [...new Set([...(matched ?? []), ...keywords(query)])].filter(Boolean);
+}
+
+function classifyGuidelineSubtopic(value: string) {
+  const text = normalizeText(value);
+  if (/infertil|خصوب|عقم|تاخر الانجاب/.test(text)) return "PCOS and infertility";
+  if (/pregnan|حمل/.test(text)) return "PCOS and pregnancy";
+  if (/metabolic|insulin|weight|سكري/.test(text)) return "PCOS and metabolic risk";
+  if (/ovulat|تبويض/.test(text)) return "PCOS and ovulation";
+  if (/menstrual|bleeding|cycle|دور|نزف/.test(text)) return "PCOS and menstrual disorders";
+  if (/endometr|بطان/.test(text)) return "PCOS and endometrial risk";
+  if (/monitor|follow up|متابع/.test(text)) return "PCOS monitoring";
+  if (/treat|management|medication|علاج/.test(text)) return "PCOS treatment-related guidance";
+  return "General clinical guidance";
 }
 
 async function extractText(buffer: Buffer, mimeType: string) {

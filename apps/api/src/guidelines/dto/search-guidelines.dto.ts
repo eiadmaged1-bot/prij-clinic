@@ -24,4 +24,11 @@ export class SearchGuidelinesDto {
   @IsOptional()
   @IsString()
   limit?: string;
+
+  @IsOptional() @IsString() year?: string;
+  @IsOptional() @IsString() region?: string;
+  @IsOptional() @IsString() reviewStatus?: string;
+  @IsOptional() @IsString() sourceKind?: string;
+  @IsOptional() @IsString() clinicalArea?: string;
+  @IsOptional() @IsString() synthesis?: string;
 }
