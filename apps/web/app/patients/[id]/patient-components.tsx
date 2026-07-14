@@ -1220,18 +1220,23 @@ export function numericPayload(raw: Record<string, string>, numericKeys: string[
     return Object.fromEntries(Object.entries(raw).map(([key, value]) => [key, numericKeys.includes(key) ? Number(value) : value]));
 }
 
-export async function submitVisitAction(patientId: string, endpoint: string, payload: Record<string, unknown>) {
+export async function submitVisitAction(patientId: string, endpoint: string, payload: Record<string, unknown>, idempotencyKey?: string) {
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/patients/${patientId}/${endpoint}`, {
             method: "POST",
             credentials: "include",
             headers: {
               "content-type": "application/json",
+              ...(idempotencyKey ? { "idempotency-key": idempotencyKey } : {}),
               ...(token ? { authorization: `Bearer ${token}` } : {})
             },
             body: JSON.stringify(payload)
           });
-    if (!response.ok) throw new Error("Could not save visit action.");
+    if (!response.ok) {
+      const body = await response.json().catch(() => null) as { message?: string | string[] } | null;
+      const detail = Array.isArray(body?.message) ? body.message[0] : body?.message;
+      throw new Error(detail || "Could not save visit action. Your selected items were preserved.");
+    }
     return response.json() as Promise<Record<string, unknown>>;
 }
 

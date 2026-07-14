@@ -1,5 +1,5 @@
 import { AppActionButton } from "@/components/actions/AppActionButton";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { completeDoctorVisit, createDoctorVisitFollowUp, getCurrentDoctorVisit, getDoctorVisitPacket, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
@@ -7,6 +7,7 @@ import { searchMedications, type MedicationResult } from "@/lib/medications";
 import { Patient, ReferenceResult, TimelineItem, values, submitVisitAction, CareAssistPanel, MedicationSafetyTerminal, ReferencePicker } from "./patient-components";
 import { HistorySheetWorkspace } from "./panel-components";
 import { DoctorSignatureBadge } from "./timeline-components";
+import { createSecureIdempotencyKey } from "@/lib/idempotency-key";
 
 export function DoctorVisitFlow({ patient, related, onReload, permissions = [], roles = [] }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void; permissions?: string[]; roles?: string[] }) {
   const [visit, setVisit] = useState<DoctorVisitState | null>(null);
@@ -17,6 +18,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
   const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
   const [selectedInvestigation, setSelectedInvestigation] = useState<ReferenceResult | null>(null);
   const [hint, setHint] = useState("");
+  const actionKeys = useRef<Record<string, string>>({});
   const [activeStep, setActiveStep] = useState("History");
   const [activePlanSection, setActivePlanSection] = useState("Prescription");
   const encounterId = String(visit?.encounter?.id ?? "");
@@ -89,41 +91,50 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     const form = event.currentTarget;
     const payload = values(form, ["instructions"]);
     const genericName = selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName ?? "Generic medication";
-    await submitVisitAction(patient.id, "prescriptions", {
-      encounterId,
-      items: [{
-        medicationName: genericName,
-        medicationGenericId: selectedMedication.type === "generic_medication" ? selectedMedication.id : undefined,
-        instructions: payload.instructions
-      }]
-    });
-    setStatus("Prescription draft updated with generic medication.");
-    setActivePlanSection("Investigations");
-    setVisit(await getCurrentDoctorVisit(patient.id));
-    form.reset();
+    try {
+      actionKeys.current.prescription ||= createSecureIdempotencyKey();
+      await submitVisitAction(patient.id, "prescriptions", { encounterId, items: [{ medicationName: genericName, medicationGenericId: selectedMedication.type === "generic_medication" ? selectedMedication.id : undefined, instructions: payload.instructions }] }, actionKeys.current.prescription);
+      delete actionKeys.current.prescription;
+      setSelectedMedication(null);
+      setStatus("Prescription draft updated with generic medication.");
+      setActivePlanSection("Investigations");
+      setVisit(await getCurrentDoctorVisit(patient.id));
+      form.reset();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Prescription save failed. The selected medication was preserved for retry.");
+    }
   }
 
   async function addInvestigation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!encounterId || !selectedInvestigation) return;
     const payload = values(event.currentTarget, ["instructions"]);
-    await submitVisitAction(patient.id, "investigations", {
-      encounterId,
-      priority: "routine",
-      items: [{ category: selectedInvestigation.category ?? "laboratory", testName: selectedInvestigation.label, instructions: payload.instructions }]
-    });
-    setStatus("Investigation request added.");
-    setActivePlanSection("Follow-up");
-    setVisit(await getCurrentDoctorVisit(patient.id));
+    try {
+      actionKeys.current.investigation ||= createSecureIdempotencyKey();
+      await submitVisitAction(patient.id, "investigations", { encounterId, priority: "routine", items: [{ category: investigationCategory(selectedInvestigation.category), testName: selectedInvestigation.label, instructions: payload.instructions }] }, actionKeys.current.investigation);
+      delete actionKeys.current.investigation;
+      setSelectedInvestigation(null);
+      setStatus("Investigation request added.");
+      setActivePlanSection("Follow-up");
+      setVisit(await getCurrentDoctorVisit(patient.id));
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Investigation save failed. CBC/TSH selection was preserved for retry.");
+    }
   }
 
   async function addFollowUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!encounterId) return;
-    await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string });
-    setStatus("Follow-up task added.");
-    setActiveStep("Review");
-    setVisit(await getCurrentDoctorVisit(patient.id));
+    try {
+      actionKeys.current.followUp ||= createSecureIdempotencyKey();
+      await createDoctorVisitFollowUp(patient.id, encounterId, values(event.currentTarget, ["dueAt", "title", "note"]) as { dueAt?: string; title?: string; note?: string }, actionKeys.current.followUp);
+      delete actionKeys.current.followUp;
+      setStatus("Follow-up task added.");
+      setActiveStep("Review");
+      setVisit(await getCurrentDoctorVisit(patient.id));
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Follow-up save failed. The form was preserved for retry.");
+    }
   }
 
   async function loadPacket() {
@@ -177,7 +188,7 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       {activeStep === "History" ? <div className="doctor-friendly-grid active-visit-step">
         <section className="panel">
           <div className="section-heading"><h3>History</h3><span className="badge">Step 1</span></div>
-          <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload) => { await submitVisitAction(patient.id, endpoint, payload); onReload(); }} status={status} />
+          <HistorySheetWorkspace related={related} onSubmit={async (endpoint, payload, idempotencyKey) => { await submitVisitAction(patient.id, endpoint, payload, idempotencyKey); onReload(); }} status={status} />
         </section>
       </div> : null}
 
@@ -297,4 +308,16 @@ export function insertHintIntoPlan(hint: string, setStatus: (value: string) => v
     field.value = [field.value.trim(), insertion].filter(Boolean).join("\n");
     field.dispatchEvent(new Event("input", { bubbles: true }));
     setStatus("Selected note inserted into the encounter draft. Save draft to persist it.");
+}
+
+function investigationCategory(category?: string | null) {
+    const value = String(category ?? "").toLowerCase();
+    if (/ultrasound|sonograph/.test(value)) return "ultrasound";
+    if (/radiology|imaging|x-ray|ct|mri/.test(value)) return "radiology";
+    if (/patholog|histolog|biopsy/.test(value)) return "pathology";
+    if (/cytolog|pap/.test(value)) return "cytology";
+    if (/procedure|endoscopy/.test(value)) return "procedure";
+    if (/external|referral/.test(value)) return "external";
+    if (/other/.test(value)) return "other";
+    return "laboratory";
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -32,8 +32,8 @@ export class DoctorVisitController {
 
   @Post(":encounterId/follow-up")
   @Permissions("patient_task.create")
-  followUp(@Param("patientId") patientId: string, @Param("encounterId") encounterId: string, @Body() dto: CreateFollowUpDto, @CurrentUser() user: AuthUser) {
-    return this.visits.createFollowUp(patientId, encounterId, dto, user);
+  followUp(@Param("patientId") patientId: string, @Param("encounterId") encounterId: string, @Body() dto: CreateFollowUpDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.visits.createFollowUp(patientId, encounterId, dto, user, idempotencyKey);
   }
 
   @Get(":encounterId/packet")

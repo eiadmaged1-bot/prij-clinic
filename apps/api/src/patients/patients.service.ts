@@ -764,64 +764,89 @@ export class PatientsService {
     return sheet;
   }
 
-  async createOperationHistory(id: string, dto: PatientOperationHistoryDto, user: AuthUser) {
+  async createOperationHistory(id: string, dto: PatientOperationHistoryDto, user: AuthUser, idempotencyKey?: string) {
     const patient = await this.get(id, user);
     await this.assertHistorySheet(id, dto.historySheetId);
     const catalog = dto.operationCatalogItemId ? await this.prisma.operationCatalogItem.findFirst({ where: { id: dto.operationCatalogItemId, isActive: true } }) : null;
     if (dto.operationCatalogItemId && !catalog) throw new BadRequestException("Operation catalog item was not found.");
-    const item = await this.prisma.patientOperationHistoryItem.create({
-      data: {
-        patientId: id,
-        historySheetId: dto.historySheetId ?? null,
-        operationCatalogItemId: catalog?.id ?? null,
-        operationNameSnapshot: catalog?.name ?? dto.operationNameSnapshot.trim(),
-        approximateDate: dto.approximateDate ? new Date(dto.approximateDate) : null,
-        year: dto.year ?? null,
-        notes: clean(dto.notes)
-      }
-    });
+    const request = { patientId: id, ...dto, operationCatalogItemId: catalog?.id ?? dto.operationCatalogItemId };
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: id, operation: "patient.operation_history.create", rawKey: idempotencyKey, requestPayload: request }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Operation history save is still in progress." });
+      const replay = await this.prisma.patientOperationHistoryItem.findFirst({ where: { id: attempt.resourceId, patientId: id } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved operation history could not be reloaded." });
+      return replay;
+    }
+    let item;
+    try {
+      item = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.patientOperationHistoryItem.create({ data: { patientId: id, historySheetId: dto.historySheetId ?? null, operationCatalogItemId: catalog?.id ?? null, operationNameSnapshot: catalog?.name ?? dto.operationNameSnapshot.trim(), approximateDate: dto.approximateDate ? new Date(dto.approximateDate) : null, year: dto.year ?? null, notes: clean(dto.notes) } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "patient_operation_history_item", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Operation history save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({ actorUserId: user.id, action: "patient_operation_history.created", resourceType: "patient_operation_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(catalog) } });
     const operationTag = operationTagCode(item.operationNameSnapshot);
     if (operationTag) await this.clinicalTags.createFromSource({ patientId: id, tagCode: operationTag, sourceType: "operation_history", sourceId: item.id, createdByUserId: user.id });
     return item;
   }
 
-  async createMedicationHistory(id: string, dto: PatientMedicationHistoryDto, user: AuthUser) {
+  async createMedicationHistory(id: string, dto: PatientMedicationHistoryDto, user: AuthUser, idempotencyKey?: string) {
     const patient = await this.get(id, user);
     await this.assertHistorySheet(id, dto.historySheetId);
     const generic = dto.medicationGenericId ? await this.prisma.medicationGeneric.findFirst({ where: { id: dto.medicationGenericId, isActive: true, isControlled: false } }) : null;
     if (dto.medicationGenericId && !generic) throw new BadRequestException("Generic medication reference was not found or is not available for normal selection.");
-    const item = await this.prisma.patientMedicationHistoryItem.create({
-      data: {
-        patientId: id,
-        historySheetId: dto.historySheetId ?? null,
-        medicationGenericId: generic?.id ?? null,
-        genericNameSnapshot: generic?.genericName ?? dto.genericNameSnapshot.trim(),
-        familyNameSnapshot: generic?.familyName ?? clean(dto.familyNameSnapshot),
-        currentOrPast: clean(dto.currentOrPast) ?? "past",
-        notes: clean(dto.notes)
-      }
-    });
+    const normalizedStatus = dto.currentOrPast === "previous" ? "past" : clean(dto.currentOrPast) ?? "past";
+    const request = { patientId: id, ...dto, currentOrPast: normalizedStatus, medicationGenericId: generic?.id ?? dto.medicationGenericId };
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: id, operation: "patient.medication_history.create", rawKey: idempotencyKey, requestPayload: request }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Medication history save is still in progress." });
+      const replay = await this.prisma.patientMedicationHistoryItem.findFirst({ where: { id: attempt.resourceId, patientId: id } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved medication history could not be reloaded." });
+      return replay;
+    }
+    let item;
+    try {
+      item = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.patientMedicationHistoryItem.create({ data: { patientId: id, historySheetId: dto.historySheetId ?? null, medicationGenericId: generic?.id ?? null, genericNameSnapshot: generic?.genericName ?? dto.genericNameSnapshot.trim(), familyNameSnapshot: generic?.familyName ?? clean(dto.familyNameSnapshot), currentOrPast: normalizedStatus, clinicalGroupSnapshot: clean(dto.clinicalGroupSnapshot), indication: clean(dto.indication), startDate: dto.startDate ? new Date(dto.startDate) : null, stopDate: dto.stopDate ? new Date(dto.stopDate) : null, notes: clean(dto.notes) } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "patient_medication_history_item", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Medication history save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({ actorUserId: user.id, action: "patient_medication_history.created", resourceType: "patient_medication_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(generic) } });
     return item;
   }
 
-  async createInvestigationHistory(id: string, dto: PatientInvestigationHistoryDto, user: AuthUser) {
+  async createInvestigationHistory(id: string, dto: PatientInvestigationHistoryDto, user: AuthUser, idempotencyKey?: string) {
     const patient = await this.get(id, user);
     await this.assertHistorySheet(id, dto.historySheetId);
     const catalog = dto.investigationCatalogItemId ? await this.prisma.investigationCatalogItem.findFirst({ where: { id: dto.investigationCatalogItemId, active: true } }) : null;
     if (dto.investigationCatalogItemId && !catalog) throw new BadRequestException("Investigation catalog item was not found.");
-    const item = await this.prisma.patientInvestigationHistoryItem.create({
-      data: {
-        patientId: id,
-        historySheetId: dto.historySheetId ?? null,
-        investigationCatalogItemId: catalog?.id ?? null,
-        investigationNameSnapshot: catalog?.name ?? dto.investigationNameSnapshot.trim(),
-        context: clean(dto.context) ?? "previous",
-        date: dto.date ? new Date(dto.date) : null,
-        notes: clean(dto.notes)
-      }
-    });
+    const request = { patientId: id, ...dto, investigationCatalogItemId: catalog?.id ?? dto.investigationCatalogItemId };
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: id, operation: "patient.investigation_history.create", rawKey: idempotencyKey, requestPayload: request }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Investigation history save is still in progress." });
+      const replay = await this.prisma.patientInvestigationHistoryItem.findFirst({ where: { id: attempt.resourceId, patientId: id } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved investigation history could not be reloaded." });
+      return replay;
+    }
+    let item;
+    try {
+      item = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.patientInvestigationHistoryItem.create({ data: { patientId: id, historySheetId: dto.historySheetId ?? null, investigationCatalogItemId: catalog?.id ?? null, investigationNameSnapshot: catalog?.name ?? dto.investigationNameSnapshot.trim(), context: clean(dto.context) ?? "previous", date: dto.date ? new Date(dto.date) : null, notes: clean(dto.notes) } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "patient_investigation_history_item", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Investigation history save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({ actorUserId: user.id, action: "patient_investigation_history.created", resourceType: "patient_investigation_history_item", resourceId: item.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId: id, catalogLinked: Boolean(catalog) } });
     return item;
   }
@@ -957,37 +982,55 @@ export class PatientsService {
     return encounter;
   }
 
-  async createPrescription(id: string, dto: PatientContextPrescriptionDto, user: AuthUser) {
-    await this.get(id, user);
-    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: id, requireDoctorScope: true });
-    const prescription = await this.prisma.prescription.create({
-      data: {
-        patientId: id,
-        encounterId: dto.encounterId ?? null,
-        doctorId: user.id,
-        notes: clean(dto.notes),
-        items: { create: await Promise.all(dto.items.map((item) => resolvePrescriptionItem(this.prisma, item))) }
-      },
-      include: { items: true, patient: true, encounter: true }
-    });
+  async createPrescription(id: string, dto: PatientContextPrescriptionDto, user: AuthUser, idempotencyKey?: string) {
+    const patient = await this.get(id, user);
+    const encounter = await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: id, requireDoctorScope: true });
+    if (!encounter || encounter.status !== "draft") throw new BadRequestException("An active draft visit is required to add a prescription.");
+    const resolvedItems = await Promise.all(dto.items.map((item) => resolvePrescriptionItem(this.prisma, item)));
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: dto.encounterId, operation: "visit.prescription.create", rawKey: idempotencyKey, requestPayload: dto }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Prescription save is still in progress." });
+      const replay = await this.prisma.prescription.findFirst({ where: { id: attempt.resourceId, patientId: id, encounterId: dto.encounterId }, include: { items: true, patient: true, encounter: true } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved prescription could not be reloaded." });
+      return replay;
+    }
+    let prescription;
+    try {
+      prescription = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.prescription.create({ data: { patientId: id, encounterId: dto.encounterId, doctorId: user.id, notes: clean(dto.notes), items: { create: resolvedItems } }, include: { items: true, patient: true, encounter: true } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "prescription", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Prescription save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({ actorUserId: user.id, action: "prescription.created", resourceType: "prescription", resourceId: prescription.id, severity: "high", metadataJson: { patientId: id, itemCount: prescription.items.length, source: "patient_file" } });
     return prescription;
   }
 
-  async createInvestigation(id: string, dto: PatientContextInvestigationDto, user: AuthUser) {
-    await this.get(id, user);
-    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: id, requireDoctorScope: true });
-    const order = await this.prisma.investigationOrder.create({
-      data: {
-        patientId: id,
-        encounterId: dto.encounterId ?? null,
-        doctorId: user.id,
-        priority: dto.priority ?? "routine",
-        notes: clean(dto.notes),
-        items: { create: dto.items.map((item) => ({ category: item.category, testName: item.testName.trim(), instructions: clean(item.instructions) })) }
-      },
-      include: { items: true, patient: true, encounter: true }
-    });
+  async createInvestigation(id: string, dto: PatientContextInvestigationDto, user: AuthUser, idempotencyKey?: string) {
+    const patient = await this.get(id, user);
+    const encounter = await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: id, requireDoctorScope: true });
+    if (!encounter || encounter.status !== "draft") throw new BadRequestException("An active draft visit is required to request investigations.");
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: dto.encounterId, operation: "visit.investigation.create", rawKey: idempotencyKey, requestPayload: dto }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Investigation save is still in progress." });
+      const replay = await this.prisma.investigationOrder.findFirst({ where: { id: attempt.resourceId, patientId: id, encounterId: dto.encounterId }, include: { items: true, patient: true, encounter: true } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved investigation request could not be reloaded." });
+      return replay;
+    }
+    let order;
+    try {
+      order = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.investigationOrder.create({ data: { patientId: id, encounterId: dto.encounterId, doctorId: user.id, priority: dto.priority ?? "routine", notes: clean(dto.notes), items: { create: dto.items.map((item) => ({ category: item.category, testName: item.testName.trim(), instructions: clean(item.instructions) })) } }, include: { items: true, patient: true, encounter: true } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "investigation_order", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Investigation save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({ actorUserId: user.id, action: "investigation_order.created", resourceType: "investigation_order", resourceId: order.id, severity: "high", metadataJson: { patientId: id, itemCount: order.items.length, source: "patient_file" } });
     return order;
   }

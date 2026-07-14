@@ -39,8 +39,8 @@ export function updateDoctorVisit(patientId: string, encounterId: string, input:
   return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}`, { method: "PATCH", body: JSON.stringify(input) });
 }
 
-export function createDoctorVisitFollowUp(patientId: string, encounterId: string, input: { dueAt?: string; title?: string; note?: string }) {
-  return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}/follow-up`, { method: "POST", body: JSON.stringify(input) });
+export function createDoctorVisitFollowUp(patientId: string, encounterId: string, input: { dueAt?: string; title?: string; note?: string }, idempotencyKey?: string) {
+  return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}/follow-up`, { method: "POST", headers: idempotencyKey ? { "idempotency-key": idempotencyKey } : undefined, body: JSON.stringify(input) });
 }
 
 export function getDoctorVisitPacket(patientId: string, encounterId: string) {

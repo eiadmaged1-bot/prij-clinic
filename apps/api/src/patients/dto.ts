@@ -568,9 +568,8 @@ export class PatientContextPrescriptionItemDto {
 }
 
 export class PatientContextPrescriptionDto {
-  @IsOptional()
   @IsUUID()
-  encounterId?: string;
+  encounterId!: string;
 
   @IsOptional()
   @IsString()
@@ -599,9 +598,8 @@ export class PatientContextInvestigationItemDto {
 }
 
 export class PatientContextInvestigationDto {
-  @IsOptional()
   @IsUUID()
-  encounterId?: string;
+  encounterId!: string;
 
   @IsOptional()
   @IsEnum(InvestigationPriority)
@@ -959,8 +957,8 @@ export class PatientMedicationHistoryDto {
   clinicalGroupSnapshot?: string;
 
   @IsOptional()
-  @IsIn(["current", "previous", "stopped"])
-  currentOrPast?: "current" | "previous" | "stopped";
+  @IsIn(["current", "past", "previous", "stopped"])
+  currentOrPast?: "current" | "past" | "previous" | "stopped";
 
   @IsOptional()
   @IsString()

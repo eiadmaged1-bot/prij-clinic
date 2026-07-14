@@ -1,17 +1,19 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceAppointment, assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { IdempotencyService } from "../idempotency/idempotency.service";
 import { CreateFollowUpDto, StartDoctorVisitDto, UpdateDoctorVisitDto } from "./dto";
 
 @Injectable()
 export class DoctorVisitService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    private readonly idempotency: IdempotencyService
   ) {}
 
   async start(patientId: string, dto: StartDoctorVisitDto, user: AuthUser) {
@@ -116,20 +118,28 @@ export class DoctorVisitService {
     return updated;
   }
 
-  async createFollowUp(patientId: string, encounterId: string, dto: CreateFollowUpDto, user: AuthUser) {
+  async createFollowUp(patientId: string, encounterId: string, dto: CreateFollowUpDto, user: AuthUser, idempotencyKey?: string) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
-    await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
-    const task = await this.prisma.patientTask.create({
-      data: {
-        patientId,
-        branchId: patient.branchId,
-        createdByUserId: user.id,
-        taskType: "schedule_follow_up",
-        title: clean(dto.title) ?? "Follow-up visit",
-        description: clean(dto.note),
-        dueAt: dto.dueAt ? new Date(dto.dueAt) : null
-      }
-    });
+    const encounter = await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
+    if (!encounter || encounter.status !== "draft") throw new BadRequestException("An active draft visit is required to add follow-up actions.");
+    const attempt = idempotencyKey ? await this.idempotency.beginOrReplay({ userId: user.id, branchId: patient.branchId, scopeKey: encounterId, operation: "visit.follow_up.create", rawKey: idempotencyKey, requestPayload: dto }) : null;
+    if (attempt?.isReplay) {
+      if (!attempt.resourceId) throw new ConflictException({ code: "IDEMPOTENCY_REQUEST_IN_PROGRESS", message: "Follow-up save is still in progress." });
+      const replay = await this.prisma.patientTask.findFirst({ where: { id: attempt.resourceId, patientId } });
+      if (!replay) throw new ConflictException({ code: "IDEMPOTENCY_RESOURCE_MISSING", message: "Saved follow-up could not be reloaded." });
+      return replay;
+    }
+    let task;
+    try {
+      task = await this.prisma.$transaction(async (tx) => {
+        const created = await tx.patientTask.create({ data: { patientId, branchId: patient.branchId, createdByUserId: user.id, taskType: "schedule_follow_up", title: clean(dto.title) ?? "Follow-up visit", description: clean(dto.note), dueAt: dto.dueAt ? new Date(dto.dueAt) : null } });
+        if (attempt) await this.idempotency.complete({ tx, recordId: attempt.recordId, responseStatus: 201, resourceType: "patient_task", resourceId: created.id });
+        return created;
+      });
+    } catch (error) {
+      if (attempt) await this.idempotency.failOrRelease({ recordId: attempt.recordId, safeReason: "Follow-up save failed.", releaseLock: true }).catch(() => undefined);
+      throw error;
+    }
     await this.audit.record({
       actorUserId: user.id,
       action: "doctor_visit.follow_up_created",

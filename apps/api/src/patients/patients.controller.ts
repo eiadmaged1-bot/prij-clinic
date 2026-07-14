@@ -180,20 +180,20 @@ export class PatientsController {
 
   @Post(":id/operation-history")
   @Permissions("encounter.create")
-  createOperationHistory(@Param("id") id: string, @Body() dto: PatientOperationHistoryDto, @CurrentUser() user: AuthUser) {
-    return this.patients.createOperationHistory(id, dto, user);
+  createOperationHistory(@Param("id") id: string, @Body() dto: PatientOperationHistoryDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createOperationHistory(id, dto, user, idempotencyKey);
   }
 
   @Post(":id/medication-history")
   @Permissions("encounter.create")
-  createMedicationHistory(@Param("id") id: string, @Body() dto: PatientMedicationHistoryDto, @CurrentUser() user: AuthUser) {
-    return this.patients.createMedicationHistory(id, dto, user);
+  createMedicationHistory(@Param("id") id: string, @Body() dto: PatientMedicationHistoryDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createMedicationHistory(id, dto, user, idempotencyKey);
   }
 
   @Post(":id/investigation-history")
   @Permissions("encounter.create")
-  createInvestigationHistory(@Param("id") id: string, @Body() dto: PatientInvestigationHistoryDto, @CurrentUser() user: AuthUser) {
-    return this.patients.createInvestigationHistory(id, dto, user);
+  createInvestigationHistory(@Param("id") id: string, @Body() dto: PatientInvestigationHistoryDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createInvestigationHistory(id, dto, user, idempotencyKey);
   }
 
   @Post(":id/appointments")
@@ -216,14 +216,14 @@ export class PatientsController {
 
   @Post(":id/prescriptions")
   @Permissions("prescription.create")
-  createPrescription(@Param("id") id: string, @Body() dto: PatientContextPrescriptionDto, @CurrentUser() user: AuthUser) {
-    return this.patients.createPrescription(id, dto, user);
+  createPrescription(@Param("id") id: string, @Body() dto: PatientContextPrescriptionDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createPrescription(id, dto, user, idempotencyKey);
   }
 
   @Post(":id/investigations")
   @Permissions("investigation.create")
-  createInvestigation(@Param("id") id: string, @Body() dto: PatientContextInvestigationDto, @CurrentUser() user: AuthUser) {
-    return this.patients.createInvestigation(id, dto, user);
+  createInvestigation(@Param("id") id: string, @Body() dto: PatientContextInvestigationDto, @Headers("idempotency-key") idempotencyKey: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.patients.createInvestigation(id, dto, user, idempotencyKey);
   }
 
   @Post(":id/reports")
