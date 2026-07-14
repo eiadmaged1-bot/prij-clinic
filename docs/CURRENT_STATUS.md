@@ -21,3 +21,6 @@ Forward-only migrations added in this sprint: prescription dispensing metadata, 
 This is development verification, not production, privacy, deployment, or clinical-governance signoff.
 
 Final verification results and unavailable legacy suites are recorded in `docs/MANUAL_QA_REPORT.md`.
+# v1.4.5 reconstruction (2026-07-14)
+
+Implemented on `fix/v1.4.5-mobile-workflow-knowledge-reconstruction`: role-safe landings, shared sticky mobile header/account sheet, compact Reception and Doctor workspaces, idempotent patient-to-queue handoff, deterministic hydration, permanent PHI-free QR workflow, guided patient workspace, reversible/amendable clinical tags, resilient autosave/session handling, authoritative PDF guideline viewer, reviewed page-cited summaries/search, generic-first pharmacology, approved formula calculators, Dermatology reference search, and audited encounter-linked findings. Clinical knowledge output remains assistive and doctor-review gated.

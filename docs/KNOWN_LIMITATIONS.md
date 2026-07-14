@@ -17,3 +17,10 @@
 - CSV parsing supports normal quoted rows but not embedded multiline quoted cells. Windows-1256 requires explicit selection.
 - A5 prescription printing has no final clinic-approved background artwork. Browser print headers/footers remain operator-controlled.
 - Medication, investigation, guideline, Smart Search, and AI content is assistive and draft/review-oriented. Nothing autonomously diagnoses, prescribes, doses, treats, or finalizes clinical records.
+# v1.4.5 limitations
+
+- No pharmacology, Dermatology, guideline summary, or calculator dataset is claimed complete or clinically verified. Normal views expose only approved evidence; seeded generic identities are not clinical recommendations.
+- PDF rendering uses the browser viewer with extracted-page fallback; advanced native thumbnail/search behavior depends on browser PDF support.
+- Camera scanning requires HTTPS and compatible hardware. LAN HTTP retains manual lookup only.
+- Credential-dependent integration suites and physical-device/ngrok QA require configured test accounts and an active tunnel.
+- Calculators support approved, reviewed, test-locked handlers only and never prescribe or infer missing inputs.

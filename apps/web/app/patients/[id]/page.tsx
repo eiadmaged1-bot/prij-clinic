@@ -14,10 +14,10 @@ import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorks
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useInterfaceMode } from "@/lib/interface-mode";
 import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
-import { ageLabel as patientAgeLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
+import { ageLabel as patientAgeLabel, phaseTypeLabel } from "@/lib/patient-labels";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 import { autosaveLabel, loadLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
-import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel, formatDateTime } from "./patient-components";
+import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
 
 const legacyTabDefinitions: TabConfig[] = [
@@ -312,18 +312,6 @@ export default function PatientFilePage() {
 
     setActionStatus("Saved to this patient file.");
     requestPatientWorkspaceRefresh();
-  }
-
-  async function updatePatientType(nextType: string) {
-    if (!patient) return;
-    const token = sessionStorage.getItem("prijClinicToken");
-    await fetch(`${getApiBaseUrl()}/patients/${patient.id}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-      body: JSON.stringify({ patientType: nextType })
-    });
-    setPatient({ ...patient, patientType: nextType });
   }
 
   if (patient && !roleContextReady) {

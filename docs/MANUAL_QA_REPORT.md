@@ -29,3 +29,6 @@ Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.4-role-runtime-clinical-workf
 - Physical/PDF print inspection for Arabic, English, bilingual, long-name, and controlled page-count cases.
 
 These items must not be inferred from build or static contract tests. Prior v1.4.3 manual/ngrok evidence is historical only.
+# v1.4.5 QA note — 2026-07-14
+
+Automated viewport/contract tests cover 360–430 px mobile, tablet/desktop layouts, role routing, hydration, account sheet, queue handoff, QR capability states, patient workspace, guidelines, pharmacology, calculators, Dermatology, and RTL. Workspace typecheck/build and database checks are recorded in the release report. Physical iPhone/Android, role-authenticated browser walkthroughs, camera permission, and current ngrok HTTPS were not claimed unless explicitly recorded in the final report.
