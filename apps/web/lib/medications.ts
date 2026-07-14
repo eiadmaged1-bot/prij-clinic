@@ -52,6 +52,17 @@ export function listDrugFamilies() {
   return request<Array<{ id: string; code: string; displayName: string; aliases?: string[]; verificationStatus: string }>>("/medications/families");
 }
 
+export type PharmacologySearchResult = { id: string; genericName: string; family?: string | null; pharmacologicClass?: string | null; reviewStatus: string; mainUse: string; keyCaution: string; clearance: string; matchReason: string; profileCompleteness: number };
+export type PharmacologyProfile = PharmacologySearchResult & Record<string, unknown> & { className?: string | null; aliases?: Array<{ alias: string; scopeType: string }>; mechanism?: string[]; pharmacodynamics?: string[]; pharmacokinetics?: Array<Record<string, unknown>>; adverseEffects?: Array<Record<string, unknown>>; contraindications?: Array<Record<string, unknown>>; cautions?: Array<Record<string, unknown>>; interactions?: Array<Record<string, unknown>>; monitoring?: Array<Record<string, unknown>>; pregnancyLactation?: Array<Record<string, unknown>>; renal?: Array<Record<string, unknown>>; hepatic?: Array<Record<string, unknown>>; spectrum?: Array<Record<string, unknown>>; calculators?: Array<Record<string, unknown>>; sources?: Array<Record<string, unknown>>; doctorReviewRequired: boolean };
+
+export function searchPharmacology(query: string) {
+  return request<{ query: string; results: PharmacologySearchResult[]; genericFirst: boolean; tradeNamesAreAliasesOnly: boolean }>(`/pharmacology/search?q=${encodeURIComponent(query)}`);
+}
+
+export function getPharmacologyProfile(id: string) {
+  return request<PharmacologyProfile>(`/pharmacology/generics/${encodeURIComponent(id)}`);
+}
+
 export function getMedicationIngredient(id: string) {
   return request(`/medications/ingredients/${id}`);
 }

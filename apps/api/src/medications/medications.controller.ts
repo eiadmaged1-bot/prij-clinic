@@ -95,6 +95,18 @@ export class MedicationsController {
     return this.search.search(dto.query ?? "");
   }
 
+  @Get("pharmacology/search")
+  @Permissions("medications.search")
+  pharmacologySearch(@Query("q") q: string | undefined) {
+    return this.medications.searchPharmacology(q ?? "");
+  }
+
+  @Get("pharmacology/generics/:id")
+  @Permissions("medications.read")
+  pharmacologyProfile(@Param("id") id: string) {
+    return this.medications.pharmacologyProfile(id);
+  }
+
   @Get("medications/ingredients/:id/label-sections")
   @Permissions("medications.read")
   ingredientLabels(@Param("id") id: string) {

@@ -4,6 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferencePatient } from "../auth/reference-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeMedicationSearch } from "./normalize-medication-search";
+import { Prisma } from "@prisma/client";
 
 @Injectable()
 export class MedicationsService {
@@ -18,6 +19,37 @@ export class MedicationsService {
 
   getFamily(id: string) {
     return this.prisma.drugFamily.findUniqueOrThrow({ where: { id }, include: { genericMemberships: { include: { medication: true } } } });
+  }
+
+  async searchPharmacology(query: string) {
+    const normalized = normalizeMedicationSearch(query);
+    if (normalized.length < 2) return { query, results: [] };
+    const medications = await this.prisma.medicationGeneric.findMany({
+      where: { isActive: true },
+      include: pharmacologyInclude,
+      orderBy: { genericName: "asc" },
+      take: 500
+    });
+    const results = medications.flatMap((medication) => {
+      const evidence = pharmacologyEvidence(medication);
+      const matchFields = [
+        ["generic name", medication.genericName], ["family", medication.familyMemberships.map((item) => item.family.displayName).join(" ")], ["class", `${medication.className ?? ""} ${medication.pharmacologicClass ?? ""}`],
+        ["alias", medication.aliasesScoped.map((item) => item.alias).join(" ")], ["mechanism", evidence.mechanism.join(" ")], ["pharmacodynamics", evidence.pharmacodynamics.join(" ")],
+        ["adverse effect", evidence.adverseEffects.map((item) => item.name).join(" ")], ["contraindication", evidence.contraindications.map((item) => item.name).join(" ")],
+        ["monitoring", evidence.monitoring.map((item) => item.parameter).join(" ")], ["renal/hepatic", `${evidence.renal.map((item) => item.adjustmentStatus).join(" ")} ${evidence.hepatic.map((item) => item.adjustmentStatus).join(" ")}`],
+        ["antimicrobial spectrum", spectrumSearchText(evidence.spectrum)]
+      ] as const;
+      const matches = matchFields.filter(([, value]) => normalizeMedicationSearch(value).includes(normalized));
+      if (!matches.length) return [];
+      return [{ id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, mainUse: "No reviewed indication summary available.", keyCaution: evidence.adverseEffects.slice(0, 3).map((item) => item.name).join(" · ") || "No reviewed caution summary available.", clearance: evidence.renal[0]?.primaryElimination || evidence.hepatic[0]?.primaryMetabolism || "No reviewed clearance summary available.", matchReason: `Matched ${matches.map(([field]) => field).join(", ")}`, profileCompleteness: evidence.profileCompleteness }];
+    });
+    return { query, results: results.slice(0, 50), genericFirst: true, tradeNamesAreAliasesOnly: true };
+  }
+
+  async pharmacologyProfile(id: string) {
+    const medication = await this.prisma.medicationGeneric.findUnique({ where: { id }, include: pharmacologyInclude });
+    if (!medication || !medication.isActive) throw new NotFoundException("Generic medication profile not found.");
+    return { id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, className: medication.className, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, aliases: medication.aliasesScoped.map((alias) => ({ alias: alias.alias, scopeType: alias.scopeType })), ...pharmacologyEvidence(medication), doctorReviewRequired: true };
   }
 
   async createFamily(dto: Record<string, string>, user: AuthUser) {
@@ -319,4 +351,41 @@ export class MedicationsService {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() || null : null;
+}
+
+const pharmacologyInclude = {
+  familyMemberships: { include: { family: true } },
+  aliasesScoped: { where: { status: "active" } },
+  mechanismSummaries: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  pharmacodynamicSummaries: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  pharmacokineticSummaries: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  adverseEffects: { include: { source: true }, orderBy: [{ severity: "asc" }, { name: "asc" }] },
+  contraindications: { include: { source: true }, orderBy: { name: "asc" } },
+  cautions: { include: { source: true }, orderBy: { riskGroup: "asc" } },
+  interactionsPrimary: { include: { source: true, secondaryGeneric: true }, orderBy: { severity: "asc" } },
+  monitoringRequirements: { include: { source: true }, orderBy: { parameter: "asc" } },
+  pregnancyLactationProfiles: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  renalGuidance: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  hepaticGuidance: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  antimicrobialSpectra: { include: { source: true }, orderBy: { createdAt: "desc" } },
+  doseFormulas: { where: { active: true }, include: { versions: { where: { approvalStatus: "approved" }, include: { source: true }, orderBy: { version: "desc" } } } }
+} satisfies Prisma.MedicationGenericInclude;
+
+type PharmacologyMedication = Prisma.MedicationGenericGetPayload<{ include: typeof pharmacologyInclude }>;
+
+function pharmacologyEvidence(medication: PharmacologyMedication) {
+  const mechanism = medication.mechanismSummaries.flatMap((row) => jsonStrings(row.bulletsJson));
+  const pharmacodynamics = medication.pharmacodynamicSummaries.flatMap((row) => jsonStrings(row.bulletsJson));
+  const pharmacokinetics = medication.pharmacokineticSummaries.map((row) => ({ absorption: jsonStrings(row.absorptionJson), metabolism: jsonStrings(row.metabolismJson), halfLife: jsonStrings(row.halfLifeJson), elimination: jsonStrings(row.eliminationJson), clinicalNotes: jsonStrings(row.clinicalNotesJson), reviewStatus: row.reviewStatus, source: row.source }));
+  const evidenceGroups = [mechanism, pharmacodynamics, pharmacokinetics, medication.adverseEffects, medication.contraindications, medication.cautions, medication.interactionsPrimary, medication.monitoringRequirements, medication.pregnancyLactationProfiles, medication.renalGuidance, medication.hepaticGuidance, medication.antimicrobialSpectra, medication.doseFormulas.flatMap((formula) => formula.versions)];
+  return { mechanism, pharmacodynamics, pharmacokinetics, adverseEffects: medication.adverseEffects, contraindications: medication.contraindications, cautions: medication.cautions, interactions: medication.interactionsPrimary, monitoring: medication.monitoringRequirements, pregnancyLactation: medication.pregnancyLactationProfiles, renal: medication.renalGuidance, hepatic: medication.hepaticGuidance, spectrum: medication.antimicrobialSpectra, calculators: medication.doseFormulas.filter((formula) => formula.versions.length), sources: [...new Map(evidenceGroups.flatMap((group) => group.flatMap((row) => typeof row === "object" && row && "source" in row ? [[(row as { source: { id: string } }).source.id, (row as { source: unknown }).source] as const] : [])).map(([key, value]) => [key, value])).values()], profileCompleteness: evidenceGroups.filter((group) => group.length > 0).length };
+}
+
+function jsonStrings(value: Prisma.JsonValue) {
+  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === "string");
+  return typeof value === "string" ? [value] : [];
+}
+
+function spectrumSearchText(rows: PharmacologyMedication["antimicrobialSpectra"]) {
+  return rows.map((row) => `gram positive ${row.gramPositive} gram +ve g+ve جرام موجب gram negative ${row.gramNegative} anaerobic ${row.anaerobic} atypical ${row.atypical} pseudomonas antipseudomonal ${row.pseudomonas} mrsa ${row.mrsa} enterococcus ${row.enterococcus} esbl ${row.esblRelevance} intracellular ${row.intracellular} ${row.resistanceLimitations}`).join(" ");
 }

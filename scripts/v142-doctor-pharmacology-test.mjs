@@ -8,7 +8,7 @@ const medicationComponents = read("apps/web/components/medications/MedicationCom
 const prescriptions = read("apps/web/app/prescriptions/page.tsx");
 const patientPicker = read("apps/web/components/clinic/PatientPicker.tsx");
 
-for (const text of ["Medication & Prescription Assistant", "Search & Prescribe", "painkiller", "vaginal infection"]) {
+for (const text of ["Clinical knowledge", "Pharmacology", "Generic-first", "PharmacologyWorkspace"]) {
   if (!medicationPage.includes(text)) failures.push(`Medication page missing search-first marker: ${text}`);
 }
 
