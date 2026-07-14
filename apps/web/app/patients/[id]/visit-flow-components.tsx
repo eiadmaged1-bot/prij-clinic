@@ -12,6 +12,7 @@ import { addUniqueBasketItem, SelectedBasket, type SelectedBasketItem } from "@/
 
 type PrescriptionBasketItem = SelectedBasketItem & { medication: MedicationResult };
 type InvestigationBasketItem = SelectedBasketItem & { investigation: ReferenceResult };
+const visitSteps = ["History", "Examination", "Assessment", "Plan", "Review"] as const;
 
 export function DoctorVisitFlow({ patient, related, onReload, permissions = [], roles = [] }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void; permissions?: string[]; roles?: string[] }) {
   const [visit, setVisit] = useState<DoctorVisitState | null>(null);
@@ -27,12 +28,11 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
   const [investigationReason, setInvestigationReason] = useState("");
   const [hint, setHint] = useState("");
   const actionKeys = useRef<Record<string, string>>({});
-  const [activeStep, setActiveStep] = useState("History");
+  const [activeStep, setActiveStep] = useState<(typeof visitSteps)[number]>("History");
   const [activePlanSection, setActivePlanSection] = useState("Prescription");
   const encounterId = String(visit?.encounter?.id ?? "");
   const latestHistorySheetId = String((related["history-sheet"] ?? [])[0]?.id ?? "") || undefined;
   const terminalMedication = hoveredMedication ?? selectedMedication;
-  const visitSteps = ["History", "Examination", "Assessment", "Plan", "Review"];
   const activeStepIndex = Math.max(0, visitSteps.indexOf(activeStep));
   const encounterReady = Boolean(String(visit?.encounter?.chiefComplaint ?? "").trim() && String(visit?.encounter?.assessmentText ?? "").trim() && String(visit?.encounter?.planText ?? "").trim());
 

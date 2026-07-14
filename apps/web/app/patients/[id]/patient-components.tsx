@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 import { AppActionLink } from "@/components/actions/AppActionLink";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
@@ -548,13 +548,13 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
   const [correctionReason, setCorrectionReason] = useState("");
   const [status, setStatus] = useState("");
 
-  async function loadTags() {
+  const loadTags = useCallback(async () => {
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : {} }).catch(() => null);
     if (response?.ok) setTags(((await response.json()) as { tags?: TagRow[] }).tags ?? []);
-  }
+  }, [patient.id]);
 
-  useEffect(() => { void loadTags(); }, [patient.id]);
+  useEffect(() => { void loadTags(); }, [loadTags]);
 
   function resetEditor() {
     setPending(null); setEditingId(null); setHistoryStatus("current"); setTagDate(""); setTagYear(""); setDetails(""); setManualNote(""); setCorrectionReason("");
