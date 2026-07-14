@@ -1,5 +1,13 @@
 # Manual QA Report
 
+## v1.4.6 evidence
+
+Focused tests passed for visit actions, baskets, Visit, search/queue, QR fallback, mobile Investigations, guideline ranges, History, prescriptions, hydration/errors, and credential safety. Type checks and production web/API builds passed. Queue concurrency correctly refused to run without isolated API/session/CSRF credentials.
+
+Final legacy-suite status: patient workspace, patient queue, doctor dashboard, PHI/log redaction, prescriptions, investigation workflow, smart tags/search, Arabic/RTL, autosave, guideline viewer/summaries/search, pharmacology model/UI/search/governance, and isolated AI safety/regression passed. Live guideline center, security-expanded, accounts/RBAC, audit assertions, and public-login proxy did not pass because their configured runtime/login prerequisites were unavailable. The combined clinic-workflow script exited abnormally on Windows and is not claimed.
+
+No real device, desktop browser, or ngrok walkthrough was performed. Those QA categories are **not performed**, not passed.
+
 Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.4-role-runtime-clinical-workflow-reconstruction`.
 
 ## Automated and runtime verification completed

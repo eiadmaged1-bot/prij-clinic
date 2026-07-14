@@ -1,5 +1,13 @@
 # Known Limitations
 
+## v1.4.6 unresolved recovery limits
+
+- The KFS July 2026 antibiotic PDF is absent from the private vault and was not imported or committed.
+- Pharmacology evidence, pregnancy/lactation, aliases, antimicrobial spectrum, and Dermatology tables remain empty.
+- Autosave restores visit fields; recovery of every basket, active step, and open drawer is not proven.
+- Physical mobile/desktop, ngrok, camera, offline reconnect, and print walkthroughs were not performed.
+- Credential-dependent concurrency/E2E suites were not run without isolated credentials.
+
 - This sprint is not a production-readiness or medical-safety claim. Privacy, restore drills, monitoring, deployment, penetration testing, and clinical-governance signoff remain required.
 - Full manual role QA at every requested desktop/mobile viewport has not yet been rerun after the v1.4.4 changes. Current claims are automated/build verification unless explicitly stated otherwise.
 - Some legacy integration scripts assume disposable databases but do not enforce them or self-clean. The final clinical persistence and OB/GYN runs created clearly labeled synthetic test records in the preserved development database. They were not deleted because destructive cleanup was not proven safe; administrators should review/archive them through the application.

@@ -1,5 +1,11 @@
 # Current Status
 
+## v1.4.6 recovery status
+
+Base `b5ecf2e59ddcb37c231ecf55003141a97c75f130`. Repaired audited visit actions, baskets, five-step Visit, collapsed History, search/queue, QR fallback, mobile Investigations, prescriptions, guideline ranges, and hydration/errors. Additive migration `20260714233000_prescription_structured_fields` is applied locally; no clinical/audit records were deleted.
+
+Inventory: generics 37; families 53; memberships 2 (SABA → Salbutamol/Terbutaline); templates/shortcuts 4/4; guideline sources/documents/versions/sections/chunks 248/51/14/2549/2577; queue 180 with zero active duplicate groups; operation history 2; investigation orders/items 196/204; tags 15; audit 38,721. Pharmacology evidence, aliases, summaries, and Dermatology records remain zero.
+
 Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.4-role-runtime-clinical-workflow-reconstruction`.
 
 ## Verified v1.4.4 work
