@@ -14,7 +14,8 @@ assert.match(migration, /CREATE TABLE "DermatologyCondition"[\s\S]*CREATE TABLE 
 assert.doesNotMatch(migration, /DROP TABLE|TRUNCATE|DELETE FROM/, "migration must preserve existing clinical data");
 assert.match(service, /genericOptions:\s*\{ where:\s*\{ reviewStatus:\s*"approved" \}/, "normal results must expose only approved generic options");
 assert.match(service, /assessmentFirst:\s*true[\s\S]*noAutomaticDiagnosisOrTreatment:\s*true/, "search must remain assistive and assessment-first");
-assert.match(service, /encounterId:\s*dto\.encounterId, patientId/, "finding must be bound to its source encounter and patient");
+assert.match(service, /encounter\.findFirst\(\{ where:\s*\{ id:\s*dto\.encounterId, patientId \}/, "finding must be bound to its source encounter and patient");
+assert.match(service, /patientClinicalFinding\.findMany\(\{ where:\s*\{ patientId \}/, "patient workspace must be able to read linked findings");
 assert.match(service, /PATIENT_CLINICAL_FINDING_CREATED/, "finding creation must be audited");
 assert.match(controller, /@Permissions\("clinical_tags\.write"\)/, "patient finding writes must be RBAC protected");
 assert.match(ui, /Red flags and escalation[\s\S]*Assessment and differential[\s\S]*Non-drug care[\s\S]*Reviewed generic options/, "red flags and assessment must precede options");

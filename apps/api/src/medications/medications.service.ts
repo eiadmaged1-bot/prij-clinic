@@ -39,6 +39,13 @@ export class MedicationsService {
     return finding;
   }
 
+  async listClinicalFindings(patientId: string, user: AuthUser) {
+    const patient = await assertCanReferencePatient(this.prisma, patientId, user);
+    const findings = await this.prisma.patientClinicalFinding.findMany({ where: { patientId }, include: { condition: true, encounter: { select: { id: true, startedAt: true, status: true } }, createdBy: { select: { id: true, displayName: true } } }, orderBy: { createdAt: "desc" } });
+    await this.audit.record({ actorUserId: user.id, action: "PATIENT_CLINICAL_FINDINGS_READ", resourceType: "patient", resourceId: patientId, branchId: patient.branchId, severity: "medium", metadataJson: { count: findings.length } });
+    return { findings, doctorReviewRequired: true };
+  }
+
   listFamilies() {
     return this.prisma.drugFamily.findMany({ where: { genericMemberships: { some: {} } }, include: { genericMemberships: { include: { medication: true } } }, orderBy: { displayName: "asc" } });
   }

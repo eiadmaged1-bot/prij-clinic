@@ -133,6 +133,10 @@ export class MedicationsController {
   @Permissions("clinical_tags.write")
   createClinicalFinding(@Param("id") id: string, @Body() dto: CreateDermatologyFindingDto, @CurrentUser() user: AuthUser) { return this.medications.createClinicalFinding(id, dto, user); }
 
+  @Get("patients/:id/clinical-findings")
+  @Permissions("clinical_tags.read")
+  listClinicalFindings(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.medications.listClinicalFindings(id, user); }
+
   @Get("medications/ingredients/:id/label-sections")
   @Permissions("medications.read")
   ingredientLabels(@Param("id") id: string) {
