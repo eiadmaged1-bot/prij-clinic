@@ -519,6 +519,10 @@ select:focus {
   grid-template-columns: minmax(0, 1fr);
 }
 
+.app-shell.receptionist-shell {
+  --density-sidebar-width: 14.5rem;
+}
+
 body {
   overflow-x: hidden;
 }
@@ -1580,7 +1584,7 @@ details.form-fieldset summary {
 
 .reception-home-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(8rem, 0.42fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
 }

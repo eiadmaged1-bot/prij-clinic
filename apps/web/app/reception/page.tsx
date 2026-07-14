@@ -9,6 +9,7 @@ import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { useI18n } from "@/i18n/useI18n";
 import { AppShell } from "../mvp-page";
+import { useSession } from "../session";
 
 type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; status?: string | null };
 type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: Patient | null };
@@ -31,7 +32,20 @@ function ReceptionHomeContent() {
   const [status, setStatus] = useState("");
   const { key: idempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
+  const { user } = useSession();
   const copy = receptionCopy[language];
+  const workflowCopy = language === "ar" ? {
+    checkIn: "تسجيل الحضور",
+    todayAppointments: "مواعيد اليوم",
+    bookAppointment: "حجز موعد",
+    paymentStatus: "حالة الدفع"
+  } : {
+    checkIn: "Check-in",
+    todayAppointments: "Today’s appointments",
+    bookAppointment: "Book appointment",
+    paymentStatus: "Payment status"
+  };
+  const canViewPaymentStatus = Boolean(user?.permissions.includes("billing.read"));
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
@@ -118,8 +132,11 @@ function ReceptionHomeContent() {
       <section className="reception-home-grid compact-action-grid" aria-label={copy.receptionActions}>
         <Link className="reception-action-card premium-depth-card" href="/patients/new"><ThreeDMedicalIcon name="patients" size="sm" /><span>{copy.newPatient}</span></Link>
         <Link className="reception-action-card premium-depth-card" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" /><span>{copy.returningPatientQr}</span></Link>
+        <Link className="reception-action-card premium-depth-card" href="/reception/check-in"><ThreeDMedicalIcon name="reception" size="sm" /><span>{workflowCopy.checkIn}</span></Link>
+        <Link className="reception-action-card premium-depth-card" href="/calendar"><ThreeDMedicalIcon name="calendar" size="sm" /><span>{workflowCopy.todayAppointments}</span></Link>
+        <Link className="reception-action-card premium-depth-card" href="/calendar?mode=new"><ThreeDMedicalIcon name="calendar" size="sm" /><span>{workflowCopy.bookAppointment}</span></Link>
         <Link className="reception-action-card premium-depth-card" href="/queue"><ThreeDMedicalIcon name="queue" size="sm" /><span>{copy.queue}</span></Link>
-        <Link className="reception-action-card premium-depth-card" href="/calendar"><ThreeDMedicalIcon name="calendar" size="sm" /><span>{copy.appointments}</span></Link>
+        {canViewPaymentStatus ? <Link className="reception-action-card premium-depth-card" href="/billing"><ThreeDMedicalIcon name="billing" size="sm" /><span>{workflowCopy.paymentStatus}</span></Link> : null}
       </section>
 
       <section className="panel compact-panel today-summary-card" aria-label={copy.queueNow}>
