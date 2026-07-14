@@ -15,6 +15,7 @@ import { SearchGuidelinesDto } from "./dto/search-guidelines.dto";
 import { UpdateCheckDto } from "./dto/update-check.dto";
 import { UpdateGuidelineSourceDto } from "./dto/update-guideline-source.dto";
 import { UploadGuidelineDto } from "./dto/upload-guideline.dto";
+import { CreateGuidelineSummaryDto, ReviewGuidelineSummaryDto } from "./dto/guideline-summary.dto";
 import { GuidelinesService } from "./guidelines.service";
 
 type UploadedGuidelineFile = {
@@ -97,6 +98,18 @@ export class GuidelinesController {
   @Permissions("guidelines.review")
   reviewDocument(@Param("id") id: string, @Body() dto: ReviewGuidelineDto, @CurrentUser() user: AuthUser) {
     return this.guidelines.reviewDocument(id, dto, user);
+  }
+
+  @Post("documents/:id/summaries")
+  @Permissions("guidelines.import")
+  createSummary(@Param("id") id: string, @Body() dto: CreateGuidelineSummaryDto, @CurrentUser() user: AuthUser) {
+    return this.guidelines.createSummary(id, dto, user);
+  }
+
+  @Post("documents/:documentId/summaries/:summaryId/review")
+  @Permissions("guidelines.review")
+  reviewSummary(@Param("documentId") documentId: string, @Param("summaryId") summaryId: string, @Body() dto: ReviewGuidelineSummaryDto, @CurrentUser() user: AuthUser) {
+    return this.guidelines.reviewSummary(documentId, summaryId, dto, user);
   }
 
   @Post("documents/:id/archive")

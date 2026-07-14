@@ -22,6 +22,7 @@ import { ReviewGuidelineDto } from "./dto/review-guideline.dto";
 import { SearchGuidelinesDto } from "./dto/search-guidelines.dto";
 import { UpdateGuidelineSourceDto } from "./dto/update-guideline-source.dto";
 import { UploadGuidelineDto } from "./dto/upload-guideline.dto";
+import { CreateGuidelineSummaryDto, ReviewGuidelineSummaryDto } from "./dto/guideline-summary.dto";
 import { buildCitationLabel } from "./utils/citation-builder";
 import { chunkText } from "./utils/chunk-text";
 import { sha256 } from "./utils/file-hash";
@@ -29,6 +30,7 @@ import { assertSafePublicUrl } from "./utils/safe-url";
 import { keywords, normalizeText } from "./utils/text-normalizer";
 
 type SearchMode = "SEARCH_ONLY" | "MOCK_RAG" | "CITATION_SUMMARY";
+const requiredSummarySections = ["AT_A_GLANCE", "SCOPE_POPULATION", "KEY_RECOMMENDATIONS", "ASSESSMENT_DIAGNOSIS", "INVESTIGATIONS", "RISK_STRATIFICATION", "MANAGEMENT", "MEDICATION_GUIDANCE", "PROCEDURES_INTERVENTIONS", "SPECIAL_POPULATIONS", "PREGNANCY_LACTATION", "MONITORING", "FOLLOW_UP", "ESCALATION_REFERRAL", "RED_FLAGS", "WHAT_NOT_TO_DO", "EVIDENCE_LIMITATIONS", "DECISION_PATHWAY"];
 const supportedGuidelineOrganizations = ["ACOG", "RCOG", "NICE", "WHO", "FIGO", "ESHRE", "ASRM", "SMFM", "CDC", "Other women’s health sources"];
 const demoGuidelineDisclaimer = "Demo guideline sample - not clinical use.";
 type UploadedGuidelineFile = {
@@ -112,6 +114,7 @@ export class GuidelinesService {
         source: true,
         sections: { orderBy: { orderIndex: "asc" }, take: 20 },
         chunks: { orderBy: { chunkIndex: "asc" }, take: 20 },
+        summaries: { orderBy: { createdAt: "desc" }, take: 3, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: { orderBy: [{ bulletIndex: "asc" }, { pageStart: "asc" }] } } }, reviewedBy: { select: { id: true, displayName: true } } } },
         _count: { select: { chunks: true, sections: true } }
       }
     });
@@ -195,6 +198,49 @@ export class GuidelinesService {
       metadataJson: { changedFields: Object.keys(dto) }
     });
     return safeDocument(document);
+  }
+
+  async createSummary(documentId: string, dto: CreateGuidelineSummaryDto, user: AuthUser) {
+    await this.ensureDocument(documentId, user);
+    const sectionTypes = dto.sections.map((section) => section.sectionType);
+    if (new Set(sectionTypes).size !== sectionTypes.length) throw new BadRequestException("Summary section types must be unique.");
+    for (const section of dto.sections) {
+      const citedBullets = new Set(section.citations.map((citation) => citation.bulletIndex));
+      if (section.bullets.some((_, index) => !citedBullets.has(index))) throw new BadRequestException(`Every summary bullet requires a page citation: ${section.heading}.`);
+      if (section.citations.some((citation) => citation.bulletIndex >= section.bullets.length || (citation.pageEnd && citation.pageEnd < citation.pageStart))) throw new BadRequestException(`Invalid citation range in ${section.heading}.`);
+    }
+    const sectionIds = dto.sections.flatMap((section) => section.citations.flatMap((citation) => citation.sectionId ? [citation.sectionId] : []));
+    const chunkIds = dto.sections.flatMap((section) => section.citations.flatMap((citation) => citation.chunkId ? [citation.chunkId] : []));
+    const [validSections, validChunks] = await Promise.all([
+      this.prisma.guidelineSection.count({ where: { id: { in: sectionIds }, documentId } }),
+      this.prisma.guidelineChunk.count({ where: { id: { in: chunkIds }, documentId } })
+    ]);
+    if (validSections !== new Set(sectionIds).size || validChunks !== new Set(chunkIds).size) throw new BadRequestException("Summary citations must reference this guideline document only.");
+    const summary = await this.prisma.guidelineSummary.create({ data: {
+      documentId, versionId: dto.versionId, status: "NEEDS_REVIEW", provenanceType: dto.provenanceType, createdByUserId: user.id,
+      sections: { create: dto.sections.map((section, orderIndex) => ({ sectionType: section.sectionType, heading: section.heading.trim(), bulletsJson: section.bullets.map((bullet) => bullet.trim()), orderIndex, citations: { create: section.citations.map((citation) => ({ documentId, sectionId: citation.sectionId, chunkId: citation.chunkId, bulletIndex: citation.bulletIndex, pageStart: citation.pageStart, pageEnd: citation.pageEnd, citationType: citation.citationType, label: citation.label.trim() })) } })) }
+    }, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: true } } } });
+    await this.audit.record({ actorUserId: user.id, action: "guideline.summary_draft_created", resourceType: "guideline_summary", resourceId: summary.id, severity: "high", metadataJson: { documentId, provenanceType: dto.provenanceType, sectionCount: dto.sections.length, status: "NEEDS_REVIEW" } });
+    return summary;
+  }
+
+  async reviewSummary(documentId: string, summaryId: string, dto: ReviewGuidelineSummaryDto, user: AuthUser) {
+    await this.ensureDocument(documentId, user);
+    if (!user.roles.includes("Doctor")) throw new ForbiddenException("A Doctor role is required to approve or reject a clinical guideline summary.");
+    const existing = await this.prisma.guidelineSummary.findFirst({ where: { id: summaryId, documentId }, include: { sections: { include: { citations: true } } } });
+    if (!existing) throw new NotFoundException("Guideline summary not found.");
+    if (dto.decision === "CLINIC_APPROVED") {
+      const present = new Set(existing.sections.map((section) => section.sectionType));
+      const missing = requiredSummarySections.filter((section) => !present.has(section));
+      if (missing.length) throw new BadRequestException(`A clinic-approved summary requires all structured sections. Missing: ${missing.join(", ")}.`);
+      if (existing.sections.some((section) => !section.citations.length)) throw new BadRequestException("Every clinic-approved summary section requires page citations.");
+    }
+    const reviewed = await this.prisma.$transaction(async (tx) => {
+      if (dto.decision === "CLINIC_APPROVED") await tx.guidelineSummary.updateMany({ where: { documentId, status: "CLINIC_APPROVED", id: { not: summaryId } }, data: { status: "SUPERSEDED" } });
+      return tx.guidelineSummary.update({ where: { id: summaryId }, data: { status: dto.decision, reviewReason: dto.reason.trim(), reviewedByUserId: user.id, reviewedAt: new Date(), publishedAt: dto.decision === "CLINIC_APPROVED" ? new Date() : null }, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: true } } } });
+    });
+    await this.audit.record({ actorUserId: user.id, action: "guideline.summary_reviewed", resourceType: "guideline_summary", resourceId: summaryId, severity: "high", reason: dto.reason.trim(), metadataJson: { documentId, previousStatus: existing.status, decision: dto.decision, autoApproved: false } });
+    return reviewed;
   }
 
   async upload(file: UploadedGuidelineFile, dto: UploadGuidelineDto, user: AuthUser) {

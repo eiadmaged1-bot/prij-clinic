@@ -103,6 +103,8 @@ model User {
   reviewedAiDrafts                   AiDraft[]                      @relation("AiDraftsReviewedBy")
   importedGuidelineDocuments         GuidelineDocument[]            @relation("GuidelineDocumentsImportedBy")
   reviewedGuidelineDocuments         GuidelineDocument[]            @relation("GuidelineDocumentsReviewedBy")
+  createdGuidelineSummaries          GuidelineSummary[]             @relation("GuidelineSummariesCreatedBy")
+  reviewedGuidelineSummaries         GuidelineSummary[]             @relation("GuidelineSummariesReviewedBy")
   requestedGuidelineImportJobs       GuidelineImportJob[]           @relation("GuidelineImportJobsRequestedBy")
   guidelineReviewDecisions           GuidelineReviewDecision[]      @relation("GuidelineReviewDecisionsDecidedBy")
   guidelineQueryLogs                 GuidelineQueryLog[]            @relation("GuidelineQueryLogsUser")
@@ -3231,15 +3233,17 @@ model GuidelineDocument {
   createdAt           DateTime               @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime               @updatedAt @db.Timestamptz(3)
 
-  source          GuidelineSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  importedByUser  User?                     @relation("GuidelineDocumentsImportedBy", fields: [importedByUserId], references: [id], onDelete: SetNull)
-  reviewedByUser  User?                     @relation("GuidelineDocumentsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
-  versions        GuidelineVersion[]
-  sections        GuidelineSection[]
-  chunks          GuidelineChunk[]
-  importJobs      GuidelineImportJob[]
-  updateChecks    GuidelineUpdateCheck[]
-  reviewDecisions GuidelineReviewDecision[]
+  source                   GuidelineSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  importedByUser           User?                      @relation("GuidelineDocumentsImportedBy", fields: [importedByUserId], references: [id], onDelete: SetNull)
+  reviewedByUser           User?                      @relation("GuidelineDocumentsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  versions                 GuidelineVersion[]
+  sections                 GuidelineSection[]
+  chunks                   GuidelineChunk[]
+  importJobs               GuidelineImportJob[]
+  updateChecks             GuidelineUpdateCheck[]
+  reviewDecisions          GuidelineReviewDecision[]
+  summaries                GuidelineSummary[]
+  GuidelineSummaryCitation GuidelineSummaryCitation[]
 
   @@index([sourceId])
   @@index([specialty])
@@ -3271,6 +3275,7 @@ model GuidelineVersion {
   sections        GuidelineSection[]
   chunks          GuidelineChunk[]
   reviewDecisions GuidelineReviewDecision[]
+  summaries       GuidelineSummary[]
 
   @@index([documentId])
   @@index([status])
@@ -3292,9 +3297,10 @@ model GuidelineSection {
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
-  document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
-  chunks   GuidelineChunk[]
+  document         GuidelineDocument          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version          GuidelineVersion?          @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  chunks           GuidelineChunk[]
+  summaryCitations GuidelineSummaryCitation[]
 
   @@index([documentId, orderIndex])
   @@index([documentId])
@@ -3319,9 +3325,10 @@ model GuidelineChunk {
   createdAt        DateTime @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime @updatedAt @db.Timestamptz(3)
 
-  document GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  section  GuidelineSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
-  version  GuidelineVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  document         GuidelineDocument          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  section          GuidelineSection?          @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  version          GuidelineVersion?          @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  summaryCitations GuidelineSummaryCitation[]
 
   @@unique([documentId, chunkIndex])
   @@unique([sectionId, chunkIndex])
@@ -3330,6 +3337,72 @@ model GuidelineChunk {
   @@index([versionId])
   @@index([citationLabel])
   @@index([reviewStatus])
+}
+
+model GuidelineSummary {
+  id               String    @id @default(uuid()) @db.Uuid
+  documentId       String    @db.Uuid
+  versionId        String?   @db.Uuid
+  status           String    @default("DRAFT_SUMMARY")
+  provenanceType   String    @default("AI_GENERATED_DRAFT")
+  createdByUserId  String?   @db.Uuid
+  reviewedByUserId String?   @db.Uuid
+  reviewReason     String?
+  reviewedAt       DateTime? @db.Timestamptz(3)
+  publishedAt      DateTime? @db.Timestamptz(3)
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
+
+  document   GuidelineDocument         @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  version    GuidelineVersion?         @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  createdBy  User?                     @relation("GuidelineSummariesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  reviewedBy User?                     @relation("GuidelineSummariesReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  sections   GuidelineSummarySection[]
+
+  @@index([documentId, status])
+  @@index([versionId])
+  @@index([reviewedByUserId])
+}
+
+model GuidelineSummarySection {
+  id          String   @id @default(uuid()) @db.Uuid
+  summaryId   String   @db.Uuid
+  sectionType String
+  heading     String
+  bulletsJson Json
+  orderIndex  Int
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  summary   GuidelineSummary           @relation(fields: [summaryId], references: [id], onDelete: Cascade)
+  citations GuidelineSummaryCitation[]
+
+  @@unique([summaryId, sectionType])
+  @@index([summaryId, orderIndex])
+}
+
+model GuidelineSummaryCitation {
+  id               String   @id @default(uuid()) @db.Uuid
+  summarySectionId String   @db.Uuid
+  documentId       String   @db.Uuid
+  sectionId        String?  @db.Uuid
+  chunkId          String?  @db.Uuid
+  bulletIndex      Int
+  pageStart        Int
+  pageEnd          Int?
+  citationType     String
+  label            String
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+
+  summarySection GuidelineSummarySection @relation(fields: [summarySectionId], references: [id], onDelete: Cascade)
+  document       GuidelineDocument       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  section        GuidelineSection?       @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  chunk          GuidelineChunk?         @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@index([summarySectionId, bulletIndex])
+  @@index([documentId, pageStart])
+  @@index([sectionId])
+  @@index([chunkId])
 }
 
 model GuidelineImportJob {
