@@ -26,7 +26,6 @@ const allowedRequestHeaders = new Set([
   "user-agent",
   "cookie",
   "referer",
-  "origin",
   "x-request-id",
   "idempotency-key",
   "x-csrf-token"
