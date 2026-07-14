@@ -1185,6 +1185,16 @@ body {
   background: var(--background);
 }
 
+@media (max-width: 900px) {
+  .doctor-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .doctor-kpi-grid .compact-kpi-card {
+    min-height: 6rem;
+  }
+}
+
 .authorization-pending {
   display: grid;
   min-height: 100dvh;

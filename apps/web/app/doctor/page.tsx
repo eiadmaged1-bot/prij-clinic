@@ -79,11 +79,10 @@ export default function DoctorModePage() {
         <section className="compact-kpi-grid doctor-kpi-grid" aria-label="Doctor operational summary">
           {loading ? <DashboardSkeletons /> : (
             <>
-              <CompactKpiCard label="Current patient" value={current ? patientName(current.patient) : "None"} detail={current ? `Queue ${current.queueNumber ?? "—"}` : "No active visit"} tone="accent" />
-              <CompactKpiCard label="Waiting patients" value={waiting.length} />
-              <CompactKpiCard label="Appointments today" value={todayAppointments.length} />
-              <CompactKpiCard label="Results requiring review" value={resultsToReview.length} />
-              <CompactKpiCard label="Follow-ups due" value={followUpsDue.length} />
+              <CompactKpiCard label="Waiting" value={waiting.length} tone="accent" />
+              <CompactKpiCard label="Appointments" value={todayAppointments.length} />
+              <CompactKpiCard label="Results" value={resultsToReview.length} />
+              <CompactKpiCard label="Follow-ups" value={followUpsDue.length} />
             </>
           )}
         </section>
@@ -135,7 +134,7 @@ export default function DoctorModePage() {
 }
 
 function DashboardSkeletons() {
-  return <>{Array.from({ length: 5 }, (_, index) => <div className="compact-kpi-card" key={index}><div className="skeleton" aria-label="Loading dashboard count" /></div>)}</>;
+  return <>{Array.from({ length: 4 }, (_, index) => <div className="compact-kpi-card" key={index}><div className="skeleton" aria-label="Loading dashboard count" /></div>)}</>;
 }
 
 function patientName(patient?: PatientSummary | null) {

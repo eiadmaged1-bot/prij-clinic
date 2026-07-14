@@ -331,6 +331,7 @@
     "test:v145:patient-queue": "node scripts/v145-patient-queue-handoff-test.mjs",
     "test:v145:hydration": "node scripts/v145-hydration-contract-test.mjs",
     "test:v145:qr": "node scripts/v145-qr-capability-test.mjs",
+    "test:v145:doctor-dashboard": "node scripts/v145-doctor-mobile-dashboard-test.mjs",
     "test:v1444:arabic-rtl": "node scripts/v1444-arabic-rtl-test.mjs",
     "test:prescription-print": "node scripts/prescription-print-test.mjs",
     "test:medication-reference": "node scripts/medication-reference-test.mjs",

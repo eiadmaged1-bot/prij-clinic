@@ -10,9 +10,9 @@ const css = await readFile("apps/web/app/globals.css", "utf8");
 for (const required of [
   "Current patient / active visit",
   "Waiting patients",
-  "Appointments today",
-  "Results requiring review",
-  "Follow-ups due",
+  'label="Appointments"',
+  'label="Results"',
+  'label="Follow-ups"',
   "Recent activity",
   "Search Patient",
   "Open next patient",
