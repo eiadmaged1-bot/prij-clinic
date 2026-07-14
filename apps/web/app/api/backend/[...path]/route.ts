@@ -26,6 +26,7 @@ const allowedRequestHeaders = new Set([
   "user-agent",
   "cookie",
   "referer",
+  "range",
   "x-request-id",
   "idempotency-key",
   "x-csrf-token",
@@ -273,6 +274,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
 }
 
 export const GET = proxy;
+export const HEAD = proxy;
 export const POST = proxy;
 export const PATCH = proxy;
 export const PUT = proxy;

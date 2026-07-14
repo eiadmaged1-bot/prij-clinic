@@ -11,7 +11,7 @@ type Chunk = { id: string; heading?: string | null; sectionPath?: string | null;
 type SummaryCitation = { id: string; bulletIndex: number; pageStart: number; pageEnd?: number | null; citationType: string; label: string };
 type SummarySection = { id: string; heading: string; sectionType: string; bulletsJson: string[]; citations: SummaryCitation[] };
 type GuidelineSummary = { id: string; status: string; provenanceType: string; reviewReason?: string | null; sections: SummarySection[]; reviewedBy?: { displayName: string } | null };
-type Document = { id: string; title: string; organization: string; versionLabel?: string | null; guidelineStatus: string; reviewStatus: string; specialty: string; topic: string; fileMimeType?: string | null; downloadsAllowed?: boolean; source?: { name?: string; organization?: string }; sections?: Section[]; chunks?: Chunk[]; summaries?: GuidelineSummary[] };
+type Document = { id: string; title: string; organization: string; versionLabel?: string | null; guidelineStatus: string; reviewStatus: string; specialty: string; topic: string; pageCount?: number; fileMimeType?: string | null; downloadsAllowed?: boolean; source?: { name?: string; organization?: string }; sections?: Section[]; chunks?: Chunk[]; summaries?: GuidelineSummary[] };
 type MobileTab = "PDF" | "Clinical Summary" | "Sections" | "Sources";
 
 export default function GuidelineViewerPage() {
@@ -49,7 +49,7 @@ export default function GuidelineViewerPage() {
   useEffect(() => { localStorage.setItem(`guideline:last-page:${params.id}`, String(page)); }, [page, params.id]);
 
   const sections = useMemo(() => document?.sections?.length ? document.sections : (document?.chunks ?? []).map((chunk) => ({ id: chunk.id, heading: chunk.heading || chunk.sectionPath || `Section ${chunk.chunkIndex + 1}`, orderIndex: chunk.chunkIndex, text: chunk.text, pageStart: chunk.pageStart, pageEnd: chunk.pageEnd })), [document]);
-  const pageCount = useMemo(() => Math.max(1, ...sections.map((section) => section.pageEnd ?? section.pageStart ?? 1)), [sections]);
+  const pageCount = useMemo(() => Math.max(document?.pageCount ?? 1, ...sections.map((section) => section.pageEnd ?? section.pageStart ?? 1)), [document?.pageCount, sections]);
   const matches = useMemo(() => query.trim() ? sections.filter((section) => `${section.heading} ${section.text ?? ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) : [], [query, sections]);
   const summary = useMemo(() => document?.summaries?.find((item) => item.status === "CLINIC_APPROVED") ?? document?.summaries?.[0] ?? null, [document]);
   const pdfUrl = `${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}/view#page=${page}&zoom=${fit === "width" ? "page-width" : fit === "page" ? "page-fit" : zoom}`;

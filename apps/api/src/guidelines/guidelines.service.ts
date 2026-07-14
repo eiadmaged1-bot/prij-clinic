@@ -127,7 +127,12 @@ export class GuidelinesService {
       severity: "medium",
       metadataJson: { title: document.title, accessLevel: document.accessLevel }
     });
-    return this.withLastFileAccess(safeDocument(document));
+    const pageStats = await this.prisma.guidelineSection.aggregate({
+      where: { documentId: document.id },
+      _max: { pageStart: true, pageEnd: true }
+    });
+    const pageCount = Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0, 1);
+    return this.withLastFileAccess({ ...safeDocument(document), pageCount });
   }
 
   async viewDocumentFile(id: string, user: AuthUser) {

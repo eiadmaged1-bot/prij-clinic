@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
-import type { Response } from "express";
+import type { Request, Response } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -72,11 +72,27 @@ export class GuidelinesController {
   }
 
   @Get("documents/:id/view")
-  async viewDocument(@Param("id") id: string, @CurrentUser() user: AuthUser, @Res() response: Response) {
+  async viewDocument(@Param("id") id: string, @CurrentUser() user: AuthUser, @Req() request: Request, @Res() response: Response) {
     const file = await this.guidelines.viewDocumentFile(id, user);
     response.setHeader("content-type", file.mimeType);
     response.setHeader("content-disposition", `${file.disposition}; filename="${file.fileName}"`);
     response.setHeader("x-guideline-vault", "application-streamed");
+    response.setHeader("accept-ranges", "bytes");
+    response.setHeader("cache-control", "private, no-store");
+    const range = parseByteRange(request.headers.range, file.buffer.length);
+    if (range === "invalid") {
+      response.setHeader("content-range", `bytes */${file.buffer.length}`);
+      response.status(416).end();
+      return;
+    }
+    if (range) {
+      const chunk = file.buffer.subarray(range.start, range.end + 1);
+      response.setHeader("content-range", `bytes ${range.start}-${range.end}/${file.buffer.length}`);
+      response.setHeader("content-length", String(chunk.length));
+      response.status(206).send(chunk);
+      return;
+    }
+    response.setHeader("content-length", String(file.buffer.length));
     response.send(file.buffer);
   }
 
@@ -178,4 +194,14 @@ export class GuidelinesController {
   queryLogs() {
     return this.guidelines.queryLogs();
   }
+}
+
+function parseByteRange(value: string | undefined, size: number): { start: number; end: number } | "invalid" | null {
+  if (!value) return null;
+  const match = /^bytes=(\d*)-(\d*)$/.exec(value.trim());
+  if (!match || (!match[1] && !match[2]) || size <= 0) return "invalid";
+  const start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
+  const end = match[2] && match[1] ? Number(match[2]) : size - 1;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || start >= size) return "invalid";
+  return { start, end: Math.min(end, size - 1) };
 }
