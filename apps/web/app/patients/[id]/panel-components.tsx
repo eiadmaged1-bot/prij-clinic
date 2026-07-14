@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, type ReactNode, useRef, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createSecureIdempotencyKey } from "@/lib/idempotency-key";
@@ -607,52 +607,58 @@ export function HistorySheetWorkspace({
         {status ? <span className="badge">{status}</span> : <span className="badge">{sheets.length} sheet(s)</span>}
       </div>
 
-      <form className="form-grid" onSubmit={handleSheetSubmit}>
-        <fieldset className="obgyn-fieldset wide">
-          <legend>Presenting history</legend>
+      <form className="history-collapsed-form" onSubmit={handleSheetSubmit}>
+        <HistorySection title="Presenting complaint" open>
           <label>Chief complaint<input name="chiefComplaint" defaultValue={String(latestSheet?.chiefComplaint ?? "")} /></label>
-          <label>History of present illness<textarea name="historyOfPresentIllness" defaultValue={String(latestSheet?.historyOfPresentIllness ?? "")} /></label>
-        </fieldset>
-        <fieldset className="obgyn-fieldset">
-          <legend>Obstetric history</legend>
-          <label>Gravida<input name="gravida" type="number" min="0" /></label>
-          <label>Para<input name="para" type="number" min="0" /></label>
-          <label>Abortions<input name="abortions" type="number" min="0" /></label>
-          <label>Living children<input name="livingChildren" type="number" min="0" /></label>
-          <label>LMP<input name="lmp" type="date" /></label>
+          <label className="wide">Optional full details<textarea name="historyOfPresentIllness" defaultValue={String(latestSheet?.historyOfPresentIllness ?? "")} /></label>
+        </HistorySection>
+        <HistorySection title="Obstetric history">
+          <label>Gravida<input name="gravida" type="number" min="0" step="1" inputMode="numeric" /></label>
+          <label>Para<input name="para" type="number" min="0" step="1" inputMode="numeric" /></label>
+          <label>Abortions<input name="abortions" type="number" min="0" step="1" inputMode="numeric" /></label>
+          <label>Living children<input name="livingChildren" type="number" min="0" step="1" inputMode="numeric" /></label>
           <label>EDD<input name="edd" type="date" /></label>
-          <label>Previous CS count<input name="previousCsCount" type="number" min="0" /></label>
-          <label>Previous vaginal delivery count<input name="previousVaginalDeliveryCount" type="number" min="0" /></label>
-          <label>Previous ectopic pregnancy<input name="previousEctopicPregnancy" /></label>
-          <label>Previous miscarriage<input name="previousMiscarriage" /></label>
-          <label>Previous stillbirth<input name="previousStillbirth" /></label>
-          <label>Previous preterm birth<input name="previousPretermBirth" /></label>
-        </fieldset>
-        <fieldset className="obgyn-fieldset">
-          <legend>Gynecology history</legend>
-          <label>Cycle regularity<input name="cycleRegularity" /></label>
-          <label>Cycle interval<input name="cycleInterval" /></label>
-          <label>Duration<input name="duration" /></label>
-          <label>Amount of bleeding<input name="bleedingAmount" /></label>
-          <label>Dysmenorrhea<input name="dysmenorrhea" /></label>
-          <label>Intermenstrual bleeding<input name="intermenstrualBleeding" /></label>
-          <label>Postcoital bleeding<input name="postcoitalBleeding" /></label>
-          <label>Vaginal discharge<input name="vaginalDischarge" /></label>
-          <label>Pelvic pain<input name="pelvicPain" /></label>
-          <label>Dyspareunia<input name="dyspareunia" /></label>
-          <label>Menopause status<input name="menopauseStatus" /></label>
-        </fieldset>
-        <fieldset className="obgyn-fieldset wide">
-          <legend>Background history</legend>
-          <label>Contraception history<textarea name="contraceptionHistory" /></label>
-          <label>Infertility history<textarea name="infertilityHistory" /></label>
-          <label>Past medical history<textarea name="pastMedicalHistory" /></label>
-          <label>Allergy history<textarea name="allergyHistory" /></label>
-          <label>Family history<textarea name="familyHistory" /></label>
-          <label>Social history<textarea name="socialHistory" /></label>
-          <label>Notes/free text<textarea name="notes" defaultValue={String(latestSheet?.notes ?? "")} /></label>
-        </fieldset>
-        <button className="button" type="submit">Save history sheet</button>
+          <label>Previous CS count<input name="previousCsCount" type="number" min="0" step="1" /></label>
+          <label>Previous vaginal delivery count<input name="previousVaginalDeliveryCount" type="number" min="0" step="1" /></label>
+          <TriStateField label="Previous ectopic pregnancy" name="previousEctopicPregnancy" />
+          <TriStateField label="Previous miscarriage" name="previousMiscarriage" />
+          <TriStateField label="Previous stillbirth" name="previousStillbirth" />
+          <TriStateField label="Previous preterm birth" name="previousPretermBirth" />
+        </HistorySection>
+        <HistorySection title="Menstrual history">
+          <label>LMP<input name="lmp" type="date" /></label>
+          <label>Cycle regularity<select name="cycleRegularity" defaultValue=""><option value="">Not recorded</option><option value="regular">Regular</option><option value="irregular">Irregular</option><option value="unknown">Unknown</option></select></label>
+          <label>Cycle interval (days)<input name="cycleInterval" type="number" min="1" inputMode="numeric" /></label>
+          <label>Bleeding duration (days)<input name="duration" type="number" min="0" inputMode="numeric" /></label>
+          <label>Bleeding amount<select name="bleedingAmount" defaultValue=""><option value="">Not recorded</option><option value="light">Light</option><option value="usual">Usual</option><option value="heavy">Heavy</option><option value="unknown">Unknown</option></select></label>
+          <label>Dysmenorrhea severity<select name="dysmenorrhea" defaultValue=""><option value="">Not recorded</option><option value="none">None</option><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option><option value="unknown">Unknown</option></select></label>
+          <TriStateField label="Intermenstrual bleeding" name="intermenstrualBleeding" />
+          <TriStateField label="Postcoital bleeding" name="postcoitalBleeding" />
+        </HistorySection>
+        <HistorySection title="Gynecologic history">
+          <TriStateField label="Vaginal discharge" name="vaginalDischarge" />
+          <TriStateField label="Pelvic pain" name="pelvicPain" />
+          <label>Dyspareunia type<select name="dyspareunia" defaultValue=""><option value="">Not recorded</option><option value="none">None</option><option value="superficial">Superficial</option><option value="deep">Deep</option><option value="unknown">Unknown</option></select></label>
+          <label>Menopause status<select name="menopauseStatus" defaultValue=""><option value="">Not recorded</option><option value="premenopausal">Premenopausal</option><option value="perimenopausal">Perimenopausal</option><option value="postmenopausal">Postmenopausal</option><option value="unknown">Unknown</option></select></label>
+          <label className="wide">Contraception history<textarea name="contraceptionHistory" /></label>
+          <label className="wide">Infertility history<textarea name="infertilityHistory" /></label>
+        </HistorySection>
+        <HistorySection title="Medical and surgical history">
+          <label className="wide">Optional key details<textarea name="pastMedicalHistory" /></label>
+          <label className="wide">Family history<textarea name="familyHistory" /></label>
+        </HistorySection>
+        <HistorySection title="Medication and allergy history">
+          <label className="wide">Allergy history<textarea name="allergyHistory" /></label>
+          <p className="muted wide">Use the selected history basket below for catalog-linked medications. No medication is prescribed from this section.</p>
+        </HistorySection>
+        <HistorySection title="Social history">
+          <label className="wide">Optional full details<textarea name="socialHistory" /></label>
+        </HistorySection>
+        <HistorySection title="Previous investigations">
+          <label className="wide">Optional free text and context<textarea name="notes" defaultValue={String(latestSheet?.notes ?? "")} /></label>
+          <p className="muted wide">Use the previous investigation picker below to retain the catalog ID and save once.</p>
+        </HistorySection>
+        <div className="history-review-bar"><div><strong>History summary</strong><span>Review missing complaint and clinically required fields before Next.</span></div><button className="button" type="submit">Save history once</button></div>
       </form>
 
       <div className="doctor-friendly-grid">
@@ -670,6 +676,17 @@ export function HistorySheetWorkspace({
       <RelatedPanel config={{ key: "history-sheet", label: "Saved history sheets", icon: "doctor", empty: "No structured history sheet yet." }} rows={sheets} />
     </section>
     );
+}
+
+function HistorySection({ title, children, open = false }: { title: string; children: ReactNode; open?: boolean }) {
+  return <details className="history-collapsed-section" open={open}>
+    <summary><strong>{title}</strong><span>Quick Add · Optional Key Details · Optional Full Details</span></summary>
+    <fieldset className="history-section-fields"><legend className="sr-only">{title}</legend>{children}</fieldset>
+  </details>;
+}
+
+function TriStateField({ label, name }: { label: string; name: string }) {
+  return <label>{label}<select name={name} defaultValue="unknown"><option value="yes">Yes</option><option value="no">No</option><option value="unknown">Unknown</option></select></label>;
 }
 
 export function InfertilityWorkspacePanel({ patient, workspace, phases }: { patient: Patient; workspace: InfertilityWorkspace; phases: ClinicalPhase[] }) {
