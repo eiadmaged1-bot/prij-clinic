@@ -5,6 +5,7 @@ import { assertCanReferencePatient } from "../auth/reference-scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { normalizeMedicationSearch } from "./normalize-medication-search";
 import { Prisma } from "@prisma/client";
+import { CreatePharmacologySummaryDto } from "./pharmacology-profile.dto";
 
 @Injectable()
 export class MedicationsService {
@@ -52,6 +53,28 @@ export class MedicationsService {
     const medication = await this.prisma.medicationGeneric.findUnique({ where: { id }, include: pharmacologyInclude });
     if (!medication || !medication.isActive) throw new NotFoundException("Generic medication profile not found.");
     return { id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, className: medication.className, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, aliases: medication.aliasesScoped.map((alias) => ({ alias: alias.alias, scopeType: alias.scopeType })), ...pharmacologyEvidence(medication), doctorReviewRequired: true };
+  }
+
+  async createPharmacologySummary(id: string, dto: CreatePharmacologySummaryDto, user: AuthUser) {
+    const [medication, source] = await Promise.all([this.prisma.medicationGeneric.findUnique({ where: { id } }), this.prisma.pharmacologySource.findUnique({ where: { id: dto.sourceId } })]);
+    if (!medication) throw new NotFoundException("Generic medication profile not found.");
+    if (!source) throw new BadRequestException("A valid pharmacology source is required.");
+    if (!dto.mechanismBullets?.length && !dto.pharmacodynamicBullets?.length && !dto.pharmacokinetics) throw new BadRequestException("Add at least one structured summary section.");
+    const created = await this.prisma.$transaction(async (tx) => {
+      const mechanism = dto.mechanismBullets ? await tx.mechanismSummary.create({ data: { medicationGenericId: id, sourceId: source.id, bulletsJson: cleanBullets(dto.mechanismBullets), reviewStatus: "needs_review" } }) : null;
+      const pharmacodynamics = dto.pharmacodynamicBullets ? await tx.pharmacodynamicSummary.create({ data: { medicationGenericId: id, sourceId: source.id, bulletsJson: cleanBullets(dto.pharmacodynamicBullets), reviewStatus: "needs_review" } }) : null;
+      const pk = dto.pharmacokinetics ? await tx.pharmacokineticSummary.create({ data: { medicationGenericId: id, sourceId: source.id, absorptionJson: cleanBullets(dto.pharmacokinetics.absorption ?? []), metabolismJson: cleanBullets(dto.pharmacokinetics.metabolism ?? []), halfLifeJson: cleanBullets(dto.pharmacokinetics.halfLife ?? []), eliminationJson: cleanBullets(dto.pharmacokinetics.elimination ?? []), clinicalNotesJson: cleanBullets(dto.pharmacokinetics.clinicalNotes ?? []), reviewStatus: "needs_review" } }) : null;
+      return { mechanism, pharmacodynamics, pharmacokinetics: pk };
+    });
+    await this.audit.record({ actorUserId: user.id, action: "pharmacology.summary_draft_created", resourceType: "medication_generic", resourceId: id, severity: "high", metadataJson: { sourceId: source.id, sections: Object.entries(created).filter(([, value]) => value).map(([key]) => key), reviewStatus: "needs_review", authorNotePresent: Boolean(dto.authorNote?.trim()), autoApproved: false } });
+    return { ...created, reviewStatus: "needs_review", doctorReviewRequired: true };
+  }
+
+  async pharmacologyCoverage() {
+    const [generics, mechanism, pharmacodynamics, pharmacokinetics, renal, hepatic, pregnancyLactation, spectrum, approvedFormulaVersions] = await Promise.all([
+      this.prisma.medicationGeneric.count({ where: { isActive: true } }), this.prisma.mechanismSummary.groupBy({ by: ["medicationGenericId"] }), this.prisma.pharmacodynamicSummary.groupBy({ by: ["medicationGenericId"] }), this.prisma.pharmacokineticSummary.groupBy({ by: ["medicationGenericId"] }), this.prisma.renalGuidance.groupBy({ by: ["medicationGenericId"] }), this.prisma.hepaticGuidance.groupBy({ by: ["medicationGenericId"] }), this.prisma.pregnancyLactationProfile.groupBy({ by: ["medicationGenericId"] }), this.prisma.antimicrobialSpectrum.groupBy({ by: ["medicationGenericId"] }), this.prisma.formulaVersion.count({ where: { approvalStatus: "approved" } })
+    ]);
+    return { generics, profiles: { mechanism: mechanism.length, pharmacodynamics: pharmacodynamics.length, pharmacokinetics: pharmacokinetics.length, renal: renal.length, hepatic: hepatic.length, pregnancyLactation: pregnancyLactation.length, antimicrobialSpectrum: spectrum.length }, approvedFormulaVersions, completeDatasetClaimed: false, clinicalVerificationClaimed: false };
   }
 
   async createFamily(dto: Record<string, string>, user: AuthUser) {
@@ -391,6 +414,8 @@ function jsonStrings(value: Prisma.JsonValue) {
 function spectrumSearchText(rows: PharmacologyMedication["antimicrobialSpectra"]) {
   return rows.map((row) => `gram positive ${row.gramPositive} gram +ve g+ve جرام موجب gram negative ${row.gramNegative} anaerobic ${row.anaerobic} atypical ${row.atypical} pseudomonas antipseudomonal ${row.pseudomonas} mrsa ${row.mrsa} enterococcus ${row.enterococcus} esbl ${row.esblRelevance} intracellular ${row.intracellular} ${row.resistanceLimitations}`).join(" ");
 }
+
+function cleanBullets(values: string[]) { return values.map((value) => value.trim()).filter(Boolean); }
 
 const allowedCoverage = new Set(["strong", "variable", "limited", "usually inactive", "resistance-dependent", "unknown/unverified"]);
 

@@ -7,6 +7,7 @@ import { Permissions } from "../rbac/require-permissions.decorator";
 import { MedicationSafetyService } from "./medication-safety.service";
 import { MedicationSearchService } from "./medication-search.service";
 import { MedicationsService } from "./medications.service";
+import { CreatePharmacologySummaryDto } from "./pharmacology-profile.dto";
 
 @Controller()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -105,6 +106,18 @@ export class MedicationsController {
   @Permissions("medications.read")
   pharmacologyProfile(@Param("id") id: string) {
     return this.medications.pharmacologyProfile(id);
+  }
+
+  @Post("pharmacology/generics/:id/summaries")
+  @Permissions("medications.manage_catalog")
+  createPharmacologySummary(@Param("id") id: string, @Body() dto: CreatePharmacologySummaryDto, @CurrentUser() user: AuthUser) {
+    return this.medications.createPharmacologySummary(id, dto, user);
+  }
+
+  @Get("pharmacology/coverage")
+  @Permissions("medications.read")
+  pharmacologyCoverage() {
+    return this.medications.pharmacologyCoverage();
   }
 
   @Get("medications/ingredients/:id/label-sections")

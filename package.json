@@ -312,6 +312,7 @@
     "test:v145:generic-pharmacology": "node scripts/v145-generic-first-pharmacology-test.mjs",
     "test:v145:pharmacology-ui": "node scripts/v145-compact-pharmacology-ui-test.mjs",
     "test:v145:pharmacology-search": "node scripts/v145-pharmacology-concept-search-test.mjs",
+    "test:v145:pharmacology-summaries": "node scripts/v145-pharmacology-summary-governance-test.mjs",
     "test:v142:minimal-ux": "node scripts/v142-minimal-ux-test.mjs",
     "test:v142:start-visit-context": "node scripts/v142-start-visit-context-test.mjs",
     "test:v142:core-visit-workspace": "node scripts/v142-core-visit-workspace-test.mjs",
