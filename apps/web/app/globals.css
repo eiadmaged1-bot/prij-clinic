@@ -1735,6 +1735,32 @@ details.form-fieldset summary {
   padding: 0.85rem;
 }
 
+.reception-action-card span {
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+.queue-indicator-row {
+  display: none;
+}
+
+.queue-indicator-row-clean {
+  margin: 0;
+}
+
+@media (max-width: 430px) {
+  .compact-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .compact-action-grid .reception-action-card {
+    min-height: 4.5rem;
+    padding: 0.7rem;
+  }
+}
+
 .today-summary-card {
   margin-bottom: 1rem;
 }

@@ -10,6 +10,7 @@ import { visitTypeLabel, type VisitTypeValue } from "@/lib/visit-types";
 import { useI18n } from "@/i18n/useI18n";
 import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
+import { receptionCopy as cleanReceptionCopy, receptionWorkflowCopy } from "./reception-copy";
 
 type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; status?: string | null };
 type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: Patient | null };
@@ -33,8 +34,8 @@ function ReceptionHomeContent() {
   const { key: idempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
   const { user } = useSession();
-  const copy = receptionCopy[language];
-  const workflowCopy = language === "ar" ? {
+  const copy = cleanReceptionCopy[language];
+  const legacyWorkflowCopy = language === "ar" ? {
     checkIn: "تسجيل الحضور",
     todayAppointments: "مواعيد اليوم",
     bookAppointment: "حجز موعد",
@@ -45,6 +46,8 @@ function ReceptionHomeContent() {
     bookAppointment: "Book appointment",
     paymentStatus: "Payment status"
   };
+  void legacyWorkflowCopy;
+  const workflowCopy = receptionWorkflowCopy[language];
   const canViewPaymentStatus = Boolean(user?.permissions.includes("billing.read"));
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
@@ -144,7 +147,9 @@ function ReceptionHomeContent() {
           <h2>{copy.queueNow}</h2>
         </div>
         <p className="queue-compact-line queue-indicator-row">{copy.waiting}: {waiting.length} Ã‚Â· {copy.urgent}: {urgentWaiting.length}</p>
+        <p className="queue-indicator-row-clean">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgentWaiting.length}</p>
         <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {nextPatient ? patientLabel(nextPatient.patient) : copy.noPatientWaiting}</p>
+        <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link>
       </section>
 
       {lookupOpen ? (
