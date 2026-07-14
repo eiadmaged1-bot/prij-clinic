@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { useTheme } from "../theme";
@@ -8,6 +9,7 @@ import { IconName, ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon"
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
+import { roleLandingPath } from "@/lib/role-routing";
 
 type SafeUser = {
   id: string;
@@ -64,6 +66,7 @@ const portalModules: Array<[string, string, string, string, string]> = [
 ];
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { theme } = useTheme();
   const [user, setUser] = useState<SafeUser | null>(null);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -85,6 +88,8 @@ export default function DashboardPage() {
       })
       .then((data) => {
         setUser(data.user);
+        const landing = roleLandingPath(data.user);
+        if (landing !== "/dashboard") router.replace(landing);
         return fetch(`${getApiBaseUrl()}/dashboard/summary`, {
           credentials: "include",
           headers: token ? { authorization: `Bearer ${token}` } : undefined
@@ -96,7 +101,11 @@ export default function DashboardPage() {
         }
       })
       .catch(() => setError("Please sign in to continue."));
-  }, []);
+  }, [router]);
+
+  if (user && roleLandingPath(user) !== "/dashboard") {
+    return <main className="page centered role-neutral-loading" aria-busy="true"><div className="skeleton" aria-label="Opening role workspace" /></main>;
+  }
 
   if (error) {
     return (

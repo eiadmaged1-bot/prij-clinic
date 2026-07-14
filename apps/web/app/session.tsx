@@ -86,7 +86,7 @@ type SessionContextValue = {
   status: "loading" | "authenticated" | "unauthenticated";
   message: string;
   isAdmin: boolean;
-  login(input: LoginInput): Promise<void>;
+  login(input: LoginInput): Promise<SessionUser>;
   logout(): Promise<void>;
   expire(returnUrl?: string): void;
   refresh(): Promise<void>;
@@ -241,6 +241,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMessage("");
     setUser(data.user);
     setStatus("authenticated");
+    return data.user;
   }, []);
 
   const logout = useCallback(async () => {

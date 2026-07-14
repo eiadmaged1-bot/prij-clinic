@@ -39,6 +39,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { useInterfaceMode } from "@/lib/interface-mode";
 import { MobileBottomNav, doctorMinimalisticNav, receptionistMinimalisticNav } from "@/components/layout/MobileBottomNav";
+import { canAccessWorkspace, roleLandingPath } from "@/lib/role-routing";
 
 const navGroupOrder: NavItem["group"][] = [
   "Home",
@@ -359,6 +360,14 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     }
   }, [pathname, router, status]);
 
+  const routeAuthorized = Boolean(user && canAccessWorkspace(pathname, user));
+
+  useEffect(() => {
+    if (status === "authenticated" && user && !routeAuthorized) {
+      router.replace(roleLandingPath(user));
+    }
+  }, [routeAuthorized, router, status, user]);
+
   useEffect(() => {
     setMobileNavOpen(false);
   }, [pathname]);
@@ -391,6 +400,26 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   async function signOut() {
     await logout();
     router.push("/login");
+  }
+
+  if (status === "loading" || (status === "authenticated" && (!user || !routeAuthorized))) {
+    return (
+      <main className="app-shell authorization-pending" aria-busy="true">
+        <section className="role-neutral-loading" aria-label="Checking workspace access">
+          <div className="skeleton" />
+        </section>
+      </main>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <main className="app-shell authorization-pending" aria-busy="true">
+        <section className="role-neutral-loading" aria-label="Opening secure sign in">
+          <div className="skeleton" />
+        </section>
+      </main>
+    );
   }
 
   return (

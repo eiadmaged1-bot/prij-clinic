@@ -7,6 +7,7 @@ import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { I18nProvider, useI18n } from "../../i18n/useI18n";
 import { useSession } from "../session";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
+import { roleLandingPath, safePostLoginPath } from "@/lib/role-routing";
 
 const loginText = {
   en: {
@@ -80,11 +81,10 @@ function LoginContent() {
     setIsSubmitting(true);
 
     try {
-      await session.login({ identifier: email, password });
+      const user = await session.login({ identifier: email, password });
       const requestedReturnUrl = searchParams.get("returnUrl") ?? sessionStorage.getItem("prijClinicReturnUrl");
-      const returnUrl = requestedReturnUrl?.startsWith("/") && !requestedReturnUrl.startsWith("//") ? requestedReturnUrl : "/dashboard";
       sessionStorage.removeItem("prijClinicReturnUrl");
-      router.replace(returnUrl);
+      router.replace(safePostLoginPath(requestedReturnUrl, user));
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : text.connectionProblem);
     } finally {
@@ -130,7 +130,7 @@ function LoginContent() {
             <p className="muted">{session.user.roles.join(", ") || text.staffAccess}</p>
           </div>
           <div className="form-actions">
-            <Link className="button" href="/dashboard">
+            <Link className="button" href={roleLandingPath(session.user)}>
               <ThreeDMedicalIcon name="dashboard" size="sm" />
               {text.open}
             </Link>
