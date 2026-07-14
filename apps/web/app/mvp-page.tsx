@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { navigationRegistry, type NavItem } from "./navigation-registry";
@@ -526,6 +526,46 @@ export function UserMenu({
   const role = user ? primaryRole(user.roles) : "Login required";
   const rawDisplayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
   const displayName = /^doc$/i.test(rawDisplayName.trim()) ? "Doctor" : rawDisplayName;
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const panel = panelRef.current;
+    const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []);
+    const previousOverflow = document.body.style.overflow;
+    if (window.matchMedia("(max-width: 767px)").matches) document.body.style.overflow = "hidden";
+    focusable()[0]?.focus();
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   if (!user) {
     return (
@@ -537,21 +577,38 @@ export function UserMenu({
   }
 
   return (
-    <details className="account-menu" aria-label="Current account">
-      <summary>
+    <div className={`account-menu ${open ? "open" : ""}`} aria-label="Current account">
+      <button
+        aria-controls="account-menu-panel"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="account-menu-trigger"
+        onClick={() => setOpen((current) => !current)}
+        ref={triggerRef}
+        type="button"
+      >
         <ThreeDMedicalIcon name={canOpenAdmin ? "admin" : "doctor"} size="sm" tone={canOpenAdmin ? "violet" : "slate"} />
         <span className="account-summary-copy">
           <strong>{displayName}</strong>
           <span>{role}</span>
         </span>
-      </summary>
-      <div className="account-menu-panel">
+      </button>
+      {open ? <button aria-label="Close account menu" className="account-sheet-backdrop" onClick={() => setOpen(false)} type="button" /> : null}
+      {open ? <div aria-label="Account and preferences" aria-modal="true" className="account-menu-panel" id="account-menu-panel" ref={panelRef} role="dialog">
+        <div className="account-sheet-heading">
+          <strong>{t("accountPreferences")}</strong>
+          <button aria-label="Close account menu" className="account-sheet-close" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} type="button">×</button>
+        </div>
         <div className="account-menu-profile">
           <strong>{displayName}</strong>
           <span className="badge">{role}</span>
           <span className="muted">{user.branchName || "All assigned branches"}</span>
         </div>
         <LanguageSwitcher />
+        <Link className="button secondary compact" href={canOpenAdmin ? "/admin/appearance" : roleLandingPath(user)}>
+          <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
+          {t("accountPreferences")}
+        </Link>
         {canOpenAdmin ? (
           <Link className="button secondary compact" href="/admin">
             <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
@@ -562,8 +619,8 @@ export function UserMenu({
           <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
           {t("logout")}
         </button>
-      </div>
-    </details>
+      </div> : null}
+    </div>
   );
 }
 

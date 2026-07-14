@@ -1171,7 +1171,8 @@ body {
 }
 
 .topbar {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 20;
   display: flex;
   align-items: center;
@@ -1181,6 +1182,7 @@ body {
   min-width: 0;
   max-width: 100%;
   overflow: visible;
+  background: var(--background);
 }
 
 .authorization-pending {
@@ -1242,7 +1244,7 @@ body {
   flex: 0 0 auto;
 }
 
-.account-menu summary,
+.account-menu-trigger,
 .topbar-account-login {
   display: inline-flex;
   align-items: center;
@@ -1258,8 +1260,9 @@ body {
   padding: 0.45rem 0.65rem;
 }
 
-.account-menu summary::-webkit-details-marker {
-  display: none;
+.account-menu-trigger {
+  cursor: pointer;
+  font: inherit;
 }
 
 .account-summary-copy {
@@ -1295,6 +1298,34 @@ body {
   background: var(--surface);
   box-shadow: var(--shadow-md);
   padding: 0.7rem;
+}
+
+.account-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  border: 0;
+  background: rgb(15 23 42 / 35%);
+}
+
+.account-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.account-sheet-close {
+  display: inline-grid;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+  cursor: pointer;
+  font-size: 1.35rem;
+  place-items: center;
 }
 
 .account-menu-profile {
@@ -5104,7 +5135,7 @@ body {
     display: block;
   }
 
-  .account-menu summary,
+  .account-menu-trigger,
   .topbar-account-login {
     max-width: 9.5rem;
     padding-inline: 0.5rem;
@@ -5905,6 +5936,53 @@ select {
 .doctor-mobile-visit-footer div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .doctor-mobile-visit-footer button { min-height: 48px; }
 @media (max-width: 767px) {
+  .topbar,
+  .theme-prij-heritage .topbar,
+  .theme-medicolize-portal .topbar {
+    top: 0;
+    z-index: 60;
+    padding-top: max(0.55rem, env(safe-area-inset-top));
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+
+  .account-summary-copy {
+    display: none;
+  }
+
+  .account-menu-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .account-menu-panel {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 80;
+    display: grid;
+    width: 100%;
+    max-width: none;
+    max-height: min(85dvh, 44rem);
+    overflow: auto;
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .account-menu-panel :is(.button, button, a) {
+    min-height: 44px;
+  }
+
+  .account-menu-panel .language-switcher {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  html[dir="rtl"] .account-menu-panel {
+    text-align: right;
+  }
+
   .interface-minimalistic { padding-bottom: calc(76px + env(safe-area-inset-bottom)); overflow-x: clip; }
   .interface-minimalistic .app-main { min-width: 0; width: 100%; }
   .mobile-bottom-nav { position: fixed; inset-inline: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); min-height: 64px; padding-bottom: env(safe-area-inset-bottom); border-top: 1px solid #dbe4e8; background: #fff; }

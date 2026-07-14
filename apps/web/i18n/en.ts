@@ -1,4 +1,5 @@
 export const en = {
+  accountPreferences: "Account & preferences",
   appName: "Dr Maged Attia Clinics",
   appSubtitle: "Women's health",
   clinicOperations: "Clinic operations",
