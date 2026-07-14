@@ -562,6 +562,16 @@ body {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
+.doctor-operational-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.doctor-operational-grid > * {
+  min-width: 0;
+}
+
 .compact-kpi-card {
   display: grid;
   align-content: center;
@@ -3880,6 +3890,10 @@ button.obgyn-template-card {
 @media (max-width: 1199px) {
   .app-shell {
     display: block;
+  }
+
+  .doctor-operational-grid {
+    grid-template-columns: 1fr;
   }
 
   .app-shell.sidebar-collapsed {

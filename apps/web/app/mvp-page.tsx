@@ -499,7 +499,8 @@ export function UserMenu({
 }) {
   const { t } = useI18n();
   const role = user ? primaryRole(user.roles) : "Login required";
-  const displayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
+  const rawDisplayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
+  const displayName = /^doc$/i.test(rawDisplayName.trim()) ? "Doctor" : rawDisplayName;
 
   if (!user) {
     return (

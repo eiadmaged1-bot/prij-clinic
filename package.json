@@ -152,6 +152,7 @@
     "test:v1444:idempotency": "node scripts/v1444-idempotency-key-test.mjs",
     "test:v1444:runtime-errors": "node scripts/v1444-runtime-error-test.mjs",
     "test:v1444:reception": "node scripts/v1444-reception-shell-test.mjs",
+    "test:v1444:doctor": "node scripts/v1444-doctor-dashboard-test.mjs",
     "test:production-launch:idempotency-concurrency": "node scripts/production-launch-idempotency-concurrency-test.mjs",
     "test:production-launch:idempotency-safety": "node scripts/production-launch-idempotency-safety-test.mjs",
     "test:production-launch:queue-concurrency": "node scripts/production-launch-queue-concurrency-test.mjs",
