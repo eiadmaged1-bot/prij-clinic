@@ -105,6 +105,9 @@ model User {
   reviewedGuidelineDocuments         GuidelineDocument[]            @relation("GuidelineDocumentsReviewedBy")
   createdGuidelineSummaries          GuidelineSummary[]             @relation("GuidelineSummariesCreatedBy")
   reviewedGuidelineSummaries         GuidelineSummary[]             @relation("GuidelineSummariesReviewedBy")
+  createdMedicationAliases           MedicationAlias[]              @relation("MedicationAliasesCreatedBy")
+  pharmacologyReviews                ReviewRecord[]                 @relation("PharmacologyReviewsBy")
+  formulaReviews                     FormulaVersion[]               @relation("FormulaVersionsReviewedBy")
   requestedGuidelineImportJobs       GuidelineImportJob[]           @relation("GuidelineImportJobsRequestedBy")
   guidelineReviewDecisions           GuidelineReviewDecision[]      @relation("GuidelineReviewDecisionsDecidedBy")
   guidelineQueryLogs                 GuidelineQueryLog[]            @relation("GuidelineQueryLogsUser")
@@ -1133,10 +1136,26 @@ model MedicationGeneric {
   createdAt          DateTime @default(now()) @db.Timestamptz(3)
   updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 
-  tags                     MedicationGenericTag[]
-  prescriptionItems        PrescriptionItem[]
-  patientMedicationHistory PatientMedicationHistoryItem[]
-  safetyProfile            MedicationSafetyProfile?
+  tags                       MedicationGenericTag[]
+  prescriptionItems          PrescriptionItem[]
+  patientMedicationHistory   PatientMedicationHistoryItem[]
+  safetyProfile              MedicationSafetyProfile?
+  familyMemberships          GenericMedicationFamilyMembership[]
+  aliasesScoped              MedicationAlias[]
+  mechanismSummaries         MechanismSummary[]
+  pharmacodynamicSummaries   PharmacodynamicSummary[]
+  pharmacokineticSummaries   PharmacokineticSummary[]
+  adverseEffects             AdverseEffect[]
+  contraindications          Contraindication[]
+  cautions                   Caution[]
+  interactionsPrimary        Interaction[]                       @relation("InteractionPrimaryGeneric")
+  interactionsSecondary      Interaction[]                       @relation("InteractionSecondaryGeneric")
+  monitoringRequirements     MonitoringRequirement[]
+  pregnancyLactationProfiles PregnancyLactationProfile[]
+  renalGuidance              RenalGuidance[]
+  hepaticGuidance            HepaticGuidance[]
+  antimicrobialSpectra       AntimicrobialSpectrum[]
+  doseFormulas               DoseFormula[]
 
   @@index([genericName])
   @@index([familyName])
@@ -1208,12 +1227,368 @@ model DrugFamily {
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @db.Timestamptz(3)
 
-  memberships MedicationFamilyMembership[]
+  memberships        MedicationFamilyMembership[]
+  genericMemberships GenericMedicationFamilyMembership[]
 
   @@index([code])
   @@index([displayName])
   @@index([normalizedSearchText])
   @@index([verificationStatus])
+}
+
+model GenericMedicationFamilyMembership {
+  id                  String   @id @default(uuid()) @db.Uuid
+  medicationGenericId String   @db.Uuid
+  familyId            String   @db.Uuid
+  sourceId            String?  @db.Uuid
+  reviewStatus        String   @default("needs_review")
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+
+  medication MedicationGeneric   @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  family     DrugFamily          @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  source     PharmacologySource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  @@unique([medicationGenericId, familyId])
+  @@index([familyId, reviewStatus])
+  @@index([sourceId])
+}
+
+model MedicationAlias {
+  id                  String   @id @default(uuid()) @db.Uuid
+  medicationGenericId String   @db.Uuid
+  alias               String
+  normalizedAlias     String
+  aliasType           String   @default("TRADE_NAME")
+  scopeType           String   @default("CLINIC")
+  scopeId             String?
+  status              String   @default("active")
+  createdByUserId     String?  @db.Uuid
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+
+  medication MedicationGeneric @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  createdBy  User?             @relation("MedicationAliasesCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([medicationGenericId, normalizedAlias, scopeType, scopeId])
+  @@index([normalizedAlias, status])
+  @@index([scopeType, scopeId])
+}
+
+model PharmacologySource {
+  id             String    @id @default(uuid()) @db.Uuid
+  title          String
+  organization   String
+  sourceUrl      String?
+  versionLabel   String?
+  publishedAt    DateTime? @db.Date
+  provenanceType String
+  reviewStatus   String    @default("needs_review")
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+
+  familyMemberships        GenericMedicationFamilyMembership[]
+  mechanismSummaries       MechanismSummary[]
+  pharmacodynamicSummaries PharmacodynamicSummary[]
+  pharmacokineticSummaries PharmacokineticSummary[]
+  adverseEffects           AdverseEffect[]
+  contraindications        Contraindication[]
+  cautions                 Caution[]
+  interactions             Interaction[]
+  monitoringRequirements   MonitoringRequirement[]
+  pregnancyProfiles        PregnancyLactationProfile[]
+  renalGuidance            RenalGuidance[]
+  hepaticGuidance          HepaticGuidance[]
+  antimicrobialSpectra     AntimicrobialSpectrum[]
+  formulaVersions          FormulaVersion[]
+  reviewRecords            ReviewRecord[]
+
+  @@index([organization, reviewStatus])
+  @@index([provenanceType])
+}
+
+model MechanismSummary {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  bulletsJson         Json
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, reviewStatus])
+  @@index([sourceId])
+}
+
+model PharmacodynamicSummary {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  bulletsJson         Json
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, reviewStatus])
+  @@index([sourceId])
+}
+
+model PharmacokineticSummary {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  absorptionJson      Json
+  metabolismJson      Json
+  halfLifeJson        Json
+  eliminationJson     Json
+  clinicalNotesJson   Json
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, reviewStatus])
+  @@index([sourceId])
+}
+
+model AdverseEffect {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  name                String
+  normalizedName      String
+  severity            String
+  frequencyCategory   String?
+  summaryText         String?
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, severity])
+  @@index([normalizedName])
+  @@index([sourceId])
+}
+
+model Contraindication {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  name                String
+  normalizedName      String
+  classification      String
+  summaryText         String?
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, classification])
+  @@index([normalizedName])
+  @@index([sourceId])
+}
+
+model Caution {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  riskGroup           String
+  normalizedText      String
+  summaryText         String
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId])
+  @@index([normalizedText])
+  @@index([sourceId])
+}
+
+model Interaction {
+  id                   String             @id @default(uuid()) @db.Uuid
+  primaryGenericId     String             @db.Uuid
+  secondaryGenericId   String?            @db.Uuid
+  sourceId             String             @db.Uuid
+  interactingSubstance String?
+  normalizedSearchText String
+  severity             String
+  mechanismText        String?
+  recommendedResponse  String
+  reviewStatus         String             @default("needs_review")
+  createdAt            DateTime           @default(now()) @db.Timestamptz(3)
+  primaryGeneric       MedicationGeneric  @relation("InteractionPrimaryGeneric", fields: [primaryGenericId], references: [id], onDelete: Cascade)
+  secondaryGeneric     MedicationGeneric? @relation("InteractionSecondaryGeneric", fields: [secondaryGenericId], references: [id], onDelete: SetNull)
+  source               PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([primaryGenericId, severity])
+  @@index([secondaryGenericId])
+  @@index([normalizedSearchText])
+  @@index([sourceId])
+}
+
+model MonitoringRequirement {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  parameter           String
+  normalizedParameter String
+  timingText          String?
+  staleAfterHours     Int?
+  summaryText         String
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId])
+  @@index([normalizedParameter])
+  @@index([sourceId])
+}
+
+model PregnancyLactationProfile {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  pregnancyNarrative  String
+  trimesterJson       Json?
+  reproductiveJson    Json?
+  lactationNarrative  String
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, reviewStatus])
+  @@index([sourceId])
+}
+
+model RenalGuidance {
+  id                           String             @id @default(uuid()) @db.Uuid
+  medicationGenericId          String             @db.Uuid
+  sourceId                     String             @db.Uuid
+  primaryElimination           String?
+  activeMetaboliteAccumulation String?
+  adjustmentStatus             String
+  monitoringText               String?
+  guidanceJson                 Json
+  reviewStatus                 String             @default("needs_review")
+  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  medication                   MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source                       PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, adjustmentStatus])
+  @@index([sourceId])
+}
+
+model HepaticGuidance {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @db.Uuid
+  sourceId            String             @db.Uuid
+  primaryMetabolism   String?
+  adjustmentStatus    String
+  monitoringText      String?
+  guidanceJson        Json
+  reviewStatus        String             @default("needs_review")
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  medication          MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source              PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, adjustmentStatus])
+  @@index([sourceId])
+}
+
+model AntimicrobialSpectrum {
+  id                    String             @id @default(uuid()) @db.Uuid
+  medicationGenericId   String             @db.Uuid
+  sourceId              String             @db.Uuid
+  gramPositive          String             @default("unknown/unverified")
+  gramNegative          String             @default("unknown/unverified")
+  anaerobic             String             @default("unknown/unverified")
+  atypical              String             @default("unknown/unverified")
+  pseudomonas           String             @default("unknown/unverified")
+  mrsa                  String             @default("unknown/unverified")
+  enterococcus          String             @default("unknown/unverified")
+  esblRelevance         String             @default("unknown/unverified")
+  intracellular         String             @default("unknown/unverified")
+  resistanceLimitations String
+  reviewStatus          String             @default("needs_review")
+  createdAt             DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(3)
+  medication            MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source                PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([medicationGenericId, reviewStatus])
+  @@index([gramPositive])
+  @@index([gramNegative])
+  @@index([pseudomonas])
+  @@index([mrsa])
+  @@index([enterococcus])
+}
+
+model DoseFormula {
+  id                  String             @id @default(uuid()) @db.Uuid
+  stableId            String             @unique
+  medicationGenericId String?            @db.Uuid
+  name                String
+  calculatorType      String
+  active              Boolean            @default(true)
+  createdAt           DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime           @updatedAt @db.Timestamptz(3)
+  medication          MedicationGeneric? @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)
+  versions            FormulaVersion[]
+
+  @@index([medicationGenericId])
+  @@index([calculatorType, active])
+}
+
+model FormulaVersion {
+  id              String             @id @default(uuid()) @db.Uuid
+  formulaId       String             @db.Uuid
+  version         Int
+  expression      String
+  outputUnit      String
+  inputSchemaJson Json
+  validRangeJson  Json
+  populationText  String
+  exclusionsJson  Json
+  sourceId        String             @db.Uuid
+  reviewerUserId  String?            @db.Uuid
+  approvalStatus  String             @default("needs_review")
+  testCasesJson   Json
+  roundingMethod  String
+  limitationsText String
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  formula         DoseFormula        @relation(fields: [formulaId], references: [id], onDelete: Cascade)
+  source          PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  reviewer        User?              @relation("FormulaVersionsReviewedBy", fields: [reviewerUserId], references: [id], onDelete: SetNull)
+
+  @@unique([formulaId, version])
+  @@index([approvalStatus])
+  @@index([sourceId])
+  @@index([reviewerUserId])
+}
+
+model ReviewRecord {
+  id             String              @id @default(uuid()) @db.Uuid
+  resourceType   String
+  resourceId     String              @db.Uuid
+  sourceId       String?             @db.Uuid
+  reviewerUserId String              @db.Uuid
+  decision       String
+  reason         String
+  reviewedAt     DateTime            @default(now()) @db.Timestamptz(3)
+  source         PharmacologySource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  reviewer       User                @relation("PharmacologyReviewsBy", fields: [reviewerUserId], references: [id], onDelete: Restrict)
+
+  @@index([resourceType, resourceId])
+  @@index([sourceId])
+  @@index([reviewerUserId, reviewedAt])
 }
 
 model MedicationIngredient {

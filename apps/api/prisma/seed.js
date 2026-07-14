@@ -1070,6 +1070,20 @@ async function seedMedicationIntelligence(prisma) {
     familyByCode.set(code, family);
   }
 
+  // Generic identity only: no trade names and no clinical claims are seeded here.
+  for (const genericName of ["Salbutamol", "Terbutaline"]) {
+    const medication = await prisma.medicationGeneric.upsert({
+      where: { normalizedName: normalizeSearchText(genericName) },
+      update: { genericName, familyName: "SABA", className: "Short-acting beta2 agonist", pharmacologicClass: "Beta2 agonist", isActive: true },
+      create: { genericName, normalizedName: normalizeSearchText(genericName), familyName: "SABA", className: "Short-acting beta2 agonist", pharmacologicClass: "Beta2 agonist", sourceType: "curated_reference", reviewStatus: "needs_review", aliases: [] }
+    });
+    await prisma.genericMedicationFamilyMembership.upsert({
+      where: { medicationGenericId_familyId: { medicationGenericId: medication.id, familyId: familyByCode.get("SABA").id } },
+      update: { reviewStatus: "catalog_only" },
+      create: { medicationGenericId: medication.id, familyId: familyByCode.get("SABA").id, reviewStatus: "catalog_only" }
+    });
+  }
+
   const countries = [
     ["EG", "Egypt", null, false],
     ["KSA", "Saudi Arabia", "KSA", true],

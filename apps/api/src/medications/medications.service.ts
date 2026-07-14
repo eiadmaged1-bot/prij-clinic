@@ -13,11 +13,11 @@ export class MedicationsService {
   ) {}
 
   listFamilies() {
-    return this.prisma.drugFamily.findMany({ orderBy: { displayName: "asc" } });
+    return this.prisma.drugFamily.findMany({ where: { genericMemberships: { some: {} } }, include: { genericMemberships: { include: { medication: true } } }, orderBy: { displayName: "asc" } });
   }
 
   getFamily(id: string) {
-    return this.prisma.drugFamily.findUniqueOrThrow({ where: { id } });
+    return this.prisma.drugFamily.findUniqueOrThrow({ where: { id }, include: { genericMemberships: { include: { medication: true } } } });
   }
 
   async createFamily(dto: Record<string, string>, user: AuthUser) {

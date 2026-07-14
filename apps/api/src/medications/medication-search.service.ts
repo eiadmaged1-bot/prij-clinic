@@ -18,7 +18,7 @@ export class MedicationSearchService {
         take: 500
       }),
       this.prisma.drugFamily.findMany({
-        where: { normalizedSearchText: { contains, mode: "insensitive" } },
+        where: { normalizedSearchText: { contains, mode: "insensitive" }, genericMemberships: { some: {} } },
         take,
         orderBy: { displayName: "asc" }
       }),
