@@ -10,7 +10,7 @@ export class AuditController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get("recent")
-  @RequireRoles("OWNER")
+  @RequireRoles("Owner")
   async getRecentLogs() {
     return this.prisma.auditLog.findMany({
       take: 10,

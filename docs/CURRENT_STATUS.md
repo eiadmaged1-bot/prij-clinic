@@ -1,33 +1,24 @@
 # Current Status
 
-## Desktop UX reconstruction sprint
+Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.3-db-migration-public-proxy-lock`.
 
-Branch: `fix/v1.4.2-doctor-core-merged-lock`.
+## v1.4.3 reconciliation result
 
-Implemented:
+- A verified SQL backup was created at `C:\Newfolder\prij-clinic\backups\prij-clinic-local-20260714-032357.backup.sql` before any database change.
+- The preserved PostgreSQL database is migration-current across 51 migrations and has an empty Prisma schema diff.
+- `20260711120000_user_interface_preferences` was classified as partially applied: its enums, enum ordering, table, columns, constraints, indexes, nullability, and defaults were present except the `UserPreference.updatedAt` default.
+- `GuidelineSource.abbreviation` was absent although its historical migration was recorded as applied. It is nullable with no default, unique constraint, or index requirement.
+- Forward-only migration `20260714040000_reconcile_database_drift` restores the missing abbreviation and other proven historical defaults, nullable guideline fields, backfill/index state, and the user-preference timestamp default without deleting data or recreating enums.
+- Protected operational table counts and deterministic hashes were identical before and after reconciliation/seeding.
+- The complete 51-migration chain applies from zero to an empty disposable database with no manual intervention and an empty final schema diff.
+- The seed is idempotent on both preserved and fresh databases; duplicate checks passed for permissions, clinical tags, investigations, medication generics/families, and guideline sources.
 
-- Responsive role shell with a fixed desktop sidebar, mobile drawer, compact account menu, safe session-expiry handling, and friendly patient-workspace failures.
-- Unique Guideline action-card IDs and React keys.
-- Shared restrained desktop design components and tokens, compact role dashboards, one queue workspace, role-filtered reports, calendar filters/tabs, and safer staff messaging states.
-- Patient directory defaults to All patients and exposes advanced filters only on demand.
-- Compact patient identity header with focused Overview, History, Current Visit, Prescriptions, Investigations & Results, Women’s Health, Documents, and Timeline tabs.
-- Audited structured history tags and multi-term Smart Clinical Search.
-- Seven-step doctor visit with draft persistence, validation, doctor review, signature, and audited amendment boundaries.
-- Categorized investigation ordering, selected-request basket, custom favorite sets, and separate catalog administration.
-- Doctor-owned medication shortcuts and prescription templates applied only as editable drafts.
-- Signed, review-gated A5 prescription print route with English/Arabic support and navigation-free print CSS.
-- Medication reference search/profile recovery plus Owner/Admin dry-run import, duplicate validation, provenance, review queue, and safe archive.
-- HMAC-protected, replay-resistant, idempotent Google Form intake with pending review and no automatic patient merge.
+## Proxy and security result
 
-Observed medication reference baseline during this sprint: 35 generic rows, 53 family rows, 1 medication product row, 15 market variants, 30 drug-market source rows, and 7 medication-data source rows. All 15 market variants are demo/reference fixtures; non-demo/official variants remain 0.
+- API binds to loopback only and public access uses web port 3000 plus `/api/backend/...`.
+- `/api/backend/health` and `/api/backend/health/live` return the intentional safe body `{ "status": "up" }` locally and through the single ngrok tunnel.
+- The proxy preserves status, query strings, cookies, bounded raw bodies, HMAC bytes, and allowlisted intake headers while excluding browser `Origin`, authorization, and untrusted forwarding headers.
+- Expanded security, RBAC, audit, clinical persistence, AI safety/regression, external intake, transaction, pagination, search-budget, and migration-chain verification passed on disposable databases.
+- AI output remains disabled/mock-only and draft-only until doctor review; no autonomous clinical action was introduced.
 
-Safety status:
-
-- No autonomous diagnosis, prescription, dosing, treatment ranking, or final clinical update.
-- AI clinical content remains assistive and draft-only until doctor approval.
-- Signed clinical records remain immutable except through audited amendment paths.
-- Imported medication records default to `needs_review`.
-- External intake remains pending and untrusted until an authorized reviewer acts; matching never auto-merges.
-- No database reset/drop or migration deletion was performed.
-
-The final local build/test matrix and 12-case multi-resolution desktop role QA pass. Public-tunnel QA is partial because the configured tunnel returns 404 for same-origin health; exact evidence and blocked checks are recorded in `docs/MANUAL_QA_REPORT.md`.
+This remains development verification, not production, privacy, deployment, or clinical-governance signoff. See `docs/MIGRATION_RECONCILIATION_V1_4_3.md`, `docs/MANUAL_QA_REPORT.md`, and `docs/DEPENDENCY_AUDIT.md`.

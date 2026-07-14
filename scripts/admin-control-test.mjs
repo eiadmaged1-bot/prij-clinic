@@ -1,15 +1,14 @@
-import { apiJson, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, apiStatus, assertStatus, demoUsers, findTestAuditLogs, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("ADMIN-CONTROL");
 
 async function main() {
   await waitForApi();
 
-  const adminLogin = await apiJson("POST", "/auth/login", null, { identifier: "eyad", password: "eyad" });
-  const admin = adminLogin.token;
-  if (!admin) throw new Error("eyad login did not return token.");
-  if (!adminLogin.user?.roles?.includes("Owner")) throw new Error("eyad login is not assigned the Owner role.");
-  record.pass("eyad local admin login works");
+  const admin = await login(demoUsers.owner);
+  const currentUser = await apiJson("GET", "/auth/me", admin);
+  if (!currentUser.user?.roles?.includes("Owner")) throw new Error("synthetic admin login is not assigned the Owner role.");
+  record.pass("synthetic owner session login works");
 
   const reception = await login(demoUsers.reception);
   assertStatus(await apiStatus("GET", "/admin/control-center", reception), 403, "reception admin control center");
@@ -83,7 +82,7 @@ async function main() {
   assertStatus(await apiStatus("DELETE", `/encounters/${invoice.id}`, admin), 404, "hard delete signed clinical route");
   record.pass("audit logs and clinical records have no normal hard-delete API routes");
 
-  const audit = (await apiJson("GET", "/audit?limit=100", admin)).auditLogs ?? [];
+  const audit = await findTestAuditLogs({});
   const overrideAudit = audit.find((entry) => entry.resourceId === invoice.id && entry.action === "admin_override.invoice_voided");
   if (!overrideAudit?.reason) throw new Error("admin override audit entry with reason was not found.");
   const serviceAudit = audit.find((entry) => entry.resourceId === service.id && entry.action === "service_item.updated");

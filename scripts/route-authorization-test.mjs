@@ -49,7 +49,10 @@ async function main() {
     }
 
     try {
-      const owner = await apiStatus(route.method, path, ownerToken, body);
+      const ownerSession = route.method === "POST" && route.path === "/auth/logout"
+        ? await login(demoUsers.owner)
+        : ownerToken;
+      const owner = await apiStatus(route.method, path, ownerSession, body);
       assertStatus(owner, route.expectedStatusWithOwner, `${label} owner`);
       row.owner = String(owner);
       record.pass(`${label} owner allowed`);

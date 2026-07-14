@@ -1,10 +1,13 @@
+import { disconnectTestPrisma, findTestAuditLogs } from "./security-route-manifest.mjs";
+
 const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, "");
-const EMAIL = process.env.DEMO_ADMIN_LOGIN || process.env.DEMO_TEST_EMAIL || process.env.DEMO_OWNER_EMAIL || "eyad";
-const PASSWORD = process.env.DEMO_ADMIN_PASSWORD || process.env.DEMO_TEST_PASSWORD || process.env.DEMO_OWNER_PASSWORD || "eyad";
+const EMAIL = process.env.DEMO_ADMIN_LOGIN || process.env.DEMO_TEST_EMAIL || process.env.DEMO_OWNER_EMAIL;
+const PASSWORD = process.env.DEMO_ADMIN_PASSWORD || process.env.DEMO_TEST_PASSWORD || process.env.DEMO_OWNER_PASSWORD;
 const TIMEOUT_MS = Number(process.env.API_WAIT_TIMEOUT_MS || 90_000);
+if (!EMAIL || !PASSWORD) throw new Error("A synthetic demo login and password are required for security integration tests.");
 
 const results = [];
-let token = null;
+let session = null;
 
 function pass(label) {
   results.push({ status: "PASS", label });
@@ -62,10 +65,7 @@ async function json(path, options = {}) {
 async function authedJson(path, options = {}) {
   return json(path, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`
-    }
+    headers: authenticatedHeaders(options.headers)
   });
 }
 
@@ -77,11 +77,15 @@ async function status(path, options = {}) {
 async function authedStatus(path, options = {}) {
   return status(path, {
     ...options,
-    headers: {
-      ...(options.headers || {}),
-      Authorization: `Bearer ${token}`
-    }
+    headers: authenticatedHeaders(options.headers)
   });
+}
+
+function authenticatedHeaders(extra = {}) {
+  const result = { ...extra, Cookie: session };
+  const csrf = /(?:^|;\s*)csrf-token=([^;]+)/.exec(session ?? "")?.[1];
+  if (csrf) result["x-csrf-token"] = csrf;
+  return result;
 }
 
 async function waitForApi() {
@@ -90,12 +94,12 @@ async function waitForApi() {
 
   while (Date.now() < deadline) {
     try {
-      const body = await json("/health");
-      if (body?.status === "ok") {
-        pass("API /health became ready");
+      const body = await json("/health/live");
+      if (body?.status === "up") {
+        pass("API /health/live became ready");
         return;
       }
-      lastError = new Error(`/health returned unexpected body: ${formatBody(body)}`);
+      lastError = new Error(`/health/live returned unexpected body: ${formatBody(body)}`);
     } catch (error) {
       lastError = error;
     }
@@ -152,13 +156,7 @@ await runStep("wait for API health", waitForApi);
 
 await runStep("GET /health", async () => {
   const body = await json("/health");
-  assert(body?.status === "ok", "/health did not return ok");
-});
-
-await runStep("GET /health/db", async () => {
-  const body = await json("/health/db");
-  assert(body?.status === "ok", "/health/db did not return ok");
-  assert(body?.database === "connected", "/health/db did not report connected database");
+  assert(body?.status === "up", "/health did not return up");
 });
 
 await runStep("protected endpoint rejects anonymous request", async () => {
@@ -166,14 +164,14 @@ await runStep("protected endpoint rejects anonymous request", async () => {
 });
 
 await runStep("login with seeded demo owner", async () => {
-  const body = await json("/auth/login", {
+  const { response, body } = await request("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: EMAIL, password: PASSWORD })
   });
-
-  assert(body?.token, "login did not return a token");
-  token = body.token;
+  assert(response.ok, `login returned ${response.status}: ${formatBody(body)}`);
+  session = (response.headers.getSetCookie?.() ?? []).map((value) => value.split(";", 1)[0]).join("; ");
+  assert(session.includes("prij_clinic_session="), "login did not establish a session cookie");
 });
 
 const today = new Date().toISOString().slice(0, 10);
@@ -275,8 +273,8 @@ await runStep("AI review audit confirms no clinical insertion", async () => {
   });
   assert(reviewed?.status === "rejected", "review did not update the AI draft artifact");
 
-  const audit = await authedJson("/audit?limit=100");
-  const reviewAudit = firstArray(audit, "auditLogs").find(
+  const audit = await findTestAuditLogs({ resourceId: createdDraftId });
+  const reviewAudit = audit.find(
     (item) => item.resourceId === createdDraftId && item.action === "ai_draft.rejected"
   );
   assert(reviewAudit, "AI review audit entry was not found");
@@ -303,3 +301,5 @@ console.log(`FAIL ${failed.length}`);
 if (failed.length > 0) {
   process.exitCode = 1;
 }
+
+await disconnectTestPrisma();

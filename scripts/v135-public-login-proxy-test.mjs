@@ -13,6 +13,9 @@ assert(
 );
 assert(route.includes("forwardedRequestHeaders(request, requestId)"), "proxy must forward request headers with a request ID");
 assert(route.includes("forwardedResponseHeaders(upstream)"), "proxy must forward response headers");
+for (const header of ["x-prij-timestamp", "x-prij-signature", "x-prij-dry-run"]) {
+  assert(route.includes(`"${header}"`), `proxy must forward intake HMAC header ${header}`);
+}
 assert(route.includes("export const POST = proxy"), "proxy must forward POST login");
 assert(route.includes("export const GET = proxy"), "proxy must forward GET session/health");
 assert(route.includes("export const OPTIONS = proxy"), "proxy must support OPTIONS");

@@ -1,12 +1,13 @@
 # Known Limitations
 
-- This sprint is not a production-readiness or medical-safety claim. Deployment, privacy, backup/restore, access-control, and clinical governance signoff remain required before real PHI/PII use.
-- Medication content is incomplete. Current rows are demo/reference fixtures unless a provenance-backed source is imported and reviewed; missing interaction data never means a combination is safe.
-- Medication search and Care Assist are reference aids only. They do not diagnose, prescribe, choose treatment, choose a dose, or update final records autonomously.
-- A5 print architecture and safe-area configuration are functional, but no final approved clinic background/template asset was found. Exact placement remains a clinic-approval TODO.
-- Calendar day/week/month controls are present, but the current data query remains anchored to the selected date; full range aggregation is future work.
-- Investigation favorites are doctor-controlled request bundles, not suggested workups or clinical decision support.
-- Smart tags are structured history/search metadata, not diagnoses. Search access is scoped and audited.
-- Google Form intake never auto-merges. Reviewers still need conservative field-by-field verification before creating or matching a patient.
-- Public tunnels are temporary QA tools only. Use synthetic data, tunnel web port 3000 only, and route API calls through `/api/backend/...`.
-- Browser print headers/footers such as URL/title are controlled by the print dialog and must be disabled by the operator; application chrome itself is excluded from the print route.
+- This sprint is not a production-readiness or medical-safety claim. Privacy, restore drills, access-control review, monitoring, deployment, and clinical-governance signoff remain required before real PHI/PII use.
+- The preserved development database contains real operational records. Destructive tests must continue to use disposable isolated databases.
+- The current environment has no `PRIJ_EXTERNAL_INTAKE_SECRET`; public invalid-signature behavior was verified, but a public signed dry run was correctly skipped. The isolated HMAC integration suite passed with an ephemeral secret.
+- Seven high-severity dependency findings remain. Most are development-tooling-only; production-reachable `multer` and `xlsx` require controlled upgrade/replacement work. See `docs/DEPENDENCY_AUDIT.md`.
+- `npm run test:v139:clinical-tags-edd-intake` retains one legacy static UI expectation for a permanent patient QR label. Current smart-tag and signed-intake suites pass; the removed UI element was not reintroduced.
+- Expanded security emits expected warnings for synthetic fallback fixtures, broadly authenticated routes without meaningful denied-role cases, and the absence of an assigned-doctor patient-scope model.
+- Medication content remains demo/reference material unless provenance-backed and reviewed. Missing interaction data never means a combination is safe.
+- Medication search, smart tags, investigation favorites, Care Assist, and AI drafts are assistive only; they do not diagnose, prescribe, rank treatment, select doses, or write final records autonomously.
+- A5 printing is functional, but no final clinic-approved background/template artwork is present. Browser print headers/footers remain operator-controlled.
+- Google Form intake never auto-merges. Authorized staff must review pending data conservatively before creating or matching a patient.
+- Public ngrok tunnels are temporary QA tools only. Use one tunnel to loopback web port 3000, never expose API port 3001, and never use real patient data through a tunnel.

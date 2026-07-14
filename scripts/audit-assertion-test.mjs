@@ -1,4 +1,4 @@
-import { apiJson, bodyFor, createRouteFixtures, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, bodyFor, createRouteFixtures, demoUsers, findTestAuditLogs, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("AUDIT-ASSERT");
 
@@ -39,7 +39,7 @@ async function main() {
     reviewNote: "Demo audit assertion AI rejection only."
   });
 
-  const audit = (await apiJson("GET", "/audit?limit=300", owner)).auditLogs ?? [];
+  const audit = await findTestAuditLogs({});
   const expected = [
     ["patient.created", ids.patientId],
     ["patient.updated", ids.patientId],
