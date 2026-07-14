@@ -38,6 +38,7 @@ function ReceptionQrScanContent() {
   const v140QrSourceCompatibilityLock = "Manual fallback Add to today&apos;s queue Open file";
   void v140QrSourceCompatibilityLock;
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const stopScanRef = useRef(false);
   const [manualId, setManualId] = useState("");
@@ -121,12 +122,6 @@ function ReceptionQrScanContent() {
     setCameraActive(false);
     stopScanRef.current = false;
 
-    const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-    if (!Detector) {
-      setScannerStatus(copy.decoderUnsupported);
-      return;
-    }
-
     try {
       const stream = await openCamera();
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -136,12 +131,19 @@ function ReceptionQrScanContent() {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-      const detector = new Detector({ formats: ["qr_code"] });
-      setScannerStatus(copy.cameraActive);
+      setScannerStatus(copy.cameraStarted);
+      let detectFrame: () => Promise<string | undefined>;
+      try {
+        detectFrame = await createFrameDecoder(videoRef, canvasRef, copy, setScannerStatus);
+      } catch {
+        setScannerStatus(copy.decoderFailed);
+        stopCamera();
+        return;
+      }
+      setScannerStatus(copy.scanning);
       const scanOnce = async () => {
         if (stopScanRef.current) return;
-        const codes = videoRef.current ? await detector.detect(videoRef.current).catch(() => []) : [];
-        const value = codes[0]?.rawValue;
+        const value = await detectFrame().catch(() => undefined);
         if (value) {
           stopCamera();
           await resolvePatient(value, "scan");
@@ -174,6 +176,7 @@ function ReceptionQrScanContent() {
     if (response?.ok) {
       setStatus(copy.patientAddedToQueue);
       await loadQueue();
+      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId: resolved.patientId } }));
     } else {
       if (response) {
         const body = await response.json().catch(() => ({}));
@@ -221,7 +224,8 @@ function ReceptionQrScanContent() {
             <ThreeDMedicalIcon name="search" size="sm" />
             {copy.startCameraScan}
           </button>
-          {cameraActive ? <video className="qr-video active" ref={videoRef} muted playsInline /> : null}
+          <video className={`qr-video ${cameraActive ? "active" : ""}`} ref={videoRef} muted playsInline hidden={!cameraActive} />
+          <canvas ref={canvasRef} hidden aria-hidden="true" />
           <p className="muted">{copy.qrSafety}</p>
         </article>
         <article className="panel compact-panel">
@@ -264,6 +268,41 @@ async function openCamera() {
   }
 }
 
+async function createFrameDecoder(
+  videoRef: { current: HTMLVideoElement | null },
+  canvasRef: { current: HTMLCanvasElement | null },
+  copy: QrCopy,
+  setScannerStatus: (message: string) => void
+) {
+  const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
+  if (Detector) {
+    try {
+      const detector = new Detector({ formats: ["qr_code"] });
+      return async () => {
+        const codes = videoRef.current ? await detector.detect(videoRef.current) : [];
+        return codes[0]?.rawValue;
+      };
+    } catch {
+      // Some browsers expose BarcodeDetector but reject QR format construction.
+    }
+  }
+
+  setScannerStatus(copy.decoderLoading);
+  const { default: jsQR } = await import("jsqr");
+  return async () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !video.videoWidth || !video.videoHeight) return undefined;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    if (!context) return undefined;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const frame = context.getImageData(0, 0, canvas.width, canvas.height);
+    return jsQR(frame.data, frame.width, frame.height, { inversionAttempts: "attemptBoth" })?.data;
+  };
+}
+
 type QrCopy = (typeof qrCopy)[keyof typeof qrCopy];
 
 function cameraErrorMessage(error: unknown, copy: QrCopy) {
@@ -288,6 +327,10 @@ const qrCopy = {
     insecureContext: "Camera scanning requires the clinic HTTPS address. Manual lookup remains available.",
     cameraApiUnavailable: "Camera API unavailable. Use manual lookup.",
     cameraActive: "Camera scanner active",
+    cameraStarted: "Camera started",
+    decoderLoading: "Loading QR decoder",
+    decoderFailed: "QR decoder failed to load. Retry or use manual lookup.",
+    scanning: "Scanning for patient QR",
     qrSafety: "QR must not contain sensitive medical data. Manual lookup remains available.",
     manualLookup: "Manual lookup",
     lookupLabel: "QR token, MRN/file number, phone, or name",
@@ -336,6 +379,10 @@ const qrCopy = {
     startCameraScan: "Ø¨Ø¯Ø¡ Ù…Ø³Ø­ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§",
     requestingCamera: "Ø¬Ø§Ø± Ø·Ù„Ø¨ Ø¥Ø°Ù† Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§",
     cameraActive: "Ù…Ø§Ø³Ø­ Ø§Ù„ÙƒØ§Ù…ÙŠØ±Ø§ ÙŠØ¹Ù…Ù„",
+    cameraStarted: "تم تشغيل الكاميرا",
+    decoderLoading: "جارٍ تحميل قارئ QR",
+    decoderFailed: "تعذر تحميل قارئ QR. أعد المحاولة أو استخدم البحث اليدوي.",
+    scanning: "جارٍ مسح QR للمريضة",
     qrSafety: "ÙŠØ¬Ø¨ Ø£Ù„Ø§ ÙŠØ­ØªÙˆÙŠ QR Ø¹Ù„Ù‰ Ø¨ÙŠØ§Ù†Ø§Øª Ø·Ø¨ÙŠØ© Ø­Ø³Ø§Ø³Ø©. Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ÙŠØ¯ÙˆÙŠ Ù…ØªØ§Ø­ Ø¯Ø§Ø¦Ù…Ø§.",
     manualLookup: "Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ÙŠØ¯ÙˆÙŠ",
     lookupLabel: "QR Ø£Ùˆ Ø±Ù‚Ù… Ø§Ù„Ù…Ù„Ù Ø£Ùˆ Ø§Ù„Ù‡Ø§ØªÙ Ø£Ùˆ Ø§Ù„Ø§Ø³Ù…",

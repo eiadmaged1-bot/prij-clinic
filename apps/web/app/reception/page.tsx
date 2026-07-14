@@ -258,10 +258,6 @@ function patientLabel(patient?: Patient | null) {
   return `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || patient.medicalRecordNumber || "Patient";
 }
 
-function patientSearchText(patient?: Patient | null) {
-  return `${patientLabel(patient)} ${patient?.phone ?? ""} ${patient?.medicalRecordNumber ?? ""} ${patient?.id ?? ""}`.toLowerCase();
-}
-
 function waitingDuration(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000));
   if (minutes < 60) return `${minutes} min waiting`;
