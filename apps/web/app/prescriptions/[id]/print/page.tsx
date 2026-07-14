@@ -13,7 +13,7 @@ type PrintPrescription = {
   notes?: string | null;
   patient?: { firstName?: string; lastName?: string; displayName?: string; dateOfBirth?: string | null; medicalRecordNumber?: string | null } | null;
   doctor?: { displayName?: string } | null;
-  items: Array<{ id: string; medicationName: string; genericName?: string | null; tradeName?: string | null; strengthText?: string | null; dosageForm?: string | null; dose?: string | null; route?: string | null; frequency?: string | null; duration?: string | null; instructions?: string | null }>;
+  items: Array<{ id: string; medicationName: string; genericName?: string | null; tradeName?: string | null; strengthText?: string | null; dosageForm?: string | null; quantityText?: string | null; dispensingUnit?: string | null; dose?: string | null; route?: string | null; frequency?: string | null; duration?: string | null; instructions?: string | null }>;
 };
 
 export default function PrescriptionPrintPage() {
@@ -57,6 +57,7 @@ export default function PrescriptionPrintPage() {
       <section className={styles.medications}>
         {prescription.items.map((item, index) => <article className={styles.medication} key={item.id} dir={prescriptionTextDirection(`${item.medicationName} ${item.instructions ?? ""}`)}>
           <div className={styles.medicationHeader}><strong>{index + 1}. {item.medicationName}</strong><span>{[item.strengthText, item.dosageForm].filter(Boolean).join(" · ")}</span></div>
+          {item.quantityText || item.dispensingUnit ? <div className={styles.directions}>Dispense: {[item.quantityText, item.dispensingUnit].filter(Boolean).join(" ")}</div> : null}
           <div className={styles.directions}>{[item.dose, item.route, item.frequency, item.duration].filter(Boolean).join(" · ")}</div>
           {item.instructions ? <div className={styles.instructions}>{item.instructions}</div> : null}
         </article>)}
