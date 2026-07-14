@@ -25,7 +25,7 @@ assert.ok((patientService.match(/encounter\.status !== "draft"/g) ?? []).length 
 for (const auditAction of ["patient_operation_history.created", "patient_medication_history.created", "patient_investigation_history.created", "prescription.created", "investigation_order.created"]) assert.match(patientService, new RegExp(auditAction.replace(".", "\\.")), `audit action missing ${auditAction}`);
 assert.match(visitService, /doctor_visit\.follow_up_created/, "follow-up audit action missing");
 assert.match(historyUi, /retryKeys = useRef/, "history retry keys must survive rerender");
-assert.match(historyUi, /The item could not be saved\. It remains selected for retry\./, "history failure must preserve selection");
+assert.match(historyUi, /Every item remains selected for idempotent retry\./, "history failure must preserve selection");
 assert.match(historyUi, /role=\{saveState === "failed" \? "alert" : "status"\}/, "history save must use inline accessible status");
 assert.match(submitUi, /idempotency-key/, "shared visit submit must forward idempotency key");
 assert.match(submitUi, /Your selected items were preserved/, "shared visit submit must return safe preservation error");

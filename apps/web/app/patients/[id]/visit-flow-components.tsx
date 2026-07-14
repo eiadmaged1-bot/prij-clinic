@@ -8,6 +8,10 @@ import { Patient, ReferenceResult, TimelineItem, values, submitVisitAction, Care
 import { HistorySheetWorkspace } from "./panel-components";
 import { DoctorSignatureBadge } from "./timeline-components";
 import { createSecureIdempotencyKey } from "@/lib/idempotency-key";
+import { addUniqueBasketItem, SelectedBasket, type SelectedBasketItem } from "@/components/clinical/SelectedBasket";
+
+type PrescriptionBasketItem = SelectedBasketItem & { medication: MedicationResult };
+type InvestigationBasketItem = SelectedBasketItem & { investigation: ReferenceResult };
 
 export function DoctorVisitFlow({ patient, related, onReload, permissions = [], roles = [] }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; onReload: () => void; permissions?: string[]; roles?: string[] }) {
   const [visit, setVisit] = useState<DoctorVisitState | null>(null);
@@ -17,6 +21,10 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
   const [medicationQuery, setMedicationQuery] = useState("");
   const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
   const [selectedInvestigation, setSelectedInvestigation] = useState<ReferenceResult | null>(null);
+  const [prescriptionBasket, setPrescriptionBasket] = useState<PrescriptionBasketItem[]>([]);
+  const [investigationBasket, setInvestigationBasket] = useState<InvestigationBasketItem[]>([]);
+  const [prescriptionInstructions, setPrescriptionInstructions] = useState("");
+  const [investigationReason, setInvestigationReason] = useState("");
   const [hint, setHint] = useState("");
   const actionKeys = useRef<Record<string, string>>({});
   const [activeStep, setActiveStep] = useState("History");
@@ -85,40 +93,39 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
     setVisit(await getCurrentDoctorVisit(patient.id));
   }
 
-  async function addPrescription(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!encounterId || !selectedMedication) return;
-    const form = event.currentTarget;
-    const payload = values(form, ["instructions"]);
-    const genericName = selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName ?? "Generic medication";
+  async function savePrescriptionBasket() {
+    if (!encounterId || !prescriptionBasket.length) return;
     try {
       actionKeys.current.prescription ||= createSecureIdempotencyKey();
-      await submitVisitAction(patient.id, "prescriptions", { encounterId, items: [{ medicationName: genericName, medicationGenericId: selectedMedication.type === "generic_medication" ? selectedMedication.id : undefined, instructions: payload.instructions }] }, actionKeys.current.prescription);
+      await submitVisitAction(patient.id, "prescriptions", { encounterId, items: prescriptionBasket.map(({ medication }) => ({ medicationName: medication.genericName ?? medication.brandName ?? medication.tradeName ?? "Generic medication", medicationGenericId: medication.type === "generic_medication" ? medication.id : undefined, instructions: prescriptionInstructions || undefined })) }, actionKeys.current.prescription);
       delete actionKeys.current.prescription;
       setSelectedMedication(null);
+      setPrescriptionBasket([]);
+      setPrescriptionInstructions("");
       setStatus("Prescription draft updated with generic medication.");
       setActivePlanSection("Investigations");
       setVisit(await getCurrentDoctorVisit(patient.id));
-      form.reset();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Prescription save failed. The selected medication was preserved for retry.");
+      throw error;
     }
   }
 
-  async function addInvestigation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!encounterId || !selectedInvestigation) return;
-    const payload = values(event.currentTarget, ["instructions"]);
+  async function saveInvestigationBasket() {
+    if (!encounterId || !investigationBasket.length) return;
     try {
       actionKeys.current.investigation ||= createSecureIdempotencyKey();
-      await submitVisitAction(patient.id, "investigations", { encounterId, priority: "routine", items: [{ category: investigationCategory(selectedInvestigation.category), testName: selectedInvestigation.label, instructions: payload.instructions }] }, actionKeys.current.investigation);
+      await submitVisitAction(patient.id, "investigations", { encounterId, priority: "routine", items: investigationBasket.map(({ investigation }) => ({ category: investigationCategory(investigation.category), testName: investigation.label, instructions: investigationReason || undefined })) }, actionKeys.current.investigation);
       delete actionKeys.current.investigation;
       setSelectedInvestigation(null);
+      setInvestigationBasket([]);
+      setInvestigationReason("");
       setStatus("Investigation request added.");
       setActivePlanSection("Follow-up");
       setVisit(await getCurrentDoctorVisit(patient.id));
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Investigation save failed. CBC/TSH selection was preserved for retry.");
+      throw error;
     }
   }
 
@@ -210,12 +217,12 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       {activeStep === "Plan" ? <div className="active-visit-step">
         <div className="visit-plan-tabs" aria-label="Plan sections">{["Prescription", "Investigations", "Follow-up"].map((section) => <button className={activePlanSection === section ? "active" : ""} key={section} onClick={() => setActivePlanSection(section)} type="button">{section}</button>)}</div>
       {activePlanSection === "Prescription" ? <div className="doctor-friendly-grid">
-        <form className="panel form-grid" onSubmit={(event) => void addPrescription(event)}>
+        <form className="panel form-grid" onSubmit={(event) => event.preventDefault()}>
           <div className="section-heading"><h3>Prescription Draft</h3><span className="badge warning">Generic-first</span></div>
           <label>Search generic medication<input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Search generic name or class" /></label>
           <div className="data-list">
             {medicationResults.map((row) => (
-              <button className="data-row" key={`${row.type}-${row.id}`} type="button" onClick={() => setSelectedMedication(row)} onFocus={() => setHoveredMedication(row)} onMouseEnter={() => setHoveredMedication(row)} onMouseLeave={() => setHoveredMedication(null)}>
+              <button className="data-row" key={`${row.type}-${row.id}`} type="button" onClick={() => { setSelectedMedication(row); setPrescriptionBasket((items) => addUniqueBasketItem(items, { key: `prescription:${row.id}`, stableId: row.id, kind: "prescription", label: row.genericName ?? row.brandName ?? row.tradeName ?? "Generic medication", subtitle: row.familyName ?? row.className ?? "Generic medication", medication: row })); }} onFocus={() => setHoveredMedication(row)} onMouseEnter={() => setHoveredMedication(row)} onMouseLeave={() => setHoveredMedication(null)}>
                 <strong>{row.genericName ?? row.brandName ?? row.tradeName ?? "Generic medication"}</strong>
                 <span className="badge">{row.familyName ?? row.family ?? row.className ?? "Generic visible"}</span>
                 {row.tradeName || row.brandName ? <span className="muted">Trade/search match: {row.tradeName ?? row.brandName}</span> : null}
@@ -223,8 +230,8 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
             ))}
           </div>
           {selectedMedication ? <p className="notice">Selected generic: {selectedMedication.genericName ?? selectedMedication.brandName ?? selectedMedication.tradeName}</p> : null}
-          <label>Manual doctor instructions<textarea name="instructions" placeholder="Doctor-written instructions only" /></label>
-          <button className="button" type="submit" disabled={!encounterId || !selectedMedication}>Save prescription and continue</button>
+          <label>Manual doctor instructions<textarea name="instructions" value={prescriptionInstructions} onChange={(event) => setPrescriptionInstructions(event.target.value)} placeholder="Doctor-written instructions only" /></label>
+          <SelectedBasket title="Prescription medications" items={prescriptionBasket} onChange={setPrescriptionBasket} onSave={savePrescriptionBasket} saveLabel="Save prescription once" />
           <p className="muted">Dose, frequency, and duration are not auto-filled.</p>
         </form>
         <div className="doctor-advanced-tool">
@@ -233,12 +240,12 @@ export function DoctorVisitFlow({ patient, related, onReload, permissions = [], 
       </div> : null}
 
       {activePlanSection === "Investigations" ? <div className="doctor-friendly-grid">
-        <form className="panel form-grid" onSubmit={(event) => void addInvestigation(event)}>
+        <form className="panel form-grid" onSubmit={(event) => event.preventDefault()}>
           <div className="section-heading"><h3>Investigations</h3><span className="badge">Request only</span></div>
-          <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={setSelectedInvestigation} />
+          <ReferencePicker title="Investigation search" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={selectedInvestigation} onSelect={(item) => { setSelectedInvestigation(item); if (item) setInvestigationBasket((items) => addUniqueBasketItem(items, { key: `investigation:${item.id}`, stableId: item.id, kind: "investigation", label: item.label, subtitle: item.category, investigation: item })); }} />
           {selectedInvestigation ? <p className="notice">Selected investigation: {selectedInvestigation.label}</p> : null}
-          <label>Clinical reason<textarea name="instructions" /></label>
-          <button className="button" type="submit" disabled={!encounterId || !selectedInvestigation}>Save investigation and continue</button>
+          <label>Clinical reason<textarea name="instructions" value={investigationReason} onChange={(event) => setInvestigationReason(event.target.value)} /></label>
+          <SelectedBasket title="Investigation requests" items={investigationBasket} onChange={setInvestigationBasket} onSave={saveInvestigationBasket} saveLabel="Save investigations once" />
         </form>
         <section className="panel doctor-advanced-tool">
           <h3>Clinical Note Terminal</h3>

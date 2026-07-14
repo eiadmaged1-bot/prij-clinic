@@ -3,6 +3,9 @@ import { FormEvent, useRef, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createSecureIdempotencyKey } from "@/lib/idempotency-key";
+import { addUniqueBasketItem, SelectedBasket, type SelectedBasketItem } from "@/components/clinical/SelectedBasket";
+
+type HistoryBasketItem = SelectedBasketItem & { endpoint: string; payload: Record<string, unknown> };
 import { Patient, GynecologyVisit, PregnancyRecord, InfertilityWorkspace, ClinicalPhase, ReferenceResult, RelatedPanel, Metric, formPayload, requestPatientWorkspaceRefresh, gynecologyTemplateFields, gynecologyTemplateOptions, templateLabel, templateSummary, formatDate, DoctorTemplateCards, ReferencePicker, values, numericPayload } from "./patient-components";
 import { gpalSummary, gpalLooksInconsistent, CreatePregnancyEpisodeCard, PreviousPregnancyHistoryCard, FetusStarterCard, AntenatalVisitCard, UltrasoundReportBuilder } from "./pregnancy-components";
 
@@ -529,6 +532,7 @@ export function HistorySheetWorkspace({
     const [operation, setOperation] = useState<ReferenceResult | null>(null);
     const [medication, setMedication] = useState<ReferenceResult | null>(null);
     const [investigation, setInvestigation] = useState<ReferenceResult | null>(null);
+    const [historyBasket, setHistoryBasket] = useState<HistoryBasketItem[]>([]);
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
     const [saveError, setSaveError] = useState("");
     const retryKeys = useRef<Record<string, string>>({});
@@ -560,20 +564,36 @@ export function HistorySheetWorkspace({
         });
     }
 
-    async function submitHistoryItem(endpoint: string, payload: Record<string, unknown>) {
+    function addHistoryItem(endpoint: string, reference: ReferenceResult, payload: Record<string, unknown>) {
+        setHistoryBasket((items) => addUniqueBasketItem(items, {
+          key: `${endpoint}:${reference.id}`,
+          stableId: reference.id,
+          kind: endpoint,
+          label: reference.label,
+          subtitle: reference.category ?? reference.familyName ?? endpoint.replaceAll("-", " "),
+          endpoint,
+          payload
+        }));
+    }
+
+    async function saveHistoryBasket(items: HistoryBasketItem[]) {
         setSaveState("saving");
         setSaveError("");
         try {
-          retryKeys.current[endpoint] ||= createSecureIdempotencyKey();
-          await onSubmit(endpoint, { historySheetId: sheetId || undefined, ...payload }, retryKeys.current[endpoint]);
-          delete retryKeys.current[endpoint];
-          if (endpoint === "operation-history") setOperation(null);
-          if (endpoint === "medication-history") setMedication(null);
-          if (endpoint === "investigation-history") setInvestigation(null);
+          await Promise.all(items.map((item) => {
+            retryKeys.current[item.key] ||= createSecureIdempotencyKey();
+            return onSubmit(item.endpoint, { historySheetId: sheetId || undefined, ...item.payload }, retryKeys.current[item.key]);
+          }));
+          items.forEach((item) => delete retryKeys.current[item.key]);
+          setHistoryBasket([]);
+          setOperation(null);
+          setMedication(null);
+          setInvestigation(null);
           setSaveState("saved");
         } catch (error) {
           setSaveState("failed");
-          setSaveError(error instanceof Error ? error.message : "The item could not be saved. It remains selected for retry.");
+          setSaveError(error instanceof Error ? error.message : "History basket could not be saved. Every item remains selected for idempotent retry.");
+          throw error;
         }
     }
 
@@ -641,10 +661,11 @@ export function HistorySheetWorkspace({
         <ReferencePicker title="Previous investigation" endpoint="/reference/investigations/search" placeholder="Search investigation" selected={investigation} onSelect={setInvestigation} />
       </div>
       <div className="form-actions no-print">
-        <button className="button secondary" type="button" disabled={!operation || saveState === "saving"} onClick={() => operation && void submitHistoryItem("operation-history", { operationCatalogItemId: operation.id, operationNameSnapshot: operation.label })}>Add operation</button>
-        <button className="button secondary" type="button" disabled={!medication || saveState === "saving"} onClick={() => medication && void submitHistoryItem("medication-history", { medicationGenericId: medication.type === "generic_medication" ? medication.id : undefined, genericNameSnapshot: medication.genericName ?? medication.label, familyNameSnapshot: medication.familyName ?? undefined, currentOrPast: "past" })}>Add medication</button>
-        <button className="button secondary" type="button" disabled={!investigation || saveState === "saving"} onClick={() => investigation && void submitHistoryItem("investigation-history", { investigationCatalogItemId: investigation.id, investigationNameSnapshot: investigation.label, context: "previous" })}>Add investigation</button>
+        <button className="button secondary" type="button" disabled={!operation || saveState === "saving"} onClick={() => operation && addHistoryItem("operation-history", operation, { operationCatalogItemId: operation.id, operationNameSnapshot: operation.label })}>Add operation to basket</button>
+        <button className="button secondary" type="button" disabled={!medication || saveState === "saving"} onClick={() => medication && addHistoryItem("medication-history", medication, { medicationGenericId: medication.type === "generic_medication" ? medication.id : undefined, genericNameSnapshot: medication.genericName ?? medication.label, familyNameSnapshot: medication.familyName ?? undefined, currentOrPast: "past" })}>Add medication to basket</button>
+        <button className="button secondary" type="button" disabled={!investigation || saveState === "saving"} onClick={() => investigation && addHistoryItem("investigation-history", investigation, { investigationCatalogItemId: investigation.id, investigationNameSnapshot: investigation.label, context: "previous" })}>Add investigation to basket</button>
       </div>
+      <SelectedBasket title="Selected history" items={historyBasket} onChange={setHistoryBasket} onSave={saveHistoryBasket} saving={saveState === "saving"} saveLabel="Save history once" />
       <p className={saveState === "failed" ? "warning-text" : "muted"} role={saveState === "failed" ? "alert" : "status"}>{saveState === "saving" ? "Saving selected clinical history…" : saveState === "saved" ? "Saved. The record will remain after refresh." : saveError}</p>
       <RelatedPanel config={{ key: "history-sheet", label: "Saved history sheets", icon: "doctor", empty: "No structured history sheet yet." }} rows={sheets} />
     </section>
