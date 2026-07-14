@@ -264,8 +264,23 @@ export class PatientsService {
     return this.lookup.get(id, user);
   }
 
-  async qrInfo(id: string, user: AuthUser) {
-    const patient = await this.get(id, user);
+  async qrInfo(lookup: string, user: AuthUser) {
+    const trimmed = lookup.trim();
+    const token = trimmed.startsWith("PRIJ-PATIENT:") ? trimmed.slice("PRIJ-PATIENT:".length) : trimmed;
+    const uuidLookup = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
+    const patient = await this.prisma.patient.findFirst({
+      where: {
+        ...branchScope(user),
+        OR: [
+          ...(uuidLookup ? [{ qrToken: token }, { id: token }] : []),
+          { medicalRecordNumber: { equals: trimmed, mode: "insensitive" } },
+          { phone: trimmed },
+          { firstName: { contains: trimmed, mode: "insensitive" } },
+          { lastName: { contains: trimmed, mode: "insensitive" } }
+        ]
+      }
+    });
+    if (!patient) throw new NotFoundException("Patient lookup did not match an accessible record.");
 
     await this.audit.record({
       actorUserId: user.id,
@@ -274,7 +289,7 @@ export class PatientsService {
       resourceId: patient.id,
       branchId: patient.branchId,
       severity: "medium",
-      metadataJson: { patientIdOnly: true }
+      metadataJson: { lookupType: trimmed.startsWith("PRIJ-PATIENT:") ? "opaque_qr_token" : "manual_lookup" }
     });
 
     return {
@@ -283,6 +298,20 @@ export class PatientsService {
       medicalRecordNumber: patient.medicalRecordNumber,
       status: patient.status
     };
+  }
+
+  async qrTokenInfo(id: string, user: AuthUser) {
+    const patient = await this.get(id, user);
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "patient.qr_viewed",
+      resourceType: "patient",
+      resourceId: patient.id,
+      branchId: patient.branchId,
+      severity: "medium",
+      metadataJson: { payloadContainsPhi: false }
+    });
+    return { token: patient.qrToken, payload: `PRIJ-PATIENT:${patient.qrToken}` };
   }
 
   async followUpHints(id: string, user: AuthUser) {

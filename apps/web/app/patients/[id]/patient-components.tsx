@@ -1039,7 +1039,20 @@ export function SelectedPatientSummary({ patient }: { patient: Patient }) {
 }
 
 export function PatientQrModal({ patient, onClose }: { patient: Patient; onClose: () => void }) {
-    const qrSource = patientQrSvgDataUri(patient.id);
+    const [payload, setPayload] = useState("");
+    const [status, setStatus] = useState("Preparing secure QR");
+    useEffect(() => {
+      const controller = new AbortController();
+      fetch(`${getApiBaseUrl()}/patients/${encodeURIComponent(patient.id)}/qr-token`, { credentials: "include", signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error("QR access denied");
+          return response.json() as Promise<{ payload: string }>;
+        })
+        .then((result) => { setPayload(result.payload); setStatus("Permanent QR ready"); })
+        .catch((error) => { if (error instanceof DOMException && error.name === "AbortError") return; setStatus("QR is unavailable. Try again."); });
+      return () => controller.abort();
+    }, [patient.id]);
+    const qrSource = payload ? patientQrSvgDataUri(payload) : "";
     return (
     <div className="patient-qr-backdrop" role="dialog" aria-modal="true" aria-label="Patient QR">
       <section className="patient-qr-modal">
@@ -1051,8 +1064,8 @@ export function PatientQrModal({ patient, onClose }: { patient: Patient; onClose
           </div>
           <button className="button secondary compact no-print" type="button" onClick={onClose}>Close</button>
         </div>
-        <Image className="patient-qr-image" src={qrSource} alt="Patient QR" width={280} height={280} unoptimized data-qr-payload={patient.id} />
-        <p className="muted">QR contains patient ID only. Login and role access are still required.</p>
+        {qrSource ? <Image className="patient-qr-image" src={qrSource} alt="Patient QR" width={280} height={280} unoptimized /> : <div className="skeleton" aria-label={status} />}
+        <p className="muted">{status}. QR contains an opaque lookup token only; login and role access are still required.</p>
         <div className="form-actions no-print">
           <button className="button" type="button" onClick={() => window.print()}>
             <ThreeDMedicalIcon name="reports" size="sm" />

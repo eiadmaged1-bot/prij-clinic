@@ -88,6 +88,12 @@ export class PatientsController {
     return this.patients.qrInfo(id, user);
   }
 
+  @Get(":id/qr-token")
+  @Permissions("patient.read")
+  qrToken(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.patients.qrTokenInfo(id, user);
+  }
+
   @Get(":id/timeline")
   @Permissions("patient.read")
   timeline(@Param("id") id: string, @Query("limit") limit: string | undefined, @Query("cursor") cursor: string | undefined, @CurrentUser() user: AuthUser) {

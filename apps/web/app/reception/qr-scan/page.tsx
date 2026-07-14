@@ -20,6 +20,7 @@ type ResolvedPatient = {
 };
 
 type QueueTicket = { patientId: string; status: string };
+type CameraCapability = "checking" | "ready" | "insecure" | "unavailable";
 
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => {
   detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>>;
@@ -44,7 +45,8 @@ function ReceptionQrScanContent() {
   const [queueTickets, setQueueTickets] = useState<QueueTicket[]>([]);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Manual lookup ready");
-  const [scannerStatus, setScannerStatus] = useState("Start camera scan");
+  const [scannerStatus, setScannerStatus] = useState("Checking camera capability");
+  const [cameraCapability, setCameraCapability] = useState<CameraCapability>("checking");
   const [cameraActive, setCameraActive] = useState(false);
   const { key: idempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
@@ -62,11 +64,29 @@ function ReceptionQrScanContent() {
     return () => stopCamera();
   }, [loadQueue]);
 
+  useEffect(() => {
+    if (!window.isSecureContext) {
+      setCameraCapability("insecure");
+      setScannerStatus(copy.insecureContext);
+    } else if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraCapability("unavailable");
+      setScannerStatus(copy.cameraApiUnavailable);
+    } else {
+      setCameraCapability("ready");
+      setScannerStatus(copy.permissionNotRequested);
+    }
+  }, [copy]);
+
   const activeTicket = resolved ? queueTickets.find((ticket) => ticket.patientId === resolved.patientId && ["waiting", "called"].includes(ticket.status)) : null;
 
   const resolvePatient = useCallback(async (rawValue: string, source: "scan" | "manual") => {
     const lookup = rawValue.trim();
     if (!lookup) return;
+    if (source === "scan" && !/^PRIJ-PATIENT:[0-9a-f-]{36}$/i.test(lookup)) {
+      setResolved(null);
+      setStatus(copy.invalidQr);
+      return;
+    }
     setManualId(lookup);
     setStatus(source === "scan" ? copy.qrScanned : copy.resolvingPatient);
     const response = await fetch(`${getApiBaseUrl()}/patients/${encodeURIComponent(lookup)}/qr`, {
@@ -80,7 +100,7 @@ function ReceptionQrScanContent() {
     }
     if (!response.ok) {
       setResolved(null);
-      setStatus(copy.noPatientFound);
+      setStatus(source === "scan" ? copy.invalidOrExpiredToken : copy.noPatientFound);
       return;
     }
     setResolved(await response.json() as ResolvedPatient);
@@ -89,12 +109,21 @@ function ReceptionQrScanContent() {
   }, [copy, headers, loadQueue]);
 
   async function startCameraScan() {
+    if (cameraCapability === "insecure") {
+      setScannerStatus(copy.insecureContext);
+      return;
+    }
+    if (cameraCapability !== "ready") {
+      setScannerStatus(copy.cameraApiUnavailable);
+      return;
+    }
     setScannerStatus(copy.requestingCamera);
     setCameraActive(false);
     stopScanRef.current = false;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setScannerStatus(copy.browserUnsupported);
+    const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
+    if (!Detector) {
+      setScannerStatus(copy.decoderUnsupported);
       return;
     }
 
@@ -106,11 +135,6 @@ function ReceptionQrScanContent() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
-      }
-      const Detector = (window as typeof window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-      if (!Detector) {
-        setScannerStatus(copy.decoderUnsupported);
-        return;
       }
       const detector = new Detector({ formats: ["qr_code"] });
       setScannerStatus(copy.cameraActive);
@@ -193,7 +217,7 @@ function ReceptionQrScanContent() {
             <h2>{copy.permanentPatientQr}</h2>
             <span className="badge">{scannerStatus}</span>
           </div>
-          <button className="button" type="button" onClick={() => void startCameraScan()}>
+          <button className="button" type="button" onClick={() => void startCameraScan()} disabled={cameraCapability !== "ready"}>
             <ThreeDMedicalIcon name="search" size="sm" />
             {copy.startCameraScan}
           </button>
@@ -260,6 +284,9 @@ const qrCopy = {
     permanentPatientQr: "Permanent Patient QR",
     startCameraScan: "Start camera scan",
     requestingCamera: "Requesting camera permission",
+    permissionNotRequested: "Camera permission not requested",
+    insecureContext: "Camera scanning requires the clinic HTTPS address. Manual lookup remains available.",
+    cameraApiUnavailable: "Camera API unavailable. Use manual lookup.",
     cameraActive: "Camera scanner active",
     qrSafety: "QR must not contain sensitive medical data. Manual lookup remains available.",
     manualLookup: "Manual lookup",
@@ -270,6 +297,8 @@ const qrCopy = {
     resolvingPatient: "Resolving patient.",
     signInRequired: "Please sign in before scanning patient QR.",
     noPatientFound: "No patient found. Try QR token, MRN/file number, phone, or name.",
+    invalidQr: "Invalid patient QR. No patient lookup was performed.",
+    invalidOrExpiredToken: "This QR token is invalid, expired, or the patient is unavailable.",
     patientFound: "Patient found. Confirm next action.",
     patientFoundTitle: "Patient found",
     fileNumber: "File number",
@@ -294,6 +323,11 @@ const qrCopy = {
     cameraUnavailable: "Camera unavailable. Use manual lookup."
   },
   ar: {
+    permissionNotRequested: "لم يتم طلب إذن الكاميرا بعد",
+    insecureContext: "مسح الكاميرا يتطلب رابط العيادة الآمن HTTPS. البحث اليدوي متاح.",
+    cameraApiUnavailable: "واجهة الكاميرا غير متاحة. استخدم البحث اليدوي.",
+    invalidQr: "رمز QR للمريضة غير صالح. لم يتم إجراء بحث عن مريضة.",
+    invalidOrExpiredToken: "رمز QR غير صالح أو منتهي أو أن المريضة غير متاحة.",
     eyebrow: "Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
     title: "ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø¨Ø§Ù„Ù€ QR",
     reception: "Ø§Ù„Ø§Ø³ØªÙ‚Ø¨Ø§Ù„",
