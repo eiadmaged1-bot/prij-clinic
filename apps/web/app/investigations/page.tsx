@@ -1,309 +1,157 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
-import { PatientPicker, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
-type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean; isHighPriority?: boolean };
-type InvestigationTemplate = { name: string; category: string; subcategory?: string; items: string[] };
-type FavoriteSet = { id: string; name: string; defaultVisitType?: string | null; items: Array<{ investigationCatalogItem: CatalogItem }> };
-type ClinicalRequest = { id: string; title: string; status: string; patientId: string; requestNote?: string | null; followUpHintActive?: boolean; items?: Array<{ testName?: string; category?: string }> };
-type Patient = PatientPickerPatient;
+type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean };
+type FavoriteSet = { id: string; name: string; nameAr?: string | null; scope?: string; items: Array<{ investigationCatalogItem: CatalogItem }> };
+type ClinicalRequest = { id: string; title: string; status: string; patientId: string; followUpHintActive?: boolean; patient?: { firstName?: string; lastName?: string; medicalRecordNumber?: string } };
+type Workspace = { investigationCatalog?: CatalogItem[]; categories?: string[]; favorites?: CatalogItem[]; highPriority?: CatalogItem[]; favoriteSets?: FavoriteSet[] };
 
-const masterLabCategories = ["Routine labs", "Pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Ultrasound", "Radiology", "Pathology", "Preoperative", "Other"];
+const categoryTabs = ["Favorites", "Routine labs", "Antenatal", "High-risk pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Tumor markers", "Ultrasound", "Radiology", "Pathology", "Cervical screening", "Preoperative", "Postoperative", "Other"];
 
 export default function InvestigationsPage() {
-  const [query, setQuery] = useState("");
-  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [favorites, setFavorites] = useState<CatalogItem[]>([]);
-  const [highPriority, setHighPriority] = useState<CatalogItem[]>([]);
-  const [templates, setTemplates] = useState<InvestigationTemplate[]>([]);
-  const [favoriteSets, setFavoriteSets] = useState<FavoriteSet[]>([]);
-  const [selected, setSelected] = useState<CatalogItem[]>([]);
-  const [requests, setRequests] = useState<ClinicalRequest[]>([]);
-  const patients: Patient[] = [];
   const [patientId, setPatientId] = useState("");
   const [encounterId, setEncounterId] = useState("");
-  const [requestNote, setRequestNote] = useState("");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("");
+  const [workspace, setWorkspace] = useState<Workspace>({});
+  const [selected, setSelected] = useState<CatalogItem[]>([]);
   const [indications, setIndications] = useState<Record<string, string>>({});
   const [priority, setPriority] = useState("routine");
+  const [requestNote, setRequestNote] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [setName, setSetName] = useState("");
-  const [category, setCategory] = useState("");
+  const [setNameAr, setSetNameAr] = useState("");
+  const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const [status, setStatus] = useState("Ready");
+  const [savedRequestId, setSavedRequestId] = useState("");
+  const hasPatientContext = Boolean(patientId && encounterId);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const routePatientId = params.get("patientId");
-    const routeVisitId = params.get("visitId") ?? params.get("encounterId");
-    if (routePatientId) setPatientId(routePatientId);
-    if (routeVisitId) setEncounterId(routeVisitId);
+    setPatientId(params.get("patientId") ?? "");
+    setEncounterId(params.get("encounterId") ?? params.get("visitId") ?? "");
     void loadRequests();
   }, []);
-  const searchCatalog = useCallback(async (value: string) => {
-    const expanded = expandSearchShortcut(value);
-    if (!expanded.trim() && !category) {
-      setCatalog([]);
-      return;
-    }
+
+  const loadWorkspace = useCallback(async () => {
     const params = new URLSearchParams();
+    const expanded = expandSearchShortcut(query);
     if (expanded.trim()) params.set("q", expanded);
-    if (category) params.set("category", category);
-    const data = await apiGet(`/investigations/catalog?${params.toString()}`);
-    setCatalog((data.investigationCatalog ?? []) as CatalogItem[]);
-    setCategories((data.categories ?? []) as string[]);
-    setFavorites((data.favorites ?? []) as CatalogItem[]);
-    setHighPriority((data.highPriority ?? []) as CatalogItem[]);
-    setTemplates((data.templates ?? []) as InvestigationTemplate[]);
-    setFavoriteSets((data.favoriteSets ?? []) as FavoriteSet[]);
-  }, [category]);
+    if (category && category !== "Favorites") params.set("category", category);
+    setWorkspace(await apiGet(`/investigations/catalog?${params.toString()}`) as Workspace);
+  }, [query, category]);
 
   useEffect(() => {
-    const timeout = window.setTimeout(() => { void searchCatalog(query); }, 220);
+    const timeout = window.setTimeout(() => void loadWorkspace(), 180);
     return () => window.clearTimeout(timeout);
-  }, [query, category, searchCatalog]);
+  }, [loadWorkspace]);
 
   async function loadRequests() {
-    const data = await apiGet("/clinical-requests");
-    setRequests((data.clinicalRequests ?? []) as ClinicalRequest[]);
+    const data = await apiGet("/clinical-requests") as { clinicalRequests?: ClinicalRequest[] };
+    setRequests(data.clinicalRequests ?? []);
   }
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!patientId.trim() || !encounterId.trim() || selected.length === 0) {
-      setStatus("Open an active patient visit and select at least one request.");
-      return;
-    }
-    const response = await apiPost("/clinical-requests", {
-      patientId: patientId.trim(),
-      encounterId: encounterId.trim(),
-      priority,
-      requestedFollowUpDate: followUpDate || undefined,
-      requestNote,
-      items: selected.map((item) => ({ title: item.name, catalogItemId: item.id.startsWith("template-") ? undefined : item.id, requestType: item.category, requestNote: indications[item.id] || requestNote }))
-    });
-    setStatus(response.ok ? "Clinical request saved with follow-up hint." : "Could not save clinical request.");
-    if (response.ok) {
-      setSelected([]);
-      setIndications({});
-      setQuery("");
-      void loadRequests();
-    }
+  const patient = useMemo(() => requests.find((request) => request.patientId === patientId)?.patient, [requests, patientId]);
+  const visibleCatalog = category === "Favorites" ? workspace.favorites ?? [] : workspace.investigationCatalog ?? [];
+
+  function add(item: CatalogItem) {
+    setSelected((current) => current.some((entry) => entry.id === item.id) ? current : [...current, item]);
   }
 
-  async function action(id: string, endpoint: string) {
-    const response = await apiPost(`/clinical-requests/${id}/${endpoint}`, {});
-    setStatus(response.ok ? "Result follow-up updated." : "Could not update result follow-up.");
-    if (response.ok) void loadRequests();
+  function applySet(set: FavoriteSet) {
+    setSelected((current) => [...current, ...set.items.map((entry) => entry.investigationCatalogItem).filter((item) => !current.some((existing) => existing.id === item.id))]);
   }
 
-  async function star(item: CatalogItem) {
-    const response = await apiPost(`/investigations/catalog/${item.id}/${item.favorite ? "unfavorite" : "favorite"}`, {});
-    if (response.ok) void searchCatalog(query);
-  }
-
-  function addTemplate(template: InvestigationTemplate) {
-    const additions = template.items.map((name) => ({ id: `template-${template.name}-${name}`, name, category: template.category, subcategory: template.subcategory }));
-    setSelected((current) => [...current, ...additions.filter((item) => !current.some((existing) => existing.name === item.name))]);
-  }
-
-  function applyFavoriteSet(favoriteSet: FavoriteSet) {
-    setSelected((current) => [...current, ...favoriteSet.items.map((item) => item.investigationCatalogItem).filter((item) => !current.some((existing) => existing.id === item.id))]);
-  }
-
-  async function saveFavoriteSet() {
-    if (!setName.trim() || selected.some((item) => item.id.startsWith("template-"))) {
-      setStatus("Name the set and select catalog investigations only.");
-      return;
-    }
-    const response = await apiPost("/investigations/favorite-sets", { name: setName.trim(), investigationCatalogItemIds: selected.map((item) => item.id) });
-    setStatus(response.ok ? "Favorite set saved." : "Could not save favorite set.");
-    if (response.ok) { setSetName(""); void searchCatalog(query); }
-  }
-
-  async function favoriteSetAction(id: string, actionName: "duplicate" | "archive") {
-    const response = actionName === "archive" ? await apiRequest(`/investigations/favorite-sets/${id}`, "DELETE") : await apiPost(`/investigations/favorite-sets/${id}/duplicate`, {});
-    setStatus(response.ok ? `Favorite set ${actionName === "archive" ? "archived" : "duplicated"}.` : "Could not update favorite set.");
-    if (response.ok) void searchCatalog(query);
-  }
-
-  function moveSelected(index: number, direction: -1 | 1) {
+  function move(index: number, offset: -1 | 1) {
     setSelected((current) => {
-      const target = index + direction;
-      if (target < 0 || target >= current.length) return current;
+      const destination = index + offset;
+      if (destination < 0 || destination >= current.length) return current;
       const next = [...current];
-      const selectedItem = next[index];
-      const targetItem = next[target];
-      if (!selectedItem || !targetItem) return current;
-      next[index] = targetItem;
-      next[target] = selectedItem;
+      [next[index], next[destination]] = [next[destination]!, next[index]!];
       return next;
     });
   }
 
-  return (
-    <AppShell>
-      <section className="page-header">
-        <div className="header-row">
-          <div>
-            <p className="eyebrow">Clinical Requests</p>
-            <h1>Requested Investigations</h1>
-          </div>
-          <button className="button secondary compact" type="button" disabled={!patientId || !encounterId || selected.length === 0} onClick={() => window.print()}>
-            <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
-            Print
-          </button>
-        </div>
-      </section>
-      <SafetyAlert />
-      <section className="content-grid investigation-catalog-layout">
-        <article className="panel">
-          <div className="section-heading"><h2>Request Builder</h2><span className="badge">{status}</span></div>
-          <form className="form-grid" onSubmit={submit}>
-            <div className="wide">
-              {encounterId ? <p className="selected-patient-card"><strong>Locked active visit</strong><span>Investigations inherit patient and visit context.</span></p> : <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient and active visit before saving this request." />}
-            </div>
-            <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound, histopathology" /></label>
-            <div className="investigation-category-sidebar wide" aria-label="Investigation category filters">
-              {masterLabCategories.map((item) => (
-                <button className={query === item ? "active" : ""} key={item} type="button" onClick={() => { setCategory(""); setQuery((current) => current === item ? "" : item); }}>{item}</button>
-              ))}
-            </div>
-            {categories.length ? <label className="wide">Catalog category<select value={category} onChange={(event) => setCategory(event.target.value)}><option value="">All categories</option>{categories.map((item) => <option key={item}>{item}</option>)}</select></label> : null}
-            {category ? (
-              <div className="wide selected-patient-card">
-                <strong>{category}</strong>
-                <span>{catalog.length} investigations in this category. Same lab may appear in multiple categories; ordering uses one master investigation item where configured.</span>
-              </div>
-            ) : null}
-            <div className="wide investigation-quick-sections">
-              <QuickCatalogSection title="Favorites" items={favorites} onAdd={setSelected} onStar={star} />
-              <QuickCatalogSection title="High Priority / Common" items={highPriority} onAdd={setSelected} onStar={star} />
-            </div>
-            <div className="wide template-list">
-              {templates.map((template) => <button className="picker-row" key={template.name} type="button" onClick={() => addTemplate(template)}><strong>{template.name}</strong><span>{template.category}</span></button>)}
-            </div>
-            <section className="wide compact-panel" aria-label="Saved investigation sets">
-              <div className="section-heading compact-section-heading"><h3>My investigation sets</h3><span className="badge">{favoriteSets.length}</span></div>
-              <div className="dense-card-list">
-                {favoriteSets.map((favoriteSet) => (
-                  <div className="data-row" key={favoriteSet.id}>
-                    <button className="picker-row" type="button" onClick={() => applyFavoriteSet(favoriteSet)}><strong>{favoriteSet.name}</strong><span>{favoriteSet.items.length} investigations · apply set</span></button>
-                    <div className="form-actions">
-                      <button className="button secondary compact" type="button" onClick={() => void favoriteSetAction(favoriteSet.id, "duplicate")}>Duplicate</button>
-                      <button className="button secondary compact" type="button" onClick={() => void favoriteSetAction(favoriteSet.id, "archive")}>Archive</button>
-                    </div>
-                  </div>
-                ))}
-                {!favoriteSets.length ? <p className="muted">Save the current basket to create a reusable set.</p> : null}
-              </div>
-            </section>
-            <div className="data-list">
-              {catalog.slice(0, 10).map((item) => (
-                <div className="data-row" key={item.id}>
-                  <button className="picker-row" type="button" onClick={() => setSelected((current) => current.some((selectedItem) => selectedItem.id === item.id) ? current : [...current, item])}>
-                    <strong>{item.name}</strong><span>{[item.category, item.subcategory, item.modality].filter(Boolean).join(" / ")}</span>
-                  </button>
-                  <button className="button secondary compact" type="button" onClick={() => void star(item)}>{item.favorite ? "Starred" : "Star"}</button>
-                </div>
-              ))}
-              {!query.trim() && !category ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
-              {category && catalog.length === 0 ? <p className="empty-state compact smart-empty-state">No investigations in this category yet.</p> : null}
-            </div>
-            <div className="selected-request-chips wide" data-selected-request-chips aria-label="Selected investigation request basket">
-              {selected.length ? selected.map((item) => (
-                <article className="request-chip investigation-basket-row" key={item.id}>
-                  <strong>{item.name}</strong><em>{item.modality ?? item.category}</em>
-                  <input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" />
-                  <span className="form-actions">
-                    <button type="button" aria-label={`Move ${item.name} up`} onClick={() => moveSelected(selected.indexOf(item), -1)}>↑</button>
-                    <button type="button" aria-label={`Move ${item.name} down`} onClick={() => moveSelected(selected.indexOf(item), 1)}>↓</button>
-                    <button type="button" aria-label={`Remove ${item.name}`} onClick={() => setSelected((current) => current.filter((selectedItem) => selectedItem.id !== item.id))}>×</button>
-                  </span>
-                </article>
-              )) : <span className="empty-state compact smart-empty-state">No requests selected</span>}
-            </div>
-            <label>Overall clinical note<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
-            <label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label>
-            <label>Follow-up date<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label>
-            <div className="form-actions wide"><input aria-label="Favorite set name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="New favorite set name" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveFavoriteSet()}>Save as set</button></div>
-            <button className="button" type="submit" disabled={!patientId || !encounterId || selected.length === 0}>Attach to locked visit</button>
-            <button className="button secondary" type="button" disabled={!patientId || !encounterId || selected.length === 0} onClick={() => window.print()}>Print</button>
-          </form>
-        </article>
-        <article className="panel">
-          <div className="section-heading"><h2>Result Follow-up</h2><span className="badge">{requests.length}</span></div>
-          <div className="data-list">
-            {requests.map((request) => (
-              <article className="data-row" key={request.id}>
-                <div className="data-row-header"><strong>{request.title}</strong><span className="badge">{friendly(request.status)}</span></div>
-                <p className="muted">{request.followUpHintActive ? "Follow-up needed until result or report is reviewed." : "Follow-up resolved."}</p>
-                <div className="form-actions">
-                  <button className="button secondary compact" type="button" onClick={() => void action(request.id, "mark-result-received")}>Result received</button>
-                  <button className="button secondary compact" type="button" onClick={() => void action(request.id, "review")}>Reviewed</button>
-                  <button className="button secondary compact" type="button" onClick={() => void action(request.id, "cancel")}>Cancel</button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </article>
-      </section>
-    </AppShell>
-  );
-}
+  function duplicate(index: number) {
+    const source = selected[index];
+    if (!source) return;
+    const copy = { ...source, id: `${source.id}-copy-${Date.now()}` };
+    setSelected((current) => [...current.slice(0, index + 1), copy, ...current.slice(index + 1)]);
+    setIndications((current) => ({ ...current, [copy.id]: current[source.id] ?? "" }));
+  }
 
-function friendly(value: string) {
-  return value.replaceAll("_", " ");
-}
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!hasPatientContext || !selected.length) return setStatus("Open an active patient visit and select at least one investigation.");
+    const response = await apiPost("/clinical-requests", {
+      patientId, encounterId, priority, requestedFollowUpDate: followUpDate || undefined, requestNote,
+      items: selected.map((item) => ({ title: item.name, catalogItemId: cleanCatalogId(item.id), requestType: item.category, requestNote: indications[item.id] || requestNote }))
+    });
+    if (!response.ok) return setStatus("The request could not be saved. Check the active visit and try again.");
+    const saved = await response.json() as ClinicalRequest;
+    setSavedRequestId(saved.id);
+    setStatus("Request saved to this visit. It is ready for the dedicated print view.");
+    setSelected([]);
+    setIndications({});
+    await loadRequests();
+  }
 
-function QuickCatalogSection({
-  title,
-  items,
-  onAdd,
-  onStar
-}: {
-  title: string;
-  items: CatalogItem[];
-  onAdd: (updater: (current: CatalogItem[]) => CatalogItem[]) => void;
-  onStar: (item: CatalogItem) => Promise<void>;
-}) {
-  return (
-    <section className="compact-panel">
-      <div className="section-heading compact-section-heading"><h3>{title}</h3><span className="badge">{items.length}</span></div>
-      <div className="dense-card-list">
-        {items.slice(0, 6).map((item) => (
-          <button className="picker-row" key={`${title}-${item.id}`} type="button" onClick={() => onAdd((current) => current.some((selected) => selected.id === item.id) ? current : [...current, item])}>
-            <strong>{item.name}</strong>
-            <span>{item.category}</span>
-            <span onClick={(event) => { event.stopPropagation(); void onStar(item); }}>{item.favorite ? "Starred" : "Star"}</span>
-          </button>
-        ))}
-        {items.length === 0 ? <p className="muted">No items yet.</p> : null}
-      </div>
+  async function saveSet() {
+    const ids = selected.map((item) => cleanCatalogId(item.id)).filter(Boolean) as string[];
+    if (!setName.trim() || ids.length !== selected.length) return setStatus("Name the set and use approved catalog investigations only.");
+    const response = await apiPost("/investigations/favorite-sets", { name: setName.trim(), nameAr: setNameAr.trim() || undefined, scope: "personal", investigationCatalogItemIds: ids });
+    if (!response.ok) return setStatus("The reusable set could not be saved.");
+    setSetName(""); setSetNameAr(""); setStatus("Reusable investigation set saved."); await loadWorkspace();
+  }
+
+  async function setAction(id: string, action: "duplicate" | "archive") {
+    const response = action === "archive" ? await apiRequest(`/investigations/favorite-sets/${id}`, "DELETE") : await apiPost(`/investigations/favorite-sets/${id}/duplicate`, {});
+    setStatus(response.ok ? `Set ${action === "archive" ? "archived" : "duplicated"}.` : "The set could not be updated.");
+    if (response.ok) await loadWorkspace();
+  }
+
+  async function followUp(id: string, action: "mark-result-received" | "review") {
+    const response = await apiPost(`/clinical-requests/${id}/${action}`, {});
+    setStatus(response.ok ? "Result follow-up updated." : "Result follow-up could not be updated.");
+    if (response.ok) await loadRequests();
+  }
+
+  function printRequest(id: string) {
+    window.open(`/clinical-requests/${encodeURIComponent(id)}/print`, "_blank", "noopener,noreferrer");
+  }
+
+  return <AppShell>
+    <section className="page-header"><div className="header-row"><div><p className="eyebrow">{hasPatientContext ? "Patient clinical workflow" : "Investigation center"}</p><h1>{hasPatientContext ? "New investigation request" : "Investigation Library, Templates & Result Follow-up"}</h1></div>{savedRequestId ? <button className="button secondary compact" type="button" onClick={() => printRequest(savedRequestId)}>Print saved request</button> : null}</div></section>
+    <SafetyAlert />
+    <section className={`content-grid investigation-catalog-layout ${hasPatientContext ? "patient-context" : "library-context"}`}>
+      <article className="panel">
+        <div className="section-heading"><div><h2>{hasPatientContext ? "Catalog and request basket" : "Catalog and reusable sets"}</h2><p className="muted">Click an investigation to add it. Applying a set never orders automatically.</p></div><span className="badge">{status}</span></div>
+        <form className="form-grid" onSubmit={submit} noValidate>
+          {hasPatientContext ? <div className="patient-context-bar wide"><strong>{[patient?.firstName, patient?.lastName].filter(Boolean).join(" ") || "Selected patient"}</strong><span>MRN: {patient?.medicalRecordNumber || "Patient file"}</span><span>Active visit locked</span></div> : <div className="notice wide"><strong>Management-only center</strong><span>Open Patient File → Current Visit → Investigations to save a real request.</span></div>}
+          <label className="wide">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound" /></label>
+          <div className="investigation-category-sidebar wide" aria-label="Investigation categories">{categoryTabs.map((tab) => <button className={category === tab ? "active" : ""} key={tab} type="button" onClick={() => setCategory((current) => current === tab ? "" : tab)}>{tab}</button>)}</div>
+          <div className="wide investigation-quick-sections"><CatalogList title="Favorites" items={workspace.favorites ?? []} onAdd={add} /><CatalogList title="Common and high priority" items={workspace.highPriority ?? []} onAdd={add} /></div>
+          <div className="wide data-list">{visibleCatalog.slice(0, 30).map((item) => <button className="picker-row" key={item.id} type="button" onClick={() => add(item)}><strong>{item.name}</strong><span>{[item.category, item.subcategory, item.modality].filter(Boolean).join(" · ")}</span></button>)}{!visibleCatalog.length ? <p className="empty-state compact smart-empty-state">No catalog items match this view.</p> : null}</div>
+          <section className="wide compact-panel"><div className="section-heading compact-section-heading"><h3>Reusable investigation sets</h3><span className="badge">{workspace.favoriteSets?.length ?? 0}</span></div><div className="dense-card-list">{(workspace.favoriteSets ?? []).map((set) => <div className="data-row" key={set.id}><button className="picker-row" type="button" onClick={() => applySet(set)}><strong>{set.name}{set.nameAr ? ` / ${set.nameAr}` : ""}</strong><span>{set.items.length} investigations · {set.scope ?? "personal"}</span></button><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "archive")}>Archive</button></div></div>)}</div></section>
+          <section className="wide selected-item-basket"><div className="section-heading compact-section-heading"><h3>Selected basket</h3><span className="badge">{selected.length}</span></div>{selected.map((item, index) => <article className="request-chip investigation-basket-row" key={item.id}><div><strong>{item.name}</strong><em>{item.category}</em></div><input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" /><div className="form-actions"><button type="button" onClick={() => move(index, -1)} aria-label={`Move ${item.name} up`}>↑</button><button type="button" onClick={() => move(index, 1)} aria-label={`Move ${item.name} down`}>↓</button><button type="button" onClick={() => duplicate(index)}>Duplicate</button><button type="button" onClick={() => setSelected((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></div></article>)}{!selected.length ? <p className="empty-state compact smart-empty-state">No investigations selected.</p> : null}</section>
+          <div className="form-actions wide"><input aria-label="Set English name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="Custom set name" /><input aria-label="Set Arabic name" dir="rtl" value={setNameAr} onChange={(event) => setSetNameAr(event.target.value)} placeholder="اسم المجموعة بالعربية" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveSet()}>Save as custom set</button></div>
+          {hasPatientContext ? <><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Follow-up deadline<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>Save to visit</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); }}>Clear basket</button></div></> : null}
+        </form>
+      </article>
+      <article className="panel"><div className="section-heading"><h2>Cross-patient result follow-up</h2><span className="badge">{requests.length}</span></div><div className="data-list">{requests.map((request) => <article className="data-row" key={request.id}><div className="data-row-header"><strong>{request.title}</strong><span className="badge">{request.status.replaceAll("_", " ")}</span></div><p className="muted">{request.followUpHintActive ? "Follow-up remains active until doctor review." : "Follow-up resolved."}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => printRequest(request.id)}>Print request</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "mark-result-received")}>Result received</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "review")}>Doctor reviewed</button></div></article>)}{!requests.length ? <p className="empty-state compact smart-empty-state">No requests are visible in your permitted scope.</p> : null}</div></article>
     </section>
-  );
+  </AppShell>;
 }
 
-async function apiGet(endpoint: string) {
-  const token = sessionStorage.getItem("prijClinicToken");
-  const response = await fetch(`${getApiBaseUrl()}${endpoint}`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
-  return response?.ok ? response.json() : {};
+function CatalogList({ title, items, onAdd }: { title: string; items: CatalogItem[]; onAdd: (item: CatalogItem) => void }) {
+  return <section className="compact-panel"><div className="section-heading compact-section-heading"><h3>{title}</h3><span className="badge">{items.length}</span></div>{items.slice(0, 8).map((item) => <button className="picker-row" key={`${title}-${item.id}`} type="button" onClick={() => onAdd(item)}><strong>{item.name}</strong><span>{item.category}</span></button>)}{!items.length ? <p className="muted">No items yet.</p> : null}</section>;
 }
 
-async function apiPost(endpoint: string, payload: Record<string, unknown>) {
-  return apiRequest(endpoint, "POST", payload);
-}
-
-async function apiRequest(endpoint: string, method: "POST" | "DELETE", payload?: Record<string, unknown>) {
-  const token = sessionStorage.getItem("prijClinicToken");
-  return fetch(`${getApiBaseUrl()}${endpoint}`, {
-    method,
-    credentials: "include",
-    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-    body: payload ? JSON.stringify(payload) : undefined
-  }).catch(() => new Response(null, { status: 500 }));
-}
+function cleanCatalogId(id: string) { return id.includes("-copy-") ? id.split("-copy-")[0] : id; }
+async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); return response.ok ? response.json() : {}; }
+async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
+async function apiRequest(endpoint: string, method: "GET" | "POST" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }

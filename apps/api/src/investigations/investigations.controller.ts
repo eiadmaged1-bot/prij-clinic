@@ -131,6 +131,12 @@ export class ClinicalRequestsController {
     return { clinicalRequests: await this.investigations.listClinicalRequests(user, patientId) };
   }
 
+  @Get(":id/print")
+  @Permissions("clinical_requests.read")
+  print(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.getClinicalRequestPrint(id, user);
+  }
+
   @Get(":id")
   @Permissions("clinical_requests.read")
   get(@Param("id") id: string, @CurrentUser() user: AuthUser) {

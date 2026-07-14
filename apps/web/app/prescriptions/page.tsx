@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../../components/clinic/UniversalSearchBox";
 import { AppShell, SafetyAlert } from "../mvp-page";
@@ -208,7 +209,7 @@ export default function PrescriptionsPage() {
           {lockedContext ? <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => void preparePrint()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
             Print
-          </button> : <a className="button secondary compact" href="/patients">Open patient file</a>}
+          </button> : <Link className="button secondary compact" href="/patients">Open patient file</Link>}
         </div>
         <p className="muted">Doctor manual review required. No auto-prescribing or automatic dosing.</p>
       </section>
@@ -222,7 +223,7 @@ export default function PrescriptionsPage() {
         ] as const).map(([key, label]) => <button className={`tab-button ${active === key ? "active" : ""}`} key={key} onClick={() => setActive(key)} type="button">{label}</button>)}
       </section>
 
-      {!lockedContext ? <section className="panel compact-panel prescription-center-intro"><div><h2>Template and shortcut center</h2><p className="muted">Manage reusable medication shortcuts and prescription sets here. Clinical prescriptions can only be created from a selected patient and active visit.</p></div><a className="button compact" href="/patients">Find patient</a></section> : null}
+      {!lockedContext ? <section className="panel compact-panel prescription-center-intro"><div><h2>Template and shortcut center</h2><p className="muted">Manage reusable medication shortcuts and prescription sets here. Clinical prescriptions can only be created from a selected patient and active visit.</p></div><Link className="button compact" href="/patients">Find patient</Link></section> : null}
 
       {active === "builder" && lockedContext ? (
         <section className="panel printable-summary">

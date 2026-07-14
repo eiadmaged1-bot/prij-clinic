@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InvestigationCategory, InvestigationOrderStatus, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -130,7 +130,10 @@ export class InvestigationsService {
 
   listFavoriteSets(user: AuthUser, includeArchived = false) {
     return this.prisma.investigationFavoriteSet.findMany({
-      where: { userId: user.id, ...(includeArchived ? {} : { active: true }) },
+      where: {
+        OR: [{ userId: user.id }, ...(user.branchId ? [{ scope: "branch", branchId: user.branchId }] : []), { scope: "clinic" }],
+        ...(includeArchived ? {} : { active: true })
+      },
       include: {
         items: {
           orderBy: { position: "asc" },
@@ -143,10 +146,15 @@ export class InvestigationsService {
 
   async createFavoriteSet(dto: InvestigationFavoriteSetDto, user: AuthUser) {
     const ids = await this.validateFavoriteSetItems(dto.investigationCatalogItemIds);
+    const scope = this.favoriteSetScope(dto.scope, user);
     const favoriteSet = await this.prisma.investigationFavoriteSet.create({
       data: {
         userId: user.id,
         name: dto.name.trim(),
+        nameAr: clean(dto.nameAr),
+        icon: clean(dto.icon),
+        scope,
+        branchId: scope === "branch" ? user.branchId : null,
         defaultVisitType: clean(dto.defaultVisitType),
         active: dto.active ?? true,
         items: { create: ids.map((investigationCatalogItemId, position) => ({ investigationCatalogItemId, position })) }
@@ -160,12 +168,17 @@ export class InvestigationsService {
   async updateFavoriteSet(id: string, dto: InvestigationFavoriteSetDto, user: AuthUser) {
     await this.getOwnedFavoriteSet(id, user);
     const ids = await this.validateFavoriteSetItems(dto.investigationCatalogItemIds);
+    const scope = this.favoriteSetScope(dto.scope, user);
     const favoriteSet = await this.prisma.$transaction(async (tx) => {
       await tx.investigationFavoriteSetItem.deleteMany({ where: { favoriteSetId: id } });
       return tx.investigationFavoriteSet.update({
         where: { id },
         data: {
           name: dto.name.trim(),
+          nameAr: clean(dto.nameAr),
+          icon: clean(dto.icon),
+          scope,
+          branchId: scope === "branch" ? user.branchId : null,
           defaultVisitType: clean(dto.defaultVisitType),
           active: dto.active ?? true,
           items: { create: ids.map((investigationCatalogItemId, position) => ({ investigationCatalogItemId, position })) }
@@ -182,6 +195,9 @@ export class InvestigationsService {
     const duplicate = await this.createFavoriteSet(
       {
         name: `${source.name} copy`,
+        nameAr: source.nameAr ?? undefined,
+        icon: source.icon ?? undefined,
+        scope: "personal",
         defaultVisitType: source.defaultVisitType ?? undefined,
         investigationCatalogItemIds: source.items.map((item) => item.investigationCatalogItemId)
       },
@@ -289,7 +305,7 @@ export class InvestigationsService {
         ...(status === "voided" ? { voidReason: trimmedReason } : {}),
         items: { updateMany: { where: {}, data: { status } } }
       },
-      include: { items: true, patient: true, encounter: true }
+      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
     await this.audit.record({
@@ -339,13 +355,26 @@ export class InvestigationsService {
       where: { ...(patientId ? { patientId } : {}), ...patientBranchScope(user), ...doctorScope(user) },
       orderBy: { createdAt: "desc" },
       take: 100,
-      include: { items: true, patient: true, encounter: true }
+      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
     return orders.map(toClinicalRequest);
   }
 
   async getClinicalRequest(id: string, user: AuthUser) {
     return toClinicalRequest(await this.getOrder(id, user));
+  }
+
+  async getClinicalRequestPrint(id: string, user: AuthUser) {
+    const request = toClinicalRequest(await this.getOrder(id, user));
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "clinical_request.print_viewed",
+      resourceType: "clinical_request",
+      resourceId: id,
+      severity: "high",
+      metadataJson: { patientId: request.patientId, itemCount: request.items.length }
+    });
+    return request;
   }
 
   async markResultReceived(id: string, user: AuthUser) {
@@ -415,6 +444,16 @@ export class InvestigationsService {
       metadataJson: { itemCount, ...metadataJson }
     });
   }
+
+  private favoriteSetScope(requested: string | undefined, user: AuthUser) {
+    const scope = requested?.trim().toLowerCase() || "personal";
+    if (!new Set(["personal", "branch", "clinic"]).has(scope)) throw new BadRequestException("Invalid investigation set scope.");
+    if (scope === "branch" && !user.branchId) throw new BadRequestException("A branch is required for branch-scoped sets.");
+    if (scope !== "personal" && !user.isSystemOwner && !user.permissions.includes("investigations.manage_catalog")) {
+      throw new ForbiddenException("Shared investigation sets require catalog management permission.");
+    }
+    return scope;
+  }
 }
 
 function toItemCreate(item: InvestigationOrderItemDto) {
@@ -461,6 +500,7 @@ function toClinicalRequest(order: Record<string, any>) {
     updatedAt: order.updatedAt,
     patient: order.patient,
     encounter: order.encounter,
+    doctor: order.doctor ?? null,
     items: order.items ?? []
   };
 }

@@ -321,6 +321,7 @@
     "test:smart-tags": "node scripts/smart-clinical-tags-test.mjs",
     "test:doctor-visit": "node scripts/doctor-visit-stepper-test.mjs",
     "test:investigation-workflow": "node scripts/investigation-workflow-test.mjs",
+    "test:v1444:investigation-print": "node scripts/v1444-investigation-print-test.mjs",
     "test:prescription-print": "node scripts/prescription-print-test.mjs",
     "test:medication-reference": "node scripts/medication-reference-test.mjs",
     "test:medication-import": "node scripts/medication-import-test.mjs",
