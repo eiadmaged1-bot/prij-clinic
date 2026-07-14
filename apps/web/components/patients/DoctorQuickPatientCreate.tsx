@@ -16,7 +16,7 @@ export function DoctorQuickPatientCreate() {
   const [duplicateReviewAccepted, setDuplicateReviewAccepted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey } = useIdempotencyKey();
 
   async function submit(form: HTMLFormElement, intent: SaveIntent) {
     if (loading) return;
@@ -81,11 +81,6 @@ export function DoctorQuickPatientCreate() {
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not save the patient.");
-      // Regenerate the key so the next submission attempts a fresh create if this one really failed completely
-      // However, if it was a validation error (e.g. duplicate review required), we still want to use the same key?
-      // Actually, if it's a conflict like duplicate review, we MIGHT want to keep the same key if the user is just fixing it.
-      // But typically, if they edit the form, they are making a new request. Let's regenerate on any error.
-      regenerateIdempotencyKey();
     } finally {
       setLoading(false);
     }

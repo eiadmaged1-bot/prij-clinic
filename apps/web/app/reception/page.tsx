@@ -29,7 +29,7 @@ function ReceptionHomeContent() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("");
-  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
   const copy = receptionCopy[language];
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -91,7 +91,6 @@ function ReceptionHomeContent() {
       } else {
         setStatus(copy.couldNotAddToQueue);
       }
-      regenerateIdempotencyKey();
     }
   }
 

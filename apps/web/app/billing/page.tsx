@@ -172,10 +172,10 @@ export default function BillingPage() {
       body: JSON.stringify(payload)
     });
     if (!response.ok) {
-      if (regenerateKey) regenerateKey();
       setError("Could not save this finance action. Check permissions and required reason fields.");
       return;
     }
+    if (regenerateKey) regenerateKey();
     setMessage(success);
     await loadFinance();
   }
