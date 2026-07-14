@@ -13,6 +13,10 @@ export type PatientPickerPatient = {
   patientType?: string | null;
   createdAt?: string | null;
   latestVisitDate?: string | null;
+  dateOfBirth?: string | null;
+  phoneSuffix?: string | null;
+  branch?: { name?: string | null } | null;
+  queueState?: { status?: string | null; queueNumber?: number | null } | null;
 };
 
 type PatientPickerProps = {
@@ -42,6 +46,8 @@ export function PatientPicker({
   const [expanded, setExpanded] = useState(!selectedPatientId);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [livePatients, setLivePatients] = useState<PatientPickerPatient[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const sourcePatients = liveSearch ? livePatients : patients;
   const selected = sourcePatients.find((patient) => patient.id === selectedPatientId) ?? patients.find((patient) => patient.id === selectedPatientId) ?? null;
 
@@ -53,7 +59,8 @@ export function PatientPicker({
       return;
     }
     const timer = window.setTimeout(() => {
-      void fetchPatients(text, includeArchived).then(setLivePatients).catch(() => setLivePatients([]));
+      setPage(1);
+      void fetchPatients(text, includeArchived, 1).then((data) => { setLivePatients(data.patients); setHasMore(data.hasMore); }).catch(() => { setLivePatients([]); setHasMore(false); });
     }, 220);
     return () => window.clearTimeout(timer);
   }, [includeArchived, liveSearch, minSearchLength, query]);
@@ -65,8 +72,7 @@ export function PatientPicker({
       .filter((patient) => includeArchived || patient.status !== "archived")
       .filter((patient) => patientSearchText(patient).includes(text))
       .filter((patient) => !isDemoLikePatient(patient))
-      .sort(comparePatientRecency)
-      .slice(0, 20);
+      .sort(comparePatientRecency);
   }, [includeArchived, minSearchLength, query, sourcePatients]);
 
   const groupedMatches = useMemo(() => groupPatientsByType(matches), [matches]);
@@ -121,6 +127,7 @@ export function PatientPicker({
               </section>
             ))}
             {query.trim().length >= minSearchLength && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
+            {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), includeArchived, nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }); }}>Load more patients</button> : null}
           </div>
         </div>
       ) : null}
@@ -132,7 +139,7 @@ export function SelectedPatientSummary({ patient }: { patient: PatientPickerPati
   return (
     <div className="selected-patient-card">
       <strong>{patientLabel(patient)}</strong>
-      <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? "No phone"} | {patient.status ?? "active"}</span>
+      <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.dateOfBirth ? `DOB ${patient.dateOfBirth.slice(0, 10)}` : "DOB unavailable"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"} | {patient.queueState?.status ? `queue ${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not in queue"}</span>
     </div>
   );
 }
@@ -146,16 +153,16 @@ export function patientSearchText(patient?: PatientPickerPatient | null) {
   return `${patientLabel(patient)} ${patient?.medicalRecordNumber ?? ""} ${patient?.phone ?? ""} ${patient?.status ?? ""} ${patient?.patientType ?? ""}`.toLowerCase();
 }
 
-async function fetchPatients(query: string, includeArchived: boolean) {
+async function fetchPatients(query: string, includeArchived: boolean, page: number) {
   const token = sessionStorage.getItem("prijClinicToken");
-  const params = new URLSearchParams({ q: query, includeArchived: String(includeArchived) });
+  const params = new URLSearchParams({ q: query, includeArchived: String(includeArchived), page: String(page), limit: "20" });
   const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, {
     credentials: "include",
     headers: token ? { authorization: `Bearer ${token}` } : undefined
   });
-  if (!response.ok) return [];
-  const data = (await response.json()) as { patients?: PatientPickerPatient[] };
-  return data.patients ?? [];
+  if (!response.ok) return { patients: [], hasMore: false };
+  const data = (await response.json()) as { patients?: PatientPickerPatient[]; pageInfo?: { hasMore?: boolean } };
+  return { patients: data.patients ?? [], hasMore: Boolean(data.pageInfo?.hasMore) };
 }
 
 function groupPatientsByType(patients: PatientPickerPatient[]) {

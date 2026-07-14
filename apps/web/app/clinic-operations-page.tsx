@@ -79,6 +79,12 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
 
   useEffect(() => { void load(); }, [load]);
 
+  useEffect(() => {
+    const refreshQueue = () => void load();
+    window.addEventListener("clinic-queue:changed", refreshQueue);
+    return () => window.removeEventListener("clinic-queue:changed", refreshQueue);
+  }, [load]);
+
   const completed = queue.filter((ticket) => ticket.status === "completed");
   const pendingRequests = orders.filter((order) => !["reviewed", "cancelled"].includes(order.status));
   const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));

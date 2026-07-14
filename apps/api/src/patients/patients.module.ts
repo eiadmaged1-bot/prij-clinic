@@ -11,9 +11,10 @@ import { PatientSearchService } from "./services/patient-search.service";
 import { PatientLookupService } from "./services/patient-lookup.service";
 
 import { DoctorVisitModule } from "../doctor-visit/doctor-visit.module";
+import { ClinicTimeModule } from "../clinic-time/clinic-time.module";
 
 @Module({
-  imports: [AuditModule, AuthModule, ClinicalTagsModule, PrismaModule, RbacModule, UsersModule, DoctorVisitModule],
+  imports: [AuditModule, AuthModule, ClinicalTagsModule, PrismaModule, RbacModule, UsersModule, DoctorVisitModule, ClinicTimeModule],
   controllers: [PatientsController],
   providers: [PatientsService, PatientSearchService, PatientLookupService],
   exports: [PatientsService]

@@ -12,7 +12,7 @@ import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
 import { receptionCopy as cleanReceptionCopy, receptionWorkflowCopy } from "./reception-copy";
 
-type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; status?: string | null };
+type Patient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; phoneSuffix?: string | null; dateOfBirth?: string | null; status?: string | null; branch?: { name?: string | null } | null; latestVisitDate?: string | null; queueState?: { status?: string | null; queueNumber?: number | null } | null };
 type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string | null; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: Patient | null };
 
 export default function ReceptionHomePage() {
@@ -25,6 +25,8 @@ export default function ReceptionHomePage() {
 
 function ReceptionHomeContent() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [patientPage, setPatientPage] = useState(1);
+  const [hasMorePatients, setHasMorePatients] = useState(false);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [query, setQuery] = useState("");
   const [lookupOpen, setLookupOpen] = useState(false);
@@ -53,11 +55,7 @@ function ReceptionHomeContent() {
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
   const load = useCallback(async () => {
-    const [patientResponse, queueResponse] = await Promise.all([
-      fetch(`${getApiBaseUrl()}/patients`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers })
-    ]);
-    setPatients(patientResponse.ok ? ((await patientResponse.json()) as { patients?: Patient[] }).patients ?? [] : []);
+    const queueResponse = await fetch(`${getApiBaseUrl()}/queue/today`, { credentials: "include", headers });
     setQueue(queueResponse.ok ? ((await queueResponse.json()) as { queueTickets?: QueueTicket[] }).queueTickets ?? [] : []);
   }, [headers]);
 
@@ -71,11 +69,35 @@ function ReceptionHomeContent() {
     return () => window.removeEventListener("clinic-queue:changed", refreshQueue);
   }, [load]);
 
+  useEffect(() => {
+    const search = query.trim();
+    if (search.length < 2) {
+      setPatients([]);
+      setHasMorePatients(false);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams({ q: search, page: "1", limit: "20" });
+      void fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, { credentials: "include", headers })
+        .then(async (response) => response.ok ? response.json() as Promise<{ patients?: Patient[]; pageInfo?: { hasMore?: boolean } }> : { patients: [], pageInfo: { hasMore: false } })
+        .then((data) => {
+          setPatients(data.patients ?? []);
+          setPatientPage(1);
+          setHasMorePatients(Boolean(data.pageInfo?.hasMore));
+        })
+        .catch(() => {
+          setPatients([]);
+          setHasMorePatients(false);
+        });
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [headers, query]);
+
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
   const urgentWaiting = waiting.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const nextPatient = [...urgentWaiting, ...waiting.filter((ticket) => !urgentWaiting.includes(ticket))][0] ?? null;
   const trimmedQuery = query.trim().toLowerCase();
-  const results = trimmedQuery ? patients.filter((patient) => patientSearchText(patient).includes(trimmedQuery)).slice(0, 8) : [];
+  const results = trimmedQuery ? patients : [];
   const activeTicket = selectedPatient ? queue.find((ticket) => ticket.patientId === selectedPatient.id && ["waiting", "called"].includes(ticket.status)) : null;
   const selectedQueueIndex = selectedPatient ? waiting.findIndex((ticket) => ticket.patientId === selectedPatient.id) : -1;
 
@@ -102,6 +124,7 @@ function ReceptionHomeContent() {
       setSelectedPatient(null);
       setVisitType("");
       await load();
+      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId: selectedPatient.id } }));
     } else {
       if (response) {
         const body = await response.json().catch(() => ({}));
@@ -134,7 +157,7 @@ function ReceptionHomeContent() {
       <section className="panel compact-panel">
         <label>
           {copy.searchPatient}
-          <input value={query} onChange={(event) => { setQuery(event.target.value); setLookupOpen(true); }} placeholder={copy.searchPlaceholder} />
+          <input value={query} onChange={(event) => { setQuery(event.target.value); setSelectedPatient(null); setStatus(""); setLookupOpen(true); }} placeholder={copy.searchPlaceholder} />
         </label>
       </section>
 
@@ -171,9 +194,20 @@ function ReceptionHomeContent() {
             {results.map((patient) => (
               <button className={`picker-row ${selectedPatient?.id === patient.id ? "active" : ""}`} key={patient.id} type="button" onClick={() => setSelectedPatient(patient)}>
                 <strong>{patientLabel(patient)}</strong>
-                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.phone ?? copy.noPhone}</span>
+                <span>{patient.medicalRecordNumber ?? "No MRN"} | {patient.dateOfBirth ? `DOB ${patient.dateOfBirth.slice(0, 10)}` : "DOB unavailable"} | phone …{patient.phoneSuffix ?? "none"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"} | {patient.queueState?.status ?? "not in queue"}</span>
               </button>
             ))}
+            {hasMorePatients ? <button className="button secondary compact" type="button" onClick={() => {
+              const nextPage = patientPage + 1;
+              const params = new URLSearchParams({ q: query.trim(), page: String(nextPage), limit: "20" });
+              void fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, { credentials: "include", headers })
+                .then(async (response) => response.ok ? response.json() as Promise<{ patients?: Patient[]; pageInfo?: { hasMore?: boolean } }> : { patients: [], pageInfo: { hasMore: false } })
+                .then((data) => {
+                  setPatients((current) => [...current, ...(data.patients ?? []).filter((row) => !current.some((item) => item.id === row.id))]);
+                  setPatientPage(nextPage);
+                  setHasMorePatients(Boolean(data.pageInfo?.hasMore));
+                });
+            }}>Load more patients</button> : null}
             {!trimmedQuery ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>{copy.searchToFind}</span></p> : null}
             {trimmedQuery && !results.length ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>{copy.noMatch}</span></p> : null}
           </div>

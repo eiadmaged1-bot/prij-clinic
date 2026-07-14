@@ -64,9 +64,11 @@ export class PatientsController {
     @Query("q") query?: string,
     @Query("search") search?: string,
     @Query("mode") mode?: string,
-    @Query("includeArchived") includeArchived?: string
+    @Query("includeArchived") includeArchived?: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string
   ) {
-    return { patients: await this.search.list(user, { query: query ?? search, mode, includeArchived }) };
+    return this.search.list(user, { query: query ?? search, mode, includeArchived, page, limit });
   }
 
   @Get(":id")
