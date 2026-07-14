@@ -83,4 +83,20 @@ export class UpdateClinicalTagDto {
   @IsString()
   @MaxLength(1000)
   manualNote?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isRemoved?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  correctionReason?: string;
+}
+
+export class RemoveClinicalTagDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
 }

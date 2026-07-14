@@ -131,6 +131,7 @@ model User {
   investigationFavoriteSets          InvestigationFavoriteSet[]
   updatedVisitPriceSettings          VisitPriceAuditSetting[]       @relation("VisitPriceSettingsUpdatedBy")
   createdPatientClinicalTags         PatientClinicalTag[]           @relation("PatientClinicalTagsCreatedBy")
+  clinicalTagAmendments              PatientClinicalTagAmendment[]  @relation("ClinicalTagAmendmentsBy")
   reviewedExternalSubmissions        ExternalPatientSubmission[]    @relation("ExternalSubmissionsReviewedBy")
   patientImportBatches               PatientImportBatch[]
   authSessions                       AuthSession[]
@@ -354,9 +355,10 @@ model Patient {
   patientMedications          PatientMedication[]
   patientAllergies            PatientAllergy[]
   clinicalTags                PatientClinicalTag[]
+  clinicalTagAmendments       PatientClinicalTagAmendment[]
   externalSubmissionsCreated  ExternalPatientSubmission[]       @relation("ExternalSubmissionCreatedPatient")
   externalSubmissionsAttached ExternalPatientSubmission[]       @relation("ExternalSubmissionAttachedPatient")
-  patientImportRows          PatientImportRow[]
+  patientImportRows           PatientImportRow[]
   medicationSafetyChecks      MedicationSafetyCheck[]
   calculations                PatientCalculation[]
   datingAssessments           PregnancyDatingAssessment[]
@@ -801,9 +803,9 @@ model ExternalPatientSubmission {
   createdPatient  Patient? @relation("ExternalSubmissionCreatedPatient", fields: [createdPatientId], references: [id], onDelete: SetNull)
   attachedPatient Patient? @relation("ExternalSubmissionAttachedPatient", fields: [attachedPatientId], references: [id], onDelete: SetNull)
 
+  @@unique([externalSubmissionId])
   @@index([status, receivedAt])
   @@index([source])
-  @@unique([externalSubmissionId])
   @@index([payloadHash])
   @@index([createdPatientId])
   @@index([attachedPatientId])
@@ -811,16 +813,16 @@ model ExternalPatientSubmission {
 }
 
 model ClinicalTagDefinition {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code        String   @unique
-  label       String
-  labelAr     String?
-  aliasesJson Json?
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String   @unique
+  label         String
+  labelAr       String?
+  aliasesJson   Json?
   aliasesArJson Json?
-  category    String
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime @default(now()) @updatedAt @db.Timestamptz(3)
+  category      String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   patientTags PatientClinicalTag[]
 
@@ -829,33 +831,37 @@ model ClinicalTagDefinition {
 }
 
 model PatientClinicalTag {
-  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  patientId       String    @db.Uuid
-  tagDefinitionId String?   @db.Uuid
-  tagCode         String
-  label           String
-  category        String
-  sourceType      String
-  sourceId        String?
-  sourceEncounterId String? @db.Uuid
-  assignmentType  String    @default("derived")
-  doctorConfirmed Boolean   @default(false)
-  status          String    @default("active")
-  effectiveDate   DateTime? @db.Date
-  resolutionDate  DateTime? @db.Date
-  historyStatus   String    @default("current")
-  tagDate         DateTime? @db.Date
-  tagYear         Int?
-  detailJson      Json?
-  manualNote      String?
-  notes           String?
-  createdByUserId String?   @db.Uuid
-  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt       DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patientId         String    @db.Uuid
+  tagDefinitionId   String?   @db.Uuid
+  tagCode           String
+  label             String
+  category          String
+  sourceType        String
+  sourceId          String?
+  sourceEncounterId String?   @db.Uuid
+  assignmentType    String    @default("derived")
+  doctorConfirmed   Boolean   @default(false)
+  status            String    @default("active")
+  effectiveDate     DateTime? @db.Date
+  resolutionDate    DateTime? @db.Date
+  historyStatus     String    @default("current")
+  tagDate           DateTime? @db.Date
+  tagYear           Int?
+  detailJson        Json?
+  manualNote        String?
+  notes             String?
+  isRemoved         Boolean   @default(false)
+  removedAt         DateTime? @db.Timestamptz(3)
+  removalReason     String?
+  createdByUserId   String?   @db.Uuid
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
 
-  patient       Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
-  definition    ClinicalTagDefinition? @relation(fields: [tagDefinitionId], references: [id], onDelete: SetNull)
-  createdByUser User?                  @relation("PatientClinicalTagsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  patient       Patient                       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  definition    ClinicalTagDefinition?        @relation(fields: [tagDefinitionId], references: [id], onDelete: SetNull)
+  createdByUser User?                         @relation("PatientClinicalTagsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  amendments    PatientClinicalTagAmendment[]
 
   @@unique([patientId, tagCode, sourceType, sourceId])
   @@index([patientId, tagCode])
@@ -868,6 +874,27 @@ model PatientClinicalTag {
   @@index([historyStatus])
   @@index([tagYear])
   @@index([createdByUserId])
+  @@index([patientId, isRemoved])
+}
+
+model PatientClinicalTagAmendment {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tagId       String   @db.Uuid
+  patientId   String   @db.Uuid
+  actorUserId String?  @db.Uuid
+  action      String
+  reason      String
+  beforeJson  Json
+  afterJson   Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  tag     PatientClinicalTag @relation(fields: [tagId], references: [id], onDelete: Restrict)
+  patient Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  actor   User?              @relation("ClinicalTagAmendmentsBy", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tagId, createdAt])
+  @@index([patientId, createdAt])
+  @@index([actorUserId])
 }
 
 model PatientClinicalPhase {
@@ -1072,10 +1099,10 @@ model PrescriptionItem {
   strengthText        String?
   dosageForm          String?
   medicationGenericId String? @db.Uuid
-  quantityText         String?
-  dispensingUnit       String?
-  entrySource          String  @default("unclassified")
-  verificationStatus   String  @default("review_required")
+  quantityText        String?
+  dispensingUnit      String?
+  entrySource         String  @default("unclassified")
+  verificationStatus  String  @default("review_required")
 
   prescription      Prescription       @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medicationGeneric MedicationGeneric? @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)
@@ -1791,8 +1818,8 @@ model InvestigationCatalogItem {
   updatedAt      DateTime @updatedAt @db.Timestamptz(3)
 
   patientInvestigationHistory PatientInvestigationHistoryItem[]
-  favorites        InvestigationFavorite[]
-  favoriteSetItems InvestigationFavoriteSetItem[]
+  favorites                   InvestigationFavorite[]
+  favoriteSetItems            InvestigationFavoriteSetItem[]
 
   @@index([category])
   @@index([subcategory])
@@ -1847,20 +1874,20 @@ model InvestigationFavoriteSet {
 }
 
 model PatientImportBatch {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  fileName         String
-  fileHash         String
-  fileType         String
-  encoding         String?
-  status           String   @default("previewed")
-  mappingJson      Json
-  rowCount         Int      @default(0)
-  importedCount    Int      @default(0)
-  skippedCount     Int      @default(0)
-  failedCount      Int      @default(0)
-  createdByUserId String   @db.Uuid
-  createdAt        DateTime @default(now()) @db.Timestamptz(3)
-  completedAt      DateTime? @db.Timestamptz(3)
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileName        String
+  fileHash        String
+  fileType        String
+  encoding        String?
+  status          String    @default("previewed")
+  mappingJson     Json
+  rowCount        Int       @default(0)
+  importedCount   Int       @default(0)
+  skippedCount    Int       @default(0)
+  failedCount     Int       @default(0)
+  createdByUserId String    @db.Uuid
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  completedAt     DateTime? @db.Timestamptz(3)
 
   createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
   rows      PatientImportRow[]
@@ -1871,14 +1898,14 @@ model PatientImportBatch {
 }
 
 model PatientImportRow {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  batchId          String   @db.Uuid
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId          String    @db.Uuid
   rowNumber        Int
   status           String
   normalizedJson   Json
   warningsJson     Json?
   duplicateJson    Json?
-  createdPatientId String?  @db.Uuid
+  createdPatientId String?   @db.Uuid
   errorCode        String?
   importedAt       DateTime? @db.Timestamptz(3)
 
@@ -1989,20 +2016,20 @@ model PatientOperationHistoryItem {
 }
 
 model PatientMedicationHistoryItem {
-  id                  String   @id @default(uuid()) @db.Uuid
-  patientId           String   @db.Uuid
-  historySheetId      String?  @db.Uuid
-  medicationGenericId String?  @db.Uuid
-  genericNameSnapshot String
-  familyNameSnapshot  String?
-  currentOrPast       String   @default("past")
+  id                    String    @id @default(uuid()) @db.Uuid
+  patientId             String    @db.Uuid
+  historySheetId        String?   @db.Uuid
+  medicationGenericId   String?   @db.Uuid
+  genericNameSnapshot   String
+  familyNameSnapshot    String?
+  currentOrPast         String    @default("past")
   clinicalGroupSnapshot String?
-  indication          String?
-  startDate           DateTime? @db.Date
-  stopDate            DateTime? @db.Date
-  notes               String?
-  createdAt           DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt           DateTime @updatedAt @db.Timestamptz(3)
+  indication            String?
+  startDate             DateTime? @db.Date
+  stopDate              DateTime? @db.Date
+  notes                 String?
+  createdAt             DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime  @updatedAt @db.Timestamptz(3)
 
   patient           Patient              @relation(fields: [patientId], references: [id], onDelete: Restrict)
   historySheet      PatientHistorySheet? @relation(fields: [historySheetId], references: [id], onDelete: SetNull)
@@ -2039,31 +2066,31 @@ model PatientInvestigationHistoryItem {
 }
 
 model InvestigationOrder {
-  id                 String                     @id @default(uuid()) @db.Uuid
-  orderNumber        String?                    @unique
-  patientId          String                     @db.Uuid
-  encounterId        String?                    @db.Uuid
-  doctorId           String                     @db.Uuid
-  orderSource        InvestigationOrderSource   @default(doctor)
-  orderType          InvestigationCategory      @default(laboratory)
-  clinicalQuestion   String?
-  requestedFollowUpDate DateTime?              @db.Date
-  diagnosisText      String?
-  status             InvestigationOrderStatus   @default(requested)
-  priority           InvestigationPriority      @default(routine)
-  requestedAt        DateTime                   @default(now()) @db.Timestamptz(3)
-  targetDepartment   String?
-  externalProviderId String?                    @db.Uuid
-  resultDocumentId   String?                    @db.Uuid
-  reviewedByUserId   String?                    @db.Uuid
-  reviewedAt         DateTime?                  @db.Timestamptz(3)
-  followUpHintActive Boolean                    @default(true)
-  billingStatus      InvestigationBillingStatus @default(not_billable)
-  cancellationReason String?
-  voidReason         String?
-  notes              String?
-  createdAt          DateTime                   @default(now()) @db.Timestamptz(3)
-  updatedAt          DateTime                   @updatedAt @db.Timestamptz(3)
+  id                    String                     @id @default(uuid()) @db.Uuid
+  orderNumber           String?                    @unique
+  patientId             String                     @db.Uuid
+  encounterId           String?                    @db.Uuid
+  doctorId              String                     @db.Uuid
+  orderSource           InvestigationOrderSource   @default(doctor)
+  orderType             InvestigationCategory      @default(laboratory)
+  clinicalQuestion      String?
+  requestedFollowUpDate DateTime?                  @db.Date
+  diagnosisText         String?
+  status                InvestigationOrderStatus   @default(requested)
+  priority              InvestigationPriority      @default(routine)
+  requestedAt           DateTime                   @default(now()) @db.Timestamptz(3)
+  targetDepartment      String?
+  externalProviderId    String?                    @db.Uuid
+  resultDocumentId      String?                    @db.Uuid
+  reviewedByUserId      String?                    @db.Uuid
+  reviewedAt            DateTime?                  @db.Timestamptz(3)
+  followUpHintActive    Boolean                    @default(true)
+  billingStatus         InvestigationBillingStatus @default(not_billable)
+  cancellationReason    String?
+  voidReason            String?
+  notes                 String?
+  createdAt             DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                   @updatedAt @db.Timestamptz(3)
 
   patient            Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
   encounter          Encounter?               @relation(fields: [encounterId], references: [id], onDelete: SetNull)

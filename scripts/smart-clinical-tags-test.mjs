@@ -28,7 +28,7 @@ assert(service.includes('operator === "OR"') && service.includes('operator === "
 assert(service.includes("doctorConfirmed: true") && service.includes("sourceEncounterId"), "searchable tags must preserve source links and doctor confirmation");
 assert(service.includes("medicationSearchText") && service.includes("className") && service.includes("clinicalGroupSnapshot"), "generic, family, class, and clinical-group medication search must be implemented");
 assert(service.includes('action: "clinical_tags.patient_search"') && service.includes('action: "clinical_tag.updated"') && service.includes('action: "clinical_tag.removed"'), "clinical search and changes must be audited");
-assert(patientUi.includes("history-category-list") && patientUi.includes("activeGroup") && patientUi.includes("Add custom tag") && patientUi.includes("Manual note"), "history must be mouse-first and show one editable category at a time");
+assert(patientUi.includes("history-category-list") && patientUi.includes("activeGroup") && patientUi.includes("Select custom tag") && patientUi.includes("Manual note"), "history must be mouse-first and show one editable category at a time");
 assert(searchUi.includes("PCOS + metformin") && searchUi.includes("matchingMedications") && searchUi.includes("Last visit"), "Smart Clinical Search must expose multi-tag and medication matches");
 
 const prisma = createPrisma();

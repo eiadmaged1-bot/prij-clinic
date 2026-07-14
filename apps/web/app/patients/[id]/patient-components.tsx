@@ -149,7 +149,7 @@ export const smartHistoryGroups = [
   {
     title: "Medical history",
     sourceType: "history_sheet",
-    items: [["diabetes", "Diabetes"], ["hypertension", "Hypertension"], ["thyroid_disease", "Thyroid disease"], ["asthma", "Asthma"], ["anemia", "Anemia"], ["pcos", "PCOS"], ["endometriosis", "Endometriosis"], ["recurrent_abortion", "Recurrent abortion"]]
+    items: [["diabetes", "Diabetes"], ["hypertension", "Hypertension"], ["thyroid_disease", "Thyroid disease"], ["lupus", "Lupus"], ["anticoagulant_use", "Anticoagulant use"], ["medication_class", "Medication class"], ["asthma", "Asthma"], ["anemia", "Anemia"], ["pcos", "PCOS"], ["endometriosis", "Endometriosis"], ["recurrent_pregnancy_loss", "Recurrent pregnancy loss"]]
   },
   {
     title: "Operations / procedures",
@@ -530,28 +530,51 @@ export function CaseBoardsPanel({ patient, related }: { patient: Patient; relate
 }
 
 export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  type TagRow = { id: string; tagCode: string; label: string; historyStatus: string; tagDate?: string | null; tagYear?: number | null; detailJson?: { details?: string } | null; manualNote?: string | null; isRemoved?: boolean; sourceEncounterId?: string | null; removalReason?: string | null };
+  type PendingTag = { code: string; label: string; sourceType: string };
+  const [tags, setTags] = useState<TagRow[]>([]);
+  const [pending, setPending] = useState<PendingTag | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string>(smartHistoryGroups[0].title);
-  const [historyStatus, setHistoryStatus] = useState<"current" | "historical">("current");
+  const [historyStatus, setHistoryStatus] = useState<"current" | "historical" | "resolved">("current");
   const [tagDate, setTagDate] = useState("");
   const [tagYear, setTagYear] = useState("");
   const [details, setDetails] = useState("");
   const [manualNote, setManualNote] = useState("");
   const [customTag, setCustomTag] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
   const [status, setStatus] = useState("");
 
-  async function selectTag(code: string, label: string, sourceType: string) {
-    setSelected((items) => items.includes(code) ? items : [...items, code]);
-    setStatus("Saving tag");
+  async function loadTags() {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : {} }).catch(() => null);
+    if (response?.ok) setTags(((await response.json()) as { tags?: TagRow[] }).tags ?? []);
+  }
+
+  useEffect(() => { void loadTags(); }, [patient.id]);
+
+  function resetEditor() {
+    setPending(null); setEditingId(null); setHistoryStatus("current"); setTagDate(""); setTagYear(""); setDetails(""); setManualNote(""); setCorrectionReason("");
+  }
+
+  function chooseTag(code: string, label: string, sourceType: string) {
+    setPending({ code, label, sourceType });
+    setEditingId(null);
+    setStatus(`${label} selected. Review details, then choose Add.`);
+  }
+
+  async function addTag() {
+    if (!pending) return;
+    setStatus("Saving tag…");
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({
-        tagCode: code,
-        label,
-        category: sourceType === "operation_history" ? "surgical_history" : sourceType === "previous_pregnancy" ? "obstetric_history" : "medical_history",
+        tagCode: pending.code,
+        label: pending.label,
+        category: pending.sourceType === "operation_history" ? "surgical_history" : pending.sourceType === "previous_pregnancy" ? "obstetric_history" : "medical_history",
         historyStatus,
         tagDate: tagDate || undefined,
         tagYear: tagYear ? Number(tagYear) : undefined,
@@ -559,7 +582,37 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
         manualNote: manualNote || undefined
       })
     }).catch(() => null);
-    setStatus(response?.ok ? `${label} tag saved for review.` : "Could not save this tag. Check role permissions.");
+    if (response?.ok) { setStatus(`${pending.label} added for doctor review.`); resetEditor(); await loadTags(); }
+    else setStatus("Could not add this tag. Check role permissions and validation.");
+  }
+
+  function editTag(tag: TagRow) {
+    setEditingId(tag.id); setPending(null); setHistoryStatus((tag.historyStatus as typeof historyStatus) || "current"); setTagDate(tag.tagDate?.slice(0, 10) ?? ""); setTagYear(tag.tagYear ? String(tag.tagYear) : ""); setDetails(tag.detailJson?.details ?? ""); setManualNote(tag.manualNote ?? ""); setCorrectionReason(""); setStatus(`Editing ${tag.label}.`);
+  }
+
+  async function updateTag() {
+    if (!editingId) return;
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags/${editingId}`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ historyStatus, tagDate: tagDate || undefined, tagYear: tagYear ? Number(tagYear) : undefined, detailJson: details ? { details } : undefined, manualNote: manualNote || undefined, correctionReason: correctionReason || undefined }) }).catch(() => null);
+    if (response?.ok) { setStatus("Clinical history updated with an audit record."); resetEditor(); await loadTags(); return; }
+    const message = response ? String(((await response.json().catch(() => ({}))) as { message?: string }).message ?? "") : "";
+    setStatus(message || "Could not update this clinical history item.");
+  }
+
+  async function removeTag(tag: TagRow) {
+    const reason = tag.sourceEncounterId ? window.prompt("Reason for correcting finalized clinical history:")?.trim() : correctionReason.trim();
+    if (tag.sourceEncounterId && !reason) return;
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags/${tag.id}`, { method: "DELETE", credentials: "include", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ reason: reason || undefined }) }).catch(() => null);
+    if (response?.ok) { setStatus(`${tag.label} removed. Undo remains available.`); await loadTags(); }
+    else setStatus("Could not remove this clinical history item.");
+  }
+
+  async function undoRemove(tag: TagRow) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/clinical-tags/${tag.id}`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ isRemoved: false, correctionReason: `Undo removal: ${tag.removalReason || "restored by clinician"}` }) }).catch(() => null);
+    if (response?.ok) { setStatus(`${tag.label} restored.`); await loadTags(); }
+    else setStatus("Could not restore this clinical history item.");
   }
 
   return (
@@ -567,7 +620,7 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
       <div className="section-heading">
         <div>
           <h2>Smart history option chips</h2>
-          <p className="muted">Selected chips create searchable clinical tags only. Doctor confirmation remains required for clinical interpretation.</p>
+          <p className="muted">Select, review, then add. Draft items can be edited, removed, or restored. Finalized corrections require a reason and preserve the original audit record.</p>
         </div>
         <span className="badge warning">Doctor review</span>
       </div>
@@ -576,17 +629,26 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
           {smartHistoryGroups.map((group) => <button className={activeGroup === group.title ? "active" : ""} key={group.title} onClick={() => setActiveGroup(group.title)} type="button">{group.title}</button>)}
         </nav>
         <div>
-          {smartHistoryGroups.filter((group) => group.title === activeGroup).map((group) => <div key={group.title}><h3>{group.title}</h3><div className="clinical-tag-grid">{group.items.map(([code, label]) => <button className={`clinical-tag-card ${selected.includes(code) ? "selected" : ""}`} key={code} type="button" onClick={() => void selectTag(code, label, group.sourceType)}><span>{group.title}</span><strong>{label}</strong></button>)}</div></div>)}
+          {smartHistoryGroups.filter((group) => group.title === activeGroup).map((group) => <div key={group.title}><h3>{group.title}</h3><div className="clinical-tag-grid">{group.items.map(([code, label]) => <button className={`clinical-tag-card ${pending?.code === code ? "selected" : ""}`} key={code} type="button" onClick={() => chooseTag(code, label, group.sourceType)}><span>{group.title}</span><strong>{label}</strong></button>)}</div></div>)}
         </div>
       </div>
+      <div className="selected-history-list" aria-label="Selected clinical history">
+        <h3>Selected history</h3>
+        {tags.filter((tag) => !tag.isRemoved).map((tag) => <article className="data-row" key={tag.id}><div><strong>{tag.label}</strong><span>{tag.tagYear ? ` — ${tag.tagYear}` : ""} — {tag.historyStatus}</span></div><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => editTag(tag)}>Edit</button><button className="button secondary compact danger" type="button" onClick={() => void removeTag(tag)}>Remove</button></div></article>)}
+        {tags.filter((tag) => tag.isRemoved).map((tag) => <article className="data-row removed" key={tag.id}><div><strong>{tag.label}</strong><span>Removed — {tag.removalReason}</span></div><button className="button secondary compact" type="button" onClick={() => void undoRemove(tag)}>Undo</button></article>)}
+      </div>
       <div className="form-grid compact-history-details">
-        <label>Status<select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value as "current" | "historical")}><option value="current">Current</option><option value="historical">Historical</option></select></label>
+        <label>Status<select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value as typeof historyStatus)}><option value="current">Current</option><option value="historical">Historical</option><option value="resolved">Resolved</option></select></label>
         <label>Date<input type="date" value={tagDate} onChange={(event) => setTagDate(event.target.value)} /></label>
         <label>Year<input type="number" min="1900" max="2200" value={tagYear} onChange={(event) => setTagYear(event.target.value)} /></label>
-        <label className="wide">Details<input value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Optional structured detail" /></label>
+        <label className="wide">Relevant details<input value={details} onChange={(event) => setDetails(event.target.value)} placeholder={pending?.code === "hysterectomy" ? "Type, indication, ovaries, complications, pathology, follow-up" : pending?.code === "postmenopausal_bleeding" ? "Onset, episodes, current/resolved, imaging, sampling, concern, next action" : "Optional structured detail"} /></label>
         <label className="wide">Manual note<textarea value={manualNote} onChange={(event) => setManualNote(event.target.value)} /></label>
+        {editingId ? <label className="wide">Correction reason<input value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="Required after the source encounter is finalized" /></label> : null}
         <label>Custom tag<input value={customTag} onChange={(event) => setCustomTag(event.target.value)} /></label>
-        <button className="button secondary" disabled={!customTag.trim()} type="button" onClick={() => void selectTag(customTag, customTag, "manual")}>Add custom tag</button>
+        <button className="button secondary" disabled={!customTag.trim()} type="button" onClick={() => chooseTag(customTag, customTag, "manual")}>Select custom tag</button>
+        {pending ? <button className="button" type="button" onClick={() => void addTag()}>Add {pending.label}</button> : null}
+        {editingId ? <button className="button" type="button" onClick={() => void updateTag()}>Save edit</button> : null}
+        {pending || editingId ? <button className="button secondary" type="button" onClick={resetEditor}>Cancel</button> : null}
       </div>
       {status ? <p className="notice">{status}</p> : null}
     </section>

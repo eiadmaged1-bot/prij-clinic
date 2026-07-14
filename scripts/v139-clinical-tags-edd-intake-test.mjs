@@ -10,6 +10,8 @@ const assert = (condition, message) => {
 
 const doctor = read("apps/web/app/doctor/page.tsx");
 const patientFile = read("apps/web/app/patients/[id]/page.tsx");
+const patientComponents = read("apps/web/app/patients/[id]/patient-components.tsx");
+const patientFeatures = patientComponents + read("apps/web/app/patients/[id]/pregnancy-components.tsx") + read("apps/web/app/patients/[id]/panel-components.tsx");
 const schema = read("apps/api/prisma/schema.prisma");
 const seed = read("apps/api/prisma/seed.js");
 const clinicalTagsService = read("apps/api/src/clinical-tags/clinical-tags.service.ts");
@@ -36,14 +38,14 @@ const removed = [
   "Copyable message templates"
 ];
 for (const text of removed) assert(!doctor.includes(text), `${text} removed from doctor workflow`);
-assert(patientFile.includes("Patient QR") && patientFile.includes("patientQrSvgDataUri"), "permanent patient QR remains in patient file");
+assert(patientComponents.includes("Patient QR") && patientComponents.includes("patientQrSvgDataUri"), "permanent patient QR remains in patient file");
 assert(language.includes("localStorage.setItem") && language.includes("prijClinicLanguage") && language.includes("عربي"), "segmented language switcher persists Arabic/English state");
 assert(i18nAr.includes("لوحة التحكم") && i18nAr.includes("وضع الطبيب") && shell.includes("navText(label, t)"), "Arabic navigation labels are translated through shell");
 for (const label of ["كشف", "إعادة", "استشارة", "مستعجل"]) assert(visitTypes.includes(label), `fixed Arabic visit type ${label} preserved`);
 
-assert(patientFile.includes("GpalStepper") && patientFile.includes("gpal-live-summary") && patientFile.includes("Review G/P/A/L consistency"), "G/P/A/L numeric steppers and warning render");
-assert(patientFile.includes("PreviousPregnancyHistoryCard") && patientFile.includes("Normal vaginal delivery") && patientFile.includes("Cesarean section"), "structured previous delivery history supports NVD and CS");
-assert(patientFile.includes("SmartHistoryOptionChips") && patientFile.includes("dilation_and_curettage") && patientFile.includes("mastectomy") && patientFile.includes("previous_cesarean_section"), "smart history chips create clinical tags");
+assert(patientFeatures.includes("GpalStepper") && patientFeatures.includes("gpal-live-summary") && patientFeatures.includes("Review G/P/A/L consistency"), "G/P/A/L numeric steppers and warning render");
+assert(patientFeatures.includes("PreviousPregnancyHistoryCard") && patientFeatures.includes("Normal vaginal delivery") && patientFeatures.includes("Cesarean section"), "structured previous delivery history supports NVD and CS");
+assert(patientComponents.includes("SmartHistoryOptionChips") && patientComponents.includes("dilation_and_curettage") && patientComponents.includes("mastectomy") && patientComponents.includes("previous_cesarean_section"), "smart history chips create clinical tags");
 
 assert(schema.includes("model ClinicalTagDefinition") && schema.includes("model PatientClinicalTag"), "clinical tag models exist");
 assert(seed.includes("dilation_and_curettage") && seed.includes("mastectomy") && seed.includes("ovulation_induction"), "initial clinical tag definitions are seeded");

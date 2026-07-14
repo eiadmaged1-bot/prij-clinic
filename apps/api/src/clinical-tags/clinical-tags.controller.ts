@@ -5,7 +5,7 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
 import { ClinicalTagsService } from "./clinical-tags.service";
-import { ManualClinicalTagDto, UpdateClinicalTagDto } from "./dto";
+import { ManualClinicalTagDto, RemoveClinicalTagDto, UpdateClinicalTagDto } from "./dto";
 
 @Controller()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -50,7 +50,7 @@ export class ClinicalTagsController {
 
   @Delete("patients/:patientId/clinical-tags/:tagId")
   @Permissions("clinical_tags.manage")
-  remove(@Param("patientId") patientId: string, @Param("tagId") tagId: string, @CurrentUser() user: AuthUser) {
-    return this.clinicalTags.remove(patientId, tagId, user);
+  remove(@Param("patientId") patientId: string, @Param("tagId") tagId: string, @Body() dto: RemoveClinicalTagDto, @CurrentUser() user: AuthUser) {
+    return this.clinicalTags.remove(patientId, tagId, dto.reason, user);
   }
 }

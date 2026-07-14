@@ -40,7 +40,7 @@ export class ClinicalTagsService {
     const patients = await this.prisma.patient.findMany({
       where: { ...branchScope(user) },
       include: {
-        clinicalTags: { where: { doctorConfirmed: true, ...(status ? { status } : {}) }, include: { definition: true }, orderBy: { createdAt: "desc" } },
+        clinicalTags: { where: { doctorConfirmed: true, isRemoved: false, ...(status ? { status } : {}) }, include: { definition: true }, orderBy: { createdAt: "desc" } },
         medicationHistoryItems: { include: { medicationGeneric: true }, orderBy: { createdAt: "desc" } },
         clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1 },
         encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } }
@@ -83,7 +83,7 @@ export class ClinicalTagsService {
 
   async forPatient(patientId: string, user: AuthUser) {
     await assertCanReferencePatient(this.prisma, patientId, user);
-    return this.prisma.patientClinicalTag.findMany({ where: { patientId }, include: { definition: true }, orderBy: [{ category: "asc" }, { createdAt: "desc" }] });
+    return this.prisma.patientClinicalTag.findMany({ where: { patientId }, include: { definition: true, amendments: { orderBy: { createdAt: "desc" }, take: 5 } }, orderBy: [{ isRemoved: "asc" }, { category: "asc" }, { createdAt: "desc" }] });
   }
 
   async manualAdd(patientId: string, dto: ManualClinicalTagDto, user: AuthUser) {
@@ -119,18 +119,33 @@ export class ClinicalTagsService {
     const existing = await this.prisma.patientClinicalTag.findFirst({ where: { id: tagId, patientId } });
     if (!existing) throw new BadRequestException("Clinical history tag was not found.");
     if (dto.doctorConfirmed === true && !user.roles.includes("Doctor")) throw new ForbiddenException("A doctor role is required to confirm a derived clinical tag.");
-    const updated = await this.prisma.patientClinicalTag.update({ where: { id: tagId }, data: { doctorConfirmed: dto.doctorConfirmed, status: dto.status, historyStatus: dto.historyStatus, tagDate: dto.tagDate ? parseDate(dto.tagDate) : undefined, effectiveDate: dto.tagDate ? parseDate(dto.tagDate) : undefined, resolutionDate: dto.resolutionDate ? parseDate(dto.resolutionDate) : undefined, tagYear: dto.tagYear, detailJson: dto.detailJson as Prisma.InputJsonValue | undefined, manualNote: dto.manualNote?.trim(), notes: dto.notes?.trim() } });
-    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.updated", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", metadataJson: { patientId, changedFields: Object.keys(dto) } });
+    const signedSource = await this.isSignedSource(existing.sourceEncounterId);
+    const changedFields = Object.keys(dto).filter((key) => key !== "correctionReason");
+    const reason = dto.correctionReason?.trim();
+    if (signedSource && changedFields.length && !reason) throw new BadRequestException("A correction reason is required for finalized clinical history.");
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.patientClinicalTag.update({ where: { id: tagId }, data: { doctorConfirmed: dto.doctorConfirmed, status: dto.status, historyStatus: dto.historyStatus, tagDate: dto.tagDate ? parseDate(dto.tagDate) : undefined, effectiveDate: dto.tagDate ? parseDate(dto.tagDate) : undefined, resolutionDate: dto.resolutionDate ? parseDate(dto.resolutionDate) : undefined, tagYear: dto.tagYear, detailJson: dto.detailJson as Prisma.InputJsonValue | undefined, manualNote: dto.manualNote?.trim(), notes: dto.notes?.trim(), isRemoved: dto.isRemoved, removedAt: dto.isRemoved === true ? new Date() : dto.isRemoved === false ? null : undefined, removalReason: dto.isRemoved === true ? reason || "Removed before finalization" : dto.isRemoved === false ? null : undefined } });
+      await tx.patientClinicalTagAmendment.create({ data: { tagId, patientId, actorUserId: user.id, action: dto.isRemoved === false ? "restored" : signedSource ? "amended_after_finalization" : "edited", reason: reason || "Draft clinical history updated", beforeJson: snapshot(existing), afterJson: snapshot(next) } });
+      return next;
+    });
+    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.updated", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", reason, metadataJson: { patientId, changedFields, signedSource } });
     return updated;
   }
 
-  async remove(patientId: string, tagId: string, user: AuthUser) {
+  async remove(patientId: string, tagId: string, requestedReason: string | undefined, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
     const existing = await this.prisma.patientClinicalTag.findFirst({ where: { id: tagId, patientId } });
     if (!existing) throw new BadRequestException("Clinical history tag was not found.");
-    await this.prisma.patientClinicalTag.delete({ where: { id: tagId } });
-    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.removed", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", reason: "Clinician removed structured history tag", metadataJson: { patientId, tagCode: existing.tagCode } });
-    return { removed: true };
+    const signedSource = await this.isSignedSource(existing.sourceEncounterId);
+    const reason = requestedReason?.trim() || (signedSource ? "" : "Removed before finalization");
+    if (!reason) throw new BadRequestException("A correction reason is required for finalized clinical history.");
+    const removed = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.patientClinicalTag.update({ where: { id: tagId }, data: { isRemoved: true, removedAt: new Date(), removalReason: reason } });
+      await tx.patientClinicalTagAmendment.create({ data: { tagId, patientId, actorUserId: user.id, action: signedSource ? "removed_after_finalization" : "removed", reason, beforeJson: snapshot(existing), afterJson: snapshot(next) } });
+      return next;
+    });
+    await this.audit.record({ actorUserId: user.id, action: "clinical_tag.removed", resourceType: "patient_clinical_tag", resourceId: tagId, branchId: patient.branchId, severity: "high", reason, metadataJson: { patientId, tagCode: existing.tagCode, signedSource, hardDelete: false } });
+    return { removed: true, tag: removed };
   }
 
   async createFromSource(input: { patientId: string; tagCode: string; label?: string; category?: string; sourceType: string; sourceId?: string | null; sourceEncounterId?: string | null; tagDate?: Date | null; notes?: string | null; createdByUserId?: string | null; doctorConfirmed?: boolean }) {
@@ -183,6 +198,16 @@ export class ClinicalTagsService {
       throw new ForbiddenException("Clinical tag search is restricted to Owner, Admin, and Doctor roles.");
     }
   }
+
+  private async isSignedSource(sourceEncounterId: string | null) {
+    if (!sourceEncounterId) return false;
+    const encounter = await this.prisma.encounter.findUnique({ where: { id: sourceEncounterId }, select: { status: true } });
+    return encounter?.status === "signed";
+  }
+}
+
+function snapshot(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 function normalize(value: string) {
