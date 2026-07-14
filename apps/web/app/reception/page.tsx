@@ -65,6 +65,12 @@ function ReceptionHomeContent() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const refreshQueue = () => void load();
+    window.addEventListener("clinic-queue:changed", refreshQueue);
+    return () => window.removeEventListener("clinic-queue:changed", refreshQueue);
+  }, [load]);
+
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
   const urgentWaiting = waiting.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const nextPatient = [...urgentWaiting, ...waiting.filter((ticket) => !urgentWaiting.includes(ticket))][0] ?? null;

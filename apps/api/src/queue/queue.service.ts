@@ -98,10 +98,7 @@ export class QueueService {
     });
 
     if (activeTicket) {
-      if (dto.appointmentId && activeTicket.appointmentId === dto.appointmentId) {
-        return activeTicket;
-      }
-      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : "Already in queue - Position $");
+      return { ...activeTicket, alreadyQueued: true };
     }
 
     let ticket;

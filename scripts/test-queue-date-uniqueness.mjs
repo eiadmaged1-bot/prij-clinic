@@ -33,16 +33,16 @@ async function main() {
     data: {
       branchId: branchA.id,
       medicalRecordNumber: `QUEUE-DATE-A-${runId}`,
-      firstName: "Demo",
-      lastName: "QueueDate"
+      firstName: "Synthetic",
+      lastName: "QueueDateTest"
     }
   });
   const patientB = await prisma.patient.create({
     data: {
       branchId: branchB.id,
       medicalRecordNumber: `QUEUE-DATE-B-${runId}`,
-      firstName: "Demo",
-      lastName: "QueueDate"
+      firstName: "Synthetic",
+      lastName: "QueueDateTest"
     }
   });
 
@@ -56,6 +56,7 @@ async function main() {
         patientId: patientA.id,
         queueNumber: 7,
         queueDate: dateOne,
+        visitType: "kashf",
         checkedInAt: new Date("2026-07-03T08:15:00.000Z")
       }
     });
@@ -68,6 +69,7 @@ async function main() {
             patientId: patientA.id,
             queueNumber: 7,
             queueDate: dateOne,
+            visitType: "kashf",
             checkedInAt: new Date("2026-07-03T09:15:00.000Z")
           }
         }),
@@ -81,6 +83,7 @@ async function main() {
         patientId: patientA.id,
         queueNumber: 7,
         queueDate: dateTwo,
+        visitType: "kashf",
         checkedInAt: new Date("2026-07-04T08:15:00.000Z")
       }
     });
@@ -91,6 +94,7 @@ async function main() {
         patientId: patientB.id,
         queueNumber: 7,
         queueDate: dateOne,
+        visitType: "kashf",
         checkedInAt: new Date("2026-07-03T08:15:00.000Z")
       }
     });

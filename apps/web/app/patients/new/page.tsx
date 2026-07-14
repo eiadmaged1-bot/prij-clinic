@@ -57,10 +57,55 @@ function NewPatientContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [createdPatientId, setCreatedPatientId] = useState("");
+  const [queueRetryPending, setQueueRetryPending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
-  const { key: idempotencyKey } = useIdempotencyKey();
+  const { key: patientIdempotencyKey } = useIdempotencyKey();
+  const { key: queueIdempotencyKey } = useIdempotencyKey();
+
+  async function addCreatedPatientToQueue(patientId: string) {
+    if (!visitType || !queueIdempotencyKey) return { kind: "validation" as const };
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": queueIdempotencyKey,
+        ...(token ? { authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ patientId, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "New Patient" })
+    }).catch(() => null);
+    if (!response) return { kind: "network" as const };
+    if (response.status === 401 || response.status === 403) return { kind: "permission" as const };
+    const body = await response.json().catch(() => null) as { queueNumber?: number; alreadyQueued?: boolean; error?: { code?: string }; code?: string } | null;
+    if (response.ok) {
+      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId } }));
+      router.refresh();
+      return { kind: body?.alreadyQueued ? "already" as const : "queued" as const, queueNumber: body?.queueNumber };
+    }
+    if (body?.error?.code === "QUEUE_ACTIVE_TICKET_EXISTS" || body?.code === "QUEUE_ACTIVE_TICKET_EXISTS" || response.status === 409) return { kind: "already" as const };
+    if (response.status === 400 || response.status === 422) return { kind: "validation" as const };
+    return { kind: "failed" as const };
+  }
+
+  async function retryQueue() {
+    if (!createdPatientId || isSubmitting) return;
+    setIsSubmitting(true);
+    setError("");
+    const result = await addCreatedPatientToQueue(createdPatientId);
+    if (result.kind === "queued") {
+      setQueueRetryPending(false);
+      setSuccess(`${copy.addedToQueue} ${result.queueNumber ?? "—"}.`);
+    } else if (result.kind === "already") {
+      setQueueRetryPending(false);
+      setSuccess(copy.patientAlreadyQueued);
+    } else {
+      setError(result.kind === "permission" ? copy.queuePermissionDenied : result.kind === "network" ? copy.queueUnavailable : copy.queueRetryFailed);
+    }
+    setIsSubmitting(false);
+  }
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -117,7 +162,7 @@ function NewPatientContent() {
         credentials: "include",
         headers: {
           "content-type": "application/json",
-          "idempotency-key": idempotencyKey,
+          "idempotency-key": patientIdempotencyKey,
           ...(token ? { authorization: `Bearer ${token}` } : {})
         },
         body: JSON.stringify(payload)
@@ -132,18 +177,9 @@ function NewPatientContent() {
 
       const patient = (await response.json()) as { id: string };
       setCreatedPatientId(patient.id);
-      let queueTicket: { queueNumber?: number; visitType?: string } | null = null;
+      let queueResult: Awaited<ReturnType<typeof addCreatedPatientToQueue>> | null = null;
       if (saveIntent === "queue" && canManageQueue) {
-        const queueResponse = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
-          method: "POST",
-          credentials: "include",
-          headers: {
-            "content-type": "application/json",
-            ...(token ? { authorization: `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({ patientId: patient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine" })
-        }).catch(() => undefined);
-        queueTicket = queueResponse?.ok ? await queueResponse.json().catch(() => null) as { queueNumber?: number; visitType?: string } | null : null;
+        queueResult = await addCreatedPatientToQueue(patient.id);
       }
       await fetch(`${getApiBaseUrl()}/patient-intake`, {
         method: "POST",
@@ -164,8 +200,18 @@ function NewPatientContent() {
           }
         })
       }).catch(() => undefined);
-      setSuccess(saveIntent === "queue" ? `${copy.addedToQueue} ${queueTicket?.queueNumber ?? "new"}.` : copy.patientFileSaved);
-      if (saveIntent === "queue" || saveIntent === "open") router.push(`/patients/${patient.id}`);
+      if (saveIntent === "queue" && queueResult?.kind === "queued") {
+        setSuccess(`${copy.addedToQueue} ${queueResult.queueNumber ?? "—"}.`);
+      } else if (saveIntent === "queue" && queueResult?.kind === "already") {
+        setSuccess(copy.patientAlreadyQueued);
+      } else if (saveIntent === "queue") {
+        setQueueRetryPending(true);
+        setSuccess(copy.patientCreatedQueueFailed);
+        setError(queueResult?.kind === "permission" ? copy.queuePermissionDenied : queueResult?.kind === "network" ? copy.queueUnavailable : copy.queueRetryFailed);
+      } else {
+        setSuccess(copy.patientFileSaved);
+        if (saveIntent === "open") router.push(`/patients/${patient.id}`);
+      }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : copy.createFailed);
     } finally {
@@ -264,12 +310,13 @@ function NewPatientContent() {
           {success ? <p className="success-message wide">{success}</p> : null}
 
           <div className="form-actions wide">
-            {!isDoctor && canManageQueue ? <button className="button" disabled={isSubmitting} name="saveIntent" value="queue" type="submit">
+            {!isDoctor && canManageQueue ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey || !queueIdempotencyKey} name="saveIntent" value="queue" type="submit">
               <ThreeDMedicalIcon name="patients" size="sm" />
               {isSubmitting ? copy.saving : copy.saveAndAddToQueue}
             </button> : null}
-            {isDoctor ? <button className="button" disabled={isSubmitting} name="saveIntent" value="open" type="submit">Create and open clinical file</button> : null}
-            <button className="button secondary" disabled={isSubmitting} name="saveIntent" value="file" type="submit">{isDoctor ? "Create file only" : copy.saveFileOnly}</button>
+            {isDoctor ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="open" type="submit">Create and open clinical file</button> : null}
+            <button className="button secondary" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="file" type="submit">{isDoctor ? "Create file only" : copy.saveFileOnly}</button>
+            {queueRetryPending ? <button className="button" disabled={isSubmitting || !queueIdempotencyKey} type="button" onClick={() => void retryQueue()}>{copy.retryAddToQueue}</button> : null}
             {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>{isDoctor ? "Open clinical file" : copy.openReceptionProfile}</Link> : null}
           </div>
         </form> : null}
@@ -347,6 +394,12 @@ const newPatientCopy = {
     signInRequired: "Please sign in before creating a patient file.",
     createFailed: "Could not create this patient file. Please review the required fields and try again.",
     addedToQueue: "Added to queue - Position",
+    patientAlreadyQueued: "Patient is already queued today.",
+    patientCreatedQueueFailed: "Patient created. Queue addition failed; the patient file was kept.",
+    retryAddToQueue: "Retry add to queue",
+    queuePermissionDenied: "Patient created, but you do not have permission to add to the queue.",
+    queueUnavailable: "Patient created. The queue service is unavailable; retry when the connection returns.",
+    queueRetryFailed: "Patient created. Queue addition failed; retry without recreating the patient.",
     patientFileSaved: "Patient file saved.",
     phoneMatch: "Phone matches an existing file.",
     fileMatch: "File number matches an existing file.",
@@ -386,6 +439,12 @@ const newPatientCopy = {
     signInRequired: "يرجى تسجيل الدخول قبل إنشاء ملف المريضة.",
     createFailed: "تعذر إنشاء ملف المريضة. راجع الحقول المطلوبة وحاول مرة أخرى.",
     addedToQueue: "تمت الإضافة للانتظار - رقم",
+    patientAlreadyQueued: "المريضة موجودة بالفعل في قائمة انتظار اليوم.",
+    patientCreatedQueueFailed: "تم إنشاء ملف المريضة وتعذرت إضافتها للانتظار؛ تم الاحتفاظ بالملف.",
+    retryAddToQueue: "إعادة محاولة الإضافة للانتظار",
+    queuePermissionDenied: "تم إنشاء الملف، لكن لا توجد صلاحية للإضافة إلى الانتظار.",
+    queueUnavailable: "تم إنشاء الملف. خدمة الانتظار غير متاحة؛ أعد المحاولة بعد عودة الاتصال.",
+    queueRetryFailed: "تم إنشاء الملف وتعذرت الإضافة للانتظار؛ أعد المحاولة دون إنشاء المريضة مرة أخرى.",
     patientFileSaved: "تم حفظ الملف.",
     phoneMatch: "رقم الهاتف يطابق ملفا موجودا.",
     fileMatch: "رقم الملف يطابق ملفا موجودا.",

@@ -75,6 +75,12 @@ function CalendarContent() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    const refreshQueue = () => void load();
+    window.addEventListener("clinic-queue:changed", refreshQueue);
+    return () => window.removeEventListener("clinic-queue:changed", refreshQueue);
+  }, [load]);
+
   const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient) && (!doctorFilter || appointment.doctorId === doctorFilter) && (!branchFilter || appointment.branchId === branchFilter) && (!statusFilter || appointment.status === statusFilter));
   const doctorOptions = [...new Map(appointments.filter((appointment) => appointment.doctor).map((appointment) => [appointment.doctor!.id, appointment.doctor!])).values()];
   const branchOptions = [...new Map(appointments.filter((appointment) => appointment.branch).map((appointment) => [appointment.branch!.id, appointment.branch!])).values()];
