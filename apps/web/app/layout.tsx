@@ -18,7 +18,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
         <I18nProvider><ThemeProvider>
           <SessionProvider><InterfaceModeProvider>{children}</InterfaceModeProvider></SessionProvider>

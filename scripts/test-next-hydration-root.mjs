@@ -6,7 +6,8 @@ const theme = readFileSync("apps/web/app/theme.tsx", "utf8");
 const session = readFileSync("apps/web/app/session.tsx", "utf8");
 const shell = readFileSync("apps/web/app/mvp-page.tsx", "utf8");
 
-assert.match(layout, /<html\s+[^>]*lang="en"[^>]*suppressHydrationWarning/, "root html must suppress injected-attribute hydration warnings");
+assert.match(layout, /<html\s+[^>]*lang="en"/, "root html must use a deterministic language");
+assert.doesNotMatch(layout, /suppressHydrationWarning/, "root html must not broadly hide hydration mismatches");
 
 for (const [name, source] of [
   ["layout.tsx", layout],

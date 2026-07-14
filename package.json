@@ -329,6 +329,7 @@
     "test:v145:reception-home": "node scripts/v145-reception-home-test.mjs",
     "test:v145:appointments": "node scripts/v145-appointments-mobile-test.mjs",
     "test:v145:patient-queue": "node scripts/v145-patient-queue-handoff-test.mjs",
+    "test:v145:hydration": "node scripts/v145-hydration-contract-test.mjs",
     "test:v1444:arabic-rtl": "node scripts/v1444-arabic-rtl-test.mjs",
     "test:prescription-print": "node scripts/prescription-print-test.mjs",
     "test:medication-reference": "node scripts/medication-reference-test.mjs",

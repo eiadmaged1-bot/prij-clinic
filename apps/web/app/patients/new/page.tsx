@@ -27,7 +27,7 @@ type FormState = {
 type ExistingPatient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null };
 
 const initialState: FormState = {
-  medicalRecordNumber: makeMrn(),
+  medicalRecordNumber: "",
   fullName: "",
   patientType: "WOMEN_HEALTH",
   sexualActivityStatus: "unknown",
@@ -63,6 +63,10 @@ function NewPatientContent() {
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
   const { key: patientIdempotencyKey } = useIdempotencyKey();
   const { key: queueIdempotencyKey } = useIdempotencyKey();
+
+  useEffect(() => {
+    setForm((current) => current.medicalRecordNumber ? current : { ...current, medicalRecordNumber: makeMrn() });
+  }, []);
 
   async function addCreatedPatientToQueue(patientId: string) {
     if (!visitType || !queueIdempotencyKey) return { kind: "validation" as const };

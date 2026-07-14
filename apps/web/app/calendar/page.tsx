@@ -35,9 +35,9 @@ export default function CalendarPage() {
 function CalendarContent() {
   const v140CalendarReceptionistSafetyLock = '!isReceptionistOnly ? <Link className="button compact"';
   void v140CalendarReceptionistSafetyLock;
-  const today = new Date().toISOString().slice(0, 10);
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [selectedMonth, setSelectedMonth] = useState(today.slice(0, 7));
+  const [today, setToday] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [queue, setQueue] = useState<QueueTicket[]>([]);
   const [eddEntries, setEddEntries] = useState<EddEntry[]>([]);
@@ -57,7 +57,15 @@ function CalendarContent() {
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
   const isToday = selectedDate === today;
 
+  useEffect(() => {
+    const mountedToday = new Date().toISOString().slice(0, 10);
+    setToday(mountedToday);
+    setSelectedDate(mountedToday);
+    setSelectedMonth(mountedToday.slice(0, 7));
+  }, []);
+
   const load = useCallback(async () => {
+    if (!selectedDate || !selectedMonth) return;
     setStatus(copy.loading);
     const [appointmentResponse, queueResponse, eddResponse] = await Promise.all([
       fetch(`${getApiBaseUrl()}/appointments/calendar?date=${selectedDate}`, { credentials: "include", headers }),
