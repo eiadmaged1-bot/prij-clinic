@@ -4935,6 +4935,88 @@ body {
   background: #edf8f8;
 }
 
+.investigation-mobile-tabs {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .investigation-mobile-tabs {
+    position: sticky;
+    top: var(--mobile-header-offset, 0);
+    z-index: 8;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.25rem;
+    padding: 0.35rem;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface, #fff);
+  }
+
+  .investigation-mobile-tabs button {
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0.35rem 0.2rem;
+    overflow: hidden;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 750;
+    line-height: 1.15;
+    overflow-wrap: normal;
+    word-break: keep-all;
+  }
+
+  .investigation-mobile-tabs button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .investigation-catalog-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .investigation-catalog-layout[data-mobile-active="catalog"] > article:nth-child(2),
+  .investigation-catalog-layout[data-mobile-active="sets"] > article:nth-child(2),
+  .investigation-catalog-layout[data-mobile-active="manage"] > article:nth-child(2),
+  .investigation-catalog-layout[data-mobile-active="followup"] > article:first-child,
+  .investigation-catalog-layout[data-mobile-active="catalog"] form > :nth-child(6),
+  .investigation-catalog-layout[data-mobile-active="catalog"] form > :nth-child(8) {
+    display: none;
+  }
+
+  .investigation-catalog-layout[data-mobile-active="sets"] form > :not(:nth-child(6)),
+  .investigation-catalog-layout[data-mobile-active="manage"] form > :not(:nth-child(8)) {
+    display: none;
+  }
+
+  .investigation-category-sidebar {
+    display: flex;
+    grid-template-columns: none;
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .investigation-category-sidebar button {
+    flex: 0 0 auto;
+    min-width: auto;
+    white-space: nowrap;
+  }
+
+  .investigation-catalog-layout .panel,
+  .investigation-catalog-layout .data-row,
+  .investigation-catalog-layout .picker-row {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+}
+
 .investigation-quick-sections {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }

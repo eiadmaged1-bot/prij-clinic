@@ -28,6 +28,7 @@ export default function InvestigationsPage() {
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
   const [status, setStatus] = useState("Ready");
   const [savedRequestId, setSavedRequestId] = useState("");
+  const [activeSection, setActiveSection] = useState<"catalog" | "sets" | "followup" | "manage">("catalog");
   const hasPatientContext = Boolean(patientId && encounterId);
 
   useEffect(() => {
@@ -127,7 +128,10 @@ export default function InvestigationsPage() {
   return <AppShell>
     <section className="page-header"><div className="header-row"><div><p className="eyebrow">{hasPatientContext ? "Patient clinical workflow" : "Investigation center"}</p><h1>{hasPatientContext ? "New investigation request" : "Investigation Library, Templates & Result Follow-up"}</h1></div>{savedRequestId ? <button className="button secondary compact" type="button" onClick={() => printRequest(savedRequestId)}>Print saved request</button> : null}</div></section>
     <SafetyAlert />
-    <section className={`content-grid investigation-catalog-layout ${hasPatientContext ? "patient-context" : "library-context"}`}>
+    <nav className="investigation-mobile-tabs" aria-label="Investigation Center sections">
+      {(["catalog", "sets", "followup", "manage"] as const).map((section) => <button className={activeSection === section ? "active" : ""} key={section} type="button" onClick={() => setActiveSection(section)}>{section === "followup" ? "Follow-up" : `${section[0]?.toUpperCase()}${section.slice(1)}`}</button>)}
+    </nav>
+    <section className={`content-grid investigation-catalog-layout ${hasPatientContext ? "patient-context" : "library-context"}`} data-mobile-active={activeSection}>
       <article className="panel">
         <div className="section-heading"><div><h2>{hasPatientContext ? "Catalog and request basket" : "Catalog and reusable sets"}</h2><p className="muted">Click an investigation to add it. Applying a set never orders automatically.</p></div><span className="badge">{status}</span></div>
         <form className="form-grid" onSubmit={submit} noValidate>
