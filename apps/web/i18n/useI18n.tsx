@@ -26,12 +26,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const textDirection: "ltr" | "rtl" = language === "ar" ? "rtl" : "ltr";
-  const direction: "ltr" = "ltr";
+  const direction: "ltr" | "rtl" = language === "ar" ? "rtl" : "ltr";
 
   useEffect(() => {
     document.documentElement.lang = language === "ar" ? "ar" : "en";
-    document.documentElement.dir = "ltr";
-  }, [language]);
+    document.documentElement.dir = direction;
+  }, [direction, language]);
 
   const value = useMemo(() => ({
     language,
@@ -56,10 +56,5 @@ export function useI18n() {
 export function LanguageSwitcher() {
   const { language, setLanguage } = useI18n();
 
-  return (
-    <div className="language-switcher" aria-label="Language switcher">
-      <button className={language === "ar" ? "active" : ""} type="button" onClick={() => setLanguage("ar")}>عربي</button>
-      <button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>EN</button>
-    </div>
-  );
+  return <div className="language-switcher" aria-label="Language switcher"><button className={language === "ar" ? "active" : ""} type="button" onClick={() => setLanguage("ar")}>عربي</button><button className={language === "en" ? "active" : ""} type="button" onClick={() => setLanguage("en")}>EN</button></div>;
 }

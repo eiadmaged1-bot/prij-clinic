@@ -5971,3 +5971,11 @@ select {
   .investigation-basket-row { grid-template-columns: 1fr; }
   .investigation-catalog-layout { overflow-x: clip; }
 }
+
+html[dir="rtl"] body,
+html[dir="rtl"] .app-shell { direction: rtl; }
+html[dir="rtl"] :is(input, textarea)[dir="auto"] { text-align: start; }
+html[dir="rtl"] .sidebar { border-left: 1px solid var(--border); border-right: 0; }
+html[dir="rtl"] :is(.header-row, .section-heading, .data-row-header, .topbar) { text-align: right; }
+html[dir="rtl"] .patient-context-bar strong { margin-left: auto; margin-right: 0; }
+html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }

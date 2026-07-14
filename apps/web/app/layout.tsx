@@ -5,6 +5,7 @@ import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme";
 import { OFFICIAL_APP_DESCRIPTION, OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { InterfaceModeProvider } from "@/lib/interface-mode";
+import { I18nProvider } from "@/i18n/useI18n";
 
 export const metadata: Metadata = {
   title: OFFICIAL_CLINIC_NAME,
@@ -19,9 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ThemeProvider>
+        <I18nProvider><ThemeProvider>
           <SessionProvider><InterfaceModeProvider>{children}</InterfaceModeProvider></SessionProvider>
-        </ThemeProvider>
+        </ThemeProvider></I18nProvider>
       </body>
     </html>
   );

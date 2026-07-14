@@ -8,7 +8,7 @@ import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../components/clinic/UniversalSearchBox";
-import { I18nProvider, LanguageSwitcher, useI18n } from "../i18n/useI18n";
+import { LanguageSwitcher, useI18n } from "../i18n/useI18n";
 
 type Field = {
   name: string;
@@ -319,11 +319,7 @@ export function MvpPage({
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  return (
-    <I18nProvider>
-      <AppShellChrome>{children}</AppShellChrome>
-    </I18nProvider>
-  );
+  return <AppShellChrome>{children}</AppShellChrome>;
 }
 
 function AppShellChrome({ children }: { children: ReactNode }) {
