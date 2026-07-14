@@ -811,7 +811,9 @@ model ClinicalTagDefinition {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String   @unique
   label       String
+  labelAr     String?
   aliasesJson Json?
+  aliasesArJson Json?
   category    String
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
@@ -832,6 +834,12 @@ model PatientClinicalTag {
   category        String
   sourceType      String
   sourceId        String?
+  sourceEncounterId String? @db.Uuid
+  assignmentType  String    @default("derived")
+  doctorConfirmed Boolean   @default(false)
+  status          String    @default("active")
+  effectiveDate   DateTime? @db.Date
+  resolutionDate  DateTime? @db.Date
   historyStatus   String    @default("current")
   tagDate         DateTime? @db.Date
   tagYear         Int?
@@ -851,6 +859,8 @@ model PatientClinicalTag {
   @@index([tagCode])
   @@index([category])
   @@index([sourceType])
+  @@index([sourceEncounterId])
+  @@index([doctorConfirmed, status])
   @@index([tagDate])
   @@index([historyStatus])
   @@index([tagYear])

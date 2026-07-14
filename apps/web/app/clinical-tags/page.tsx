@@ -31,12 +31,14 @@ export default function ClinicalTagsPage() {
   const [patients, setPatients] = useState<ClinicalTagPatient[]>([]);
   const [status, setStatus] = useState("Search by tag");
   const [sortMode, setSortMode] = useState("last_visit");
+  const [operator, setOperator] = useState("AND");
+  const [historyFilter, setHistoryFilter] = useState("");
 
   async function runSearch(next = query) {
     setQuery(next);
     setStatus("Searching");
     try {
-      const result = await searchClinicalTagPatients(next);
+      const result = await searchClinicalTagPatients(next, operator, historyFilter);
       setPatients(result.patients);
       setStatus("Search complete");
     } catch (error) {
@@ -83,6 +85,8 @@ export default function ClinicalTagsPage() {
         </div>
         <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}>
           <label className="wide">Search one or more tags<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="PCOS + metformin, postmenopausal bleeding + hysterectomy" /></label>
+          <label>Operator<select value={operator} onChange={(event) => setOperator(event.target.value)}><option value="AND">AND · all tags</option><option value="OR">OR · any tag</option><option value="NOT">NOT · exclude matches</option></select></label>
+          <label>Tag status<select value={historyFilter} onChange={(event) => setHistoryFilter(event.target.value)}><option value="">Current and historical</option><option value="active">Active</option><option value="historical">Historical</option><option value="resolved">Resolved</option></select></label>
           <label>Sort<select value={sortMode} onChange={(event) => setSortMode(event.target.value)}><option value="last_visit">Last visit</option><option value="name">Name</option><option value="created">Created date</option><option value="tag_date">Tag date</option></select></label>
           <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
         </form>
@@ -100,7 +104,7 @@ export default function ClinicalTagsPage() {
                 <span className="badge">{row.tagLabel}</span>
               </div>
               <p className="muted">{[row.patientType, row.currentPhase?.phaseType, row.tagLabel, row.historyStatus, row.tagDate?.slice(0, 10), row.lastVisit ? `Last visit ${new Date(row.lastVisit).toLocaleDateString()}` : null].filter(Boolean).join(" | ")}</p>
-              {row.matchingTags?.length ? <div className="clinical-chip-row">{row.matchingTags.map((tag) => <span className="badge" key={`${tag.code}-${tag.date ?? "none"}`}>{tag.label} · {tag.status ?? "recorded"}</span>)}</div> : null}
+              {row.matchingTags?.length ? <div className="matching-evidence-list">{row.matchingTags.map((tag) => <article className="compact-panel" key={`${tag.code}-${tag.sourceRecordId ?? tag.date ?? "none"}`}><strong>{tag.label} · {tag.status ?? "recorded"}</strong><span className="muted">Source: {tag.sourceType ?? "record"}{tag.sourceRecordId ? ` · record ${tag.sourceRecordId.slice(0, 8)}` : ""}{tag.sourceEncounterId ? ` · encounter ${tag.sourceEncounterId.slice(0, 8)}` : ""}</span></article>)}</div> : null}
               {row.matchingMedications?.length ? <div className="clinical-chip-row">{row.matchingMedications.map((medication, index) => <span className="badge accent" key={`${medication.genericName}-${index}`}>{[medication.genericName, medication.familyName, medication.clinicalGroup, medication.status].filter(Boolean).join(" · ")}</span>)}</div> : null}
               <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${row.patientId}`}>Open patient file</Link>
