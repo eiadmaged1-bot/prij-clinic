@@ -28,7 +28,10 @@ const allowedRequestHeaders = new Set([
   "referer",
   "x-request-id",
   "idempotency-key",
-  "x-csrf-token"
+  "x-csrf-token",
+  "x-prij-timestamp",
+  "x-prij-signature",
+  "x-prij-dry-run"
   // Note: 'authorization' and 'x-forwarded-for' are explicitly EXCLUDED per security requirements
 ]);
 

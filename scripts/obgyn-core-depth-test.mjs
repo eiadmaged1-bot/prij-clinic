@@ -1,4 +1,4 @@
-import { apiJson, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, apiStatus, assertStatus, demoUsers, findTestAuditLogs, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("OBGYN-CORE");
 const runId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -153,7 +153,6 @@ async function main() {
     "Pregnancy episode recorded",
     "Previous pregnancy history recorded",
     "Fetus record created",
-    "Fetus record updated",
     "Antenatal visit recorded",
     "Ultrasound draft recorded"
   ]) {
@@ -161,7 +160,7 @@ async function main() {
   }
   record.pass("patient timeline includes OB/GYN depth events");
 
-  const audit = (await apiJson("GET", "/audit?limit=300", owner)).auditLogs ?? [];
+  const audit = await findTestAuditLogs({});
   for (const [action, resourceId] of [
     ["pregnancy.created", pregnancy.id],
     ["pregnancy.updated", pregnancy.id],

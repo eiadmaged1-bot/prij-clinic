@@ -1,68 +1,42 @@
 # Manual QA Report
 
-Date: 2026-07-13 (Africa/Cairo). Branch: `fix/v1.4.2-doctor-core-merged-lock`.
+Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.3-db-migration-public-proxy-lock`.
 
-This is development QA with synthetic automated fixtures only. It is not production, privacy, deployment, or clinical-safety signoff.
+All mutable QA used synthetic records in disposable databases. This is not production or clinical-safety signoff.
 
-## Final automated verification
+## Database and automated QA
 
 Passed:
 
-- `npm run prisma:repair`
-- `npm run prisma:seed`
-- `npm run typecheck`
-- `npm run build` (78 web routes generated)
-- `npm run test:security:ci` — 25 pass, 2 warnings, 0 failures
-- `npm run test:security:expanded` — 6 suites pass; route authorization 346 pass/8 warnings, audit assertions 33 pass, AI regression 10 pass/1 warning
-- `npm run test:theme:ui` — 10 pass
-- `npm run test:doctor:ux` — 12 pass
-- `npm run test:visual:qa` — 8 pass
-- `npm run test:clinical:persistence` — 17 pass
-- `npm run test:obgyn:core` — 11 pass
-- `npm run test:accounts:rbac` — 18 pass
-- `npm run test:ai:regression` — 10 pass/1 warning
-- `npm run test:e2e:v01` — 17 pass/1 warning
-- `npm run test:smart-tags`, `test:doctor-visit`, `test:investigation-workflow`, `test:prescription-builder`, `test:prescription-print`, `test:medication-reference`, and `test:medication-import` — all pass
-- `npm run test:external-intake` — HMAC, validation, replay, idempotency, matching, dry run, RBAC, and audit pass
-- Role operations, P0 shell/session/guideline, receptionist, visual-density, patient-directory/workspace, and desktop design contracts — pass
+- Preserved database: backup verification, migration reconciliation, empty schema diff, Prisma generation, `prisma:repair`, and idempotent seed.
+- Fresh database: all 51 migrations, schema validation/diff, generation, seed twice with stable counts, typecheck, and production build.
+- Production database suites: architecture boundaries, pagination (6 pages/132 events), search budgets (maximum observed 90 ms), transaction boundaries, and migration chain.
+- Clinical suites: patient workspace, smart tags/multi-tag search, doctor visit, prescription/A5 print, investigations/favorites, medication reference/import, external intake, clinical persistence (17/17), and OB/GYN core (11/11).
+- Security: security CI (24 pass, 2 warnings), expanded security (6/6 groups), accounts/RBAC (18/18), audit assertions (33/33), role operations, CORS, PHI-safe log redaction, and v1.4.2 permission contracts.
+- AI: safety passed; regression passed 10 checks with one synthetic-patient fallback warning.
+- Proxy: v1.3.4 same-origin, v1.3.5 public-login, v1.3.6 proxy paths, and v1.3.7 one-tunnel contract tests.
+- Backup readiness: v0.16.0 (15 checks) and v0.18.0 staging readiness (14 checks).
 
-Expected warnings identify synthetic fallback fixtures, broadly authenticated routes without a denied-role case, and an existing patient-to-doctor assignment-model limitation. No warning was converted into a fake pass.
+One non-blocking legacy failure remains: `test:v139:clinical-tags-edd-intake` expects a removed permanent patient QR label. The current v1.4.3 feature-specific suites pass.
 
-Blocked:
+## Local proxy QA
 
-- `npm run test:staging:smoke` correctly refuses to run without `APP_ENV=staging`; the local staging retry then correctly refused because no environment-managed staging demo passwords are configured.
-
-Earlier superseded results: an old clinical-request check expected a removed hard-coded demo login, and a medication-selection check ran without an API. The current running-stack security, clinical-persistence, UI, and medication contracts supersede those environment/stale-contract failures.
-
-## Desktop QA
-
-`npm run test:desktop-role-qa` passed 12/12 Chromium cases:
-
-| Role | 1366×768 | 1440×900 | 1920×1080 | 2560×1440 |
-| --- | --- | --- | --- | --- |
-| Owner | Pass | Pass | Pass | Pass |
-| Doctor | Pass | Pass | Pass | Pass |
-| Receptionist | Pass | Pass | Pass | Pass |
-
-Checks covered authenticated shell stability, 240–260px desktop sidebar, main content beside the sidebar, no horizontal overflow, no visible Next.js crash overlay, compact KPI/card bounds, and role landing content. QA exposed and fixed duplicated desktop top-bar branding, viewport-scaled giant KPI cards, a Doctor-only 403 caused by fetching Owner summary data, and a session-hydration measurement race.
-
-Patient history/search, visit steps, investigation favorites, prescription templates, A5 print isolation/language/overflow, and medication selection are covered by focused automated contracts. Exact approved A5 artwork placement cannot be manually approved because no final template asset exists in the repository.
+- API: `127.0.0.1:3001`; web: `127.0.0.1:3000`; internal origin: `http://127.0.0.1:3001`.
+- `/api/backend/health` and `/api/backend/health/live`: HTTP 200 with `{ "status": "up" }`.
+- Signed synthetic intake dry run: HTTP 200 when an ephemeral test secret was configured.
+- Invalid signature: HTTP 403. Oversized body: HTTP 413.
+- Query forwarding, session cookies, raw-body preservation, request-size bounds, header allowlist, and no browser-Origin forwarding were verified.
 
 ## Public/ngrok QA
 
-URL tested: `https://regretful-unwomanly-silliness.ngrok-free.dev`.
+URL: `https://regretful-unwomanly-silliness.ngrok-free.dev`.
 
-Verified:
+- Exactly one tunnel targeted web port 3000. Web and API both listened on `127.0.0.1`; API port 3001 was not tunneled.
+- `/login`, `/api/backend/health`, and `/api/backend/health/live`: HTTP 200.
+- Authenticated synthetic QA returned HTTP 200 for Doctor, Reception, dashboard, Patient Files, patient workspace, prescriptions, A5 print preview, investigations, pharmacology/medications, and guidelines.
+- No developer overlay or raw stack appeared in the checked HTML.
+- Invalid-signature Google intake returned HTTP 403 with `PERMISSION_DENIED`; the external-submission count remained unchanged.
+- A public signed dry run was not run because the HMAC secret is not configured. No secret was invented.
+- Current public runtime logs contained no exact synthetic credential, unredacted password, MRN, raw stack, or forwarded browser-Origin entry.
 
-- `/login`, `/doctor`, `/reception`, `/patients`, `/clinical-tags`, `/prescriptions`, `/investigations`, `/medications`, `/guidelines`, and `/external-intake` returned HTTP 200 HTML.
-- Returned HTML contained no `Unhandled Runtime Error`, `Application error`, or `stack trace` text.
-- Invalid-signature synthetic dry-run request to `/api/backend/external-intake/google-form` returned 403.
-- Public TCP port 3001 was closed or filtered.
-
-Blocked/failed:
-
-- `/api/backend/health` returned 404, so the tunnel is not a healthy end-to-end mapping to the current clinic API.
-- Authenticated role workflows, patient file, QR/mobile workflow, and valid signed webhook dry run cannot be claimed through this tunnel.
-- No `PRIJ_EXTERNAL_INTAKE_SECRET` is configured in the current environment, so a valid signature was not generated. No secret was invented, read from a sheet, or exposed.
-
-No second public tunnel was created. Real patient data must not be used through this tunnel.
+The tunnel and both services were stopped after QA. Both disposable databases were deleted; the preserved development database was not deleted or reset.

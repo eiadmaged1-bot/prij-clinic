@@ -26,6 +26,9 @@ assert(
 );
 assert(route.includes("url.search = request.nextUrl.search"), "proxy must forward query string");
 assert(route.includes("appendSetCookieHeaders(upstream, responseHeaders)"), "proxy must preserve API set-cookie responses");
+for (const header of ["x-prij-timestamp", "x-prij-signature", "x-prij-dry-run"]) {
+  assert(route.includes(`"${header}"`), `single tunnel must preserve intake HMAC header ${header}`);
+}
 assert(!route.includes("searchParams.get(\"target\")") && !route.includes("target="), "proxy must not accept arbitrary upstream targets");
 
 assert(!nextConfig.includes('source: "/api/backend/:path*"'), "Next rewrite must not bypass the route-handler proxy");

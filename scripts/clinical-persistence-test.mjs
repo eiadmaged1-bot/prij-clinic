@@ -1,4 +1,4 @@
-import { apiJson, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, apiStatus, assertStatus, demoUsers, findTestAuditLogs, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("CLINICAL-PERSISTENCE");
 const runId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -157,7 +157,7 @@ async function main() {
   }
   record.pass("patient timeline aggregates workflow records");
 
-  const audit = (await apiJson("GET", "/audit?limit=300", owner)).auditLogs ?? [];
+  const audit = await findTestAuditLogs({});
   for (const [action, resourceId] of [
     ["appointment.created", appointment.id],
     ["queue.checked_in", ticket.id],

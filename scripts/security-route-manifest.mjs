@@ -7,8 +7,16 @@ export const DEMO_PASSWORD = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
 
+export async function disconnectTestPrisma() {
+  await prisma.$disconnect();
+}
+
+export async function findTestAuditLogs(where) {
+  return prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, take: 500 });
+}
+
 export const demoUsers = {
-  owner: process.env.DEMO_ADMIN_LOGIN || "eyad",
+  owner: process.env.DEMO_ADMIN_LOGIN || "runtime.owner@prij.local",
   doctor: "runtime.doctor@prij.local",
   reception: "runtime.reception@prij.local",
   accountant: "runtime.accountant@prij.local",
@@ -16,6 +24,7 @@ export const demoUsers = {
 };
 
 const runtimeRoleByEmail = new Map([
+  [demoUsers.owner, "Owner"],
   [demoUsers.doctor, "Doctor"],
   [demoUsers.reception, "Receptionist"],
   [demoUsers.accountant, "Accountant"],
@@ -32,7 +41,7 @@ const routeDefinitions = [
   { method: "GET", path: "/admin/control-center", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/admin/settings/appearance", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception" },
   { method: "PATCH", path: "/admin/settings/appearance", category: "admin", requiredPermission: "clinic_settings.manage", allowedAs: "owner", denyAs: "reception", fixtureBody: "appearance" },
-  { method: "GET", path: "/audit", category: "audit", requiredPermission: "audit.read", allowedAs: "owner", denyAs: "reception" },
+  { method: "GET", path: "/audit/recent", category: "audit", requiredPermission: "audit.read", allowedAs: "owner", denyAs: "reception" },
   { method: "POST", path: "/patients", category: "patients", requiredPermission: "patient.create", allowedAs: "owner", denyAs: "nurse", fixtureBody: "patient" },
   { method: "GET", path: "/patients", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient lists." },
   { method: "GET", path: "/patients/:patientId", category: "patients", requiredPermission: "patient.read", allowedAs: "owner", denyAs: null, notes: "Many staff roles can read scoped patient detail." },
@@ -151,7 +160,7 @@ export const routeManifest = routeDefinitions.map((route) => ({
   deniedLoginRole: route.denyAs,
   deniedDemoUser: route.denyAs ? demoUsers[route.denyAs] : null,
   expectedStatusWithOwner: [200, 201],
-  expectedStatusWithoutToken: [401],
+  expectedStatusWithoutToken: route.method === "GET" ? [401] : [401, 403],
   expectedStatusWithDeniedUser: route.denyAs ? [403, 404] : null,
   scopeExpectation: scopeExpectationFor(route.category),
   auditExpectation: auditExpectationFor(route),
@@ -165,8 +174,8 @@ export async function waitForApi(timeoutMs = Number(process.env.API_WAIT_TIMEOUT
   let lastError;
   while (Date.now() < deadline) {
     try {
-      const body = await apiJson("GET", "/health");
-      if (body.status === "ok") return;
+      const body = await apiJson("GET", "/health/live");
+      if (["ok", "up", "live", "ready"].includes(body.status)) return;
     } catch (error) {
       lastError = error;
     }
@@ -176,13 +185,20 @@ export async function waitForApi(timeoutMs = Number(process.env.API_WAIT_TIMEOUT
 }
 
 export async function login(email, password = DEMO_PASSWORD) {
-  if (email === demoUsers.owner && password === DEMO_PASSWORD) {
-    password = process.env.DEMO_ADMIN_PASSWORD || "eyad";
-  }
   await ensureRuntimeUser(email, password);
-  const body = await apiJson("POST", "/auth/login", null, { email, password });
-  if (!body.token) throw new Error(`Login did not return token for ${email}`);
-  return body.token;
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(`Login failed for ${email}: ${formatBody(body)}`);
+  if (body.token) return body.token;
+
+  const setCookies = response.headers.getSetCookie?.() ?? [];
+  const cookie = setCookies.map((value) => value.split(";", 1)[0]).join("; ");
+  if (!cookie.includes("prij_clinic_session=")) throw new Error(`Login did not establish a session for ${email}`);
+  return cookie;
 }
 
 async function ensureRuntimeUser(email, password) {
@@ -244,7 +260,13 @@ export async function apiStatus(method, path, token, body) {
 
 export async function apiRequest(method, path, token, body) {
   const headers = { Accept: "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token?.includes("prij_clinic_session=")) {
+    headers.Cookie = token;
+    const csrf = /(?:^|;\s*)csrf-token=([^;]+)/.exec(token)?.[1];
+    if (csrf) headers["x-csrf-token"] = csrf;
+  } else if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const response = await fetch(`${API_URL}${path}`, {
@@ -492,8 +514,13 @@ export async function createRouteFixtures(ownerToken) {
   await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
   const guidelineSource = await apiJson("POST", "/guidelines/sources", ownerToken, bodyFor("guidelineSource", ids));
   ids.guidelineSourceId = guidelineSource.id;
-  const guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
-  const guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
+  let guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
+  let guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
+  if (!guidelineDocument?.id) {
+    await apiJson("POST", "/guidelines/upload-demo-text", ownerToken, bodyFor("guidelineDemoText", ids));
+    guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
+    guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
+  }
   if (!guidelineDocument?.id) throw new Error("Expected seeded guideline document fixture.");
   ids.guidelineDocumentId = guidelineDocument.id;
   return ids;

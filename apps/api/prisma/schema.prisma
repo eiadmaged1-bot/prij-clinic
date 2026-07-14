@@ -852,6 +852,8 @@ model PatientClinicalTag {
   @@index([category])
   @@index([sourceType])
   @@index([tagDate])
+  @@index([historyStatus])
+  @@index([tagYear])
   @@index([createdByUserId])
 }
 
@@ -1799,7 +1801,7 @@ model InvestigationFavorite {
 }
 
 model ExternalIntakeReplayNonce {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nonceHash String   @unique
   expiresAt DateTime @db.Timestamptz(3)
   createdAt DateTime @default(now()) @db.Timestamptz(3)
@@ -1808,13 +1810,13 @@ model ExternalIntakeReplayNonce {
 }
 
 model InvestigationFavoriteSet {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String   @db.Uuid
   name             String
   defaultVisitType String?
   active           Boolean  @default(true)
   createdAt        DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+  updatedAt        DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
   user  User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
   items InvestigationFavoriteSetItem[]
@@ -1823,7 +1825,7 @@ model InvestigationFavoriteSet {
 }
 
 model InvestigationFavoriteSetItem {
-  id                         String @id @default(uuid()) @db.Uuid
+  id                         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   favoriteSetId              String @db.Uuid
   investigationCatalogItemId String @db.Uuid
   position                   Int
@@ -1831,7 +1833,7 @@ model InvestigationFavoriteSetItem {
   favoriteSet              InvestigationFavoriteSet @relation(fields: [favoriteSetId], references: [id], onDelete: Cascade)
   investigationCatalogItem InvestigationCatalogItem @relation(fields: [investigationCatalogItemId], references: [id], onDelete: Restrict)
 
-  @@unique([favoriteSetId, investigationCatalogItemId])
+  @@unique([favoriteSetId, investigationCatalogItemId], map: "InvestigationFavoriteSetItem_favoriteSetId_investigationCatalog")
   @@index([favoriteSetId, position])
 }
 

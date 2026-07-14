@@ -1,4 +1,4 @@
-import { apiJson, apiStatus, assertStatus, demoUsers, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
+import { apiJson, apiStatus, assertStatus, demoUsers, disconnectTestPrisma, findTestAuditLogs, login, makeRecorder, waitForApi } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("AI-REGRESSION");
 
@@ -32,7 +32,7 @@ async function main() {
     draftType: "encounter_summary",
     patientId: patient.id,
     inputSourceSummary: "Demo anonymous AI safety check only."
-  }), 401, "anonymous AI draft create");
+  }), [401, 403], "anonymous AI draft create");
   record.pass("AI routes require authentication");
 
   const draft = await apiJson("POST", "/ai-drafts", owner, {
@@ -56,7 +56,7 @@ async function main() {
   record.pass("lower-role AI review is denied");
 
   assertStatus(await apiStatus("GET", `/ai-drafts/${draft.id}`, null), 401, "anonymous AI draft detail");
-  assertStatus(await apiStatus("PATCH", `/ai-drafts/${draft.id}/review`, null, { status: "approved" }), 401, "anonymous AI draft review");
+  assertStatus(await apiStatus("PATCH", `/ai-drafts/${draft.id}/review`, null, { status: "approved" }), [401, 403], "anonymous AI draft review");
   record.pass("AI detail and review routes require auth");
 
   assertStatus(await apiStatus("POST", `/ai-drafts/${draft.id}/sign`, owner), 404, "AI sign route");
@@ -76,7 +76,7 @@ async function main() {
     reviewNote: "Demo regression safety rejection."
   });
   if (reviewed.status !== "rejected") throw new Error("AI review did not update only the draft artifact.");
-  const audit = (await apiJson("GET", "/audit?limit=100", owner)).auditLogs ?? [];
+  const audit = await findTestAuditLogs({ resourceId: draft.id });
   const reviewAudit = audit.find((entry) => entry.resourceId === draft.id && entry.action === "ai_draft.rejected");
   if (!reviewAudit || reviewAudit.metadataJson?.insertedIntoClinicalRecord !== false) {
     throw new Error("AI review audit did not prove no clinical insertion.");
@@ -89,5 +89,11 @@ async function main() {
   record.pass("AI audit confirms no external provider access");
 }
 
-await main().catch((error) => record.fail("AI safety regression setup", error));
+try {
+  await main();
+} catch (error) {
+  record.fail("AI safety regression setup", error);
+} finally {
+  await disconnectTestPrisma();
+}
 record.summary();

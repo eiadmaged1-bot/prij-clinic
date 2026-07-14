@@ -1,13 +1,15 @@
 param(
-  [string]$ApiBaseUrl = "http://localhost:3001",
-  [string]$Password = $env:DEMO_TEST_PASSWORD
+  [string]$ApiBaseUrl = $env:API_URL,
+  [string]$Password = $env:DEMO_TEST_PASSWORD,
+  [string]$OwnerLogin = $env:DEMO_ADMIN_LOGIN,
+  [string]$NurseLogin = "runtime.nurse@prij.local"
 )
 
 $ErrorActionPreference = "Stop"
 
-if (-not $Password) {
-  $Password = "LocalDev123!"
-}
+if (-not $ApiBaseUrl) { throw "API_URL is required. Use the isolated npm test runner." }
+if (-not $Password) { throw "DEMO_TEST_PASSWORD is required. Use the isolated npm test runner." }
+if (-not $OwnerLogin) { throw "DEMO_ADMIN_LOGIN is required. Use the isolated npm test runner." }
 
 function Write-Step {
   param([string]$Message)
@@ -18,12 +20,18 @@ function Invoke-Json {
   param(
     [string]$Method = "GET",
     [string]$Uri,
-    [hashtable]$Headers,
+    [object]$Headers,
     [object]$Body
   )
 
   $params = @{ Method = $Method; Uri = $Uri }
-  if ($Headers) { $params.Headers = $Headers }
+  if ($Headers -is [Microsoft.PowerShell.Commands.WebRequestSession]) {
+    $params.WebSession = $Headers
+    $csrfCookie = $Headers.Cookies.GetCookies($Uri)["csrf-token"]
+    if ($csrfCookie) { $params.Headers = @{ "x-csrf-token" = $csrfCookie.Value } }
+  } elseif ($Headers) {
+    $params.Headers = $Headers
+  }
   if ($null -ne $Body) {
     $params.ContentType = "application/json"
     $params.Body = ($Body | ConvertTo-Json -Depth 10)
@@ -36,7 +44,7 @@ function Get-StatusCode {
   param(
     [string]$Method = "GET",
     [string]$Uri,
-    [hashtable]$Headers,
+    [object]$Headers,
     [object]$Body
   )
 
@@ -57,16 +65,17 @@ function Assert-True {
 
 function Login {
   param([string]$Email)
-  $login = Invoke-Json -Method Post -Uri "$ApiBaseUrl/auth/login" -Body @{ email = $Email; password = $Password }
-  if (-not $login.token) { throw "Login failed for $Email." }
-  return @{ Authorization = "Bearer $($login.token)" }
+  $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+  $login = Invoke-RestMethod -Method Post -Uri "$ApiBaseUrl/auth/login" -WebSession $session -ContentType "application/json" -Body (@{ email = $Email; password = $Password } | ConvertTo-Json)
+  if (-not $login -or $session.Cookies.Count -eq 0) { throw "Login failed to establish a session for $Email." }
+  return $session
 }
 
 Assert-True "AI_FEATURES_ENABLED is not true in current shell" ($env:AI_FEATURES_ENABLED -ne "true")
 Assert-True "AI_PROVIDER is not configured as an external provider in current shell" ([string]::IsNullOrWhiteSpace($env:AI_PROVIDER) -or $env:AI_PROVIDER -eq "disabled")
 
-$owner = Login "demo.owner@prij.local"
-$nurse = Login "demo.nurse@prij.local"
+$owner = Login $OwnerLogin
+$nurse = Login $NurseLogin
 
 $summary = Invoke-Json -Uri "$ApiBaseUrl/dashboard/summary" -Headers $owner
 Assert-True "dashboard reports AI disabled" ($summary.safety.aiEnabled -eq $false)
@@ -116,9 +125,14 @@ $reviewed = Invoke-Json -Method Patch -Uri "$ApiBaseUrl/ai-drafts/$($draft.id)/r
 }
 Assert-True "allowed review updates only AI draft artifact" ($reviewed.status -eq "rejected")
 
-$audit = Invoke-Json -Uri "$ApiBaseUrl/audit?limit=100" -Headers $owner
-$reviewAudit = @($audit.auditLogs | Where-Object { $_.resourceId -eq $draft.id -and $_.action -eq "ai_draft.rejected" } | Select-Object -First 1)
-Assert-True "AI review audit exists" ($null -ne $reviewAudit)
-Assert-True "AI review audit confirms no clinical insertion" ($reviewAudit.metadataJson.insertedIntoClinicalRecord -eq $false)
+if (-not $env:PRIJ_TEST_DATABASE_NAME -or $env:PRIJ_TEST_DATABASE_NAME -notlike "prij_clinic_test_ai_*") {
+  throw "A guarded isolated AI test database name is required for audit verification."
+}
+$draftGuid = [Guid]::Parse($draft.id).ToString()
+$auditSql = "SELECT count(*) FROM `"AuditLog`" WHERE `"resourceId`" = '$draftGuid'::uuid AND `"action`" = 'ai_draft.rejected' AND `"metadataJson`"->>'insertedIntoClinicalRecord' = 'false'"
+$auditCount = $auditSql | docker exec -i prij-clinic-postgres psql -U prij_clinic_dev -d $env:PRIJ_TEST_DATABASE_NAME -X -tA
+if ($LASTEXITCODE -ne 0) { throw "AI review audit query failed." }
+Assert-True "AI review audit exists" ([int]$auditCount -gt 0)
+Assert-True "AI review audit confirms no clinical insertion" ([int]$auditCount -gt 0)
 
 Write-Host "AI-SAFETY PASS"
