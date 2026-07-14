@@ -7,8 +7,8 @@ assert(!center.includes("guideline-actions"), "duplicate launcher card navigatio
 assert(center.includes("FormData") && center.includes("/guidelines/upload") && center.includes("Upload for review"), "controlled upload form must call backend");
 for (const type of [".pdf", ".txt", ".md", ".markdown"]) assert(center.includes(type), `upload type missing: ${type}`);
 assert(center.includes("GuidelineReviewActions") && center.includes('"APPROVED"') && center.includes('"REJECTED"'), "review queue decisions missing");
-assert(viewer.includes("Table of contents") && viewer.includes("Search within") && viewer.includes("Previous section") && viewer.includes("Next section"), "section viewer navigation missing");
-assert(viewer.includes("untrusted evidence content") && viewer.includes("Doctor review is required"), "untrusted content safety notice missing");
+assert(viewer.includes("Table of contents") && viewer.includes("Search original text") && viewer.includes("Previous page") && viewer.includes("Next page"), "authoritative viewer navigation missing");
+assert(viewer.includes("original PDF is authoritative") && viewer.includes("Doctor review is required"), "authoritative content safety notice missing");
 assert(service.includes("documentAccessWhere") && service.includes('action: "guideline.document_read"'), "viewer reads must be RBAC scoped and audited");
 assert(controller.includes('@Get("documents/:id")') && controller.includes('@Post("documents/:id/review")'), "viewer/review routes missing");
 assert(service.includes("matching PDF, TXT, and Markdown") && service.includes("fileSha256"), "MIME-extension validation and duplicate hash required");
