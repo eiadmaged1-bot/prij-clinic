@@ -1,42 +1,31 @@
 # Manual QA Report
 
-Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.3-db-migration-public-proxy-lock`.
+Date: 2026-07-14 (Africa/Cairo). Branch: `fix/v1.4.4-role-runtime-clinical-workflow-reconstruction`.
 
-All mutable QA used synthetic records in disposable databases. This is not production or clinical-safety signoff.
+## Automated and runtime verification completed
 
-## Database and automated QA
+- Production web builds compile all current routes, including dedicated prescription/investigation print, guideline viewer, and patient import.
+- API production build and monorepo typecheck pass at recorded checkpoints.
+- Production-like local UAT was started earlier in this sprint: web login and API health returned HTTP 200; API listener was verified loopback-only and then stopped.
+- Focused v1.4.4 contracts passed for idempotency, runtime errors, Reception, Doctor, prescriptions, investigation workflow/print, Smart Clinical Search, external intake Arabic/HMAC, patient import, guidelines, and Arabic/RTL.
+- Final commands passed: `prisma:repair`, `prisma:seed`, full monorepo typecheck, and full API/web/shared production build across 81 web routes.
+- Clinical persistence passed 17/17; OB/GYN core passed 11/11; PHI/document safety passed 18 checks; AI safety passed; AI regression passed 10 checks with one fallback warning; external intake integration passed.
+- Focused assertion totals: UUID 12, runtime error 17, Reception 22, Doctor 30, patient prescription 39, investigation print 16, patient import 25, guidelines 24, Arabic/RTL 23. Existing prescription builder/print, investigation workflow, Smart Tags, patient workspace, doctor visit, medication reference/import, and guideline library contracts passed.
 
-Passed:
+## Unavailable or invalid legacy results
 
-- Preserved database: backup verification, migration reconciliation, empty schema diff, Prisma generation, `prisma:repair`, and idempotent seed.
-- Fresh database: all 51 migrations, schema validation/diff, generation, seed twice with stable counts, typecheck, and production build.
-- Production database suites: architecture boundaries, pagination (6 pages/132 events), search budgets (maximum observed 90 ms), transaction boundaries, and migration chain.
-- Clinical suites: patient workspace, smart tags/multi-tag search, doctor visit, prescription/A5 print, investigations/favorites, medication reference/import, external intake, clinical persistence (17/17), and OB/GYN core (11/11).
-- Security: security CI (24 pass, 2 warnings), expanded security (6/6 groups), accounts/RBAC (18/18), audit assertions (33/33), role operations, CORS, PHI-safe log redaction, and v1.4.2 permission contracts.
-- AI: safety passed; regression passed 10 checks with one synthetic-patient fallback warning.
-- Proxy: v1.3.4 same-origin, v1.3.5 public-login, v1.3.6 proxy paths, and v1.3.7 one-tunnel contract tests.
-- Backup readiness: v0.16.0 (15 checks) and v0.18.0 staging readiness (14 checks).
+- `test:security:ci`: health and anonymous protection passed 4 checks; the remaining 20 checks could not authenticate because protected seeded credentials are unavailable. No password was changed or invented.
+- `test:security:expanded`: 3 groups passed and 3 setup groups failed. Failures were inherited credential unavailability and collisions with existing active queue fixtures, not v1.4.4 assertions.
+- `test:investigations:results` and `test:guidelines:library` could not authenticate with their legacy demo credential.
+- `test:production-launch:pagination` was not runnable because its required isolated `DATABASE_URL` and `TEST_API_PORT` were not supplied.
+- Legacy clinical persistence/OB-GYN scripts create labeled synthetic records and do not self-clean. No further stateful legacy suites were run against the preserved database, and no records were deleted.
 
-One non-blocking legacy failure remains: `test:v139:clinical-tags-edd-intake` expects a removed permanent patient QR label. The current v1.4.3 feature-specific suites pass.
+## Not yet performed on this branch
 
-## Local proxy QA
+- Authenticated browser walkthrough for Receptionist, Doctor, and Owner after all final changes.
+- Visual measurement at 1366x768, 1440x900, 1920x1080, and 2560x1440.
+- Android/iPhone portrait and landscape browser walkthrough.
+- Current-branch ngrok tunnel QA.
+- Physical/PDF print inspection for Arabic, English, bilingual, long-name, and controlled page-count cases.
 
-- API: `127.0.0.1:3001`; web: `127.0.0.1:3000`; internal origin: `http://127.0.0.1:3001`.
-- `/api/backend/health` and `/api/backend/health/live`: HTTP 200 with `{ "status": "up" }`.
-- Signed synthetic intake dry run: HTTP 200 when an ephemeral test secret was configured.
-- Invalid signature: HTTP 403. Oversized body: HTTP 413.
-- Query forwarding, session cookies, raw-body preservation, request-size bounds, header allowlist, and no browser-Origin forwarding were verified.
-
-## Public/ngrok QA
-
-URL: `https://regretful-unwomanly-silliness.ngrok-free.dev`.
-
-- Exactly one tunnel targeted web port 3000. Web and API both listened on `127.0.0.1`; API port 3001 was not tunneled.
-- `/login`, `/api/backend/health`, and `/api/backend/health/live`: HTTP 200.
-- Authenticated synthetic QA returned HTTP 200 for Doctor, Reception, dashboard, Patient Files, patient workspace, prescriptions, A5 print preview, investigations, pharmacology/medications, and guidelines.
-- No developer overlay or raw stack appeared in the checked HTML.
-- Invalid-signature Google intake returned HTTP 403 with `PERMISSION_DENIED`; the external-submission count remained unchanged.
-- A public signed dry run was not run because the HMAC secret is not configured. No secret was invented.
-- Current public runtime logs contained no exact synthetic credential, unredacted password, MRN, raw stack, or forwarded browser-Origin entry.
-
-The tunnel and both services were stopped after QA. Both disposable databases were deleted; the preserved development database was not deleted or reset.
+These items must not be inferred from build or static contract tests. Prior v1.4.3 manual/ngrok evidence is historical only.

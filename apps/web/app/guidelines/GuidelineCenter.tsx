@@ -40,6 +40,7 @@ type Document = {
 
 type SearchResult = {
   chunkId: string;
+  documentId: string;
   title: string;
   organization: string;
   versionLabel?: string;
@@ -57,7 +58,6 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const canReview = Boolean(user?.permissions.includes("guidelines.review"));
   const canManageSources = Boolean(user?.permissions.includes("guidelines.manage_sources"));
   const canManagePrivate = Boolean(user?.roles.includes("Owner") || user?.permissions.includes("guidelines.manage_private"));
-  const isOwnerAdmin = Boolean(user?.roles.includes("Owner") || user?.roles.includes("Admin"));
   const [sources, setSources] = useState<Source[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [query, setQuery] = useState("");
@@ -183,15 +183,6 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
                 <Link className="button secondary compact" href="/guidelines">Recent</Link>
               </div>
             </section>
-            <section className="guideline-actions">
-              {cards({ canUpload, canImport, canReview, isOwnerAdmin }).map((card) => (
-                <Link className="guideline-card" href={card.href} key={card.id}>
-                  <ThreeDMedicalIcon name={card.icon} size="md" tone="navy" />
-                  <strong>{card.title}</strong>
-                  <span>{card.copy}</span>
-                </Link>
-              ))}
-            </section>
             {documents.length ? (
               <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed documents" />
             ) : (
@@ -204,7 +195,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
         {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
         {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
         {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
-        {view === "review" ? <DocumentList documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"))} title="Documents needing review" /> : null}
+        {view === "review" ? <DocumentList canReview={canReview} documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"))} title="Documents needing review" /> : null}
         {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
         {view === "private" ? (
           <PrivateVault
@@ -232,6 +223,7 @@ function GuidelineShell({ title, message, children }: { title: string; message?:
         </div>
         <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
       </section>
+      <nav className="patient-tabs simple" aria-label="Guideline library navigation"><Link href="/guidelines">Browse</Link><Link href="/guidelines/search">Search</Link><Link href="/guidelines/ask">Ask Evidence Library</Link><Link href="/guidelines">Recent</Link><Link href="/guidelines/upload">Upload</Link><Link href="/guidelines/review">Review Queue</Link></nav>
       {children}
     </>
   );
@@ -256,6 +248,7 @@ function SearchPanel(props: {
             <p>{result.snippet}</p>
             <p className="muted">{result.organization} - {result.versionLabel ?? "current"} - {result.sectionHeading}</p>
             <span className="badge accent">{result.citationLabel}</span>
+            <Link className="button secondary compact" href={`/guidelines/${result.documentId}`}>Open cited document</Link>
           </article>
         ))}
         {!props.results.length ? <Empty text="No matching source found in your local guideline library." /> : null}
@@ -304,25 +297,38 @@ function SourceList({ sources, canManageSources }: { sources: Source[]; canManag
 }
 
 function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boolean }) {
+  const [title, setTitle] = useState(""); const [specialty, setSpecialty] = useState(""); const [topic, setTopic] = useState(""); const [version, setVersion] = useState(""); const [sourceId, setSourceId] = useState(""); const [file, setFile] = useState<File | null>(null); const [status, setStatus] = useState("");
+  async function upload(event: FormEvent) {
+    event.preventDefault();
+    if (!file || !title.trim() || !specialty.trim() || !topic.trim()) return setStatus("Title, specialty, topic, and file are required.");
+    const form = new FormData(); form.set("file", file); form.set("title", title.trim()); form.set("specialty", specialty.trim()); form.set("topic", topic.trim()); form.set("accessLevel", "OWNER_DOCTOR"); form.set("licenseStatus", "LICENSED_PRIVATE"); if (version.trim()) form.set("versionLabel", version.trim()); if (sourceId) form.set("sourceId", sourceId);
+    setStatus("Uploading to protected storage for review");
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/guidelines/upload`, { method: "POST", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined, body: form });
+    if (!response.ok) return setStatus("Upload failed. Check file type, metadata, permissions, or duplicate hash.");
+    const body = await response.json(); setStatus("Uploaded and indexed. Governance review is required before publication."); window.location.href = `/guidelines/${body.document.id}`;
+  }
   return (
     <section className="panel">
       <div className="section-heading"><h2>Upload licensed PDF or text</h2><span className="badge warning">Private vault</span></div>
       {canUpload ? (
-        <form className="form-grid">
-          <label>Title<input placeholder="Document title" /></label>
-          <label>Specialty<input placeholder="obstetrics or gynecology" /></label>
-          <label>Topic<input placeholder="Topic" /></label>
-          <label>Source<select>{sources.map((source) => <option key={source.id}>{source.organization}</option>)}</select></label>
+        <form className="form-grid" onSubmit={upload} noValidate>
+          <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Document title" /></label>
+          <label>Specialty<input value={specialty} onChange={(event) => setSpecialty(event.target.value)} placeholder="obstetrics or gynecology" /></label>
+          <label>Topic<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="Topic" /></label>
+          <label>Version<input value={version} onChange={(event) => setVersion(event.target.value)} placeholder="Version label" /></label>
+          <label>Source<select value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Private licensed upload</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.organization}</option>)}</select></label>
           <label>Access<select><option>Owner and Doctor</option><option>Owner only</option></select></label>
-          <label>File<input type="file" accept=".pdf,.txt,text/plain,application/pdf" /></label>
-          <button className="button" type="button"><ThreeDMedicalIcon name="files" size="sm" />Upload for review</button>
+          <label>File<input type="file" accept=".pdf,.txt,.md,.markdown,text/plain,text/markdown,application/pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
+          <button className="button" type="submit"><ThreeDMedicalIcon name="files" size="sm" />Upload for review</button>
+          {status ? <p className="notice wide">{status}</p> : null}
         </form>
       ) : <Empty text="Upload is restricted to authorized owner or doctor accounts." />}
     </section>
   );
 }
 
-function DocumentList({ documents, title }: { documents: Document[]; title: string }) {
+function DocumentList({ documents, title, canReview = false }: { documents: Document[]; title: string; canReview?: boolean }) {
   return (
     <section className="panel">
       <div className="section-heading">
@@ -332,15 +338,23 @@ function DocumentList({ documents, title }: { documents: Document[]; title: stri
       <div className="dense-card-list">
         {documents.map((document) => (
           <article className="data-row dense" key={document.id}>
-            <div className="data-row-header"><strong>{document.title}</strong><span className="badge">{document.guidelineStatus}</span></div>
+            <div className="data-row-header"><Link href={`/guidelines/${document.id}`}><strong>{document.title}</strong></Link><span className="badge">{document.guidelineStatus}</span></div>
             <p>{document.organization} - {document.specialty} - {document.topic}</p>
             <p className="muted">{document.versionLabel ?? "No version label"} - {document._count?.chunks ?? 0} indexed chunks</p>
+            <Link className="button secondary compact" href={`/guidelines/${document.id}`}>Open viewer</Link>
+            {canReview ? <GuidelineReviewActions documentId={document.id} /> : null}
           </article>
         ))}
         {!documents.length ? <Empty text={title === "Documents needing review" ? "No documents need review" : "No guideline documents in this view yet."} /> : null}
       </div>
     </section>
   );
+}
+
+function GuidelineReviewActions({ documentId }: { documentId: string }) {
+  const [reason, setReason] = useState(""); const [status, setStatus] = useState("");
+  async function decide(decision: "APPROVED" | "REJECTED" | "ARCHIVED") { if (decision !== "APPROVED" && !reason.trim()) return setStatus("A reason is required."); const token = sessionStorage.getItem("prijClinicToken"); const response = await fetch(`${getApiBaseUrl()}/guidelines/documents/${documentId}/review`, { method: "POST", credentials: "include", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ decision, reason: reason.trim() || undefined }) }); if (!response.ok) return setStatus("Review decision could not be saved."); setStatus("Review decision saved and audited."); window.location.reload(); }
+  return <div className="compact-panel"><label>Review note<input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Required for rejection or archive" /></label><div className="form-actions"><button className="button compact" type="button" onClick={() => void decide("APPROVED")}>Approve</button><button className="button secondary compact" type="button" onClick={() => void decide("REJECTED")}>Reject</button><button className="button secondary compact" type="button" onClick={() => void decide("ARCHIVED")}>Archive</button></div>{status ? <p className="muted">{status}</p> : null}</div>;
 }
 
 function filterTrainingDocuments(documents: Document[]) {
@@ -416,37 +430,6 @@ function PrivateVault({
 
 function Empty({ text }: { text: string }) {
   return <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>{text}</span></p>;
-}
-
-function cards({
-  canUpload,
-  canImport,
-  canReview,
-  isOwnerAdmin
-}: {
-  canUpload: boolean;
-  canImport: boolean;
-  canReview: boolean;
-  isOwnerAdmin: boolean;
-}) {
-  if (!isOwnerAdmin) {
-    return [
-      { id: "doctor-recent-library", href: "/guidelines", title: "Guidelines", copy: "Recent indexed evidence-library documents.", icon: "reports" as const },
-      { id: "doctor-search", href: "/guidelines/search", title: "Search", copy: "Find indexed sections with citations.", icon: "search" as const },
-      { id: "doctor-browse", href: "/guidelines/search", title: "Browse", copy: "Browse local evidence-library content.", icon: "files" as const },
-      { id: "doctor-ask", href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
-      { id: "doctor-recent", href: "/guidelines", title: "Recent", copy: "Recently indexed guideline documents.", icon: "timeline" as const }
-    ];
-  }
-  return [
-    { id: "admin-imports", href: "/guidelines/imports", title: "Import official guidelines", copy: canImport ? "Run the built-in official source pack from the server CLI." : "Restricted import area.", icon: "reports" as const },
-    { id: "admin-search", href: "/guidelines/search", title: "Search All Guidelines", copy: "Find indexed sections with citations.", icon: "search" as const },
-    { id: "admin-ask", href: "/guidelines/ask", title: "Ask Evidence Library", copy: "Local summary from indexed chunks only.", icon: "ai" as const },
-    { id: "admin-upload", href: "/guidelines/upload", title: "Upload Licensed PDF", copy: canUpload ? "Private file extraction and review." : "Restricted upload area.", icon: "files" as const },
-    { id: "admin-sources", href: "/guidelines/sources", title: "Sources Registry", copy: canImport ? "Manage open and restricted sources." : "Review source access types.", icon: "reports" as const },
-    { id: "admin-review", href: "/guidelines/review", title: "Needs Review", copy: canReview ? "Approve, reject, or archive imports." : "Doctor review queue.", icon: "doctor" as const },
-    { id: "admin-vault", href: "/guidelines/private-vault", title: "Private Vault", copy: "Licensed local uploads stay private.", icon: "consent" as const }
-  ];
 }
 
 function titleFor(view: GuidelineCenterProps["view"]) {

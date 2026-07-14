@@ -30,6 +30,25 @@ export class PrescriptionItemDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(160)
+  optionalBrandOrTradeName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  quantityText?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  dispensingUnit?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  manualEntry?: boolean;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   dose?: string;
 

@@ -60,7 +60,7 @@ function NewPatientContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
-  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey } = useIdempotencyKey();
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -126,7 +126,6 @@ function NewPatientContent() {
       if (response.status === 401) throw new Error(copy.signInRequired);
 
       if (!response.ok) {
-        regenerateIdempotencyKey();
         const body = await response.json().catch(() => null) as { message?: string } | null;
         throw new Error(body?.message || copy.createFailed);
       }

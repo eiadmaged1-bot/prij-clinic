@@ -132,6 +132,7 @@ model User {
   updatedVisitPriceSettings          VisitPriceAuditSetting[]       @relation("VisitPriceSettingsUpdatedBy")
   createdPatientClinicalTags         PatientClinicalTag[]           @relation("PatientClinicalTagsCreatedBy")
   reviewedExternalSubmissions        ExternalPatientSubmission[]    @relation("ExternalSubmissionsReviewedBy")
+  patientImportBatches               PatientImportBatch[]
   authSessions                       AuthSession[]
   idempotencyRecords                 IdempotencyRecord[]
 
@@ -354,6 +355,7 @@ model Patient {
   clinicalTags                PatientClinicalTag[]
   externalSubmissionsCreated  ExternalPatientSubmission[]       @relation("ExternalSubmissionCreatedPatient")
   externalSubmissionsAttached ExternalPatientSubmission[]       @relation("ExternalSubmissionAttachedPatient")
+  patientImportRows          PatientImportRow[]
   medicationSafetyChecks      MedicationSafetyCheck[]
   calculations                PatientCalculation[]
   datingAssessments           PregnancyDatingAssessment[]
@@ -811,7 +813,9 @@ model ClinicalTagDefinition {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code        String   @unique
   label       String
+  labelAr     String?
   aliasesJson Json?
+  aliasesArJson Json?
   category    String
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
@@ -832,6 +836,12 @@ model PatientClinicalTag {
   category        String
   sourceType      String
   sourceId        String?
+  sourceEncounterId String? @db.Uuid
+  assignmentType  String    @default("derived")
+  doctorConfirmed Boolean   @default(false)
+  status          String    @default("active")
+  effectiveDate   DateTime? @db.Date
+  resolutionDate  DateTime? @db.Date
   historyStatus   String    @default("current")
   tagDate         DateTime? @db.Date
   tagYear         Int?
@@ -851,6 +861,8 @@ model PatientClinicalTag {
   @@index([tagCode])
   @@index([category])
   @@index([sourceType])
+  @@index([sourceEncounterId])
+  @@index([doctorConfirmed, status])
   @@index([tagDate])
   @@index([historyStatus])
   @@index([tagYear])
@@ -1059,6 +1071,10 @@ model PrescriptionItem {
   strengthText        String?
   dosageForm          String?
   medicationGenericId String? @db.Uuid
+  quantityText         String?
+  dispensingUnit       String?
+  entrySource          String  @default("unclassified")
+  verificationStatus   String  @default("review_required")
 
   prescription      Prescription       @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medicationGeneric MedicationGeneric? @relation(fields: [medicationGenericId], references: [id], onDelete: SetNull)
@@ -1813,6 +1829,10 @@ model InvestigationFavoriteSet {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String   @db.Uuid
   name             String
+  nameAr           String?
+  icon             String?
+  scope            String   @default("personal")
+  branchId         String?  @db.Uuid
   defaultVisitType String?
   active           Boolean  @default(true)
   createdAt        DateTime @default(now()) @db.Timestamptz(3)
@@ -1822,6 +1842,51 @@ model InvestigationFavoriteSet {
   items InvestigationFavoriteSetItem[]
 
   @@index([userId, active])
+  @@index([scope, branchId, active])
+}
+
+model PatientImportBatch {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fileName         String
+  fileHash         String
+  fileType         String
+  encoding         String?
+  status           String   @default("previewed")
+  mappingJson      Json
+  rowCount         Int      @default(0)
+  importedCount    Int      @default(0)
+  skippedCount     Int      @default(0)
+  failedCount      Int      @default(0)
+  createdByUserId String   @db.Uuid
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  completedAt      DateTime? @db.Timestamptz(3)
+
+  createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
+  rows      PatientImportRow[]
+
+  @@index([createdByUserId, createdAt])
+  @@index([fileHash])
+  @@index([status])
+}
+
+model PatientImportRow {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  batchId          String   @db.Uuid
+  rowNumber        Int
+  status           String
+  normalizedJson   Json
+  warningsJson     Json?
+  duplicateJson    Json?
+  createdPatientId String?  @db.Uuid
+  errorCode        String?
+  importedAt       DateTime? @db.Timestamptz(3)
+
+  batch          PatientImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdPatient Patient?           @relation(fields: [createdPatientId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, rowNumber])
+  @@index([status])
+  @@index([createdPatientId])
 }
 
 model InvestigationFavoriteSetItem {

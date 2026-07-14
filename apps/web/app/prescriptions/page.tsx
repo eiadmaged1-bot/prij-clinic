@@ -1,25 +1,24 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../../components/clinic/UniversalSearchBox";
-import { PatientPicker, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Shortcut = { id: string; displayName: string; genericName: string; defaultDoseText?: string | null; defaultTimingText?: string | null; defaultDurationText?: string | null; defaultInstructions?: string | null };
 type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; itemsJson?: PrescriptionItem[] };
-type PrescriptionItem = { medicationName: string; strengthText?: string; dosageForm?: string; dose?: string; route?: string; frequency?: string; duration?: string; instructions?: string; notes?: string };
-type Patient = PatientPickerPatient;
+type PrescriptionItem = { medicationName: string; medicationGenericId?: string; medicationProductId?: string; drugMarketVariantId?: string; optionalBrandOrTradeName?: string; strengthText?: string; dosageForm?: string; quantityText?: string; dispensingUnit?: string; dose?: string; route?: string; frequency?: string; duration?: string; instructions?: string; notes?: string; manualEntry?: boolean };
+type MedicationResult = { type: string; id: string; productId?: string; genericName?: string | null; brandName?: string | null; tradeName?: string | null; strengthText?: string | null; dosageForm?: string | null };
 
-const emptyItem: PrescriptionItem = { medicationName: "", strengthText: "", dosageForm: "", dose: "", route: "", frequency: "", duration: "", instructions: "", notes: "" };
+const emptyItem: PrescriptionItem = { medicationName: "", strengthText: "", dosageForm: "", quantityText: "", dispensingUnit: "", dose: "", route: "", frequency: "", duration: "", instructions: "", notes: "", manualEntry: true };
 
 export default function PrescriptionsPage() {
-  const [active, setActive] = useState("builder");
+  const [active, setActive] = useState("templates");
   const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [recent, setRecent] = useState<Record<string, unknown>[]>([]);
-  const patients: Patient[] = [];
   const [items, setItems] = useState<PrescriptionItem[]>([{ ...emptyItem }]);
   const [patientId, setPatientId] = useState("");
   const [encounterId, setEncounterId] = useState("");
@@ -32,6 +31,10 @@ export default function PrescriptionsPage() {
   const [savedPrescriptionId, setSavedPrescriptionId] = useState("");
   const [templateTitle, setTemplateTitle] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState("");
+  const [medicationQuery, setMedicationQuery] = useState("");
+  const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const lockedContext = Boolean(patientId && encounterId);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -40,6 +43,7 @@ export default function PrescriptionsPage() {
     const routeMedication = params.get("medication")?.trim();
     if (routePatientId) setPatientId(routePatientId);
     if (routeVisitId) setEncounterId(routeVisitId);
+    if (routePatientId && routeVisitId) setActive("builder");
     if (routeMedication) setItems([{ ...emptyItem, medicationName: routeMedication }]);
     void load();
   }, []);
@@ -52,7 +56,18 @@ export default function PrescriptionsPage() {
     });
   }, [patientId]);
 
-  useEffect(() => { setSavedPrescriptionId(""); setDoctorReviewed(false); }, [items, notes]);
+  useEffect(() => { setSavedPrescriptionId(""); setDoctorReviewed(false); setIdentityConfirmed(false); }, [items, notes]);
+
+  useEffect(() => {
+    if (!lockedContext || medicationQuery.trim().length < 2) { setMedicationResults([]); return; }
+    const timer = window.setTimeout(() => {
+      void apiPost("/medications/search", { query: medicationQuery.trim() }).then(async (response) => {
+        const data = response.ok ? await response.json() as { results?: MedicationResult[] } : {};
+        setMedicationResults((data.results ?? []).filter((result) => result.type !== "family").slice(0, 10));
+      });
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [lockedContext, medicationQuery]);
 
   async function load() {
     const [shortcutData, templateData, prescriptionData] = await Promise.all([
@@ -66,16 +81,27 @@ export default function PrescriptionsPage() {
   }
 
   async function savePrescription(nextStatus = "draft") {
+    if (!lockedContext) {
+      setStatus("Open a patient file and active visit before creating a prescription draft.");
+      return;
+    }
     setStatus("Saving printable prescription");
     const cleanItems = items.map((item) => ({
       medicationName: item.medicationName.trim(),
+      medicationGenericId: item.medicationGenericId,
+      medicationProductId: item.medicationProductId,
+      drugMarketVariantId: item.drugMarketVariantId,
+      optionalBrandOrTradeName: item.optionalBrandOrTradeName?.trim(),
       strengthText: item.strengthText?.trim(),
       dosageForm: item.dosageForm?.trim(),
+      quantityText: item.quantityText?.trim(),
+      dispensingUnit: item.dispensingUnit?.trim(),
       dose: item.dose?.trim(),
       route: item.route?.trim(),
       frequency: item.frequency?.trim(),
       duration: item.duration?.trim(),
-      instructions: item.instructions?.trim()
+      instructions: item.instructions?.trim(),
+      manualEntry: item.manualEntry
     })).filter((item) => item.medicationName);
     if (!cleanItems.length) {
       setStatus("Add at least one medication name.");
@@ -112,6 +138,10 @@ export default function PrescriptionsPage() {
   }
 
   function applyTemplate(template: Template) {
+    if (!lockedContext) {
+      setStatus("Template ready. Open a patient file and active visit to apply it as a clinical draft.");
+      return;
+    }
     const templateItems = Array.isArray(template.itemsJson) ? template.itemsJson : [];
     setItems(templateItems.length ? templateItems : [{ ...emptyItem }]);
     setNotes(template.diagnosisOrUseCase ?? "");
@@ -124,7 +154,23 @@ export default function PrescriptionsPage() {
   }
 
   const readyItems = items.filter((item) => item.medicationName.trim() && item.dose?.trim() && item.frequency?.trim() && item.duration?.trim());
-  const printReady = Boolean(patientId && encounterId && savedPrescriptionId && readyItems.length === items.length && doctorReviewed && alertsHandled);
+  const printReady = Boolean(patientId && encounterId && savedPrescriptionId && readyItems.length === items.length && identityConfirmed && doctorReviewed && alertsHandled);
+
+  function addCatalogMedication(result: MedicationResult) {
+    const item: PrescriptionItem = {
+      medicationName: result.genericName ?? result.tradeName ?? result.brandName ?? "Medication",
+      optionalBrandOrTradeName: result.tradeName ?? result.brandName ?? "",
+      strengthText: result.strengthText ?? "",
+      dosageForm: result.dosageForm ?? "",
+      medicationGenericId: ["ingredient", "generic_medication"].includes(result.type) ? result.id : undefined,
+      medicationProductId: result.type === "product" ? result.id : result.productId,
+      drugMarketVariantId: result.type === "market_variant" ? result.id : undefined,
+      manualEntry: false
+    };
+    setItems((current) => current.length === 1 && !current[0]?.medicationName ? [item] : [...current, item]);
+    setMedicationQuery("");
+    setMedicationResults([]);
+  }
 
   function moveItem(index: number, direction: -1 | 1) {
     setItems((current) => {
@@ -158,26 +204,28 @@ export default function PrescriptionsPage() {
         <div className="header-row">
           <div>
             <p className="eyebrow">Doctor prescription center</p>
-            <h1>Printable Prescription</h1>
+            <h1>{lockedContext ? "Patient Prescription Draft" : "Prescription Templates & Frequent Medications"}</h1>
           </div>
-          <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => void preparePrint()}>
+          {lockedContext ? <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => void preparePrint()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
             Print
-          </button>
+          </button> : <Link className="button secondary compact" href="/patients">Open patient file</Link>}
         </div>
         <p className="muted">Doctor manual review required. No auto-prescribing or automatic dosing.</p>
       </section>
       <SafetyAlert />
       <section className="patient-tabs simple">
         {([
-          ["builder", "Printable Builder"],
+          ...(lockedContext ? [["builder", "Patient Prescription"]] : []),
           ["templates", "Saved Prescription Templates"],
           ["shortcuts", "My Saved Medications"],
           ["recent", "Recent Patient Prescriptions"]
         ] as const).map(([key, label]) => <button className={`tab-button ${active === key ? "active" : ""}`} key={key} onClick={() => setActive(key)} type="button">{label}</button>)}
       </section>
 
-      {active === "builder" ? (
+      {!lockedContext ? <section className="panel compact-panel prescription-center-intro"><div><h2>Template and shortcut center</h2><p className="muted">Manage reusable medication shortcuts and prescription sets here. Clinical prescriptions can only be created from a selected patient and active visit.</p></div><Link className="button compact" href="/patients">Find patient</Link></section> : null}
+
+      {active === "builder" && lockedContext ? (
         <section className="panel printable-summary">
           <div className="section-heading">
             <div>
@@ -187,32 +235,38 @@ export default function PrescriptionsPage() {
             <span className="badge">{status}</span>
           </div>
           <UniversalSearchBox scope="prescriptions" />
+          <div className="search-picker medication-catalog-picker">
+            <label>Medication catalog search<input value={medicationQuery} onChange={(event) => setMedicationQuery(event.target.value)} placeholder="Generic, brand, trade name, or class" /></label>
+            {medicationResults.length ? <div className="data-list">{medicationResults.map((result) => <button className="picker-row" key={`${result.type}-${result.id}`} onClick={() => addCatalogMedication(result)} type="button"><strong>{result.tradeName ?? result.brandName ?? result.genericName}</strong><span>{[result.genericName, result.strengthText, result.dosageForm].filter(Boolean).join(" · ")}</span></button>)}</div> : null}
+          </div>
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); void savePrescription(); }}>
             <div className="wide">
-              {encounterId ? <div className="selected-patient-card"><strong>{patientDisplayName(patientContext) || "Locked active visit"}</strong><span>MRN: {String(patientContext?.medicalRecordNumber ?? "Not configured")} · Age: {patientAge(patientContext?.dateOfBirth)}</span><span>Allergies, pregnancy/lactation, and current medicines require doctor review.</span>{reviewHints.slice(0, 3).map((hint, index) => <small key={`${hint.message}-${index}`}>{hint.message}</small>)}</div> : <PatientPicker patients={patients} selectedPatientId={patientId} onSelect={setPatientId} required standaloneLabel="Select a patient and active visit before saving." />}
+              <div className="selected-patient-card"><strong>{patientDisplayName(patientContext) || "Locked active visit"}</strong><span>MRN: {String(patientContext?.medicalRecordNumber ?? "Not configured")} · Age: {patientAge(patientContext?.dateOfBirth)}</span><span>Allergies, pregnancy/lactation, and current medicines require doctor review.</span>{reviewHints.slice(0, 3).map((hint, index) => <small key={`${hint.message}-${index}`}>{hint.message}</small>)}</div>
             </div>
             {items.map((item, index) => (
-              <div className="panel compact-panel" key={index}>
-                <div className="section-heading compact-section-heading">
-                  <h3>Medication {index + 1}</h3>
-                  <div className="form-actions"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => [...current.slice(0, index + 1), { ...item }, ...current.slice(index + 1)])}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button></div>
+              <details className="compact-editor-drawer medication-editor-card wide" key={index} open={!item.medicationName}>
+                <summary><span><strong>{item.medicationName || `Medication ${index + 1}`}</strong><small>{[item.optionalBrandOrTradeName, item.strengthText, item.dosageForm, item.dose, item.frequency].filter(Boolean).join(" · ") || "Complete medication details"}</small></span><span className={`badge ${item.manualEntry ? "warning" : "accent"}`}>{item.manualEntry ? "Manual / unverified" : "Catalog linked"}</span></summary>
+                <div className="form-grid compact-medication-fields">
+                  <label>Generic / medication name<input value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
+                  <label>Optional brand / trade name<input value={item.optionalBrandOrTradeName ?? ""} onChange={(event) => updateItem(index, "optionalBrandOrTradeName", event.target.value, setItems)} /></label>
+                  <label>Strength<input value={item.strengthText ?? ""} onChange={(event) => updateItem(index, "strengthText", event.target.value, setItems)} /></label>
+                  <label>Dosage form<input value={item.dosageForm ?? ""} onChange={(event) => updateItem(index, "dosageForm", event.target.value, setItems)} /></label>
+                  <label>Quantity<input value={item.quantityText ?? ""} onChange={(event) => updateItem(index, "quantityText", event.target.value, setItems)} placeholder="1" /></label>
+                  <label>Dispensing unit<input value={item.dispensingUnit ?? ""} onChange={(event) => updateItem(index, "dispensingUnit", event.target.value, setItems)} placeholder="box or strip" /></label>
+                  <label>Dose<input value={item.dose ?? ""} onChange={(event) => updateItem(index, "dose", event.target.value, setItems)} /></label>
+                  <label>Route<input value={item.route ?? ""} onChange={(event) => updateItem(index, "route", event.target.value, setItems)} /></label>
+                  <label>Frequency<input value={item.frequency ?? ""} onChange={(event) => updateItem(index, "frequency", event.target.value, setItems)} /></label>
+                  <label>Duration<input value={item.duration ?? ""} onChange={(event) => updateItem(index, "duration", event.target.value, setItems)} /></label>
+                  <label className="wide">Additional instructions<input value={item.instructions ?? ""} onChange={(event) => updateItem(index, "instructions", event.target.value, setItems)} /></label>
+                  <div className="form-actions wide"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => [...current.slice(0, index + 1), { ...item }, ...current.slice(index + 1)])}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button></div>
                 </div>
-                <label>Medication<input required value={item.medicationName} onChange={(event) => updateItem(index, "medicationName", event.target.value, setItems)} /></label>
-                <label>Strength<input value={item.strengthText ?? ""} onChange={(event) => updateItem(index, "strengthText", event.target.value, setItems)} /></label>
-                <label>Form<input value={item.dosageForm ?? ""} onChange={(event) => updateItem(index, "dosageForm", event.target.value, setItems)} /></label>
-                <label>Dose text<input value={item.dose ?? ""} onChange={(event) => updateItem(index, "dose", event.target.value, setItems)} /></label>
-                <label>Route<input value={item.route ?? ""} onChange={(event) => updateItem(index, "route", event.target.value, setItems)} /></label>
-                <label>Timing<input value={item.frequency ?? ""} onChange={(event) => updateItem(index, "frequency", event.target.value, setItems)} /></label>
-                <label>Duration<input value={item.duration ?? ""} onChange={(event) => updateItem(index, "duration", event.target.value, setItems)} /></label>
-                <label>Instructions<input value={item.instructions ?? ""} onChange={(event) => updateItem(index, "instructions", event.target.value, setItems)} /></label>
-              </div>
+              </details>
             ))}
             <label>Prescription notes<input value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
-            <label className="checkbox-row"><input type="checkbox" checked={alertsHandled} onChange={(event) => setAlertsHandled(event.target.checked)} />I reviewed patient-specific alerts and prerequisites.</label>
-            <label className="checkbox-row"><input type="checkbox" checked={doctorReviewed} onChange={(event) => setDoctorReviewed(event.target.checked)} />Doctor reviewed this prescription draft.</label>
+            <section className="panel compact-panel wide prescription-review-panel"><h3>Doctor review</h3><label className="checkbox-row"><input type="checkbox" checked={identityConfirmed} onChange={(event) => setIdentityConfirmed(event.target.checked)} />Patient identity confirmed.</label><label className="checkbox-row"><input type="checkbox" checked={alertsHandled} onChange={(event) => setAlertsHandled(event.target.checked)} />Allergies, current medications, pregnancy and lactation reviewed.</label><label className="checkbox-row"><input type="checkbox" checked={doctorReviewed} onChange={(event) => setDoctorReviewed(event.target.checked)} />Dose, route, frequency, duration and instructions verified by the doctor.</label></section>
             <div className="form-actions wide"><input aria-label="Prescription template name" value={templateTitle} onChange={(event) => setTemplateTitle(event.target.value)} placeholder="Template name" /><button className="button secondary" type="button" onClick={() => void saveCurrentTemplate()}>{editingTemplateId ? "Save template changes" : "Save current rows as template"}</button>{editingTemplateId ? <button className="button secondary" type="button" onClick={() => { setEditingTemplateId(""); setTemplateTitle(""); }}>Cancel template edit</button> : null}</div>
             <div className="form-actions">
-              <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add medication</button>
+              <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>Add custom medication</button>
               <button className="button secondary" type="button" onClick={() => setStatus(patientId && encounterId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient and active visit to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
               <button className="button" type="submit">Save draft</button>
               <button className="button secondary" type="button" disabled={!printReady} onClick={() => void preparePrint()}>Review, sign and print A5</button>

@@ -61,6 +61,21 @@ export class InvestigationFavoriteSetDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(120)
+  nameAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  icon?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  scope?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   defaultVisitType?: string;
 
@@ -143,9 +158,8 @@ export class CreateClinicalRequestDto {
   @IsUUID()
   patientId!: string;
 
-  @IsOptional()
   @IsUUID()
-  encounterId?: string;
+  encounterId!: string;
 
   @IsOptional()
   @IsEnum(InvestigationPriority)

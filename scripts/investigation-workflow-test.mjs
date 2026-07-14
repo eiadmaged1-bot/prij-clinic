@@ -16,8 +16,10 @@ for (const action of ["createFavoriteSet", "updateFavoriteSet", "duplicateFavori
 assert(service.includes("userId: user.id") && service.includes("investigation_favorite_set.archived"), "favorite sets must be owner-scoped and audited");
 assert(controller.includes('@Permissions("investigations.manage_catalog")'), "catalog administration must use its dedicated permission");
 assert(adminPage.includes("Deactivate") && adminPage.includes("Restore") && adminPage.includes("Synonyms"), "admin catalog must support edit/deactivate/restore/synonyms");
-for (const category of ["Routine labs", "Pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Ultrasound", "Radiology", "Pathology", "Preoperative", "Other"]) assert(doctorPage.includes(`"${category}"`), `doctor category missing: ${category}`);
-assert(doctorPage.includes("Clinical indication") && doctorPage.includes("Move") && doctorPage.includes("Follow-up date"), "selected request basket must support indications, reordering, and follow-up");
-assert(doctorPage.includes("Save as set") && doctorPage.includes("applyFavoriteSet"), "doctor reusable sets must be mouse-first");
+for (const category of ["Routine labs", "Antenatal", "High-risk pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Tumor markers", "Ultrasound", "Radiology", "Pathology", "Cervical screening", "Preoperative", "Postoperative", "Other"]) assert(doctorPage.includes(`"${category}"`), `doctor category missing: ${category}`);
+assert(doctorPage.includes("Clinical indication") && doctorPage.includes("Move") && doctorPage.includes("Follow-up deadline"), "selected request basket must support indications, reordering, and follow-up");
+assert(doctorPage.includes("Save as custom set") && doctorPage.includes("applySet"), "doctor reusable sets must be mouse-first");
+assert(doctorPage.includes("Management-only center") && doctorPage.includes("hasPatientContext"), "standalone center must not create unscoped clinical requests");
+assert(doctorPage.includes("/clinical-requests/") && doctorPage.includes("/print"), "saved requests must use the dedicated print route");
 
 console.log("Investigation ordering, favorites, catalog RBAC, and audit contract PASS");

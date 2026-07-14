@@ -13,19 +13,19 @@ const authLogoutPath = `${sameOriginApiProxyPath}/auth/logout`;
 
 function connectionProblemMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "ØªÙˆØ¬Ø¯ Ù…Ø´ÙƒÙ„Ø© ÙÙŠ Ø§Ù„Ø§ØªØµØ§Ù„. ØªØ£ÙƒØ¯ Ø£Ù† Ø³ÙŠØ±ÙØ± Ø§Ù„Ø¹ÙŠØ§Ø¯Ø© ÙŠØ¹Ù…Ù„ Ø«Ù… Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."
+    ? "توجد مشكلة في الاتصال. تأكد أن خادم العيادة يعمل ثم حاول مرة أخرى."
     : apiUnreachableMessage;
 }
 
 function sessionEndedMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "Ø§Ù†ØªÙ‡Øª Ø§Ù„Ø¬Ù„Ø³Ø©. ÙŠØ±Ø¬Ù‰ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰."
+    ? "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى."
     : "Your session ended. Please sign in again.";
 }
 
 function invalidLoginMessage() {
   return localStorage.getItem("prijClinicLanguage") === "ar"
-    ? "Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ÙˆØ¸Ù Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± ØµØ­ÙŠØ­Ø©."
+    ? "بيانات الموظف أو كلمة المرور غير صحيحة."
     : "Invalid staff ID/email or password.";
 }
 

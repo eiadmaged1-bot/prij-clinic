@@ -1,4 +1,4 @@
-import { IsDateString, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsInt, IsObject, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
 
 export class ManualClinicalTagDto {
   @IsString()
@@ -26,8 +26,8 @@ export class ManualClinicalTagDto {
   tagYear?: number;
 
   @IsOptional()
-  @IsIn(["current", "historical"])
-  historyStatus?: "current" | "historical";
+  @IsIn(["current", "historical", "resolved"])
+  historyStatus?: "current" | "historical" | "resolved";
 
   @IsOptional()
   @IsObject()
@@ -46,8 +46,24 @@ export class ManualClinicalTagDto {
 
 export class UpdateClinicalTagDto {
   @IsOptional()
-  @IsIn(["current", "historical"])
-  historyStatus?: "current" | "historical";
+  @IsBoolean()
+  doctorConfirmed?: boolean;
+  @IsOptional()
+  @IsIn(["current", "historical", "resolved"])
+  historyStatus?: "current" | "historical" | "resolved";
+
+  @IsOptional()
+  @IsIn(["active", "historical", "resolved"])
+  status?: "active" | "historical" | "resolved";
+
+  @IsOptional()
+  @IsDateString()
+  resolutionDate?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  notes?: string;
 
   @IsOptional()
   @IsDateString()

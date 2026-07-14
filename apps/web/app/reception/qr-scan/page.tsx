@@ -46,7 +46,7 @@ function ReceptionQrScanContent() {
   const [status, setStatus] = useState("Manual lookup ready");
   const [scannerStatus, setScannerStatus] = useState("Start camera scan");
   const [cameraActive, setCameraActive] = useState(false);
-  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey } = useIdempotencyKey();
   const { language } = useI18n();
   const copy = qrCopy[language];
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
@@ -162,7 +162,6 @@ function ReceptionQrScanContent() {
       } else {
         setStatus(copy.couldNotAddToQueue);
       }
-      regenerateIdempotencyKey();
     }
   }
 

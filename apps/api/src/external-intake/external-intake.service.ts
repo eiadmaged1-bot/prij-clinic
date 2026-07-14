@@ -260,10 +260,13 @@ export class ExternalIntakeService {
           ...(birth ? [{ dateOfBirth: birth }] : [])
         ]
       },
-      select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true },
+      select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true, branch: { select: { name: true } }, encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
       take: 10
     });
-    return candidates.map((item) => ({ id: item.id, mrn: item.medicalRecordNumber, name: `${item.firstName} ${item.lastName}`.trim(), phone: item.phone, dateOfBirth: item.dateOfBirth }));
+    return candidates.map((item) => {
+      const reasons = [phone && item.phone === phone ? "exact phone" : null, birth && item.dateOfBirth?.getTime() === birth.getTime() ? "exact date of birth" : null, fullName && normalizeName(`${item.firstName} ${item.lastName}`) === normalizeName(fullName) ? "exact normalized name" : null].filter(Boolean);
+      return { id: item.id, mrn: item.medicalRecordNumber, name: `${item.firstName} ${item.lastName}`.trim(), phone: item.phone, dateOfBirth: item.dateOfBirth, branch: item.branch?.name ?? null, lastVisit: item.encounters[0]?.createdAt ?? null, confidence: reasons.length >= 2 ? "high" : reasons.length === 1 ? "medium" : "review", matchingReason: reasons.join(" + ") || "name prefix candidate" };
+    });
   }
 
   private async nextExternalMrn() {
@@ -329,6 +332,10 @@ function phaseTitle(value: string) {
 
 function objectValue(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function normalizeName(value: string) {
+  return value.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/\s+/g, " ").trim();
 }
 
 type ExternalIntakeRequest = {

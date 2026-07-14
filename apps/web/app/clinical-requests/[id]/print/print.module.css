@@ -1,0 +1,23 @@
+@page { size: A4 portrait; margin: 12mm; }
+.toolbar { align-items: center; background: #f3f7f6; display: flex; justify-content: center; min-height: 56px; padding: 8px; }
+.toolbar button { background: #0f766e; border: 0; border-radius: 8px; color: #fff; cursor: pointer; min-height: 38px; padding: 0 18px; }
+.paper { background: #fff; box-sizing: border-box; color: #15302d; font-family: Arial, "Noto Sans Arabic", sans-serif; margin: 12px auto; min-height: 273mm; padding: 12mm; width: 186mm; }
+.clinicHeader { align-items: flex-end; border-bottom: .4mm solid #0f766e; display: flex; justify-content: space-between; padding-bottom: 5mm; }
+.clinicHeader div { display: grid; gap: 1mm; }
+.clinicHeader strong { font-size: 15pt; }
+.clinicHeader span, .patientGrid span { color: #58706d; font-size: 8.5pt; text-transform: uppercase; }
+.patientGrid { border-bottom: .2mm solid #c8d8d5; display: grid; gap: 4mm; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 5mm 0; }
+.patientGrid div { display: grid; gap: 1mm; overflow-wrap: anywhere; }
+.patientGrid strong { font-size: 10pt; }
+.requests { margin-top: 8mm; }
+.requests h1 { font-size: 14pt; margin: 0 0 5mm; }
+.request { break-inside: avoid; border-bottom: .2mm solid #dce7e5; padding: 3mm 0; }
+.request > div { align-items: baseline; display: flex; gap: 4mm; justify-content: space-between; }
+.request strong { font-size: 11pt; }
+.request span, .request p, .meta { font-size: 9pt; line-height: 1.45; }
+.request p { margin: 2mm 0 0; }
+.meta { break-inside: avoid; margin-top: 7mm; }
+.paper footer { break-inside: avoid; display: flex; justify-content: flex-end; margin-top: 18mm; }
+.paper footer div { border-top: .2mm solid #718d88; min-height: 20mm; padding-top: 2mm; text-align: center; width: 55mm; }
+.message { background: #fff; color: #5f2828; margin: 30px auto; max-width: 520px; padding: 24px; }
+@media print { .toolbar { display: none !important; } .paper { margin: 0; min-height: auto; padding: 0; width: auto; } }

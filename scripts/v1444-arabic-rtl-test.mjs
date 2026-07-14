@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+const [provider, layout, css, arabic, session, tagService, importService] = await Promise.all([readFile("apps/web/i18n/useI18n.tsx", "utf8"), readFile("apps/web/app/layout.tsx", "utf8"), readFile("apps/web/app/globals.css", "utf8"), readFile("apps/web/i18n/ar.ts", "utf8"), readFile("apps/web/app/session.tsx", "utf8"), readFile("apps/api/src/clinical-tags/clinical-tags.service.ts", "utf8"), readFile("apps/api/src/patient-import/patient-import.service.ts", "utf8")]);
+assert(provider.includes('language === "ar" ? "rtl" : "ltr"') && provider.includes("document.documentElement.dir = direction"), "Arabic must set true document RTL");
+assert(provider.includes("document.documentElement.lang") && provider.includes("prijClinicLanguage"), "language and persisted preference missing");
+assert(layout.includes("<I18nProvider>") && layout.includes('lang="en"'), "global provider must wrap all routes with stable SSR language");
+for (const selector of ['html[dir="rtl"] body', '.sidebar', '.account-menu-panel', '.patient-context-bar']) assert(css.includes(selector), `RTL layout rule missing: ${selector}`);
+for (const word of ["المريضات", "الاستقبال", "الروشتات", "الفحوصات", "الإرشادات", "الأمان"]) assert(arabic.includes(word), `core Arabic translation missing: ${word}`);
+assert(!/[ÃØÙ][\x80-\xBF]/.test(arabic), "Arabic dictionary contains mojibake markers");
+for (const message of ["توجد مشكلة في الاتصال", "انتهت الجلسة", "بيانات الموظف"]) assert(session.includes(message), `Arabic session message missing: ${message}`);
+assert(tagService.includes('replace(/[أإآ]/g, "ا")') && tagService.includes("aliasesArJson"), "Arabic clinical search normalization missing");
+assert(importService.includes("\\p{L}") && importService.includes("\\uFFFD"), "Arabic names and corrupted import guards missing");
+console.log("Arabic UTF-8, true RTL, persisted language, search, validation, and core localization contract PASS (23 assertions)");

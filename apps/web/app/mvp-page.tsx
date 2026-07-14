@@ -8,7 +8,7 @@ import { useSession } from "./session";
 import { useTheme } from "./theme";
 import { IconName, ThreeDMedicalIcon } from "../components/ThreeDMedicalIcon";
 import { UniversalSearchBox } from "../components/clinic/UniversalSearchBox";
-import { I18nProvider, LanguageSwitcher, useI18n } from "../i18n/useI18n";
+import { LanguageSwitcher, useI18n } from "../i18n/useI18n";
 
 type Field = {
   name: string;
@@ -319,11 +319,7 @@ export function MvpPage({
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  return (
-    <I18nProvider>
-      <AppShellChrome>{children}</AppShellChrome>
-    </I18nProvider>
-  );
+  return <AppShellChrome>{children}</AppShellChrome>;
 }
 
 function AppShellChrome({ children }: { children: ReactNode }) {
@@ -343,7 +339,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const isOwnerAdmin = hasRole(roles, ["Owner", "Admin"]);
   const isDoctorOnly = hasRole(roles, ["Doctor"]) && !isOwnerAdmin;
-  const shellNavGroups = buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly });
+  const shellNavGroups = buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly, isReceptionistOnly });
   const activeNavHref = shellNavGroups
     .flatMap((group) => (group.links ?? []).map(([href]) => href))
     .concat(shellNavGroups.flatMap((group) => group.href ? [group.href] : []))
@@ -353,8 +349,8 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [openNavGroup, setOpenNavGroup] = useState<string | null>(routeGroupTitle);
 
   useEffect(() => {
-    setSidebarCollapsed(localStorage.getItem("prijSidebarCollapsed") === "true");
-  }, []);
+    setSidebarCollapsed(isReceptionistOnly ? false : localStorage.getItem("prijSidebarCollapsed") === "true");
+  }, [isReceptionistOnly]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -398,7 +394,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} interface-${interfaceMode.toLowerCase()} comfort-${densityMode.toLowerCase()} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "no-sidebar receptionist-shell" : ""}`} data-interface-mode={interfaceMode} data-density={doctorComfortMode ? "large" : densityMode.toLowerCase()}>
+    <main className={`app-shell theme-${theme} interface-${interfaceMode.toLowerCase()} comfort-${densityMode.toLowerCase()} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "receptionist-shell" : ""}`} data-interface-mode={interfaceMode} data-density={doctorComfortMode ? "large" : densityMode.toLowerCase()}>
       {user ? (
         <>
           <button
@@ -499,7 +495,8 @@ export function UserMenu({
 }) {
   const { t } = useI18n();
   const role = user ? primaryRole(user.roles) : "Login required";
-  const displayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
+  const rawDisplayName = user?.displayName || user?.loginId || user?.email || "Not signed in";
+  const displayName = /^doc$/i.test(rawDisplayName.trim()) ? "Doctor" : rawDisplayName;
 
   if (!user) {
     return (
@@ -790,8 +787,9 @@ function buildShellNavGroups(input: {
   canUseStaffChat: boolean;
   isOwnerAdmin: boolean;
   isDoctorOnly: boolean;
+  isReceptionistOnly: boolean;
 }): ShellNavGroup[] {
-  const { roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly } = input;
+  const { roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly, isReceptionistOnly } = input;
   const canSee = (href: string) => navigationRegistry.some((item) => item.href === href && canSeeNavItem(item, roles, permissions, canOpenAdmin));
   const link = (href: string, label: string, icon: IconName): [string, string, IconName] | null => (canSee(href) ? [href, label, icon] : null);
   const compact = (items: Array<[string, string, IconName] | null>) => items.filter(Boolean) as Array<[string, string, IconName]>;
@@ -816,6 +814,16 @@ function buildShellNavGroups(input: {
       ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : []),
       { title: "Guidelines", href: "/guidelines", icon: "reports" },
       { title: "More", icon: "settings", links: compact([link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription")]) }
+    ];
+  }
+
+  if (isReceptionistOnly) {
+    return [
+      { title: "Reception", href: "/reception", icon: "reception" },
+      { title: "New Patient", href: "/patients/new", icon: "patients" },
+      { title: "Returning Patient", href: "/reception/qr-scan", icon: "search" },
+      { title: "Waiting Line", href: "/queue", icon: "queue" },
+      { title: "Calendar", href: "/calendar", icon: "calendar" }
     ];
   }
 

@@ -73,6 +73,7 @@ async function main() {
 
   const clinicalRequest = await post("/clinical-requests", doctor.token, {
     patientId: patient.id,
+    encounterId: encounter.id,
     requestNote: "Demo follow-up request",
     items: [
       { title: "CBC", requestType: "laboratory" },

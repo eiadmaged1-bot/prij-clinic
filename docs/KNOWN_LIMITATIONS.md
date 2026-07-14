@@ -1,13 +1,19 @@
 # Known Limitations
 
-- This sprint is not a production-readiness or medical-safety claim. Privacy, restore drills, access-control review, monitoring, deployment, and clinical-governance signoff remain required before real PHI/PII use.
-- The preserved development database contains real operational records. Destructive tests must continue to use disposable isolated databases.
-- The current environment has no `PRIJ_EXTERNAL_INTAKE_SECRET`; public invalid-signature behavior was verified, but a public signed dry run was correctly skipped. The isolated HMAC integration suite passed with an ephemeral secret.
-- Seven high-severity dependency findings remain. Most are development-tooling-only; production-reachable `multer` and `xlsx` require controlled upgrade/replacement work. See `docs/DEPENDENCY_AUDIT.md`.
-- `npm run test:v139:clinical-tags-edd-intake` retains one legacy static UI expectation for a permanent patient QR label. Current smart-tag and signed-intake suites pass; the removed UI element was not reintroduced.
-- Expanded security emits expected warnings for synthetic fallback fixtures, broadly authenticated routes without meaningful denied-role cases, and the absence of an assigned-doctor patient-scope model.
-- Medication content remains demo/reference material unless provenance-backed and reviewed. Missing interaction data never means a combination is safe.
-- Medication search, smart tags, investigation favorites, Care Assist, and AI drafts are assistive only; they do not diagnose, prescribe, rank treatment, select doses, or write final records autonomously.
-- A5 printing is functional, but no final clinic-approved background/template artwork is present. Browser print headers/footers remain operator-controlled.
-- Google Form intake never auto-merges. Authorized staff must review pending data conservatively before creating or matching a patient.
-- Public ngrok tunnels are temporary QA tools only. Use one tunnel to loopback web port 3000, never expose API port 3001, and never use real patient data through a tunnel.
+- This sprint is not a production-readiness or medical-safety claim. Privacy, restore drills, monitoring, deployment, penetration testing, and clinical-governance signoff remain required.
+- Full manual role QA at every requested desktop/mobile viewport has not yet been rerun after the v1.4.4 changes. Current claims are automated/build verification unless explicitly stated otherwise.
+- Some legacy integration scripts assume disposable databases but do not enforce them or self-clean. The final clinical persistence and OB/GYN runs created clearly labeled synthetic test records in the preserved development database. They were not deleted because destructive cleanup was not proven safe; administrators should review/archive them through the application.
+- Protected seeded account credentials were unavailable, so credential-dependent security, guidelines, and investigation-result legacy suites are not complete.
+- Current-branch ngrok QA has not yet been run. Prior v1.4.3 tunnel results do not prove v1.4.4 behavior.
+- Arabic direction and core translation infrastructure work, but multiple legacy and newly reconstructed clinical screens still contain English-only operational copy. Full translation completeness is not claimed.
+- Language preference is device/browser persisted, not yet synchronized as a server-side per-user preference.
+- Guideline uploads support PDF, TXT, and Markdown. DOCX is not accepted because a safe extractor is not installed. Annotations and version replacement UI remain incomplete.
+- Investigation favorite sets expose personal creation in the current UI. Branch/clinic scope enforcement exists in the API, but shared-scope creation controls and restore UI remain incomplete.
+- The investigation catalog was not expanded or reviewed as a comprehensive bilingual catalog in this sprint. Existing provenance limits apply; no catalog is claimed to cover every investigation.
+- Investigation result endpoints support received/reviewed/cancelled follow-up, but the full requested scheduled/collected/performed/structured-result lifecycle and every cross-patient filter are not complete.
+- Smart cohort provenance and operators are implemented. Saved/pinned cohort dashboards, procedure-specific drawers, oncology concern workflows, and automatic source adapters across every requested record family remain incomplete.
+- Patient import does not automatically merge or overwrite. It imports only READY rows. Rollback is represented by preserved batch/row links, but an audited archive/rollback action UI is not yet implemented.
+- Patient schema currently has no dedicated spouse, address, secondary-phone, external-ID, or registration-date columns; those mapped import values are previewed but are not silently written into unrelated fields.
+- CSV parsing supports normal quoted rows but not embedded multiline quoted cells. Windows-1256 requires explicit selection.
+- A5 prescription printing has no final clinic-approved background artwork. Browser print headers/footers remain operator-controlled.
+- Medication, investigation, guideline, Smart Search, and AI content is assistive and draft/review-oriented. Nothing autonomously diagnoses, prescribes, doses, treats, or finalizes clinical records.

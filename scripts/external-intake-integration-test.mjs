@@ -65,6 +65,24 @@ try {
   const conflict = await send(conflictingPayload, { timestamp: nextTimestamp() });
   assert.equal(conflict.status, 409, "conflicting duplicate rejected");
 
+  const arabicPayload = {
+    ...payload(`${submissionPrefix}-ARABIC`, "+201000000009"),
+    fullName: "سارة أحمد محمد",
+    addressText: "كفر الشيخ",
+    spouseName: "محمد علي",
+    followUpType: "متابعة حمل"
+  };
+  const arabicResponse = await send(arabicPayload, { timestamp: nextTimestamp() });
+  assert.equal(arabicResponse.status, 201, "Arabic UTF-8 payload accepted");
+  const arabicBody = await arabicResponse.json();
+  const arabicStored = await prisma.externalPatientSubmission.findUniqueOrThrow({ where: { id: arabicBody.intakeId } });
+  assert.equal(arabicStored.language, "ar", "Arabic language marker stored");
+  assert.deepEqual(arabicStored.rawAnswersJson, arabicPayload, "original Arabic answers preserved without normalization");
+  assert.equal(arabicStored.mappedPatientJson.fullName, "سارة أحمد محمد", "mapped Arabic name preserved");
+  assert.equal(arabicStored.mappedPatientJson.address, "كفر الشيخ", "mapped Arabic address preserved");
+  assert.equal(arabicStored.mappedPatientJson.husbandName, "محمد علي", "mapped Arabic spouse preserved");
+  assert.equal(arabicStored.mappedCaseTypeJson.suggestedPhase, "pregnancy", "Arabic follow-up type mapped after validation");
+
   const dryRunPayload = payload(`${submissionPrefix}-DRY`, "+201000000004");
   const dryRun = await send(dryRunPayload, { timestamp: nextTimestamp(), dryRun: true });
   assert.equal(dryRun.status, 200, "dry run succeeds");
@@ -74,7 +92,7 @@ try {
   assert.equal(unauthorized.status, 401, "review inbox rejects unauthorized access");
   assert(await prisma.auditLog.count({ where: { action: "external_intake.received", resourceId: createdBody.intakeId } }) >= 1, "success audit event recorded");
 
-  console.log("External intake HMAC, validation, replay, idempotency, match candidate, dry run, RBAC, and audit PASS");
+  console.log("External intake HMAC, Arabic UTF-8, validation, replay, idempotency, match candidate, dry run, RBAC, and audit PASS");
 } finally {
   if (child && !child.killed) child.kill();
   await prisma.externalPatientSubmission.deleteMany({ where: { externalSubmissionId: { startsWith: submissionPrefix } } });

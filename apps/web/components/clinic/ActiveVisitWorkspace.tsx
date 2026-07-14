@@ -36,6 +36,7 @@ type PrescriptionLine = {
   duration?: string;
   instructions?: string;
   family?: string | null;
+  manualEntry?: boolean;
 };
 
 const modules = [
@@ -337,7 +338,7 @@ function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, 
       </div>
       <SafetyPanel safety={safety} />
       <div className="form-actions wide">
-        <button className="button secondary" type="button" onClick={() => setLines((current) => [...current, { medicationName: "Custom medication" }])}>Add medication</button>
+        <button className="button secondary" type="button" onClick={() => setLines((current) => [...current, { medicationName: "Custom medication", manualEntry: true }])}>Add custom medication</button>
         <button className="button secondary" type="button" disabled={!lines.length} onClick={onSafety}>Safety check</button>
         <button className="button" type="button" disabled={!lines.length} onClick={onSave}>Save draft</button>
         <button className="button secondary" type="button" disabled={!lines.length} onClick={() => window.print()}>Print</button>

@@ -22,6 +22,7 @@ import {
   type TimelineItem
 } from "./patient-components";
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
+import { PatientInvestigationPanel, PatientPrescriptionPanel } from "../../../components/patients/PatientClinicalWorkflowPanels";
 
 type WorkspaceModuleProps = {
   active: TabConfig;
@@ -67,8 +68,8 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   "doctor-visit": ({ patient, related, requestPatientWorkspaceRefresh, permissions, roles }) => <DoctorVisitFlow patient={patient} related={related} onReload={requestPatientWorkspaceRefresh} permissions={permissions} roles={roles} />,
   "secretary-intake": ({ related }) => <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} />,
   "doctor-note": ({ related }) => <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} />,
-  prescriptions: ({ active, related }) => <RelatedPanel config={active} rows={related.prescriptions ?? []} />,
-  investigations: ({ related }) => <InvestigationsPanel related={related} />,
+  prescriptions: ({ patient, related, permissions, roles }) => <PatientPrescriptionPanel patient={patient} related={related} permissions={permissions} roles={roles} records={related.prescriptions ?? []} />,
+  investigations: ({ patient, related, permissions, roles }) => <PatientInvestigationPanel patient={patient} related={related} permissions={permissions} roles={roles}><InvestigationsPanel related={related} /></PatientInvestigationPanel>,
   "follow-up-hints": ({ active, related }) => <RelatedPanel config={active} rows={related["follow-up-hints"] ?? []} />,
   documents: ({ related }) => <DocumentsPanel related={related} />,
   billing: ({ active, related }) => <RelatedPanel config={active} rows={related.billing ?? []} />,

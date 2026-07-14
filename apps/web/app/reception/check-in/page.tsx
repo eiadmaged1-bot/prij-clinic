@@ -23,7 +23,7 @@ export default function ReceptionCheckInPage() {
   const [priority, setPriority] = useState("routine");
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [status, setStatus] = useState("Loading");
-  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey } = useIdempotencyKey();
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
@@ -83,7 +83,6 @@ export default function ReceptionCheckInPage() {
       } else {
         setStatus("Could not check in patient");
       }
-      regenerateIdempotencyKey();
     }
   }
 

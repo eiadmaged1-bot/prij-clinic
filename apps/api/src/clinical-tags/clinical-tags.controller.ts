@@ -26,8 +26,8 @@ export class ClinicalTagsController {
 
   @Get("clinical-tags/patients")
   @Permissions("clinical_tags.search")
-  async patients(@Query("tag") tag: string | undefined, @CurrentUser() user: AuthUser) {
-    return { patients: await this.clinicalTags.patientsByTag(tag, user) };
+  async patients(@Query("tag") tag: string | undefined, @Query("operator") operator: string | undefined, @Query("status") status: string | undefined, @CurrentUser() user: AuthUser) {
+    return { patients: await this.clinicalTags.patientsByTag(tag, user, operator, status) };
   }
 
   @Get("patients/:id/clinical-tags")

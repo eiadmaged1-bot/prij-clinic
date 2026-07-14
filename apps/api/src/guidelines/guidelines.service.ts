@@ -198,9 +198,12 @@ export class GuidelinesService {
   }
 
   async upload(file: UploadedGuidelineFile, dto: UploadGuidelineDto, user: AuthUser) {
-    if (!file?.buffer) throw new BadRequestException("Upload a PDF or plain text guideline file.");
-    if (!["application/pdf", "text/plain"].includes(file.mimetype)) {
-      throw new BadRequestException("Only PDF and plain text guideline files are accepted.");
+    if (!file?.buffer) throw new BadRequestException("Upload a PDF, plain text, or Markdown guideline file.");
+    const extension = extname(file.originalname).toLowerCase();
+    const accepted = file.mimetype === "application/pdf" && extension === ".pdf"
+      || ["text/plain", "text/markdown"].includes(file.mimetype) && [".txt", ".md", ".markdown"].includes(extension);
+    if (!accepted) {
+      throw new BadRequestException("Only matching PDF, TXT, and Markdown files are accepted.");
     }
 
     const hash = sha256(file.buffer);
@@ -213,7 +216,6 @@ export class GuidelinesService {
 
     const storageRoot = join(process.cwd(), "storage", "guidelines", "private");
     await mkdir(storageRoot, { recursive: true });
-    const extension = extname(file.originalname) || (file.mimetype === "application/pdf" ? ".pdf" : ".txt");
     const fileName = `${hash}${extension}`;
     const localFilePath = join(storageRoot, fileName);
     const storedFile = encryptForVault(file.buffer);
@@ -1074,7 +1076,7 @@ function formatSearchResult(
 }
 
 async function extractText(buffer: Buffer, mimeType: string) {
-  if (mimeType === "text/plain") return buffer.toString("utf8");
+  if (mimeType === "text/plain" || mimeType === "text/markdown") return buffer.toString("utf8");
   const pdfModule = (await import("pdf-parse")) as unknown as {
     default?: (input: Buffer) => Promise<{ text: string }>;
     PDFParse?: new (input: { data: Buffer }) => { getText: () => Promise<{ text: string }>; destroy?: () => Promise<void> | void };
