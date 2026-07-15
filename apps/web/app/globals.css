@@ -4940,6 +4940,17 @@ body {
   background: #edf8f8;
 }
 
+.prescription-tabs {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.prescription-tabs .tab-button {
+  flex: 1 0 max-content;
+  min-width: 6.5rem;
+  white-space: nowrap;
+}
+
 .investigation-mobile-tabs {
   display: none;
 }

@@ -138,6 +138,10 @@ export class PrescriptionTemplateDto {
 
   @IsOptional()
   @IsString()
+  templateScope?: "personal" | "clinic";
+
+  @IsOptional()
+  @IsString()
   @MaxLength(80)
   category?: string;
 

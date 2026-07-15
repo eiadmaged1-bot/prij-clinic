@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -174,9 +174,14 @@ export class PrescriptionsService {
   }
 
   async createTemplate(dto: PrescriptionTemplateDto, user: AuthUser) {
+    const clinicTemplate = dto.templateScope === "clinic";
+    if (clinicTemplate && !user.roles.some((role) => role === "Owner" || role === "Admin")) {
+      throw new ForbiddenException("Only Owner or Admin can create clinic templates.");
+    }
     const template = await this.prisma.prescriptionTemplate.create({
       data: {
-        ownerUserId: user.roles.includes("Doctor") ? user.id : null,
+        ownerUserId: clinicTemplate ? null : user.id,
+        clinicScope: clinicTemplate ? "clinic" : null,
         title: dto.title.trim(),
         category: clean(dto.category),
         diagnosisOrUseCase: clean(dto.diagnosisOrUseCase),
@@ -193,7 +198,7 @@ export class PrescriptionsService {
       resourceType: "prescription_template",
       resourceId: template.id,
       severity: "medium",
-      metadataJson: { itemCount: dto.items.length }
+      metadataJson: { itemCount: dto.items.length, templateScope: clinicTemplate ? "clinic" : "personal" }
     });
     return template;
   }

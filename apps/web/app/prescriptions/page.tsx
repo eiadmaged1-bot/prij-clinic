@@ -8,7 +8,7 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
 type Shortcut = { id: string; displayName: string; genericName: string; defaultDoseText?: string | null; defaultTimingText?: string | null; defaultDurationText?: string | null; defaultInstructions?: string | null };
-type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; itemsJson?: PrescriptionItem[] };
+type Template = { id: string; title: string; category?: string | null; diagnosisOrUseCase?: string | null; ownerUserId?: string | null; clinicScope?: string | null; itemsJson?: PrescriptionItem[] };
 type PrescriptionItem = { medicationName: string; medicationGenericId?: string; medicationProductId?: string; drugMarketVariantId?: string; optionalBrandOrTradeName?: string; strengthText?: string; dosageForm?: string; quantityText?: string; dispensingUnit?: string; dose?: string; doseUnit?: string; route?: string; frequency?: string; duration?: string; prn?: boolean; customReason?: string; instructions?: string; notes?: string; manualEntry?: boolean };
 type MedicationResult = { type: string; id: string; productId?: string; genericName?: string | null; brandName?: string | null; tradeName?: string | null; strengthText?: string | null; dosageForm?: string | null };
 
@@ -31,6 +31,8 @@ export default function PrescriptionsPage() {
   const [savedPrescriptionId, setSavedPrescriptionId] = useState("");
   const [templateTitle, setTemplateTitle] = useState("");
   const [editingTemplateId, setEditingTemplateId] = useState("");
+  const [templateScope, setTemplateScope] = useState<"personal" | "clinic">("personal");
+  const [removedItem, setRemovedItem] = useState<{ item: PrescriptionItem; index: number } | null>(null);
   const [medicationQuery, setMedicationQuery] = useState("");
   const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
   const [identityConfirmed, setIdentityConfirmed] = useState(false);
@@ -193,7 +195,7 @@ export default function PrescriptionsPage() {
     if (!templateTitle.trim() || readyItems.length !== items.length) { setStatus("Name the template and complete all medication rows first."); return; }
     const response = editingTemplateId
       ? await apiRequest(`/prescriptions/templates/${editingTemplateId}`, "PATCH", { title: templateTitle.trim(), items, notes })
-      : await apiPost("/prescriptions/templates", { title: templateTitle.trim(), items, notes });
+      : await apiPost("/prescriptions/templates", { title: templateTitle.trim(), templateScope, items, notes });
     setStatus(response.ok ? "Prescription template saved." : "Could not save prescription template.");
     if (response.ok) { setTemplateTitle(""); setEditingTemplateId(""); void load(); }
   }
@@ -221,7 +223,7 @@ export default function PrescriptionsPage() {
         <p className="muted">Doctor manual review required. No auto-prescribing or automatic dosing.</p>
       </section>
       <SafetyAlert />
-      <section className="patient-tabs simple">
+      <section className="patient-tabs simple prescription-tabs" aria-label="Prescription Center sections">
         {([
           ...(lockedContext ? [["builder", "Patient Prescription"]] : []),
           ["templates", "Templates"],
@@ -268,13 +270,14 @@ export default function PrescriptionsPage() {
                   <label className="checkbox-row"><input type="checkbox" checked={item.prn === true} onChange={(event) => updateItem(index, "prn", event.target.checked, setItems)} />PRN / when needed</label>
                   {item.manualEntry ? <label className="wide">Reason for custom or unlisted medication<input value={item.customReason ?? ""} onChange={(event) => updateItem(index, "customReason", event.target.value, setItems)} required /></label> : null}
                   <label className="wide">Additional instructions<input value={item.instructions ?? ""} onChange={(event) => updateItem(index, "instructions", event.target.value, setItems)} /></label>
-                  <div className="form-actions wide"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => { if (window.confirm("Add a distinct formulation, route, or treatment phase?")) setItems((current) => [...current.slice(0, index + 1), { ...item } as PrescriptionItem, ...current.slice(index + 1)]); }}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} disabled={items.length === 1}>Remove</button></div>
+                  <div className="form-actions wide"><button className="button secondary compact" type="button" onClick={() => moveItem(index, -1)} disabled={index === 0}>Move up</button><button className="button secondary compact" type="button" onClick={() => moveItem(index, 1)} disabled={index === items.length - 1}>Move down</button><button className="button secondary compact" type="button" onClick={() => { if (window.confirm("Add a distinct formulation, route, or treatment phase?")) setItems((current) => [...current.slice(0, index + 1), { ...item } as PrescriptionItem, ...current.slice(index + 1)]); }}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => { setRemovedItem({ item, index }); setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); }} disabled={items.length === 1}>Remove</button></div>
                 </div>
               </details>
             ))}
             <label>Prescription notes<input value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
             <section className="panel compact-panel wide prescription-review-panel"><h3>Doctor review</h3><label className="checkbox-row"><input type="checkbox" checked={identityConfirmed} onChange={(event) => setIdentityConfirmed(event.target.checked)} />Patient identity confirmed.</label><label className="checkbox-row"><input type="checkbox" checked={alertsHandled} onChange={(event) => setAlertsHandled(event.target.checked)} />Allergies, current medications, pregnancy and lactation reviewed.</label><label className="checkbox-row"><input type="checkbox" checked={doctorReviewed} onChange={(event) => setDoctorReviewed(event.target.checked)} />Dose, route, frequency, duration and instructions verified by the doctor.</label></section>
-            <div className="form-actions wide"><input aria-label="Prescription template name" value={templateTitle} onChange={(event) => setTemplateTitle(event.target.value)} placeholder="Template name" /><button className="button secondary" type="button" onClick={() => void saveCurrentTemplate()}>{editingTemplateId ? "Save template changes" : "Save current rows as template"}</button>{editingTemplateId ? <button className="button secondary" type="button" onClick={() => { setEditingTemplateId(""); setTemplateTitle(""); }}>Cancel template edit</button> : null}</div>
+            {removedItem ? <div className="notice wide">Medication removed. <button className="button secondary compact" type="button" onClick={() => { setItems((current) => [...current.slice(0, removedItem.index), removedItem.item, ...current.slice(removedItem.index)]); setRemovedItem(null); }}>Undo remove</button></div> : null}
+            <div className="form-actions wide"><input aria-label="Prescription template name" value={templateTitle} onChange={(event) => setTemplateTitle(event.target.value)} placeholder="Template name" />{!editingTemplateId ? <label>Template visibility<select value={templateScope} onChange={(event) => setTemplateScope(event.target.value as "personal" | "clinic")}><option value="personal">Personal template</option><option value="clinic">Clinic template (Owner/Admin only)</option></select></label> : null}<button className="button secondary" type="button" onClick={() => void saveCurrentTemplate()}>{editingTemplateId ? "Save template changes" : "Save current rows as template"}</button>{editingTemplateId ? <button className="button secondary" type="button" onClick={() => { setEditingTemplateId(""); setTemplateTitle(""); }}>Cancel template edit</button> : null}</div>
             <div className="form-actions">
               <button className="button secondary" type="button" onClick={() => setItems((current) => [...current, { ...emptyItem }])}>More options · Add custom medication</button>
               <button className="button secondary" type="button" onClick={() => setStatus(patientId && encounterId ? "Patient-aware safety check is assistive. Doctor review required." : "Reference mode only. Select a patient and active visit to run allergy, pregnancy, lactation, and interaction checks.")}>Safety check</button>
@@ -299,6 +302,7 @@ function TemplatePanel({ templates, onApply, onSaved }: { templates: Template[];
     const medicationName = String(form.get("medicationName") ?? "").trim();
     const response = await apiPost("/prescriptions/templates", {
       title: String(form.get("title") ?? "").trim(),
+      templateScope: String(form.get("templateScope") ?? "personal"),
       category: String(form.get("category") ?? "").trim(),
       diagnosisOrUseCase: String(form.get("useCase") ?? "").trim(),
       items: [{ medicationName }]
@@ -312,7 +316,7 @@ function TemplatePanel({ templates, onApply, onSaved }: { templates: Template[];
     if (response.ok) onSaved();
   }
 
-  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Saved Prescription Templates</h2><span className="badge">{templates.length}</span></div><div className="data-list">{templates.map((template) => <article className="data-row" key={template.id}><div className="data-row-header"><strong>{template.title}</strong><span className="badge">{template.category ?? "Template"}</span></div><p className="muted">{template.diagnosisOrUseCase ?? "Draft support template"}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => onApply(template)}>Apply / edit in builder</button><button className="button secondary compact" type="button" onClick={() => void action(template, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void action(template, "archive")}>Archive</button></div></article>)}</div></article><article className="panel"><h2>Create template</h2><p className="muted">For multi-medication templates, arrange the rows in the builder and save them there.</p><form className="form-grid" onSubmit={submit}><label>Title<input name="title" required /></label><label>Category<input name="category" /></label><label>Use case<input name="useCase" /></label><label>Medication name<input name="medicationName" required /></label><button className="button" type="submit">Save template</button></form></article></section>;
+  return <section className="content-grid"><article className="panel"><div className="section-heading"><h2>Saved Prescription Templates</h2><span className="badge">{templates.length}</span></div><div className="data-list">{templates.map((template) => <article className="data-row" key={template.id}><div className="data-row-header"><strong>{template.title}</strong><span className="badge">{template.clinicScope ? "Clinic" : "Personal"}</span></div><p className="muted">{template.diagnosisOrUseCase ?? "Draft support template"}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => onApply(template)}>Apply / edit in builder</button><button className="button secondary compact" type="button" onClick={() => void action(template, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void action(template, "archive")}>Archive</button></div></article>)}</div></article><article className="panel"><h2>Create template</h2><p className="muted">For multi-medication templates, arrange the rows in the patient prescription builder and save them there.</p><p className="muted">Template creation from this management view starts a single generic row; it does not create a patient prescription.</p><form className="form-grid" onSubmit={submit}><label>Title<input name="title" required /></label><label>Visibility<select name="templateScope"><option value="personal">Personal template</option><option value="clinic">Clinic template (Owner/Admin only)</option></select></label><label>Category<input name="category" /></label><label>Use case<input name="useCase" /></label><label>Generic medication name<input name="medicationName" required /></label><button className="button" type="submit">Save template</button></form></article></section>;
 }
 
 function ShortcutPanel({ shortcuts, onAdd, onSaved }: { shortcuts: Shortcut[]; onAdd: (shortcut: Shortcut) => void; onSaved: () => void }) {
