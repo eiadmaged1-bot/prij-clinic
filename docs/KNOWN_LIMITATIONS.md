@@ -1,5 +1,24 @@
 # Known Limitations
 
+## v1.4.9 exact remaining limitations
+
+- Physical Receptionist/Doctor/Owner browser walkthroughs, iPhone/Android portrait/landscape, mobile Safari PDF behavior, rear camera, real printing, LAN, and ngrok QA were not performed.
+- No existing inactive/archive record was bulk reactivated or automatically classified. Owner review is still required; name/MRN signals are candidates only.
+- Data Hygiene supports audited classification and review export, but hard delete remains intentionally unavailable for referenced or signed clinical history.
+- The import CLI supports CSV directly. XLSX is staged through the web intake parser; extending the CLI with the same XLSX adapter remains outstanding.
+- Google Sheets requires deployment HTTPS and a server-side integration key. No real Sheet or Apps Script was connected during automated verification.
+- Guideline PDF delivery retains the same-origin ranged browser viewer. Physical mobile Safari rendering and complete amendment-authoring UI remain outstanding.
+- The Case Library returns bounded rows but does not yet expose a cursor UI beyond current filters.
+- Ultrasound has structured context, autosave/review/amendment controls, but complete image attachment, signed export/print, and serial comparison visualization remain partial.
+- Protocol completion stores unanswered questions and connections; no unanswered clinical content is generated. Clinical review and approval remain human responsibilities.
+- Medication content expansion is identity and family classification only. Uses, mechanism, PK/PD, cautions, interactions, pregnancy/lactation, renal/hepatic, monitoring, dosing, and susceptibility remain unsupported unless separately sourced and reviewed.
+- The workspace persists column and size for forward compatibility, but the current patient file activates one module at a time rather than rendering a simultaneous desktop masonry canvas. Missing-information dismissal-with-reason is not yet implemented.
+- Appearance covers the seven required presets and scopes; not every legacy administrative list was converted to a paginated drawer/table in this sprint.
+- New workspace copy has central English/Arabic parity. Some older operational modules still use page-local bilingual copy; complete centralized-key conversion of every legacy string is not claimed.
+- Account 2FA reset manages a safe prepare/confirm state and session revocation. A full authenticator enrollment/challenge subsystem is not present, so it is not claimed as production 2FA.
+- Branch/service-specific pricing overrides were not added because the current pricing model is clinic-wide. Required defaults and audited Owner-only edits are implemented.
+- This is not production, privacy, penetration-test, legal, or clinical-governance approval.
+
 ## v1.4.6 unresolved recovery limits
 
 - The KFS July 2026 antibiotic PDF is absent from the private vault and was not imported or committed.

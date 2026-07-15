@@ -1,5 +1,21 @@
 # Manual QA Report
 
+## v1.4.9 checkpoint evidence - 2026-07-15
+
+Checkpoint package typechecks passed after each checkpoint. New focused suites passed for patient search/queue (42 assertions), data hygiene/operational views (43), import default-confirm behavior (44), linked clinical workflows (55), medication governance (26), modular workspace (50), and appearance/account/pricing/localization (52). Existing focused queue, reception, Case Library, guidelines, investigations, prescriptions, pharmacology, workspace, autosave, admin, translation, owner-shell, and account-cleanup contracts used during checkpoints also passed after compatibility updates.
+
+No integration or destructive tests were run against the clinic database. The preservation script performed count-only reads. The legacy live Protocol Atlas probe could not reach its expected API and reported `fetch failed`; it is unavailable, not passed.
+
+Manual QA was **not performed** for authenticated role workflows, physical phone/tablet orientations, camera, mobile Safari PDF, real print/export, LAN, ngrok, backup restore, or clinical content review. Automated static/type/build evidence must not be interpreted as those manual results.
+
+Migration deploy, Prisma repair/client generation, seed, and the full monorepo typecheck passed. The initial production build compiled but failed Next.js lint on four internal guideline anchors; after converting them to `next/link`, the production build rerun passed for API, web, shared, and all 82 web routes. Two non-blocking React hook dependency warnings remain in Data Hygiene and OB Ultrasounds.
+
+All seven v1.4.9 suites passed: patient search/queue 42, data hygiene 43, import 44, linked clinical workflows 55, medication governance 26, modular workspace 50, and appearance/account/localization 52 (312 total). Available RBAC (21), audit governance (14), PHI safety (18), log redaction, Arabic/RTL (23), translation parity, proxy/tunnel, patient workspace, Reception (25), autosave (17), guideline PDF/range/search, pharmacology, investigation/mobile/print, import, and account governance suites passed.
+
+Four older static contracts remain failing because they assert superseded copy or implementation details: v1.3.5 login requires `Use owner login`; v1.4.4 guidelines requires `Browse`; v1.4.5 guideline summaries requires the raw label `Needs review`; and v1.4.5 queue handoff requires a literal `clinic-queue:changed` reference in the create-patient page even though it now calls the shared event publisher. These failures are reported, not relabeled as passes.
+
+Post-migration count-only verification preserved Patient 586, Encounter 315, QueueTicket 180, GuidelineDocument 52, ClinicalProtocol 442, ObUltrasound 213, ExternalPatientSubmission 4, InvestigationOrder 196, InvestigationResult 5, and Prescription 195. MedicationGeneric changed from 37 to 63 through governed seed content. Classification totals are 1,298 REAL and zero explicitly reviewed TEST/QUARANTINED across the five classified operational models.
+
 ## v1.4.6 evidence
 
 Focused tests passed for visit actions, baskets, Visit, search/queue, QR fallback, mobile Investigations, guideline ranges, History, prescriptions, hydration/errors, and credential safety. Type checks and production web/API builds passed. Queue concurrency correctly refused to run without isolated API/session/CSRF credentials.

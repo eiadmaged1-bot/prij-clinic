@@ -236,7 +236,7 @@ export class QueueService {
     const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
 
     const tickets = await this.prisma.queueTicket.findMany({
-      where: { queueDate, ...branchScope(user), patient: { NOT: demoPatientWhere(), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } } as unknown as Prisma.QueueTicketWhereInput,
+      where: { queueDate, ...branchScope(user), patient: { dataClassification: { notIn: ["TEST", "QUARANTINED"] } } } as unknown as Prisma.QueueTicketWhereInput,
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
@@ -346,18 +346,6 @@ function queueResponse<T extends { id: string; patientId: string; branchId: stri
       : ticket.status === "in_room" ? "IN_ROOM"
         : ticket.status === "completed" ? "COMPLETED" : "CANCELLED";
   return { ...ticket, alreadyQueued, queueState, active: ["WAITING", "CALLED", "IN_ROOM"].includes(queueState) };
-}
-
-function demoPatientWhere(): Prisma.PatientWhereInput[] {
-  return [
-    { firstName: { startsWith: "Demo", mode: "insensitive" } },
-    { lastName: { startsWith: "Demo", mode: "insensitive" } },
-    { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
-    { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },
-    { medicalRecordNumber: { startsWith: "QA-", mode: "insensitive" } },
-    { notes: { contains: "training", mode: "insensitive" } },
-    { notes: { contains: "local demo", mode: "insensitive" } }
-  ];
 }
 
 function queueFailureReason(error: unknown) {

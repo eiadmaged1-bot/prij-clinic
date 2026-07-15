@@ -1,5 +1,23 @@
 # Current Status
 
+## v1.4.9 clinic core recovery — 2026-07-15
+
+Branch `fix/v1.4.9-core-recovery-and-modular-workspace`, verified base `a63db212bfc84c6f52f6a388368c4463c1de6842`.
+
+- Patient search is clinic-wide for authorized roles, optionally branch-filtered, ranked and paginated; queue operations remain current-working-branch/current-clinic-date scoped.
+- Reception check-in uses typed safe failures, retained idempotency, stale-lock repair, and shared Reception/Doctor/Owner refresh events.
+- Operational data classification, Owner review, quarantine, exact-phone duplicate review, and hard test-database isolation are implemented without auto-deleting or name-only classification.
+- Guideline and Case Library clients preserve error states instead of converting failures to empty/ready views.
+- Excel/CSV and Google Sheets stage rows only. Eligible import rows default to `CONFIRM_CREATE` and selected; exact-phone matches require an explicit resolution; blocked rows cannot commit.
+- Ultrasound inventory is paginated and context-aware; meaningful content is required before review. Protocol completion stores structured unanswered sections without generating medical answers.
+- The Drug Atlas seed links 43 identity/classification records to an official ATC/DDD 2026 source. Clinical monograph sections remain visibly incomplete and unapproved.
+- The modular patient workspace has persisted clinic/role/specialty/personal/patient layouts, eight presets, accessible mobile ordering, panel isolation, authoritative allergy/medication reads, and deterministic non-diagnostic missing-information rules.
+- Seven appearance presets resolve device/account/role/clinic scopes independently from patient layouts. Account security adds forced password change, revoke/lock/unlock, two-step 2FA reset state, Owner self-password change, final-Owner protection, and redacted audit history.
+
+Forward-only migrations added: `20260715201500_v149_data_classification`, `20260715213000_v149_patient_import_fields`, `20260715222000_v149_ultrasound_context`, `20260715223500_v149_protocol_completion`, `20260715231500_v149_patient_workspace_layouts`, and `20260716000500_v149_appearance_account_security`. No historical migration was rewritten and no database reset or automatic record deletion was performed.
+
+Count-only pre-migration preservation snapshot: 586 patients, 315 encounters, 180 queue tickets, 52 guideline documents, 442 protocols, 213 ultrasounds, 4 external submissions, 196 investigation orders, 5 investigation results, 195 prescriptions, and 37 medication generics. Final post-migration/seed counts are recorded in `docs/V149_CORE_RECOVERY.md`.
+
 ## v1.4.6 recovery status
 
 Base `b5ecf2e59ddcb37c231ecf55003141a97c75f130`. Repaired audited visit actions, baskets, five-step Visit, collapsed History, search/queue, QR fallback, mobile Investigations, prescriptions, guideline ranges, and hydration/errors. Additive migration `20260714233000_prescription_structured_fields` is applied locally; no clinical/audit records were deleted.

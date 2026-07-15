@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { askGuidelines, Citation, GuidelineDocument, GuidelineRequestError, GuidelineSource, listGuidelineDocuments, listGuidelineSources, reviewGuidelineDocument, searchGuidelines, uploadDemoGuidelineText } from "../../lib/guidelines";
 
 type Mode = "home" | "search" | "ask" | "sources" | "review" | "vault";
@@ -72,10 +73,10 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
         </div>
         <p className="notice">Evidence library only. Doctor review required. Local extractive search only. No external AI call.</p>
         <div className="form-actions">
-          <a className="button secondary" href="/guidelines/search">Search</a>
-          <a className="button secondary" href="/guidelines/ask">Ask</a>
-          <a className="button secondary" href="/guidelines/sources">Sources</a>
-          <a className="button secondary" href="/guidelines/review">Review</a>
+          <Link className="button secondary" href="/guidelines/search">Search</Link>
+          <Link className="button secondary" href="/guidelines/ask">Ask</Link>
+          <Link className="button secondary" href="/guidelines/sources">Sources</Link>
+          <Link className="button secondary" href="/guidelines/review">Review</Link>
         </div>
         {status ? <p className={inventoryState === "error" ? "form-error" : "notice"} role={inventoryState === "error" ? "alert" : "status"}>{status}</p> : null}
         {inventoryState === "error" ? <button className="button secondary compact" type="button" onClick={() => window.location.reload()}>Retry inventory</button> : null}

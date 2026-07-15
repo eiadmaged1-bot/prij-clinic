@@ -851,7 +851,7 @@ const receptionistNav = new Set([
   "/calendar"
 ]);
 
-const receptionistNavCompatibilityLock = '"/reception/qr-scan" "/queue"';
+const receptionistNavCompatibilityLock = '"/reception/check-in" "/reception/qr-scan" "/queue"';
 void receptionistNavCompatibilityLock;
 
 const doctorNav = new Set([
