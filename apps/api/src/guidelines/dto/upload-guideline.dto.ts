@@ -1,7 +1,13 @@
 import { GuidelineAccessLevel, GuidelineLicenseStatus } from "@prisma/client";
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { IsEnum, IsIn, IsOptional, IsString, IsUUID } from "class-validator";
 
 export class UploadGuidelineDto {
+  @IsIn(["create_new_guideline", "create_new_version", "restore_archived"])
+  uploadIntent!: "create_new_guideline" | "create_new_version" | "restore_archived";
+
+  @IsOptional()
+  @IsUUID()
+  targetDocumentId?: string;
   @IsString()
   title!: string;
 

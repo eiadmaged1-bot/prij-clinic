@@ -191,14 +191,13 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
                 <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search guidelines..." />
                 <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
               </form>
-              <div className="form-actions">
-                <Link className="button secondary compact" href="/guidelines/search">Browse</Link>
-                <Link className="button secondary compact" href="/guidelines/ask">Ask Evidence Library</Link>
-                <Link className="button secondary compact" href="/guidelines">Recent</Link>
-              </div>
             </section>
             {documents.length ? (
-              <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed documents" />
+              <>
+                <DocumentList documents={filterTrainingDocuments(documents).filter((item) => item.guidelineStatus === "ACTIVE")} title="All active guidelines" />
+                <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed" />
+                {canManageSources ? <DocumentList documents={documents} title="Owner/Admin inventory — all records" /> : null}
+              </>
             ) : (
               <Empty text="No guidelines imported yet. Owner/Admin can import official sources." />
             )}
@@ -237,7 +236,7 @@ function GuidelineShell({ title, message, children }: { title: string; message?:
         </div>
         <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
       </section>
-      <nav className="patient-tabs simple" aria-label="Guideline library navigation"><Link href="/guidelines">Browse</Link><Link href="/guidelines/search">Search</Link><Link href="/guidelines/ask">Ask Evidence Library</Link><Link href="/guidelines">Recent</Link><Link href="/guidelines/upload">Upload</Link><Link href="/guidelines/review">Review Queue</Link></nav>
+      <nav className="patient-tabs simple" aria-label="Guideline library navigation"><Link href="/guidelines">Library</Link><Link href="/guidelines/search">Search</Link><Link href="/guidelines/review">Review Queue</Link><Link href="/guidelines/upload">Upload</Link></nav>
       {children}
     </>
   );
@@ -258,6 +257,7 @@ function SearchPanel(props: {
         <button className="button" type="submit"><ThreeDMedicalIcon name="search" size="sm" />Search</button>
         <details className="filter-drawer"><summary>Filters</summary><div className="guideline-filter-grid"><label>Organization<input name="organization" /></label><label>Specialty<input name="specialty" /></label><label>Year<input name="year" inputMode="numeric" /></label><label>Region<input name="region" /></label><label>Status<select name="status"><option value="">All</option><option value="ACTIVE">Current</option><option value="NEEDS_REVIEW">Needs review</option><option value="SUPERSEDED">Superseded</option><option value="ARCHIVED">Archived</option></select></label><label>Source<select name="sourceKind"><option value="">Official or custom</option><option value="official">Official</option><option value="custom">Custom</option></select></label><label>Clinical area<select name="clinicalArea"><option value="">All areas</option>{["pregnancy", "infertility", "gynecology", "oncology", "medication", "investigation", "procedure"].map((area) => <option key={area} value={area}>{area}</option>)}</select></label><label className="checkbox-row"><input name="synthesis" type="checkbox" />Cited cross-document synthesis</label></div></details>
       </form>
+      <p className="muted" aria-label="Search result modes">Result modes: <strong>Sources</strong> | <strong>Evidence synthesis</strong> (doctor review required)</p>
       {props.synthesis ? <article className="notice"><div className="section-heading"><strong>Cross-document synthesis</strong><span className="badge warning">Doctor review required</span></div><h3>Agreement</h3><ul>{props.synthesis.agreement.map((item) => <li key={`${item.documentId}-${item.page}`}>{item.bullet} <Link href={`/guidelines/${item.documentId}?page=${item.page}`}>p. {item.page}</Link></li>)}</ul><h3>Differences</h3><p>{props.synthesis.differences}</p><h3>Evidence gaps</h3><p>{props.synthesis.evidenceGaps}</p></article> : null}
       <div className="data-list">
         {Object.entries(groups).map(([group, results]) => <section className="guideline-result-group" key={group}><h2>{group}</h2>{results.map((result) => (
@@ -316,11 +316,11 @@ function SourceList({ sources, canManageSources }: { sources: Source[]; canManag
 }
 
 function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boolean }) {
-  const [title, setTitle] = useState(""); const [specialty, setSpecialty] = useState(""); const [topic, setTopic] = useState(""); const [version, setVersion] = useState(""); const [sourceId, setSourceId] = useState(""); const [file, setFile] = useState<File | null>(null); const [status, setStatus] = useState("");
+  const [title, setTitle] = useState(""); const [specialty, setSpecialty] = useState(""); const [topic, setTopic] = useState(""); const [version, setVersion] = useState(""); const [sourceId, setSourceId] = useState(""); const [file, setFile] = useState<File | null>(null); const [status, setStatus] = useState(""); const [uploadIntent, setUploadIntent] = useState("");
   async function upload(event: FormEvent) {
     event.preventDefault();
-    if (!file || !title.trim() || !specialty.trim() || !topic.trim()) return setStatus("Title, specialty, topic, and file are required.");
-    const form = new FormData(); form.set("file", file); form.set("title", title.trim()); form.set("specialty", specialty.trim()); form.set("topic", topic.trim()); form.set("accessLevel", "OWNER_DOCTOR"); form.set("licenseStatus", "LICENSED_PRIVATE"); if (version.trim()) form.set("versionLabel", version.trim()); if (sourceId) form.set("sourceId", sourceId);
+    if (!file || !title.trim() || !specialty.trim() || !topic.trim() || !uploadIntent) return setStatus("Intent, title, specialty, topic, and file are required.");
+    const form = new FormData(); form.set("file", file); form.set("uploadIntent", uploadIntent); form.set("title", title.trim()); form.set("specialty", specialty.trim()); form.set("topic", topic.trim()); form.set("accessLevel", "OWNER_DOCTOR"); form.set("licenseStatus", "LICENSED_PRIVATE"); if (version.trim()) form.set("versionLabel", version.trim()); if (sourceId) form.set("sourceId", sourceId);
     setStatus("Uploading to protected storage for review");
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/guidelines/upload`, { method: "POST", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined, body: form });
@@ -332,6 +332,7 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
       <div className="section-heading"><h2>Upload licensed PDF or text</h2><span className="badge warning">Private vault</span></div>
       {canUpload ? (
         <form className="form-grid" onSubmit={upload} noValidate>
+          <label>Upload intent<select required value={uploadIntent} onChange={(event) => setUploadIntent(event.target.value)}><option value="">Choose explicitly</option><option value="create_new_guideline">Create new guideline</option><option value="create_new_version">Create new version (blocked until version asset storage is configured)</option><option value="restore_archived">Restore archived record (blocked until version asset storage is configured)</option></select></label>
           <label>Title<input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Document title" /></label>
           <label>Specialty<input value={specialty} onChange={(event) => setSpecialty(event.target.value)} placeholder="obstetrics or gynecology" /></label>
           <label>Topic<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="Topic" /></label>

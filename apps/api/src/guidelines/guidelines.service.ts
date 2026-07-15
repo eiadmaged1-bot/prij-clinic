@@ -101,7 +101,6 @@ export class GuidelinesService {
     const documents = await this.prisma.guidelineDocument.findMany({
       where: this.documentAccessWhere(user),
       orderBy: { updatedAt: "desc" },
-      take: 100,
       include: { source: true, _count: { select: { chunks: true, sections: true } } }
     });
     return { documents: await this.withLastFileAccess(documents.map(safeDocument)) };
@@ -131,7 +130,7 @@ export class GuidelinesService {
       where: { documentId: document.id },
       _max: { pageStart: true, pageEnd: true }
     });
-    const pageCount = Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0, 1);
+    const pageCount = Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0) || null;
     return this.withLastFileAccess({ ...safeDocument(document), pageCount });
   }
 
@@ -257,9 +256,16 @@ export class GuidelinesService {
       throw new BadRequestException("Only matching PDF, TXT, and Markdown files are accepted.");
     }
 
+    const documentsBefore = await this.prisma.guidelineDocument.count();
     const hash = sha256(file.buffer);
     const duplicate = await this.prisma.guidelineDocument.findFirst({ where: { fileSha256: hash } });
-    if (duplicate) throw new BadRequestException("This guideline file is already stored in the local library.");
+    if (duplicate) {
+      await this.audit.record({ actorUserId: user.id, action: "guideline.upload_duplicate_rejected", resourceType: "guideline_document", resourceId: duplicate.id, severity: "high", metadataJson: { documentsBefore, documentsAfter: documentsBefore, hash, duplicateDecision: "reject_exact_duplicate", uploadIntent: dto.uploadIntent } });
+      throw new BadRequestException({ code: "GUIDELINE_EXACT_DUPLICATE", message: "This exact guideline file is already stored in the local library.", documentId: duplicate.id, hash });
+    }
+    if (dto.uploadIntent !== "create_new_guideline") {
+      throw new BadRequestException({ code: "GUIDELINE_VERSION_ASSET_STORAGE_REQUIRED", message: "Version and restore uploads require version-specific authoritative asset storage and cannot replace an existing document." });
+    }
 
     const source = dto.sourceId
       ? await this.ensureSource(dto.sourceId)
@@ -312,7 +318,14 @@ export class GuidelinesService {
           fileSha256: hash,
           accessLevel: document.accessLevel,
           encryptedAtRest: document.fileEncrypted,
-          downloadsAllowed: document.downloadsAllowed
+          downloadsAllowed: document.downloadsAllowed,
+          documentsBefore,
+          documentsAfter: documentsBefore + 1,
+          newDocumentId: document.id,
+          newVersionId: null,
+          hash,
+          duplicateDecision: "unique_file_created",
+          statusChanges: [{ documentId: document.id, from: null, to: document.guidelineStatus }]
         }
       });
       return { document: safeDocument(document), importJobId: job.id };
