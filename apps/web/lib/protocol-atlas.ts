@@ -54,6 +54,10 @@ export function updateStructuredProtocolContent(id: string, input: { reason: str
   return request<ClinicalProtocol>(`/protocol-atlas/${id}/structured-content`, { method: "PATCH", body: JSON.stringify(input) });
 }
 
+export function updateProtocolCompletion(id: string, input: { reason: string; questionnaire: Record<string, string[]>; connections: Record<string, string[]> }) {
+  return request<ClinicalProtocol>(`/protocol-atlas/${id}/completion`, { method: "PATCH", body: JSON.stringify(input) });
+}
+
 export function requestProtocolVerification(id: string, reason: string) {
   return request<ClinicalProtocol>(`/protocol-atlas/${id}/request-verification`, { method: "POST", body: JSON.stringify({ reason }) });
 }

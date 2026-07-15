@@ -1,4 +1,4 @@
-import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
+import { IsDateString, IsEnum, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from "class-validator";
 import { ObUltrasoundStatus, PregnancyStatus } from "@prisma/client";
 
 export class CreatePregnancyDto {
@@ -223,6 +223,11 @@ export class CreateObUltrasoundDto {
   @IsDateString()
   performedAt?: string;
 
+  @IsOptional() @IsIn(["OB", "GYN", "FERTILITY"]) clinicalContext?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(60) cycleDay?: number;
+  @IsOptional() @IsObject() structuredFindingsJson?: Record<string, unknown>;
+  @IsOptional() @IsString() @MaxLength(2000) comparisonText?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -337,6 +342,12 @@ export class UpdateObUltrasoundDto {
   @IsOptional()
   @IsDateString()
   performedAt?: string;
+
+  @IsOptional() @IsIn(["OB", "GYN", "FERTILITY"]) clinicalContext?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(60) cycleDay?: number;
+  @IsOptional() @IsObject() structuredFindingsJson?: Record<string, unknown>;
+  @IsOptional() @IsString() @MaxLength(2000) comparisonText?: string;
+  @IsOptional() @IsString() @MaxLength(500) amendmentReason?: string;
 
   @IsOptional()
   @IsString()

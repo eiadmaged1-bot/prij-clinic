@@ -373,6 +373,10 @@ export class PregnancyService {
           fetusId: dto.fetusId ?? null,
           encounterId: dto.encounterId ?? null,
           performedAt: performedAt ?? new Date(),
+          clinicalContext: dto.clinicalContext ?? "OB",
+          cycleDay: dto.cycleDay,
+          structuredFindingsJson: dto.structuredFindingsJson as Prisma.InputJsonValue | undefined,
+          comparisonText: clean(dto.comparisonText),
           scanType: clean(dto.scanType),
           indication: clean(dto.indication),
           gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
@@ -391,7 +395,7 @@ export class PregnancyService {
           dopplerNote: clean(dto.dopplerNote),
           impressionText: clean(dto.impressionText),
           createdByUserId: user.id
-        },
+        } as never,
         include: obUltrasoundIncludes
       });
 
@@ -410,13 +414,15 @@ export class PregnancyService {
     }
   }
 
-  async listObUltrasounds(user: AuthUser) {
-    const obUltrasounds = await this.prisma.obUltrasound.findMany({
-      where: { ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as unknown as Prisma.ObUltrasoundWhereInput,
-      orderBy: { performedAt: "desc" },
-      take: 100,
-      include: obUltrasoundIncludes
-    });
+  async listObUltrasounds(user: AuthUser, query: Record<string, string | undefined> = {}) {
+    const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
+    const limit = Math.max(5, Math.min(50, Number.parseInt(query.limit ?? "20", 10) || 20));
+    const status = query.status === "signed" ? "final" : query.status;
+    const where = { ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] }, ...(status && ["draft", "reviewed", "final", "voided"].includes(status) ? { status } : {}), ...(query.context ? { clinicalContext: query.context } : {}), ...(query.q ? { OR: [{ patient: { firstName: { contains: query.q, mode: "insensitive" } } }, { patient: { lastName: { contains: query.q, mode: "insensitive" } } }, { patient: { medicalRecordNumber: { contains: query.q, mode: "insensitive" } } }, { scanType: { contains: query.q, mode: "insensitive" } }] } : {}) } as unknown as Prisma.ObUltrasoundWhereInput;
+    const [obUltrasounds, total] = await Promise.all([
+      this.prisma.obUltrasound.findMany({ where, orderBy: { performedAt: "desc" }, skip: (page - 1) * limit, take: limit, include: obUltrasoundIncludes }),
+      this.prisma.obUltrasound.count({ where })
+    ]);
 
     await this.audit.record({
       actorUserId: user.id,
@@ -427,7 +433,7 @@ export class PregnancyService {
       metadataJson: { count: obUltrasounds.length }
     });
 
-    return obUltrasounds;
+    return { items: obUltrasounds, pageInfo: { page, limit, total, hasMore: page * limit < total } };
   }
 
   async getObUltrasound(id: string, user: AuthUser) {
@@ -483,6 +489,15 @@ export class PregnancyService {
       }
       data.performedAt = performedAt;
     }
+    if (dto.clinicalContext !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { clinicalContext?: string }).clinicalContext = dto.clinicalContext;
+    if (dto.cycleDay !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { cycleDay?: number }).cycleDay = dto.cycleDay;
+    if (dto.structuredFindingsJson !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { structuredFindingsJson?: Prisma.InputJsonValue }).structuredFindingsJson = dto.structuredFindingsJson as Prisma.InputJsonValue;
+    if (dto.comparisonText !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { comparisonText?: string | null }).comparisonText = clean(dto.comparisonText);
+    if (dto.amendmentReason !== undefined) {
+      if (!dto.amendmentReason.trim()) throw new BadRequestException("An amendment reason is required.");
+      (data as Prisma.ObUltrasoundUpdateInput & { amendmentReason?: string; amendmentVersion?: { increment: number } }).amendmentReason = dto.amendmentReason.trim();
+      (data as Prisma.ObUltrasoundUpdateInput & { amendmentVersion?: { increment: number } }).amendmentVersion = { increment: 1 };
+    }
     if (dto.scanType !== undefined) data.scanType = clean(dto.scanType);
     if (dto.indication !== undefined) data.indication = clean(dto.indication);
     if (dto.gestationalAgeDisplay !== undefined) data.gestationalAgeDisplay = clean(dto.gestationalAgeDisplay);
@@ -524,6 +539,7 @@ export class PregnancyService {
     if (existing.status === "voided") {
       throw new BadRequestException("Voided OB ultrasound records cannot be reviewed.");
     }
+    if (!hasMeaningfulUltrasoundContent(existing)) throw new BadRequestException("A scan type and meaningful structured measurement, finding, or impression are required before review.");
 
     const ultrasound = await this.prisma.obUltrasound.update({
       where: { id },
@@ -615,6 +631,10 @@ function toDateTime(value?: string) {
 
 function decimalOrNull(value: number | undefined) {
   return value === undefined ? null : new Prisma.Decimal(value).toDecimalPlaces(2);
+}
+
+function hasMeaningfulUltrasoundContent(scan: { scanType: string | null; impressionText: string | null; fetalHeartRateBpm: number | null; bpdMm: Prisma.Decimal | null; hcMm: Prisma.Decimal | null; acMm: Prisma.Decimal | null; flMm: Prisma.Decimal | null } & { structuredFindingsJson?: unknown }) {
+  return Boolean(scan.scanType?.trim() && (scan.impressionText?.trim() || scan.fetalHeartRateBpm || scan.bpdMm || scan.hcMm || scan.acMm || scan.flMm || (scan.structuredFindingsJson && Object.keys(scan.structuredFindingsJson as object).length)));
 }
 
 function previousPregnancyTagCodes(history: { outcome: string; outcomeType?: string | null; modeOfDelivery?: string | null }) {

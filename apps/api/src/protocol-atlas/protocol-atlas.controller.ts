@@ -4,7 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
+import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolCompletionDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
 import { SearchProtocolsDto } from "./dto/search-protocols.dto";
 import { UpdateProtocolStatusDto } from "./dto/update-protocol-status.dto";
 import { ProtocolAtlasService } from "./protocol-atlas.service";
@@ -73,6 +73,10 @@ export class ProtocolAtlasController {
   updateStructuredContent(@Param("id") id: string, @Body() dto: UpdateStructuredProtocolContentDto, @CurrentUser() user: AuthUser) {
     return this.atlas.updateStructuredContent(id, dto, user);
   }
+
+  @Patch(":id/completion")
+  @Permissions("protocol_atlas.manage")
+  updateCompletion(@Param("id") id: string, @Body() dto: UpdateProtocolCompletionDto, @CurrentUser() user: AuthUser) { return this.atlas.updateCompletion(id, dto, user); }
 
   @Post(":id/request-verification")
   @Permissions("protocol_atlas.manage")

@@ -11,6 +11,7 @@ import {
   searchProtocols,
   StructuredProtocolContent,
   updateProtocolAliases,
+  updateProtocolCompletion,
   updateProtocolSource,
   updateStructuredProtocolContent,
   verifyProtocol
@@ -27,6 +28,8 @@ const contentSections: Array<{ key: keyof Omit<StructuredProtocolContent, "summa
   { key: "referralConsiderations", label: "Referral considerations" },
   { key: "limitations", label: "Limitations" }
 ];
+
+const completionSections = ["scope", "inclusion", "exclusion", "requiredHistory", "examination", "investigations", "redFlags", "management", "medicationConsiderations", "followUp", "escalationReferral", "counselling", "sourceVersion", "clinicWorkflow", "reviewer", "approval", "unansweredQuestions", "evidenceRecommendations"] as const;
 
 export default function AdminProtocolAtlasPage() {
   const [protocols, setProtocols] = useState<ProtocolSummary[]>([]);
@@ -87,6 +90,13 @@ export default function AdminProtocolAtlasPage() {
     const form = new FormData(event.currentTarget);
     const content = contentFromForm(form, selected);
     await save(() => updateStructuredProtocolContent(selected.id, { reason: String(form.get("reason") ?? ""), content }), "Structured content saved and audited");
+  }
+
+  async function saveCompletion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); if (!selected) return; const form = new FormData(event.currentTarget);
+    const questionnaire = Object.fromEntries(completionSections.map((key) => [key, splitLines(String(form.get(key) ?? ""))]));
+    const connections = Object.fromEntries(["guidelines", "medicationFamilies", "investigationSets", "ultrasoundTemplates", "referrals", "followUpTasks", "patientContexts"].map((key) => [key, splitLines(String(form.get(`connection-${key}`) ?? ""))]));
+    await save(() => updateProtocolCompletion(selected.id, { reason: String(form.get("reason") ?? ""), questionnaire, connections }), "Protocol completion questionnaire saved and audited");
   }
 
   async function statusAction(action: "draft" | "verify" | "retire") {
@@ -181,6 +191,7 @@ export default function AdminProtocolAtlasPage() {
                 <label>Reason<textarea name="reason" required /></label>
                 <button className="button" type="submit">Save structured content</button>
               </form>
+              <details className="filter-drawer"><summary>Protocol Completion Studio</summary><form className="form-grid" onSubmit={saveCompletion}>{completionSections.map((key) => <label className="wide" key={key}>{key.replace(/([A-Z])/g, " $1")}<textarea name={key} placeholder="Leave unanswered items blank; do not invent medical content." /></label>)}<label className="wide">Linked guidelines<textarea name="connection-guidelines" /></label><label className="wide">Linked medication families / generics<textarea name="connection-medicationFamilies" /></label><label className="wide">Linked investigation sets<textarea name="connection-investigationSets" /></label><label className="wide">Linked ultrasound templates<textarea name="connection-ultrasoundTemplates" /></label><label className="wide">Linked referrals / follow-up tasks / patient contexts<textarea name="connection-referrals" /></label><label>Audit reason<textarea name="reason" required /></label><button className="button" type="submit">Save completion questionnaire</button></form></details>
 
               <article className="snapshot-result">
                 <h3>Doctor preview after verification</h3>

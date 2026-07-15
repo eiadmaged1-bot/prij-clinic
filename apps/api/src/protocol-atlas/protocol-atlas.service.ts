@@ -4,7 +4,7 @@ import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { isOwnerOrAdmin } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
+import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolCompletionDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
 import { SearchProtocolsDto } from "./dto/search-protocols.dto";
 import { UpdateProtocolStatusDto } from "./dto/update-protocol-status.dto";
 import { normalizeProtocolContent, validateProtocolContentForStatus, validateVerifiedProtocolRequirements } from "./protocol-content.schema";
@@ -161,6 +161,17 @@ export class ProtocolAtlasService {
     return { ...protocol, structuredContent: content };
   }
 
+  async updateCompletion(id: string, dto: UpdateProtocolCompletionDto, user: AuthUser) {
+    if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can update protocol completion.");
+    assertReason(dto.reason);
+    const existing = await this.findExisting(id);
+    const questionnaire = normalizeCompletionQuestionnaire(dto.questionnaire);
+    const completionPercentage = protocolCompletionPercentage(questionnaire);
+    const protocol = await this.prisma.clinicalProtocol.update({ where: { id }, data: { completionQuestionnaireJson: questionnaire as Prisma.InputJsonValue, connectionsJson: dto.connections as Prisma.InputJsonValue, completionPercentage, completionReviewerUserId: user.id, completionVersion: { increment: 1 } } as never });
+    await this.audit.record({ actorUserId: user.id, action: "protocol_completion_updated", resourceType: "clinical_protocol", resourceId: id, branchId: user.branchId, severity: "high", reason: dto.reason, metadataJson: { code: existing.code, completionPercentage, unansweredCount: questionnaire.unansweredQuestions.length, doctorDecisionStored: false } });
+    return protocol;
+  }
+
   async requestVerification(id: string, dto: ProtocolReasonDto, user: AuthUser) {
     if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can request protocol verification.");
     assertReason(dto.reason);
@@ -230,3 +241,13 @@ const protocolSummarySelect = {
 function assertReason(reason?: string | null) {
   if (!reason?.trim()) throw new BadRequestException("Audit reason is required.");
 }
+
+const completionKeys = ["scope", "inclusion", "exclusion", "requiredHistory", "examination", "investigations", "redFlags", "management", "medicationConsiderations", "followUp", "escalationReferral", "counselling", "sourceVersion", "clinicWorkflow", "reviewer", "approval"] as const;
+
+function normalizeCompletionQuestionnaire(value: Record<string, unknown>) {
+  const normalized = Object.fromEntries(completionKeys.map((key) => [key, cleanCompletionValue(value[key])])) as Record<(typeof completionKeys)[number], string[]>;
+  return { ...normalized, unansweredQuestions: cleanCompletionValue(value.unansweredQuestions), evidenceRecommendations: cleanCompletionValue(value.evidenceRecommendations), individualPatientDecisionBoundary: "Doctor decision is recorded only in the patient encounter, never in the protocol template." };
+}
+
+function cleanCompletionValue(value: unknown) { return (Array.isArray(value) ? value : typeof value === "string" ? value.split(/\r?\n/) : []).map((item) => String(item).trim()).filter(Boolean).slice(0, 30); }
+function protocolCompletionPercentage(value: Record<string, unknown>) { return Math.round(completionKeys.filter((key) => Array.isArray(value[key]) && value[key].length).length / completionKeys.length * 100); }

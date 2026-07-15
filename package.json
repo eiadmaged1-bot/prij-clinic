@@ -158,6 +158,7 @@
     "test:v149:data-hygiene-views": "node scripts/v149-data-hygiene-operational-views-test.mjs",
     "patient-import": "node scripts/patient-import.mjs",
     "test:v149:patient-import": "node scripts/v149-patient-import-default-confirm-test.mjs",
+    "test:v149:linked-clinical-workflows": "node scripts/v149-linked-clinical-workflows-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

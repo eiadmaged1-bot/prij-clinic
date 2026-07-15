@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsObject, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class ProtocolReasonDto {
   @IsString()
@@ -98,4 +98,9 @@ export class UpdateStructuredProtocolContentDto extends ProtocolReasonDto {
   @ValidateNested()
   @Type(() => StructuredProtocolContentDto)
   content!: StructuredProtocolContentDto;
+}
+
+export class UpdateProtocolCompletionDto extends ProtocolReasonDto {
+  @IsObject() questionnaire!: Record<string, unknown>;
+  @IsObject() connections!: Record<string, unknown>;
 }

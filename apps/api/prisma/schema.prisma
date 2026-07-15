@@ -3476,6 +3476,14 @@ model ObUltrasound {
   classificationReason  String?
   classifiedAt          DateTime?          @db.Timestamptz(3)
   classifiedByUserId    String?            @db.Uuid
+  clinicalContext       String             @default("OB")
+  cycleDay              Int?
+  structuredFindingsJson Json?
+  comparisonText        String?
+  signedAt              DateTime?          @db.Timestamptz(3)
+  signedByUserId        String?            @db.Uuid
+  amendmentReason       String?
+  amendmentVersion      Int                @default(0)
 
   branch         Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
   patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
@@ -3492,6 +3500,7 @@ model ObUltrasound {
   @@index([encounterId])
   @@index([status])
   @@index([dataClassification, status])
+  @@index([clinicalContext, performedAt])
 }
 
 model Invoice {
@@ -4022,6 +4031,12 @@ model ClinicalProtocol {
   sourceVersion        String?
   contentJson          Json
   safetyJson           Json?
+  completionQuestionnaireJson Json?
+  connectionsJson      Json?
+  completionPercentage Int     @default(0)
+  completionReviewerUserId String? @db.Uuid
+  completionApprovedAt DateTime? @db.Timestamptz(3)
+  completionVersion    Int      @default(1)
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @db.Timestamptz(3)
 
@@ -4031,6 +4046,7 @@ model ClinicalProtocol {
   @@index([condition])
   @@index([implementationStatus])
   @@index([riskLevel])
+  @@index([completionPercentage])
 }
 
 model AIManagementSnapshot {

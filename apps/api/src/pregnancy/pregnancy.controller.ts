@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -99,8 +99,9 @@ export class PregnancyController {
 
   @Get("ob-ultrasounds")
   @Permissions("ob_ultrasound.read")
-  async listObUltrasounds(@CurrentUser() user: AuthUser) {
-    return { obUltrasounds: await this.pregnancy.listObUltrasounds(user) };
+  async listObUltrasounds(@CurrentUser() user: AuthUser, @Query() query: Record<string, string | undefined>) {
+    const result = await this.pregnancy.listObUltrasounds(user, query);
+    return { obUltrasounds: result.items, pageInfo: result.pageInfo };
   }
 
   @Get("ob-ultrasounds/:id")
