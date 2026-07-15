@@ -30,3 +30,16 @@ Final verification results and unavailable legacy suites are recorded in `docs/M
 # v1.4.5 reconstruction (2026-07-14)
 
 Implemented on `fix/v1.4.5-mobile-workflow-knowledge-reconstruction`: role-safe landings, shared sticky mobile header/account sheet, compact Reception and Doctor workspaces, idempotent patient-to-queue handoff, deterministic hydration, permanent PHI-free QR workflow, guided patient workspace, reversible/amendable clinical tags, resilient autosave/session handling, authoritative PDF guideline viewer, reviewed page-cited summaries/search, generic-first pharmacology, approved formula calculators, Dermatology reference search, and audited encounter-linked findings. Clinical knowledge output remains assistive and doctor-review gated.
+
+## v1.4.7 connected clinic core — 2026-07-15
+
+Branch `fix/v1.4.7-connected-clinic-core-and-drug-atlas`, base `9e50efda633bba22d0a689239682d2afd115eca6`.
+
+- Patient creation and queue insertion now use the persisted patient ID, canonical active queue states, idempotent retry, partial-success recovery, branch/clinic-date scoping, and shared Reception/Doctor status refresh.
+- All targeted patient selectors use shared explicit-selection results; archived patients are blocked from Check-in until restored.
+- Reception Home, visit entry, mobile shell, permanent QR, Investigation Center, and Prescription Center follow the patient/active-visit workflow.
+- Guideline inventory is uncapped for authorized reads; active, recent, review and all-record views are separate. Duplicate hashes are rejected and audited. Antibiotics metadata was corrected without changing approval state.
+- The browse-first Clinical Drug Atlas preserves 37 active generics and 53 families. Exact existing-data matching links 27 generics; 10 remain unlinked. SABA still maps to Salbutamol and Terbutaline.
+- Four deterministic context rules connect structured facts to review links and missing-information prompts. They do not diagnose, order, prescribe, or change medication. Doctor decisions are audited and appear in the patient timeline.
+
+Forward-only migrations added: queue `IN_ROOM` and birth year; antibiotics metadata correction; deterministic generic-family joins; four context rule definitions; context-rule safety wording correction. No reset, migration rewrite, or record deletion was performed.

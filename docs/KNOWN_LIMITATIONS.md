@@ -32,3 +32,14 @@
 - Camera scanning requires HTTPS and compatible hardware. LAN HTTP retains manual lookup only.
 - Credential-dependent integration suites and physical-device/ngrok QA require configured test accounts and an active tunnel.
 - Calculators support approved, reviewed, test-locked handlers only and never prescribe or infer missing inputs.
+
+## v1.4.7 exact remaining limitations
+
+- Guideline version and archived-asset operations are visibly blocked because `GuidelineVersion` does not own an authoritative stored asset. New-version/restore uploads cannot silently replace a document.
+- Viewer totals no longer default to 1/1, but true PDF.js-derived page metadata/rendering is not implemented; the retained browser viewer and indexed page metadata remain the available mechanisms.
+- The KFS antibiotics PDF is absent. Metadata is corrected to July 2026; no clinic-approved status is claimed without an approval record.
+- Pharmacology coverage is incomplete. Ten generics have no deterministic family membership; uses, mechanisms, kinetics, renal/hepatic guidance, adverse effects, interactions, pregnancy/lactation, monitoring, calculators and sources are not claimed where records are missing.
+- Dermatology content remains incomplete and was not expanded or clinically verified in v1.4.7.
+- Atlas browse lenses use the same preserved dataset; absent structured evidence can produce no results.
+- Connected-context links prepare review/draft destinations. They do not automatically insert investigations, medications, prescriptions, or follow-ups.
+- Physical camera, mobile Safari PDF, orientation, real printer, authenticated role, current tunnel, backup restore, and credential-dependent QA remain unperformed.

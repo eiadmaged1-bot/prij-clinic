@@ -40,3 +40,11 @@ These items must not be inferred from build or static contract tests. Prior v1.4
 # v1.4.5 QA note — 2026-07-14
 
 Automated viewport/contract tests cover 360–430 px mobile, tablet/desktop layouts, role routing, hydration, account sheet, queue handoff, QR capability states, patient workspace, guidelines, pharmacology, calculators, Dermatology, and RTL. Workspace typecheck/build and database checks are recorded in the release report. Physical iPhone/Android, role-authenticated browser walkthroughs, camera permission, and current ngrok HTTPS were not claimed unless explicitly recorded in the final report.
+
+## v1.4.7 automated checkpoint verification — 2026-07-15
+
+Targeted contracts passed for queue transaction, shared patient search, visit entry, shell/hydration, permanent QR, responsive investigations, guideline inventory/PDF range/search, prescription management, generic-first pharmacology/concept search/mobile atlas, and deterministic Care Assist safety/context. API and web typechecks passed at affected checkpoints. Forward migrations deployed without reset.
+
+Final monorepo repair/seed/typecheck/build and consolidated suites are intentionally run once after documentation. Results belong in the sprint final report; no physical-device or credential-dependent result is inferred here.
+
+Not performed: physical rear-camera scanning/cleanup, mobile Safari PDF rendering/ranges, portrait/landscape visual walkthrough, authenticated Receptionist/Doctor/Owner browser synchronization, real printing, current HTTPS tunnel, backup restore drill, penetration/privacy review, and clinical-governance approval.
