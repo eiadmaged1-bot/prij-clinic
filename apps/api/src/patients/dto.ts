@@ -363,6 +363,13 @@ export class CreatePatientDto {
   dateOfBirth?: string;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  yearOfBirth?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(32)
   sex?: string;
@@ -436,6 +443,13 @@ export class UpdatePatientDto {
   @IsOptional()
   @IsDateString()
   dateOfBirth?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1900)
+  @Max(2200)
+  yearOfBirth?: number;
 
   @IsOptional()
   @IsString()

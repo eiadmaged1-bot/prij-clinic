@@ -39,7 +39,9 @@ export class QueueService {
       if (!idempotency.resourceId) {
         throw new BadRequestException("Queue check-in is still in progress.");
       }
-      return this.prisma.queueTicket.findUnique({ where: { id: idempotency.resourceId }, include: { patient: true, appointment: true } });
+      const replayed = await this.prisma.queueTicket.findUnique({ where: { id: idempotency.resourceId }, include: { patient: true, appointment: true } });
+      if (!replayed) throw new BadRequestException("Queue ticket no longer exists.");
+      return queueResponse(replayed, false);
     }
 
     try {
@@ -54,14 +56,35 @@ export class QueueService {
         });
         return t;
       });
-      return ticket;
+      return queueResponse(ticket, Boolean((ticket as typeof ticket & { alreadyQueued?: boolean }).alreadyQueued));
     } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        const dateString = this.clinicTime.getClinicDate();
+        const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
+        const activeTicket = await this.prisma.queueTicket.findFirst({
+          where: { branchId, patientId: dto.patientId, queueDate, status: { in: ["waiting", "called", "in_room"] } },
+          orderBy: { queueNumber: "asc" },
+          include: { patient: true, appointment: true }
+        });
+        if (activeTicket) {
+          await this.idempotency.complete({
+            recordId: idempotency.recordId,
+            responseStatus: 200,
+            resourceType: "queueTicket",
+            resourceId: activeTicket.id
+          });
+          return queueResponse(activeTicket, true);
+        }
+      }
       const safeReason = error instanceof Error ? error.message : "Unknown error";
       await this.idempotency.failOrRelease({
         recordId: idempotency.recordId,
         safeReason,
         releaseLock: true
       });
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new BadRequestException({ code: "QUEUE_NUMBER_CONFLICT", message: "Could not allocate a queue number. Please retry." });
+      }
       throw error;
     }
   }
@@ -91,7 +114,7 @@ export class QueueService {
         branchId,
         patientId: dto.patientId,
         queueDate,
-        status: { in: ["waiting", "called"] }
+        status: { in: ["waiting", "called", "in_room"] }
       },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
@@ -143,7 +166,7 @@ export class QueueService {
         throw new BadRequestException("Referenced patient or appointment was not found.");
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new BadRequestException({ code: "QUEUE_ACTIVE_TICKET_EXISTS", message: "Patient already has an active ticket today." });
+        throw error;
       }
 
       throw error;
@@ -282,12 +305,21 @@ export class QueueService {
 }
 
 function queueSortRank(ticket: { status: string; visitType: string }) {
+  if (ticket.status === "in_room") return 0;
   if (ticket.status === "called") return 0;
   if (ticket.status === "waiting" && ticket.visitType === "urgent_kashf") return 1;
   if (ticket.status === "waiting") return 2;
   if (ticket.status === "completed") return 3;
   if (ticket.status === "cancelled") return 4;
   return 5;
+}
+
+function queueResponse<T extends { id: string; patientId: string; branchId: string; queueNumber: number; status: string; visitType: string }>(ticket: T, alreadyQueued: boolean) {
+  const queueState = ticket.status === "waiting" ? "WAITING"
+    : ticket.status === "called" ? "CALLED"
+      : ticket.status === "in_room" ? "IN_ROOM"
+        : ticket.status === "completed" ? "COMPLETED" : "CANCELLED";
+  return { ...ticket, alreadyQueued, queueState, active: ["WAITING", "CALLED", "IN_ROOM"].includes(queueState) };
 }
 
 function demoPatientWhere(): Prisma.PatientWhereInput[] {

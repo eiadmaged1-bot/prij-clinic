@@ -78,7 +78,7 @@ function ReceptionQrScanContent() {
     }
   }, [copy]);
 
-  const activeTicket = resolved ? queueTickets.find((ticket) => ticket.patientId === resolved.patientId && ["waiting", "called"].includes(ticket.status)) : null;
+  const activeTicket = resolved ? queueTickets.find((ticket) => ticket.patientId === resolved.patientId && ["waiting", "called", "in_room"].includes(ticket.status)) : null;
 
   const resolvePatient = useCallback(async (rawValue: string, source: "scan" | "manual") => {
     const lookup = rawValue.trim();

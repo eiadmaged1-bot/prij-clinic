@@ -30,8 +30,9 @@ assert.match(picker, /Load more patients/, "shared patient picker must expose lo
 assert.match(reception, /Load more patients/, "Reception search must expose load more");
 assert.match(reception, /setSelectedPatient\(null\)/, "editing a search must clear stale selection");
 assert.match(queueService, /activeQueueTicketLock\.create/, "queue must keep an authoritative active-ticket lock");
-assert.match(queueService, /status: \{ in: \["waiting", "called"\] \}/, "only active non-cancelled queue states prevent duplicates");
-assert.match(queueService, /QUEUE_ACTIVE_TICKET_EXISTS/, "concurrent duplicate queue attempts need a stable error code");
+assert.match(queueService, /status: \{ in: \["waiting", "called", "in_room"\] \}/, "only active non-cancelled queue states prevent duplicates");
+assert.match(queueService, /queueResponse\(activeTicket, true\)/, "concurrent duplicate queue attempts must resolve to the authoritative active ticket");
+assert.match(queueService, /QUEUE_NUMBER_CONFLICT/, "non-patient uniqueness collisions must not be reported as already queued");
 assert.match(reception, /clinic-queue:changed/, "successful check-in must notify queue consumers");
 assert.match(operations, /addEventListener\("clinic-queue:changed"/, "queue and doctor waiting screens must refresh after check-in");
 assert.doesNotMatch(reception, /Already in queue[\s\S]{0,80}Not in queue/, "contradictory queue states must not be rendered together");

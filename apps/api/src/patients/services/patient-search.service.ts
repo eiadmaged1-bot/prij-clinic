@@ -62,7 +62,7 @@ export class PatientSearchService {
           take: 1
         },
         encounters: { orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }], take: 1, select: { startedAt: true, createdAt: true } },
-        queueTickets: { where: { queueDate, status: { in: ["waiting", "called"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, status: true, queueDate: true, queueNumber: true, branchId: true } }
+        queueTickets: { where: { queueDate, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, status: true, queueDate: true, queueNumber: true, branchId: true, visitType: true } }
       }
     });
     const ranked = candidates.sort((left, right) => patientSearchScore(right, query, normalizedPhone, qrToken) - patientSearchScore(left, query, normalizedPhone, qrToken) || right.updatedAt.getTime() - left.updatedAt.getTime());

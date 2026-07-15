@@ -293,6 +293,7 @@ enum AppointmentStatus {
 enum QueueTicketStatus {
   waiting
   called
+  in_room
   completed
   cancelled
 }
@@ -317,6 +318,7 @@ model Patient {
   firstName            String
   lastName             String
   dateOfBirth          DateTime?            @db.Date
+  yearOfBirth          Int?
   sex                  String?
   phone                String?
   email                String?

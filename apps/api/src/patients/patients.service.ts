@@ -192,6 +192,7 @@ export class PatientsService {
           firstName: dto.firstName.trim(),
           lastName: dto.lastName.trim(),
           dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+          yearOfBirth: dto.yearOfBirth ?? (dto.dateOfBirth ? new Date(dto.dateOfBirth).getUTCFullYear() : null),
           sex: dto.sex?.trim() || "female",
           patientType: dto.patientType ?? "GENERAL",
           sexualActivityStatus: dto.sexualActivityStatus ?? "unknown",
@@ -859,6 +860,7 @@ export class PatientsService {
     if (dto.firstName !== undefined) data.firstName = dto.firstName.trim();
     if (dto.lastName !== undefined) data.lastName = dto.lastName.trim();
     if (dto.dateOfBirth !== undefined) data.dateOfBirth = dto.dateOfBirth ? new Date(dto.dateOfBirth) : null;
+    if (dto.yearOfBirth !== undefined) data.yearOfBirth = dto.yearOfBirth;
     if (dto.sex !== undefined) data.sex = dto.sex?.trim() || null;
     if (dto.patientType !== undefined) data.patientType = dto.patientType;
     if (dto.sexualActivityStatus !== undefined) data.sexualActivityStatus = dto.sexualActivityStatus;
@@ -920,12 +922,12 @@ export class PatientsService {
     const checkedInAt = new Date();
     const queueDate = toUtcDateOnly(checkedInAt);
     const activeTicket = await this.prisma.queueTicket.findFirst({
-      where: { branchId, patientId: id, queueDate, status: { in: ["waiting", "called"] } },
+      where: { branchId, patientId: id, queueDate, status: { in: ["waiting", "called", "in_room"] } },
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
     if (activeTicket) {
-      throw new BadRequestException(activeTicket.status === "called" ? "Patient is already with doctor." : `Already in queue · Position ${activeTicket.queueNumber}`);
+      throw new BadRequestException(activeTicket.status === "in_room" ? "Patient is already with doctor." : `Already in queue · Position ${activeTicket.queueNumber}`);
     }
     const ticket = await this.createQueueTicketWithRetry({
       branchId,

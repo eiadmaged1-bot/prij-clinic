@@ -23,7 +23,7 @@ export class PatientLookupService {
       id: true, medicalRecordNumber: true, firstName: true, lastName: true, dateOfBirth: true, phone: true, patientType: true, branchId: true,
       clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1, select: { phaseType: true, title: true } },
       appointments: { where: { startAt: { gte: todayStart }, status: { in: ["booked", "rescheduled"] } }, orderBy: { startAt: "asc" }, take: 2, select: { id: true, startAt: true, status: true, appointmentType: true } },
-      queueTickets: { where: { queueDate: { gte: todayStart, lt: todayEnd }, status: { in: ["waiting", "called"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, queueNumber: true, status: true, priority: true, visitType: true } },
+      queueTickets: { where: { queueDate: { gte: todayStart, lt: todayEnd }, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, queueNumber: true, status: true, priority: true, visitType: true } },
       encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, status: true, startedAt: true, createdAt: true } },
       patientAllergies: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },
       patientMedications: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },

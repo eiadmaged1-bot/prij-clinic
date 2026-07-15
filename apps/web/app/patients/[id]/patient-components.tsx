@@ -316,7 +316,7 @@ export function ReceptionPatientProfile({
           unpaidInvoiceCount: number;
           onShowQr(): void;
         }) {
-    const activeQueue = queueRows.find((row) => ["waiting", "called", "checked_in"].includes(String(row.status ?? "")));
+    const activeQueue = queueRows.find((row) => ["waiting", "called", "in_room", "checked_in"].includes(String(row.status ?? "")));
     const nextAppointment = appointmentRows
             .filter((row) => row.startAt)
             .sort((left, right) => String(left.startAt).localeCompare(String(right.startAt)))[0];

@@ -98,7 +98,7 @@ function ReceptionHomeContent() {
   const nextPatient = [...urgentWaiting, ...waiting.filter((ticket) => !urgentWaiting.includes(ticket))][0] ?? null;
   const trimmedQuery = query.trim().toLowerCase();
   const results = trimmedQuery ? patients : [];
-  const activeTicket = selectedPatient ? queue.find((ticket) => ticket.patientId === selectedPatient.id && ["waiting", "called"].includes(ticket.status)) : null;
+  const activeTicket = selectedPatient ? queue.find((ticket) => ticket.patientId === selectedPatient.id && ["waiting", "called", "in_room"].includes(ticket.status)) : null;
   const selectedQueueIndex = selectedPatient ? waiting.findIndex((ticket) => ticket.patientId === selectedPatient.id) : -1;
 
   async function addReturningPatientToQueue() {

@@ -157,6 +157,7 @@ function NewPatientContent() {
           sex: "female",
           patientType: form.patientType || "WOMEN_HEALTH",
           sexualActivityStatus: form.sexualActivityStatus,
+          yearOfBirth: form.yearOfBirth ? Number(form.yearOfBirth) : undefined,
           phone: form.phone,
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
