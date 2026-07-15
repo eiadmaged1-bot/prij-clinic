@@ -73,8 +73,8 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   "follow-up-hints": ({ active, related }) => <RelatedPanel config={active} rows={related["follow-up-hints"] ?? []} />,
   documents: ({ related }) => <DocumentsPanel related={related} />,
   billing: ({ active, related }) => <RelatedPanel config={active} rows={related.billing ?? []} />,
-  medications: () => <PatientMedicationList />,
-  allergies: () => <PatientAllergyList />,
+  medications: ({ patient }) => <PatientMedicationList patientId={patient.id} />,
+  allergies: ({ patient }) => <PatientAllergyList patientId={patient.id} />,
   "medication-safety": ({ patient }) => <MedicationSafetyWorkspace patientId={patient.id} />,
   "ai-snapshot": ({ patient }) => <SafeAiAssistantPanel patientId={patient.id} />,
   more: ({ setActiveTab }) => <MorePatientSections setActiveTab={setActiveTab} />

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Headers, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Headers, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -33,11 +33,13 @@ import {
 import { PatientsService } from "./patients.service";
 import { PatientSearchService } from "./services/patient-search.service";
 import { PatientLookupService } from "./services/patient-lookup.service";
+import { PatientWorkspaceLayoutService } from "./services/patient-workspace-layout.service";
+import { SaveWorkspaceLayoutDto } from "./workspace-layout.dto";
 
 @Controller("patients")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PatientsController {
-  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService, private readonly lookup: PatientLookupService) {}
+  constructor(private readonly patients: PatientsService, private readonly search: PatientSearchService, private readonly lookup: PatientLookupService, private readonly workspaceLayouts: PatientWorkspaceLayoutService) {}
 
   @Post()
   @Permissions("patient.create")
@@ -87,6 +89,30 @@ export class PatientsController {
   @Permissions("patient.read")
   workspaceSummary(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.lookup.workspaceSummary(id, user);
+  }
+
+  @Get(":id/workspace-layout")
+  @Permissions("patient.read")
+  workspaceLayout(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.workspaceLayouts.resolve(id, user);
+  }
+
+  @Get(":id/workspace-presets/:presetKey")
+  @Permissions("patient.read")
+  workspacePreset(@Param("presetKey") presetKey: string) {
+    return this.workspaceLayouts.preset(presetKey);
+  }
+
+  @Put(":id/workspace-layout")
+  @Permissions("patient.read")
+  saveWorkspaceLayout(@Param("id") id: string, @Body() dto: SaveWorkspaceLayoutDto, @CurrentUser() user: AuthUser) {
+    return this.workspaceLayouts.save(id, dto, user);
+  }
+
+  @Get(":id/missing-information")
+  @Permissions("patient.read")
+  missingInformation(@Param("id") id: string) {
+    return this.workspaceLayouts.missingInformation(id);
   }
 
   @Get(":id/qr")

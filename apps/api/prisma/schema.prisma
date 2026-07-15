@@ -177,6 +177,64 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum PatientWorkspaceLayoutScope {
+  CLINIC
+  ROLE
+  SPECIALTY
+  PERSONAL
+  PATIENT
+}
+
+enum PatientWorkspacePanelSize {
+  SMALL
+  MEDIUM
+  WIDE
+  FULL
+}
+
+model PatientWorkspaceLayout {
+  id              String                      @id @default(uuid()) @db.Uuid
+  scope           PatientWorkspaceLayoutScope
+  scopeKey        String                      @unique
+  name            String
+  userId          String?                     @db.Uuid
+  patientId       String?                     @db.Uuid
+  roleKey         String?
+  specialtyKey    String?
+  presetKey       String?
+  templateVersion Int                         @default(1)
+  published       Boolean                     @default(false)
+  createdByUserId String                      @db.Uuid
+  updatedByUserId String                      @db.Uuid
+  createdAt       DateTime                    @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                    @updatedAt @db.Timestamptz(3)
+
+  panels PatientWorkspacePanelLayout[]
+
+  @@index([scope, published])
+  @@index([userId, scope])
+  @@index([patientId, scope])
+  @@index([roleKey, scope])
+  @@index([specialtyKey, scope])
+}
+
+model PatientWorkspacePanelLayout {
+  id        String                    @id @default(uuid()) @db.Uuid
+  layoutId  String                    @db.Uuid
+  panelKey  String
+  order     Int
+  column    Int                       @default(1)
+  size      PatientWorkspacePanelSize @default(MEDIUM)
+  collapsed Boolean                   @default(false)
+  pinned    Boolean                   @default(false)
+  hidden    Boolean                   @default(false)
+
+  layout PatientWorkspaceLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+
+  @@unique([layoutId, panelKey])
+  @@index([layoutId, order])
+}
+
 enum ConsentType {
   treatment
   communication

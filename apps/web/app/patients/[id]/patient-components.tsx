@@ -244,8 +244,8 @@ export const previousPregnancyOutcomeOptions = [
       "Other"
     ];
 
-export function requestPatientWorkspaceRefresh() {
-    window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
+export function requestPatientWorkspaceRefresh(refreshDependencies?: string[]) {
+    window.dispatchEvent(new CustomEvent("patient-workspace:refresh", { detail: refreshDependencies?.length ? { refreshDependencies } : undefined }));
 }
 
 export function PatientQuickActions({ patient, setActiveTab, onShowQr, permissions = [], roles = [] }: { patient: Patient; setActiveTab(tab: string): void; onShowQr(): void; permissions?: string[]; roles?: string[] }) {
@@ -796,8 +796,8 @@ export function MedicationSafetyWorkspace({ patientId }: { patientId: string }) 
     <section className="dashboard-grid">
       <MedicationSafetyPanel patientId={patientId} />
       <PrescriptionSafetyPanel patientId={patientId} />
-      <PatientMedicationList />
-      <PatientAllergyList />
+      <PatientMedicationList patientId={patientId} />
+      <PatientAllergyList patientId={patientId} />
       <HerbalSearchPanel />
     </section>
     );

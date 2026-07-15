@@ -19,6 +19,8 @@ import { AppActionButton } from "@/components/actions/AppActionButton";
 import { autosaveLabel, loadLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
 import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
+import { PatientWorkspaceEditor, type WorkspacePanelPlacement } from "../../../components/patients/PatientWorkspaceEditor";
+import { PatientPanelErrorBoundary } from "../../../components/patients/PatientPanelErrorBoundary";
 
 const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
@@ -97,15 +99,20 @@ export default function PatientFilePage() {
   const [qrOpen, setQrOpen] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [draftFields, setDraftFields] = useState<Record<string, string>>({});
+  const [workspacePanels, setWorkspacePanels] = useState<WorkspacePanelPlacement[]>([]);
   const draftKey = `patient-visit:${patientId}`;
   const autosave = useAutosaveDraft({ key: draftKey, entityType: "patient_visit_draft", patientId, payload: draftFields, enabled: activeTab === "doctor-visit" && Object.keys(draftFields).length > 0 });
   const autosaveStatus = autosave.state === "saved-local" && autosave.updatedAt ? `Saved at ${new Date(autosave.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : autosaveLabel(autosave.state);
 
   useEffect(() => {
-    const refresh = () => setRefreshVersion((version) => version + 1);
+    const refresh = (event: Event) => {
+      const dependencies = (event as CustomEvent<{ refreshDependencies?: string[] }>).detail?.refreshDependencies;
+      const activeDependencies = patientWorkspaceRegistry.find((entry) => entry.key === activeTab)?.refreshDependencies ?? [];
+      if (!dependencies?.length || dependencies.some((dependency) => activeDependencies.includes(dependency))) setRefreshVersion((version) => version + 1);
+    };
     window.addEventListener("patient-workspace:refresh", refresh);
     return () => window.removeEventListener("patient-workspace:refresh", refresh);
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     void loadLocalDraft<Record<string, string>>(draftKey).then((record) => { if (record?.payload) setDraftFields(record.payload); });
@@ -144,7 +151,10 @@ export default function PatientFilePage() {
 
   const active = useMemo(() => tabs.find((tab) => tab.key === activeTab) ?? tabs[0]!, [activeTab]);
   const visibleTabs = useMemo(
-    () => visiblePatientWorkspaceItems({ mode: interfaceMode, mobile: false, permissions, roles }).filter((tab) => {
+    () => (workspacePanels.length ? patientWorkspaceRegistry.filter((entry) => {
+      const placement = workspacePanels.find((panel) => panel.panelKey === entry.key);
+      return placement && !placement.hidden && (!entry.requiredPermissions.length || entry.requiredPermissions.some((permission) => permissions.includes(permission))) && (!entry.roles?.length || entry.roles.some((role) => roles.includes(role)));
+    }).sort((a, b) => (workspacePanels.find((panel) => panel.panelKey === a.key)?.order ?? 999) - (workspacePanels.find((panel) => panel.panelKey === b.key)?.order ?? 999)) : visiblePatientWorkspaceItems({ mode: interfaceMode, mobile: false, permissions, roles })).filter((tab) => {
       if (tab.key === "infertility") {
         const hasInfertilityContext = patient?.patientType === "INFERTILITY" || clinicalPhases.some((phase) => phase.phaseType === "infertility") || (infertilityWorkspace.cycles?.length ?? 0) > 0;
         const canOpenClinical = roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
@@ -152,7 +162,7 @@ export default function PatientFilePage() {
       }
       return true;
     }),
-    [clinicalPhases, infertilityWorkspace.cycles?.length, interfaceMode, patient?.patientType, permissions, roles]
+    [clinicalPhases, infertilityWorkspace.cycles?.length, interfaceMode, patient?.patientType, permissions, roles, workspacePanels]
   );
   const canAccessActiveTab = useMemo(() => {
     const entry = patientWorkspaceRegistry.find((item) => item.key === activeTab);
@@ -392,6 +402,7 @@ export default function PatientFilePage() {
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
           <ImportantPatientBanner patient={patient} related={related} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
+          <PatientWorkspaceEditor patientId={patientId} permissions={permissions} roles={roles} onApply={setWorkspacePanels} />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
             {visibleTabs.map((tab) => (
@@ -402,7 +413,7 @@ export default function PatientFilePage() {
             ))}
           </section>
 
-          <WorkspaceModuleRenderer
+          <PatientPanelErrorBoundary panelKey={active.key}><details className={`workspace-panel-size-${(workspacePanels.find((panel) => panel.panelKey === active.key)?.size ?? "FULL").toLowerCase()}`} open={!workspacePanels.find((panel) => panel.panelKey === active.key)?.collapsed}><summary className="workspace-panel-collapse-summary">{active.label}</summary><WorkspaceModuleRenderer
             active={active}
             patient={patient}
             related={related}
@@ -417,7 +428,7 @@ export default function PatientFilePage() {
             setActiveTab={setActiveTab}
             permissions={permissions}
             roles={roles}
-          />
+          /></details></PatientPanelErrorBoundary>
         </>
       ) : !error ? (
         <div className="skeleton" />

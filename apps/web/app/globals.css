@@ -6532,3 +6532,27 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
   .owner-service-row { border: 1px solid var(--border); border-radius: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 6px; padding: 10px; }
   .owner-service-row > strong { grid-column: 1 / -1; }
 }
+
+.patient-workspace-controls,
+.missing-information-panel,
+.workspace-editor-grid,
+.workspace-panel-library { min-width: 0; max-width: 100%; }
+.workspace-editor-grid { display: grid; gap: .75rem; }
+.workspace-panel-library { display: grid; gap: .45rem; max-height: 52vh; overflow: auto; overscroll-behavior: contain; }
+.workspace-panel-library .data-row { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 2fr); gap: .5rem; align-items: center; }
+.workspace-panel-library .form-actions { justify-content: flex-end; }
+.workspace-panel-collapse-summary { cursor: pointer; font-weight: 700; padding: .5rem 0; }
+.workspace-panel-size-small { width: min(100%, 28rem); }
+.workspace-panel-size-medium { width: min(100%, 48rem); }
+.workspace-panel-size-wide { width: min(100%, 72rem); }
+.workspace-panel-size-full { width: 100%; }
+
+@media (max-width: 720px) {
+  .workspace-editor-grid .inline-form,
+  .workspace-panel-library .data-row { grid-template-columns: minmax(0, 1fr); }
+  .workspace-panel-library .form-actions { justify-content: flex-start; }
+  .workspace-panel-size-small,
+  .workspace-panel-size-medium,
+  .workspace-panel-size-wide,
+  .workspace-panel-size-full { width: 100%; }
+}

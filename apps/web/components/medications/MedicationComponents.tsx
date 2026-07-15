@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { searchMedications, listDrugFamilies, runMedicationSafetyCheck, type MedicationResult } from "../../lib/medications";
 import { PregnancyLactationSafetyProfile } from "./PregnancyLactationSafetyProfile";
+import { listPatientAllergies, listPatientMedications, type PatientAllergyRecord, type PatientMedicationRecord } from "@/lib/patient-medications";
 import {
   searchDrugMarket,
   listDrugMarketCountries,
@@ -171,12 +172,16 @@ export function HerbalSearchPanel() {
   return <section className="panel"><h2>Herbal and Supplements</h2><p className="muted">Herbal records are catalog references for doctor review and interaction screening.</p><MedicationSearchBox /></section>;
 }
 
-export function PatientMedicationList() {
-  return <section className="panel"><h2>Current Medications</h2><p className="muted">Active prescription, OTC, herbal, supplement, and historical entries are recorded for clinician review.</p></section>;
+export function PatientMedicationList({ patientId }: { patientId: string }) {
+  const [records, setRecords] = useState<PatientMedicationRecord[]>([]); const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  useEffect(() => { let active = true; void listPatientMedications(patientId).then((rows) => { if (active) { setRecords(rows); setState("ready"); } }).catch(() => { if (active) setState("error"); }); return () => { active = false; }; }, [patientId]);
+  return <section className="panel"><h2>Current Medications</h2><p className="muted">Authoritative patient medication records; doctor review remains required.</p>{state === "loading" ? <div className="skeleton" /> : state === "error" ? <p className="form-error">Medication records could not be loaded.</p> : records.length ? <div className="dense-card-list">{records.map((record) => <article className="data-row compact" key={record.id}><strong>{record.displayName}</strong><span>{[record.genericName, record.tradeName, record.strengthText, record.route].filter(Boolean).join(" · ") || "No additional details recorded"}</span><span className="badge">{record.status}</span></article>)}</div> : <p className="empty-state compact">No medication record has been entered.</p>}</section>;
 }
 
-export function PatientAllergyList() {
-  return <section className="panel"><h2>Allergies</h2><p className="muted">Medication, ingredient, family, herbal, and other allergies are kept visible for safety review.</p></section>;
+export function PatientAllergyList({ patientId }: { patientId: string }) {
+  const [records, setRecords] = useState<PatientAllergyRecord[]>([]); const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  useEffect(() => { let active = true; void listPatientAllergies(patientId).then((rows) => { if (active) { setRecords(rows); setState("ready"); } }).catch(() => { if (active) setState("error"); }); return () => { active = false; }; }, [patientId]);
+  return <section className="panel"><h2>Allergies</h2><p className="muted">Authoritative patient allergy records; an empty list is not interpreted as “no known allergies.”</p>{state === "loading" ? <div className="skeleton" /> : state === "error" ? <p className="form-error">Allergy records could not be loaded.</p> : records.length ? <div className="dense-card-list">{records.map((record) => <article className="data-row compact" key={record.id}><div><strong>{record.displayName}</strong><span className="badge warning">{record.severity}</span></div><span>{record.reactionText || "Reaction not recorded"}</span><small>{record.allergyType} · {record.status}</small></article>)}</div> : <p className="empty-state compact">Allergy status has not been recorded.</p>}</section>;
 }
 
 export function DrugMarketSearchBox() {

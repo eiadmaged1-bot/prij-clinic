@@ -11,8 +11,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+export type PatientMedicationRecord = { id: string; displayName: string; genericName?: string | null; tradeName?: string | null; strengthText?: string | null; route?: string | null; status: string };
+export type PatientAllergyRecord = { id: string; displayName: string; allergyType: string; reactionText?: string | null; severity: string; status: string };
+
 export function listPatientMedications(patientId: string) {
-  return request(`/patients/${patientId}/medications`);
+  return request<PatientMedicationRecord[]>(`/patients/${patientId}/medications`);
 }
 
 export function addPatientMedication(patientId: string, input: Record<string, string>) {
@@ -24,7 +27,7 @@ export function stopPatientMedication(patientId: string, medicationId: string, r
 }
 
 export function listPatientAllergies(patientId: string) {
-  return request(`/patients/${patientId}/allergies`);
+  return request<PatientAllergyRecord[]>(`/patients/${patientId}/allergies`);
 }
 
 export function addPatientAllergy(patientId: string, input: Record<string, string>) {
