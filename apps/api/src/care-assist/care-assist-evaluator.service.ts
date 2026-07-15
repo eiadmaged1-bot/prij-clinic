@@ -12,6 +12,7 @@ type DraftFinding = {
   missingFields: string[];
   suggestedAction: Record<string, unknown>;
   source?: Record<string, unknown>;
+  dataUsed?: Record<string, unknown>;
   contextKey: string;
 };
 
@@ -28,7 +29,9 @@ export class CareAssistEvaluatorService {
           investigationHistoryItems: true,
           patientMedications: { where: { status: "active" } },
           patientAllergies: { where: { status: "active" } },
-          pregnancies: { where: { status: "active" }, take: 1, orderBy: { createdAt: "desc" } }
+          clinicalTags: { where: { isRemoved: false, status: "active" } },
+          investigationResults: { orderBy: { createdAt: "desc" }, take: 50 },
+          pregnancies: { where: { status: "active" }, take: 1, orderBy: { createdAt: "desc" }, include: { antenatalVisits: { orderBy: { visitDate: "desc" }, take: 1 }, fetuses: true, obUltrasounds: { orderBy: { performedAt: "desc" }, take: 1 } } }
         }
       }),
       dto.encounterId ? this.prisma.encounter.findUnique({ where: { id: dto.encounterId } }) : null,
@@ -116,6 +119,48 @@ export class CareAssistEvaluatorService {
       findings.push(draft("NO_NEXT_FOLLOW_UP_DATE_AFTER_ENCOUNTER", "No next follow-up date after encounter", "No next follow-up date is documented after the encounter.", "FOLLOW_UP", "LOW", ["nextFollowUpDate"], "encounter-follow-up"));
     }
 
+    const tagText = patient.clinicalTags.map((tag) => `${tag.tagCode} ${tag.label}`).join(" ").toLowerCase();
+    const resultText = patient.investigationResults.map((result) => result.title.toLowerCase());
+    const actionBase = { patientId: patient.id, encounterId: encounter?.id ?? null };
+    if (pregnancy && /hypertension|\bhtn\b/.test(tagText)) {
+      const missingFields = [
+        !pregnancy.antenatalVisits[0]?.bloodPressure && "blood pressure",
+        !resultText.some((title) => /protein|urine/.test(title)) && "proteinuria",
+        !resultText.some((title) => /platelet/.test(title)) && "platelets",
+        !resultText.some((title) => /creatinine|renal|egfr/.test(title)) && "renal function",
+        !resultText.some((title) => /liver|alt|ast/.test(title)) && "liver function",
+        !pregnancy.fetuses.length && !pregnancy.obUltrasounds.length && "fetal status"
+      ].filter((value): value is string => Boolean(value));
+      findings.push(contextualDraft("PREGNANCY_HYPERTENSION_CONTEXT", "Pregnancy with hypertension context", "Pregnancy and an active hypertension fact are recorded. Review the related pathway and missing assessment information; no diagnosis is inferred.", "PREGNANCY_SAFETY", "HIGH", missingFields, "pregnancy-hypertension", {
+        ...actionBase, factsUsed: ["active pregnancy record", "active hypertension clinical tag"], relatedPathway: "Hypertension in pregnancy / preeclampsia assessment and prevention", relatedMedicines: ["Medication review in Clinical Drug Atlas"], relatedInvestigations: ["Blood pressure", "Urine protein", "Platelet count", "Renal function", "Liver function", "Fetal status"]
+      }));
+    }
+
+    const infertilityText = JSON.stringify(historySheet?.infertilityHistory ?? {}).toLowerCase();
+    if (/pcos|polycystic/.test(tagText) && (patient.patientType === "INFERTILITY" || /fertility|conceiv|pregnan/.test(infertilityText))) {
+      findings.push(contextualDraft("PCOS_FERTILITY_GOAL_CONTEXT", "PCOS with fertility goal context", "PCOS and a structured fertility context are recorded. Review the pathway and available linked references; no treatment is selected.", "CLINICAL_SAFETY_REVIEW", "MODERATE", [], "pcos-fertility", {
+        ...actionBase, factsUsed: ["active PCOS clinical tag", patient.patientType === "INFERTILITY" ? "patient infertility phase" : "fertility goal in history sheet"], relatedPathway: "PCOS infertility pathway / ovulation-induction protocol", relatedMedicines: ["Metformin profile", "Related ovulation-induction medication profiles"], relatedInvestigations: ["Metabolic investigation set"]
+      }));
+    }
+
+    const penicillinAllergy = patient.patientAllergies.find((allergy) => /penicillin|amoxicillin/.test(allergy.displayName.toLowerCase()));
+    if (penicillinAllergy) {
+      const missingFields = [!penicillinAllergy.reactionText?.trim() && "allergy reaction", (!penicillinAllergy.severity || penicillinAllergy.severity === "unknown") && "allergy severity"].filter((value): value is string => Boolean(value));
+      findings.push(contextualDraft("PENICILLIN_ALLERGY_CONTEXT", "Penicillin allergy context", "A penicillin-family allergy record is present. Confirm allergy details and review the antibiotic protocol before any medication decision.", "MEDICATION_SAFETY", "HIGH", missingFields, `penicillin-allergy-${penicillinAllergy.id}`, {
+        ...actionBase, factsUsed: [`active allergy: ${penicillinAllergy.displayName}`], relatedPathway: "Antibiotic protocol", relatedMedicines: ["Alternative medication review; no alternative selected"], relatedInvestigations: []
+      }));
+    }
+
+    const renalTag = patient.clinicalTags.find((tag) => /renal impairment|kidney disease|\bckd\b/.test(`${tag.tagCode} ${tag.label}`.toLowerCase()));
+    if (renalTag && patient.patientMedications.length) {
+      const renalResult = patient.investigationResults.find((result) => /creatinine|renal|egfr/.test(result.title.toLowerCase()));
+      const observedAt = renalResult?.resultDate ?? renalResult?.createdAt;
+      const stale = !observedAt || Date.now() - observedAt.getTime() > 90 * 24 * 60 * 60 * 1000;
+      findings.push(contextualDraft("RENAL_IMPAIRMENT_ACTIVE_MEDICINE_CONTEXT", "Renal impairment with active medication context", "Renal impairment and active medication records are present. Review renal guidance and current renal results; no medication change is proposed.", "MEDICATION_SAFETY", "HIGH", stale ? [renalResult ? "current renal result (latest is stale)" : "current renal result"] : [], "renal-active-medicine", {
+        ...actionBase, factsUsed: ["active renal impairment clinical tag", `${patient.patientMedications.length} active medication record(s)`], relatedPathway: "Renal medication guidance", relatedMedicines: patient.patientMedications.map((medication) => medication.genericName || medication.displayName), relatedInvestigations: ["Current renal function"], calculatorLink: "/medications"
+      }));
+    }
+
     return {
       findings,
       dataUsed: {
@@ -146,6 +191,34 @@ function draft(ruleCode: string, title: string, message: string, category: strin
     suggestedAction: { label: "Doctor review required", type: "review_required" },
     source: { sourceType: "local_rule", warning: "Reference only. Doctor review required." },
     contextKey
+  };
+}
+
+function contextualDraft(ruleCode: string, title: string, message: string, category: string, severity: string, missingFields: string[], contextKey: string, context: Record<string, unknown>): DraftFinding {
+  const patientId = String(context.patientId);
+  const encounterId = typeof context.encounterId === "string" ? context.encounterId : null;
+  const pathway = String(context.relatedPathway ?? "");
+  const medicine = Array.isArray(context.relatedMedicines) ? String(context.relatedMedicines[0] ?? "") : "";
+  return {
+    ruleCode, title, message, category, severity, missingFields, contextKey,
+    dataUsed: { factsUsed: context.factsUsed ?? [], patientId, encounterId },
+    suggestedAction: {
+      whyItAppeared: message,
+      factsUsed: context.factsUsed ?? [],
+      missingInformation: missingFields,
+      relatedPathway: pathway,
+      relatedMedicines: context.relatedMedicines ?? [],
+      relatedInvestigations: context.relatedInvestigations ?? [],
+      actions: [
+        { label: "Review", type: "review" },
+        { label: "Open pathway", type: "link", href: `/guidelines/search?q=${encodeURIComponent(pathway)}` },
+        { label: "Add selected investigations", type: "link", href: `/investigations?patientId=${patientId}&contextRule=${ruleCode}` },
+        { label: "Open medication profile", type: "link", href: `/medications?q=${encodeURIComponent(medicine)}` },
+        ...(encounterId ? [{ label: "Add medication to prescription draft", type: "link", href: `/prescriptions?patientId=${patientId}&encounterId=${encounterId}&medication=${encodeURIComponent(medicine)}` }] : []),
+        { label: "Create follow-up", type: "link", href: `/appointments?patientId=${patientId}` }
+      ]
+    },
+    source: { sourceType: "deterministic_structured_rule", version: "v1.4.7", warning: "Assistive draft only. Doctor confirmation required." }
   };
 }
 

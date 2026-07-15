@@ -596,7 +596,8 @@ export class PatientsService {
       patientDocuments,
       referrals,
       patientTasks,
-      patientInternalNotes
+      patientInternalNotes,
+      careAssistDecisions
       // v0.12.2 history rows are loaded separately through the history sheet workspace.
     ] = await Promise.all([
       this.prisma.appointment.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "appointment", "startAt") }, include: { doctor: true }, orderBy: [{ startAt: "desc" }, { id: "asc" }], take: candidateTake }),
@@ -618,7 +619,8 @@ export class PatientsService {
       this.prisma.patientDocument.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "patient_document", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
       this.prisma.referral.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "referral", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
       this.prisma.patientTask.findMany({ where: { patientId: id, ...branchScope(user), ...timelineCursorWhere(cursor, "patient_task", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
-      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user), ...timelineCursorWhere(cursor, "internal_note", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake })
+      this.prisma.patientInternalNote.findMany({ where: { patientId: id, ...branchScope(user), ...internalNoteVisibilityWhere(user), ...timelineCursorWhere(cursor, "internal_note", "createdAt") }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake }),
+      this.prisma.careAssistDecision.findMany({ where: { finding: { patientId: id, ...clinicalScope }, ...timelineCursorWhere(cursor, "care_assist", "createdAt") }, include: { finding: { select: { id: true, title: true } }, decidedByUser: { select: { displayName: true } } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }], take: candidateTake })
     ]);
 
     const items = [
@@ -659,7 +661,8 @@ export class PatientsService {
       ...patientDocuments.map((item) => timelineItem(item.createdAt, "patient_document", "Document archived", item.status, `${item.title} (${item.storageMode})`, undefined, `/patients/${patient.id}`, undefined, item.id)),
       ...referrals.map((item) => timelineItem(item.createdAt, "referral", "Referral created", item.status, item.reason, undefined, "/referrals", undefined, item.id)),
       ...patientTasks.map((item) => timelineItem(item.createdAt, "patient_task", "Patient task created", item.status, item.title, undefined, "/tasks", undefined, item.id)),
-      ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`, undefined, item.id))
+      ...patientInternalNotes.map((item) => timelineItem(item.createdAt, "internal_note", "Internal note recorded", item.archived ? "archived" : "active", item.title ?? "Internal note", undefined, `/patients/${patient.id}`, undefined, item.id)),
+      ...careAssistDecisions.map((item) => timelineItem(item.createdAt, "care_assist", "Clinical context decision recorded", item.decision, `${item.finding.title}${item.reason ? ` · ${item.reason}` : ""}`, item.decidedByUser.displayName, `/patients/${patient.id}`, undefined, item.id))
     ].filter((item) => isTimelineItemAfterCursor(item, cursor)).sort(compareTimelineItems);
     const hasMore = items.length > limit;
     const pageItems = items.slice(0, limit);
