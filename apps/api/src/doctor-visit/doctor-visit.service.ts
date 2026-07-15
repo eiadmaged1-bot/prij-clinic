@@ -5,6 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceAppointment, assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { ClinicTimeService } from "../clinic-time/clinic-time.service";
 import { IdempotencyService } from "../idempotency/idempotency.service";
 import { CreateFollowUpDto, StartDoctorVisitDto, UpdateDoctorVisitDto } from "./dto";
 
@@ -13,7 +14,8 @@ export class DoctorVisitService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly idempotency: IdempotencyService
+    private readonly idempotency: IdempotencyService,
+    private readonly clinicTime: ClinicTimeService
   ) {}
 
   async start(patientId: string, dto: StartDoctorVisitDto, user: AuthUser) {
@@ -56,6 +58,16 @@ export class DoctorVisitService {
         })
       : encounter;
 
+    const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
+    const queueTicket = await this.prisma.queueTicket.findFirst({
+      where: { patientId, branchId: patient.branchId, queueDate, status: { in: ["waiting", "called"] } },
+      orderBy: { checkedInAt: "asc" }
+    });
+    if (queueTicket) {
+      await this.prisma.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "in_room", calledAt: queueTicket.calledAt ?? new Date() } });
+      await this.audit.record({ actorUserId: user.id, action: "queue.patient_entered_room", resourceType: "queue_ticket", resourceId: queueTicket.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId, encounterId: stampedEncounter.id, from: queueTicket.status, to: "in_room" } });
+    }
+
     if (!doctorProfile.doctorColor) {
       await this.prisma.user.update({ where: { id: user.id }, data: { doctorColor } });
     }
@@ -74,7 +86,8 @@ export class DoctorVisitService {
         startedByUserId: stampedEncounter.startedByUserId,
         doctorDisplayNameSnapshot: stampedEncounter.doctorDisplayNameSnapshot,
         doctorColorSnapshot: stampedEncounter.doctorColorSnapshot
-        , legacyEvent: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED"
+        , legacyEvent: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED",
+        queueTicketId: queueTicket?.id ?? null
       }
     });
 

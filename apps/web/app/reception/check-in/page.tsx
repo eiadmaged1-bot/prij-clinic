@@ -1,168 +1,71 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
-import { PatientPicker, SelectedPatientSummary, patientLabel, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
+import { PatientPicker, SelectedPatientSummary, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
-type Patient = PatientPickerPatient;
-type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; patient?: Patient; visitType?: VisitTypeValue | null };
-
 export default function ReceptionCheckInPage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [appointmentQuery, setAppointmentQuery] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [priority, setPriority] = useState("routine");
+  const [selectedPatient, setSelectedPatient] = useState<PatientPickerPatient | null>(null);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
-  const [status, setStatus] = useState("Loading");
+  const [status, setStatus] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [ticket, setTicket] = useState<{ queueNumber?: number; visitType?: string; queueState?: string; alreadyQueued?: boolean } | null>(null);
   const { key: idempotencyKey } = useIdempotencyKey();
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
-  const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
   useEffect(() => {
     const saved = sessionStorage.getItem("prij:check-in:selected-patient");
-    if (saved) {
-      try { setSelectedPatient(JSON.parse(saved) as Patient); } catch { sessionStorage.removeItem("prij:check-in:selected-patient"); }
-    }
+    if (saved) try { setSelectedPatient(JSON.parse(saved) as PatientPickerPatient); } catch { sessionStorage.removeItem("prij:check-in:selected-patient"); }
   }, []);
 
-  function selectPatient(patient: Patient | null) {
+  function selectPatient(patient: PatientPickerPatient | null) {
     setSelectedPatient(patient);
-    setSelectedAppointment(null);
+    setTicket(null);
+    setStatus("");
     if (patient) sessionStorage.setItem("prij:check-in:selected-patient", JSON.stringify(patient));
     else sessionStorage.removeItem("prij:check-in:selected-patient");
   }
 
-  const load = useCallback(async () => {
-    setStatus("Loading");
-    const [patientResponse, appointmentResponse] = await Promise.all([
-      fetch(`${getApiBaseUrl()}/patients`, { credentials: "include", headers }),
-      fetch(`${getApiBaseUrl()}/appointments/calendar?date=${today}`, { credentials: "include", headers })
-    ]);
-    setPatients(patientResponse.ok ? ((await patientResponse.json()) as { patients?: Patient[] }).patients ?? [] : []);
-    setAppointments(appointmentResponse.ok ? ((await appointmentResponse.json()) as { appointments?: Appointment[] }).appointments ?? [] : []);
-    setStatus("Ready");
-  }, [headers, today]);
-
-  useEffect(() => { void load(); }, [load]);
-
-  const visiblePatients = patients.filter((patient) => !isTrainingPatient(patient));
-  const visibleAppointments = appointments.filter((appointment) => !isTrainingPatient(appointment.patient));
-
-  const appointmentMatches = visibleAppointments
-    .filter((appointment) => !selectedPatient || appointment.patientId === selectedPatient.id)
-    .filter((appointment) => `${appointmentLabel(appointment)} ${appointment.status}`.toLowerCase().includes(appointmentQuery.toLowerCase()))
-    .slice(0, 8);
-
   async function submit() {
-    if (!selectedPatient) {
-      setStatus("Select a patient first");
-      return;
-    }
-    if (!visitType) {
-      setStatus("Select visit type first");
-      return;
-    }
+    if (!selectedPatient || !visitType || submitting) { setStatus("Select a patient and visit type first."); return; }
+    if (selectedPatient.status === "archived") { setStatus("Patient must be restored before Check-in."); return; }
+    setSubmitting(true);
+    setStatus("Adding patient to the waiting line…");
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST",
       credentials: "include",
-      headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(headers ?? {}) },
-      body: JSON.stringify({
-        patientId: selectedPatient.id,
-        appointmentId: selectedAppointment?.id || undefined,
-        priority,
-        visitType
-      })
+      headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "Reception Check-in" })
     }).catch(() => null);
-
-    if (response?.ok) {
-      setStatus("Patient checked in");
-    } else {
-      if (response) {
-        const body = await response.json().catch(() => ({}));
-        const code = body.error?.code || body.code;
-        if (code === "QUEUE_ACTIVE_TICKET_EXISTS") {
-          setStatus("Patient is already in the queue or with doctor");
-        } else {
-          setStatus("Could not check in patient");
-        }
-      } else {
-        setStatus("Could not check in patient");
-      }
-    }
+    if (!response) { setStatus("Could not add patient to the waiting line. Retry."); setSubmitting(false); return; }
+    const body = await response.json().catch(() => null) as { queueNumber?: number; visitType?: string; queueState?: string; alreadyQueued?: boolean } | null;
+    if (response.ok && body) {
+      setTicket(body);
+      setStatus(body.alreadyQueued ? "Patient is already waiting today" : "Patient added to waiting line");
+      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId: selectedPatient.id } }));
+    } else setStatus("Could not add patient to the waiting line. Retry.");
+    setSubmitting(false);
   }
 
-  return (
-    <AppShell>
-      <section className="page-header">
-        <div className="header-row">
-          <div>
-            <p className="eyebrow">Reception</p>
-            <h1>Check-in</h1>
-          </div>
-          <div className="topbar-actions">
-            <Link className="button secondary compact" href="/reception/today"><ThreeDMedicalIcon name="reception" size="sm" tone="slate" />Today Desk</Link>
-            <Link className="button compact" href="/patients/new"><ThreeDMedicalIcon name="patients" size="sm" />New patient</Link>
-            <Link className="button secondary compact" href="/reception/qr-scan"><ThreeDMedicalIcon name="search" size="sm" tone="slate" />Scan QR</Link>
-          </div>
-        </div>
-        <p className="muted">Fast patient check-in without large dropdowns. Walk-ins can continue without an appointment.</p>
-      </section>
-      <SafetyAlert />
-      <section className="panel compact-panel check-in-wizard">
-        <div className="section-heading"><h2>Check in or walk in</h2><span className="badge">{status}</span></div>
-        <div className="wizard-steps">
-          <article className="compact-panel">
-            <span className="badge">Step 1</span>
-            <PatientPicker patients={visiblePatients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select patient" storageKey="check-in" />
-          </article>
-          {selectedPatient?.status === "archived" ? <article className="notice wide"><strong>Archived patient</strong><span>This patient must be restored before Check-in.</span><div className="topbar-actions"><Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>Open read-only profile</Link><Link className="button compact" href={`/patients/${selectedPatient.id}`}>Restore patient</Link><button className="button secondary compact" type="button" onClick={() => selectPatient(null)}>Choose another patient</button></div></article> : null}
-          {selectedPatient?.status !== "archived" ? <>
-          <article className="compact-panel">
-            <span className="badge">Step 2</span>
-            <label>Appointment or walk-in<input value={appointmentQuery} onChange={(event) => setAppointmentQuery(event.target.value)} placeholder="Search appointment or leave walk-in" /></label>
-            <button className={`picker-row ${!selectedAppointment ? "active" : ""}`} type="button" onClick={() => setSelectedAppointment(null)}><strong>Walk-in / no appointment</strong><span>Use when no booking exists.</span></button>
-            <div className="dense-card-list">
-              {appointmentMatches.map((appointment) => <button className={`picker-row ${selectedAppointment?.id === appointment.id ? "active" : ""}`} key={appointment.id} type="button" onClick={() => setSelectedAppointment(appointment)}><strong>{appointmentLabel(appointment)}</strong><span>{appointment.status}</span></button>)}
-            </div>
-          </article>
-          <article className="compact-panel">
-            <span className="badge">Step 3</span>
-            <VisitTypeSelector value={visitType} onChange={setVisitType} compact />
-          </article>
-          <article className="compact-panel">
-            <span className="badge">Step 4</span>
-            <div className="segmented-control" aria-label="Queue priority">
-              {["routine", "priority"].map((value) => <button className={priority === value ? "active" : ""} key={value} type="button" onClick={() => setPriority(value)}>{value === "routine" ? "Routine" : "Priority note"}</button>)}
-            </div>
-            {selectedPatient ? <SelectedPatientSummary patient={selectedPatient} /> : <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="patients" size="sm" tone="slate" /><span>No patient selected.</span></p>}
-          </article>
-          <article className="compact-panel">
-            <span className="badge">Step 5</span>
-            <button className="button" type="button" onClick={() => void submit()} disabled={!selectedPatient || !visitType}><ThreeDMedicalIcon name="queue" size="sm" />Check in</button>
-            <p className="muted">Patient file, appointment link, and queue priority are saved for reception-to-doctor handoff.</p>
-          </article>
-          </> : null}
-        </div>
-      </section>
-    </AppShell>
-  );
-}
-
-function appointmentLabel(appointment: Appointment) {
-  return `${new Date(appointment.startAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${patientLabel(appointment.patient)} - ${appointment.appointmentType ?? "Visit"}`;
-}
-
-function isTrainingPatient(patient?: Patient | null) {
-  const name = patientLabel(patient);
-  const mrn = patient?.medicalRecordNumber ?? "";
-  return /^Demo\b/i.test(name) || /^DEMO[-_]/i.test(mrn) || /Local training/i.test(name);
+  const archived = selectedPatient?.status === "archived";
+  return <AppShell>
+    <section className="page-header"><div className="header-row"><div><p className="eyebrow">Reception</p><h1>Check in patient</h1></div><Link className="button secondary compact" href="/reception">Back to Reception</Link></div><p className="muted">Permanent QR and manual lookup are available in patient selection.</p></section>
+    <SafetyAlert />
+    <section className="panel compact-panel check-in-wizard">
+      <article className="compact-panel"><span className="badge">Step 1</span><PatientPicker patients={[]} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select existing patient" storageKey="check-in" /><div className="topbar-actions"><Link className="button secondary compact" href="/reception/qr-scan">Scan permanent QR</Link><Link className="button secondary compact" href="/patients/new">Create new patient</Link></div></article>
+      {archived ? <article className="notice"><strong>Archived patient</strong><span>This patient must be restored before Check-in.</span><div className="topbar-actions"><Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>Open read-only profile</Link><Link className="button compact" href={`/patients/${selectedPatient.id}`}>Restore patient</Link><button className="button secondary compact" type="button" onClick={() => selectPatient(null)}>Choose another patient</button></div></article> : null}
+      {selectedPatient && !archived ? <>
+        <article className="compact-panel"><span className="badge">Step 2</span><VisitTypeSelector value={visitType} onChange={setVisitType} compact /></article>
+        <article className="compact-panel"><span className="badge">Step 3</span><SelectedPatientSummary patient={selectedPatient} /><button className="button" type="button" onClick={() => void submit()} disabled={!visitType || submitting}><ThreeDMedicalIcon name="queue" size="sm" />{submitting ? "Adding…" : "Add to waiting line"}</button></article>
+      </> : null}
+      {status ? <p className={ticket ? "success-message" : "notice"} role="status">{status}</p> : null}
+      {ticket ? <article className="queue-position-card"><strong>Queue number {ticket.queueNumber ?? "—"}</strong><span>Visit type: {ticket.visitType ?? visitType}</span><span>Status: {ticket.queueState === "WAITING" ? "Waiting" : ticket.queueState ?? "Waiting"}</span><Link className="button secondary compact" href="/queue">Open queue</Link></article> : null}
+    </section>
+  </AppShell>;
 }

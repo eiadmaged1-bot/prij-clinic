@@ -228,7 +228,7 @@ export class QueueService {
   }
 
   async complete(id: string, user: AuthUser) {
-    return this.transition(id, user, "queue.completed", { status: "completed", completedAt: new Date() }, "called");
+    return this.transition(id, user, "queue.completed", { status: "completed", completedAt: new Date() }, ["called", "in_room"]);
   }
 
   async cancel(id: string, dto: QueueCancelDto, user: AuthUser) {
@@ -243,7 +243,7 @@ export class QueueService {
     user: AuthUser,
     action: string,
     data: { status: "called" | "completed" | "cancelled"; calledAt?: Date; completedAt?: Date; cancelledAt?: Date; cancellationReason?: string },
-    expectedPreviousStatus?: "waiting" | "called",
+    expectedPreviousStatus?: "waiting" | "called" | "in_room" | Array<"waiting" | "called" | "in_room">,
     reason?: string
   ) {
     return await this.prisma.$transaction(async (tx) => {
@@ -255,7 +255,7 @@ export class QueueService {
 
       const whereClause: Prisma.QueueTicketWhereInput = { id, ...branchScope(user) };
       if (expectedPreviousStatus) {
-        whereClause.status = expectedPreviousStatus;
+        whereClause.status = Array.isArray(expectedPreviousStatus) ? { in: expectedPreviousStatus } : expectedPreviousStatus;
       }
 
       const result = await tx.queueTicket.updateMany({

@@ -159,9 +159,16 @@ export class EncountersService {
       throw new BadRequestException("Only draft encounters can be signed.");
     }
 
-    const encounter = await this.prisma.encounter.update({
-      where: { id },
-      data: { status: "signed", signedAt: new Date(), signedByUserId: user.id }
+    const completedAt = new Date();
+    const { encounter, queueTicketId } = await this.prisma.$transaction(async (tx) => {
+      const signed = await tx.encounter.update({ where: { id }, data: { status: "signed", signedAt: completedAt, signedByUserId: user.id } });
+      const queueTicket = await tx.queueTicket.findFirst({ where: { patientId: signed.patientId, branchId: signed.branchId, status: "in_room" }, orderBy: { checkedInAt: "desc" } });
+      if (queueTicket) {
+        await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });
+        await tx.activeQueueTicketLock.deleteMany({ where: { queueTicketId: queueTicket.id } });
+        await tx.auditLog.create({ data: { actorUserId: user.id, action: "queue.completed_with_encounter", resourceType: "queue_ticket", resourceId: queueTicket.id, branchId: signed.branchId, severity: "high", metadataJson: { patientId: signed.patientId, encounterId: signed.id, from: "in_room", to: "completed" } } });
+      }
+      return { encounter: signed, queueTicketId: queueTicket?.id ?? null };
     });
 
     await this.audit.record({
@@ -171,7 +178,7 @@ export class EncountersService {
       resourceId: encounter.id,
       branchId: encounter.branchId,
       severity: "high",
-      metadataJson: { patientId: encounter.patientId }
+      metadataJson: { patientId: encounter.patientId, queueTicketId }
     });
 
     return encounter;
