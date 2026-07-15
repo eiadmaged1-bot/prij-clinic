@@ -412,7 +412,7 @@ export class PregnancyService {
 
   async listObUltrasounds(user: AuthUser) {
     const obUltrasounds = await this.prisma.obUltrasound.findMany({
-      where: branchScope(user),
+      where: { ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as unknown as Prisma.ObUltrasoundWhereInput,
       orderBy: { performedAt: "desc" },
       take: 100,
       include: obUltrasoundIncludes
@@ -432,7 +432,7 @@ export class PregnancyService {
 
   async getObUltrasound(id: string, user: AuthUser) {
     const ultrasound = await this.prisma.obUltrasound.findFirst({
-      where: { id, ...branchScope(user) },
+      where: { id, ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as unknown as Prisma.ObUltrasoundWhereInput,
       include: obUltrasoundIncludes
     });
 

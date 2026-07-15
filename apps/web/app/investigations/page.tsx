@@ -62,7 +62,9 @@ export default function InvestigationsPage() {
     const expanded = expandSearchShortcut(query);
     if (expanded.trim()) params.set("q", expanded);
     if (category && category !== "Favorites") params.set("category", category);
-    setWorkspace(await apiGet(`/investigations/catalog?${params.toString()}`) as Workspace);
+    setStatus("Loading investigation catalog…");
+    try { setWorkspace(await apiGet(`/investigations/catalog?${params.toString()}`) as Workspace); setStatus("Ready"); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Investigation catalog API failed."); }
   }, [query, category]);
 
   useEffect(() => {
@@ -71,8 +73,8 @@ export default function InvestigationsPage() {
   }, [loadWorkspace]);
 
   async function loadRequests() {
-    const data = await apiGet("/clinical-requests") as { clinicalRequests?: ClinicalRequest[] };
-    setRequests(data.clinicalRequests ?? []);
+    try { const data = await apiGet("/clinical-requests") as { clinicalRequests?: ClinicalRequest[] }; setRequests(data.clinicalRequests ?? []); }
+    catch (error) { setStatus(error instanceof Error ? error.message : "Result follow-up API failed."); }
   }
 
   const patient = useMemo(() => requests.find((request) => request.patientId === patientId)?.patient, [requests, patientId]);
@@ -183,6 +185,6 @@ function CatalogList({ title, items, onAdd }: { title: string; items: CatalogIte
 function cleanCatalogId(id: string) { return id; }
 function basketStorageKey(patientId: string, encounterId: string) { return `prij-investigation-basket:${patientId}:${encounterId}`; }
 function uniqueCatalogItems(items: CatalogItem[]) { return items.filter((item, index) => Boolean(item?.id) && items.findIndex((candidate) => candidate.id === item.id) === index); }
-async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); return response.ok ? response.json() : {}; }
+async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); if (!response.ok) { const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null; throw new Error(`${body?.error?.message ?? "Investigation request failed."}${body?.error?.requestId ? ` Request ${body.error.requestId}.` : ""}`); } return response.json(); }
 async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
 async function apiRequest(endpoint: string, method: "GET" | "POST" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }

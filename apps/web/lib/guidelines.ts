@@ -13,9 +13,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "include",
     ...init,
     headers: { ...authHeaders(), ...(init?.headers ?? {}) }
-  });
-  if (!response.ok) throw new Error("Guideline Center is unavailable for this role.");
+  }).catch(() => null);
+  if (!response) throw new GuidelineRequestError("NETWORK_ERROR", "Guideline Center could not reach the API.");
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { code?: string; message?: string; requestId?: string } } | null;
+    const code = response.status === 401 ? "SESSION_EXPIRED" : response.status === 403 ? "ACCESS_DENIED" : response.status >= 500 ? "DATABASE_OR_API_ERROR" : body?.error?.code ?? "API_ERROR";
+    throw new GuidelineRequestError(code, body?.error?.message ?? "Guideline inventory could not be loaded.", body?.error?.requestId);
+  }
   return (await response.json()) as T;
+}
+
+export class GuidelineRequestError extends Error {
+  constructor(readonly code: string, message: string, readonly requestId?: string) { super(message); }
 }
 
 export type GuidelineSource = { id: string; name: string; abbreviation?: string | null; status: string; notes?: string | null; _count?: { documents: number } };

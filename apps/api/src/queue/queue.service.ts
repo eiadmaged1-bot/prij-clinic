@@ -236,7 +236,7 @@ export class QueueService {
     const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
 
     const tickets = await this.prisma.queueTicket.findMany({
-      where: { queueDate, ...branchScope(user), patient: { NOT: demoPatientWhere() } },
+      where: { queueDate, ...branchScope(user), patient: { NOT: demoPatientWhere(), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } } as unknown as Prisma.QueueTicketWhereInput,
       orderBy: { queueNumber: "asc" },
       include: { patient: true, appointment: true }
     });
@@ -325,6 +325,7 @@ export class QueueService {
   private async findPatientForCheckIn(db: Pick<PrismaService, "patient"> | Prisma.TransactionClient, patientId: string) {
     const patient = await db.patient.findUnique({ where: { id: patientId } });
     if (!patient) throw new NotFoundException({ code: "PATIENT_NOT_ACCESSIBLE", message: "The selected patient is not accessible." });
+    if (["TEST", "QUARANTINED"].includes(String((patient as typeof patient & { dataClassification?: string }).dataClassification ?? "REAL"))) throw new NotFoundException({ code: "PATIENT_NOT_ACCESSIBLE", message: "The selected patient is not available in operational workflows." });
     return patient;
   }
 }

@@ -15,6 +15,7 @@ import { ClinicDirectoryModule } from "./clinic-directory/clinic-directory.modul
 import { ClinicalTagsModule } from "./clinical-tags/clinical-tags.module";
 import { ClinicalCalendarModule } from "./clinical-calendar/clinical-calendar.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { DataHygieneModule } from "./data-hygiene/data-hygiene.module";
 import { DoctorVisitModule } from "./doctor-visit/doctor-visit.module";
 import { DrugMarketModule } from "./drug-market/drug-market.module";
 import { EncountersModule } from "./encounters/encounters.module";
@@ -98,6 +99,7 @@ import { AuditController } from "./audit/audit.controller";
     CaseLibraryModule,
     DoctorVisitModule,
     DashboardModule,
+    DataHygieneModule,
     MedicationsModule,
     DrugMarketModule,
     AiDraftsModule,

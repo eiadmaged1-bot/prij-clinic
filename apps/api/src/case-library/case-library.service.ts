@@ -17,7 +17,7 @@ export class CaseLibraryService {
 
     const where: Prisma.EncounterWhereInput = {
       ...branchScope(user),
-      patient: { NOT: demoPatientWhere() },
+      patient: { NOT: demoPatientWhere(), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as Prisma.PatientRelationFilter,
       ...(requestedScope === "all" ? {} : { doctorId: user.id }),
       ...(query.doctorId && canViewAll ? { doctorId: query.doctorId } : {}),
       ...(query.visitType ? { appointment: { appointmentType: { contains: query.visitType, mode: "insensitive" } } } : {}),

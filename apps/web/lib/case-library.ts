@@ -10,8 +10,15 @@ async function request<T>(path: string): Promise<T> {
     credentials: "include",
     headers: authHeaders()
   });
-  if (!response.ok) throw new Error("Could not load case library.");
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null;
+    throw new CaseLibraryRequestError(response.status, body?.error?.message ?? "Could not load case library.", body?.error?.requestId);
+  }
   return (await response.json()) as T;
+}
+
+export class CaseLibraryRequestError extends Error {
+  constructor(readonly status: number, message: string, readonly requestId?: string) { super(message); }
 }
 
 export type DoctorSignature = { doctorName: string; doctorColor: string; doctorShortLabel?: string | null; startedAt: string };

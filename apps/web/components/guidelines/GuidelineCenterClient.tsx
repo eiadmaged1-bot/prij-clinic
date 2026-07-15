@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { askGuidelines, Citation, GuidelineDocument, GuidelineSource, listGuidelineDocuments, listGuidelineSources, reviewGuidelineDocument, searchGuidelines, uploadDemoGuidelineText } from "../../lib/guidelines";
+import { askGuidelines, Citation, GuidelineDocument, GuidelineRequestError, GuidelineSource, listGuidelineDocuments, listGuidelineSources, reviewGuidelineDocument, searchGuidelines, uploadDemoGuidelineText } from "../../lib/guidelines";
 
 type Mode = "home" | "search" | "ask" | "sources" | "review" | "vault";
 
@@ -10,15 +10,18 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
   const [documents, setDocuments] = useState<GuidelineDocument[]>([]);
   const [citations, setCitations] = useState<Citation[]>([]);
   const [answer, setAnswer] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("Loading guideline inventory…");
+  const [inventoryState, setInventoryState] = useState<"loading" | "ready" | "empty" | "error">("loading");
 
   useEffect(() => {
     void Promise.all([listGuidelineSources(), listGuidelineDocuments()])
       .then(([nextSources, nextDocuments]) => {
         setSources(nextSources);
         setDocuments(nextDocuments);
+        setInventoryState(nextSources.length || nextDocuments.length ? "ready" : "empty");
+        setStatus(nextSources.length || nextDocuments.length ? "Guideline inventory loaded." : "No guideline documents are currently registered.");
       })
-      .catch(() => setStatus("Guideline Center is available only to authorized clinical or owner roles."));
+      .catch((error: GuidelineRequestError) => { setInventoryState("error"); setStatus(formatGuidelineError(error)); });
   }, []);
 
   async function search(event: FormEvent<HTMLFormElement>) {
@@ -74,7 +77,8 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
           <a className="button secondary" href="/guidelines/sources">Sources</a>
           <a className="button secondary" href="/guidelines/review">Review</a>
         </div>
-        {status ? <p className="notice">{status}</p> : null}
+        {status ? <p className={inventoryState === "error" ? "form-error" : "notice"} role={inventoryState === "error" ? "alert" : "status"}>{status}</p> : null}
+        {inventoryState === "error" ? <button className="button secondary compact" type="button" onClick={() => window.location.reload()}>Retry inventory</button> : null}
       </section>
 
       {mode === "search" || mode === "home" ? (
@@ -145,6 +149,11 @@ export function GuidelineCenterClient({ mode = "home" }: { mode?: Mode }) {
       ) : null}
     </div>
   );
+}
+
+function formatGuidelineError(error: GuidelineRequestError) {
+  const prefix: Record<string, string> = { SESSION_EXPIRED: "Session expired.", ACCESS_DENIED: "Guideline access denied.", NETWORK_ERROR: "Network error.", DATABASE_OR_API_ERROR: "Guideline API or database error." };
+  return `${prefix[error.code] ?? "Guideline inventory error."} ${error.message}${error.requestId ? ` Request ${error.requestId}.` : ""}`;
 }
 
 function CitationList({ citations }: { citations: Citation[] }) {

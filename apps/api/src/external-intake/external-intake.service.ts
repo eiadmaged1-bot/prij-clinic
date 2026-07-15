@@ -129,7 +129,7 @@ export class ExternalIntakeService {
   async list(user: AuthUser, status = "pending_review") {
     this.assertReviewer(user);
     return this.prisma.externalPatientSubmission.findMany({
-      where: { ...(status ? { status } : {}) },
+      where: { ...(status ? { status } : {}), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as Prisma.ExternalPatientSubmissionWhereInput,
       orderBy: { receivedAt: "desc" },
       take: 100
     });

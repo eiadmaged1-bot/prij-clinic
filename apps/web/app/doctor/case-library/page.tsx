@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { AppShell } from "../../mvp-page";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
-import { CaseLibraryCase, listCaseLibrary } from "@/lib/case-library";
+import { CaseLibraryCase, CaseLibraryRequestError, listCaseLibrary } from "@/lib/case-library";
 import { patientTypeLabel } from "@/lib/patient-labels";
 
 export default function DoctorCaseLibraryPage() {
@@ -25,16 +25,16 @@ export default function DoctorCaseLibraryPage() {
       const result = await listCaseLibrary({ scope, ...filters });
       setCases(
         result.cases
-          .filter((item) => !isDemoLikeCase(item))
           .filter((item) => !filters.patientType || item.patientType === filters.patientType)
           .filter((item) => !filters.status || item.status === filters.status)
           .sort((left, right) => String(right.visitDateTime).localeCompare(String(left.visitDateTime)))
       );
       setCanViewAll(result.canViewAll);
       setStatus("Ready");
-    } catch {
+    } catch (error) {
       setCases([]);
-      setStatus("Access restricted or service unavailable");
+      if (error instanceof CaseLibraryRequestError) setStatus(`${error.status === 403 ? "Access denied" : error.status >= 500 ? "Database or API unavailable" : "Case request failed"}: ${error.message}${error.requestId ? ` (Request ${error.requestId})` : ""}`);
+      else setStatus("Network unavailable: the Case Library request did not complete.");
     }
   }
 
@@ -73,7 +73,8 @@ export default function DoctorCaseLibraryPage() {
       </section>
 
       <section className="case-library-grid">
-        {cases.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /><span>No cases match the current filters.</span></p> : null}
+        {cases.length === 0 && status === "Ready" ? <p className="empty-state"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /><span>{Object.values(filters).some(Boolean) ? "Filters returned zero permitted cases." : "No cases exist in this scope."}</span></p> : null}
+        {cases.length === 0 && !["Ready", "Loading"].includes(status) ? <p className="form-error" role="alert">{status}</p> : null}
         {groupCases(cases).map(([group, rows]) => (
           <section className="case-library-group" key={group}>
             <h2>{group}</h2>
@@ -81,12 +82,12 @@ export default function DoctorCaseLibraryPage() {
               <article className="data-row case-library-card" key={clinicCase.id} style={{ borderLeftColor: clinicCase.doctorSignature.doctorColor }}>
                 <div className="data-row-header">
                   <strong>{clinicCase.patientName}</strong>
-                  <span className="doctor-signature-badge"><span style={{ background: clinicCase.doctorSignature.doctorColor }} />Doctor: {clinicCase.doctorSignature.doctorName}</span>
+                  <span className="doctor-signature-badge"><span style={{ background: clinicCase.doctorSignature.doctorColor }} />Visit doctor: {clinicCase.doctorSignature.doctorName}</span>
                 </div>
                 <p className="muted">{patientTypeLabel(clinicCase.patientType)} - {clinicCase.visitType} - {new Date(clinicCase.visitDateTime).toLocaleString()} - {clinicCase.summaryPreview}</p>
                 <div className="tag-row">{clinicCase.tags.filter((tag) => !/^https?:\/\//i.test(tag)).map((tag) => <span className="badge" key={tag}>{tag}</span>)}</div>
                 <div className="form-actions">
-                  <Link className="button compact" href={clinicCase.links.patient}>Open patient</Link>
+                  <Link className="button compact" href={clinicCase.links.patient}>Open patient profile</Link>
                   <Link className="button secondary compact" href={clinicCase.links.visit}>Open visit</Link>
                 </div>
               </article>
@@ -109,8 +110,4 @@ function groupCases(cases: CaseLibraryCase[]) {
     UNCLASSIFIED: "Unclassified - needs patient type review"
   };
   return order.map((key) => [labels[key], cases.filter((item) => (item.patientType || "UNCLASSIFIED") === key)] as const).filter(([, rows]) => rows.length > 0);
-}
-
-function isDemoLikeCase(clinicCase: CaseLibraryCase) {
-  return /\b(demo|test|qa|runtime|fixture|ux-|ngrok|regretful-unwomanly-silliness)\b/i.test(`${clinicCase.patientName} ${clinicCase.medicalRecordNumber} ${clinicCase.summaryPreview} ${clinicCase.tags.join(" ")}`);
 }

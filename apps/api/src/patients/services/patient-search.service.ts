@@ -45,6 +45,7 @@ export class PatientSearchService {
       ...(requestedStatus ? { status: requestedStatus } : includeArchived ? {} : { status: { not: PatientStatus.archived } }),
       ...(requestedType ? { patientType: requestedType } : {}),
     };
+    if (directoryView !== "qa_test") (where as Prisma.PatientWhereInput & { dataClassification?: unknown }).dataClassification = { notIn: ["TEST", "QUARANTINED"] };
     if (directoryView === "incomplete") where.AND = [{ OR: [{ phone: null }, { AND: [{ dateOfBirth: null }, { yearOfBirth: null }] }] }];
     if (directoryView === "qa_test") where.AND = [{ OR: demoPatientWhere() }];
     if (directoryView === "exact_phone_duplicates") {

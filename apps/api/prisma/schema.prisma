@@ -198,6 +198,13 @@ enum PatientStatus {
   archived
 }
 
+enum DataClassification {
+  REAL
+  TEST
+  NEEDS_REVIEW
+  QUARANTINED
+}
+
 enum PatientType {
   OB
   GYN
@@ -329,6 +336,10 @@ model Patient {
   createdAt            DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime             @updatedAt @db.Timestamptz(3)
   createdByUserId      String?              @db.Uuid
+  dataClassification   DataClassification   @default(REAL)
+  classificationReason String?
+  classifiedAt         DateTime?            @db.Timestamptz(3)
+  classifiedByUserId   String?              @db.Uuid
 
   branch                      Branch?                           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   createdByUser               User?                             @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -385,6 +396,7 @@ model Patient {
   @@index([patientType])
   @@index([lastName, firstName])
   @@index([phone])
+  @@index([dataClassification, status])
 }
 
 model ConsentRecord {
@@ -481,6 +493,7 @@ model QueueTicket {
   cancellationReason              String?
   createdAt                       DateTime          @default(now()) @db.Timestamptz(3)
   updatedAt                       DateTime          @updatedAt @db.Timestamptz(3)
+  dataClassification              DataClassification @default(REAL)
 
   branch             Branch                 @relation(fields: [branchId], references: [id], onDelete: Restrict)
   patient            Patient                @relation(fields: [patientId], references: [id], onDelete: Restrict)
@@ -493,6 +506,7 @@ model QueueTicket {
   @@unique([branchId, queueDate, queueNumber])
   @@index([branchId, checkedInAt])
   @@index([branchId, queueDate, status])
+  @@index([dataClassification, queueDate])
   @@index([branchId, queueDate, visitType])
   @@index([patientId])
   @@index([appointmentId])
@@ -622,6 +636,7 @@ model Encounter {
   voidReason                String?
   createdAt                 DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt                 DateTime        @updatedAt @db.Timestamptz(3)
+  dataClassification        DataClassification @default(REAL)
 
   branch                Branch                   @relation(fields: [branchId], references: [id], onDelete: Restrict)
   patient               Patient                  @relation(fields: [patientId], references: [id], onDelete: Restrict)
@@ -651,6 +666,7 @@ model Encounter {
   @@index([appointmentId])
   @@index([status])
   @@index([voidedByUserId])
+  @@index([dataClassification, status])
 }
 
 model StaffConversation {
@@ -808,6 +824,10 @@ model ExternalPatientSubmission {
   attachedPatientId       String?   @db.Uuid
   createdAt               DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt               DateTime  @default(now()) @updatedAt @db.Timestamptz(3)
+  dataClassification      DataClassification @default(REAL)
+  classificationReason    String?
+  classifiedAt            DateTime? @db.Timestamptz(3)
+  classifiedByUserId      String?   @db.Uuid
 
   reviewedBy      User?    @relation("ExternalSubmissionsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
   createdPatient  Patient? @relation("ExternalSubmissionCreatedPatient", fields: [createdPatientId], references: [id], onDelete: SetNull)
@@ -820,6 +840,7 @@ model ExternalPatientSubmission {
   @@index([createdPatientId])
   @@index([attachedPatientId])
   @@index([reviewedByUserId])
+  @@index([dataClassification, status])
 }
 
 model ClinicalTagDefinition {
@@ -3432,6 +3453,10 @@ model ObUltrasound {
   reviewedAt            DateTime?          @db.Timestamptz(3)
   createdAt             DateTime           @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime           @updatedAt @db.Timestamptz(3)
+  dataClassification    DataClassification @default(REAL)
+  classificationReason  String?
+  classifiedAt          DateTime?          @db.Timestamptz(3)
+  classifiedByUserId    String?            @db.Uuid
 
   branch         Branch?         @relation(fields: [branchId], references: [id], onDelete: SetNull)
   patient        Patient         @relation(fields: [patientId], references: [id], onDelete: Restrict)
@@ -3447,6 +3472,7 @@ model ObUltrasound {
   @@index([fetusId])
   @@index([encounterId])
   @@index([status])
+  @@index([dataClassification, status])
 }
 
 model Invoice {
