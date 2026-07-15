@@ -22,8 +22,8 @@ check(service.includes("workspace.template_changed") && service.includes("patien
 check(service.includes("Mandatory panel") && service.includes("overview"), "mandatory identity panel is locked");
 for (const rule of ["DOB_ABSENT", "ALLERGY_STATUS_UNKNOWN", "UNSIGNED_ENCOUNTER", "PREGNANCY_EDD_ABSENT", "ACTIVE_VISIT_BP_ABSENT", "INFERTILITY_CYCLE_DAY_ABSENT", "ORDER_RESULT", "RESULT_REVIEW", "TREATMENT_CONSENT_ABSENT"]) check(service.includes(rule), `${rule} deterministic rule exists`);
 check(service.includes("diagnosticOutput: false") && service.includes("prescribingOutput: false"), "missing-information engine is non-diagnostic and non-prescribing");
-check(editor.includes("Move up") && editor.includes("Move down"), "mobile-accessible reorder controls exist");
-check(editor.includes("Clear") || editor.includes("Reset preview"), "reset behavior exists");
+check(editor.includes('t("moveUp")') && editor.includes('t("moveDown")'), "mobile-accessible translated reorder controls exist");
+check(editor.includes('t("resetPreview")'), "translated reset behavior exists");
 check(boundary.includes("Other patient panels remain available"), "panel failure isolation exists");
 check(renderer.includes("PatientMedicationList patientId={patient.id}") && renderer.includes("PatientAllergyList patientId={patient.id}"), "real patient data identifiers reach medication panels");
 check(medicationPanels.includes("listPatientMedications(patientId)") && medicationPanels.includes("listPatientAllergies(patientId)"), "medication and allergy panels use authoritative endpoints");

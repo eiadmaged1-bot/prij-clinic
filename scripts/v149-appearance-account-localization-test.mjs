@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+
+const theme = fs.readFileSync("apps/web/app/theme.tsx", "utf8");
+const appearance = fs.readFileSync("apps/web/app/admin/appearance/page.tsx", "utf8");
+const accounts = fs.readFileSync("apps/web/app/admin/accounts/page.tsx", "utf8");
+const controller = fs.readFileSync("apps/api/src/rbac/admin.controller.ts", "utf8");
+const rbac = fs.readFileSync("apps/api/src/rbac/rbac.service.ts", "utf8");
+const billing = fs.readFileSync("apps/api/src/billing/billing.service.ts", "utf8");
+const billingDto = fs.readFileSync("apps/api/src/billing/dto.ts", "utf8");
+const users = fs.readFileSync("apps/api/src/users/users.service.ts", "utf8");
+const en = fs.readFileSync("apps/web/i18n/en.ts", "utf8");
+const ar = fs.readFileSync("apps/web/i18n/ar.ts", "utf8");
+
+let assertions = 0; const check = (value, message) => { assert.ok(value, message); assertions += 1; };
+for (const name of ["Dr Maged Premium", "Clinical Green", "Lavender", "Rose", "Minimal White", "Compact Operations", "High Contrast"]) check(theme.includes(name), `${name} theme exists`);
+for (const field of ["accent", "sidebar", "typography", "fontScale", "density", "cardRadius", "shadow", "border", "tableDensity", "iconDensity", "reducedMotion", "contrast"]) check(theme.includes(field), `${field} theme setting exists`);
+for (const scope of ["device", "account", "role", "clinic"]) check(appearance.includes(`\"${scope}\"`), `${scope} appearance scope exists`);
+check(appearance.includes("Reception") && appearance.includes("Doctor patient file") && appearance.includes("desktop / tablet / mobile"), "live context previews exist");
+check(users.includes('source: "ACCOUNT"') && users.includes('source: "ROLE"') && users.includes('source: "CLINIC"'), "appearance scope resolution exists");
+for (const endpoint of ["revoke-sessions", "lock", "unlock", "2fa-reset/prepare", "2fa-reset/confirm", "audit-history", "accounts/me/change-password"]) check(controller.includes(endpoint), `${endpoint} account endpoint exists`);
+for (const action of ["account.sessions_revoked", "account.locked", "account.unlocked", "account.two_factor_reset_prepared", "account.two_factor_reset_performed", "account.own_password_changed"]) check(rbac.includes(action), `${action} is audited`);
+check(rbac.includes("forcePasswordChange: dto.forcePasswordChange ?? true"), "admin password reset defaults to forced change");
+check(rbac.includes("Current password is incorrect") && rbac.includes("revokeAllUserSessions(actor.id"), "self password change verifies and revokes sessions");
+check(rbac.includes("The final active Owner cannot be deactivated or assigned another role"), "final Owner remains protected");
+check(accounts.includes("admin-compact-table") && accounts.includes("View audit history"), "account management uses compact table and audit drawer content");
+for (const [token, multiplier] of [["kashfMultiplier", "1"], ["recheckMultiplier", "0.5"], ["consultationMultiplier", "0.75"], ["urgentMultiplier", "2"]]) check(billing.includes(`${token}: dto.${token} ?? ${multiplier}`), `${token} default is ${multiplier}`);
+check(billingDto.includes("reason!: string") && billing.includes("A reason is required for pricing changes"), "pricing changes require an audited reason");
+const keys = (source) => [...source.matchAll(/^  ([A-Za-z][A-Za-z0-9]*):/gm)].map((match) => match[1]);
+assert.deepEqual(keys(en).sort(), keys(ar).sort(), "English and Arabic dictionaries must have exact key parity"); assertions += 1;
+for (const [name, source] of [["English", en], ["Arabic", ar], ["workspace editor", fs.readFileSync("apps/web/components/patients/PatientWorkspaceEditor.tsx", "utf8")]]) check(!/[ÃØÙ][\x80-\xBF]/.test(source) && !source.includes("????"), `${name} has no mojibake markers`);
+check(ar.includes("مساحة عمل المريضة المرنة") && appearance.includes("Theme settings are independent from patient panel layouts"), "Arabic workspace copy and layout/theme separation exist");
+console.log(`v1.4.9 appearance, account, pricing, and localization assertions passed: ${assertions}`);

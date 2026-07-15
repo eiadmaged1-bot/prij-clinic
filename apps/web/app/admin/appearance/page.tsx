@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../../mvp-page";
-import { AppThemeId, isThemeId, themes, useTheme } from "../../theme";
+import { AppThemeId, isThemeId, themes, useTheme, type ThemeConfiguration } from "../../theme";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { InterfaceModeSettings } from "@/components/settings/InterfaceModeSettings";
@@ -12,21 +12,27 @@ type AppearanceSettings = {
   defaultTheme: AppThemeId;
   allowUserThemeOverride: boolean;
   defaultDoctorComfortMode: boolean;
+  appearanceConfig: Partial<ThemeConfiguration>;
+  roleDefaults: Record<string, { themeId: AppThemeId; configuration: ThemeConfiguration }>;
 };
 
 const fallbackSettings: AppearanceSettings = {
   defaultTheme: "clinic-premium",
   allowUserThemeOverride: true,
-  defaultDoctorComfortMode: false
+  defaultDoctorComfortMode: false,
+  appearanceConfig: {},
+  roleDefaults: {}
 };
 
 export default function AppearancePage() {
-  const { doctorComfortMode, setDoctorComfortMode, theme, setTheme, resetTheme } = useTheme();
+  const { doctorComfortMode, setDoctorComfortMode, theme, setTheme, resetTheme, configuration, setConfiguration } = useTheme();
   const [settings, setSettings] = useState<AppearanceSettings>(fallbackSettings);
   const [selectedTheme, setSelectedTheme] = useState<AppThemeId>(theme);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [scope, setScope] = useState<"device" | "account" | "role" | "clinic">("device");
+  const [roleScope, setRoleScope] = useState("Doctor");
 
   const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
   const headers = useMemo(
@@ -72,6 +78,7 @@ export default function AppearancePage() {
       defaultTheme,
       allowUserThemeOverride: typeof data.allowUserThemeOverride === "boolean" ? data.allowUserThemeOverride : true,
       defaultDoctorComfortMode: typeof data.defaultDoctorComfortMode === "boolean" ? data.defaultDoctorComfortMode : false
+      ,appearanceConfig: data.appearanceConfig && typeof data.appearanceConfig === "object" ? data.appearanceConfig : {}, roleDefaults: data.roleDefaults && typeof data.roleDefaults === "object" ? data.roleDefaults : {}
     };
     setSettings(next);
     setSelectedTheme(defaultTheme);
@@ -85,8 +92,16 @@ export default function AppearancePage() {
     const next = {
       defaultTheme: selectedTheme,
       allowUserThemeOverride: settings.allowUserThemeOverride,
-      defaultDoctorComfortMode: settings.defaultDoctorComfortMode
+      defaultDoctorComfortMode: settings.defaultDoctorComfortMode,
+      appearanceConfig: configuration,
+      roleDefaults: scope === "role" ? { ...settings.roleDefaults, [roleScope]: { themeId: selectedTheme, configuration } } : settings.roleDefaults
     };
+
+    if (scope === "device") { setTheme(selectedTheme); setConfiguration(configuration); setIsSaving(false); setMessage("Appearance saved for this device."); return; }
+    if (scope === "account") {
+      const accountResponse = await fetch(`${getApiBaseUrl()}/users/me/preferences`, { method: "PATCH", credentials: "include", headers, body: JSON.stringify({ appearanceJson: { themeId: selectedTheme, ...configuration } }) }).catch(() => null);
+      setIsSaving(false); if (!accountResponse?.ok) { setError("Could not save account appearance."); return; } setTheme(selectedTheme); setConfiguration(configuration); setMessage("Appearance saved to your account."); return;
+    }
 
     const response = await fetch(`${getApiBaseUrl()}/admin/settings/appearance`, {
       method: "PATCH",
@@ -111,7 +126,7 @@ export default function AppearancePage() {
     }
 
     setSettings(next);
-    setTheme(selectedTheme);
+    setTheme(selectedTheme); setConfiguration(configuration);
     setDoctorComfortMode(next.defaultDoctorComfortMode);
     setMessage("Appearance settings saved and audited.");
   }
@@ -119,6 +134,7 @@ export default function AppearancePage() {
   function applyForThisBrowser(themeId: AppThemeId) {
     setSelectedTheme(themeId);
     setTheme(themeId);
+    setConfiguration(themes.find((item) => item.id === themeId)!.configuration);
     setMessage("Theme applied to this browser.");
     setError("");
   }
@@ -162,6 +178,8 @@ export default function AppearancePage() {
         </div>
       </section>
 
+      <section className="panel"><div className="section-heading"><div><h2>Appearance scope</h2><p className="muted">Theme settings are independent from patient panel layouts.</p></div></div><div className="inline-form"><label>Save for<select value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="device">This device</option><option value="account">My account</option><option value="role">Role default</option><option value="clinic">Clinic default</option></select></label>{scope === "role" ? <label>Role<select value={roleScope} onChange={(event) => setRoleScope(event.target.value)}>{["Doctor", "Receptionist", "Nurse", "Accountant", "Admin", "Owner"].map((role) => <option key={role}>{role}</option>)}</select></label> : null}</div></section>
+
       <section className="panel">
         <div className="section-heading">
           <div>
@@ -181,7 +199,7 @@ export default function AppearancePage() {
       {message ? <p className="success-message">{message}</p> : null}
 
       <section className="theme-preview-grid" aria-label="Theme choices">
-        {process.env.NODE_ENV !== "production" ? themes.map((appTheme) => (
+        {themes.map((appTheme) => (
           <article className={`theme-preview theme-preview-${appTheme.id} ${selectedTheme === appTheme.id ? "selected" : ""}`} key={appTheme.id}>
             <div className="theme-preview-window">
               <span />
@@ -194,7 +212,7 @@ export default function AppearancePage() {
               <p className="muted">{appTheme.description}</p>
             </div>
             <div className="form-actions">
-              <button className="button compact" onClick={() => setSelectedTheme(appTheme.id)} type="button">
+              <button className="button compact" onClick={() => { setSelectedTheme(appTheme.id); setConfiguration(appTheme.configuration); }} type="button">
                 Select
               </button>
               <button className="button secondary compact" onClick={() => applyForThisBrowser(appTheme.id)} type="button">
@@ -202,8 +220,10 @@ export default function AppearancePage() {
               </button>
             </div>
           </article>
-        )) : <p className="muted">The official operational theme is locked for production.</p>}
+        ))}
       </section>
+
+      <section className="panel"><div className="section-heading"><h2>Theme details</h2><span className="badge">Live preview</span></div><div className="form-grid"><label>Accent<input type="color" value={configuration.accent} onChange={(event) => setConfiguration({ ...configuration, accent: event.target.value })} /></label><label>Sidebar<select value={configuration.sidebar} onChange={(event) => setConfiguration({ ...configuration, sidebar: event.target.value as ThemeConfiguration["sidebar"] })}><option value="light">Light</option><option value="dark">Dark</option><option value="accent">Accent</option></select></label><label>Font scale<input type="range" min="0.9" max="1.3" step="0.05" value={configuration.fontScale} onChange={(event) => setConfiguration({ ...configuration, fontScale: Number(event.target.value) })} /></label><label>Card radius<input type="range" min="0" max="24" value={configuration.cardRadius} onChange={(event) => setConfiguration({ ...configuration, cardRadius: Number(event.target.value) })} /></label><label>Density<select value={configuration.density} onChange={(event) => setConfiguration({ ...configuration, density: event.target.value as ThemeConfiguration["density"] })}><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label><label className="toggle-row"><input type="checkbox" checked={configuration.reducedMotion} onChange={(event) => setConfiguration({ ...configuration, reducedMotion: event.target.checked })} /> Reduced motion</label><label className="toggle-row"><input type="checkbox" checked={configuration.contrast === "high"} onChange={(event) => setConfiguration({ ...configuration, contrast: event.target.checked ? "high" : "standard" })} /> High contrast</label></div><div className="appearance-context-previews"><article className="data-row"><strong>Reception</strong><span>Queue and patient search preview</span></article><article className="data-row"><strong>Doctor patient file</strong><span>Panels remain independently configured</span></article><article className="data-row"><strong>Owner · desktop / tablet / mobile</strong><span>Compact administration preview</span></article></div></section>
 
       <section className="panel">
         <div className="section-heading">
@@ -231,7 +251,7 @@ export default function AppearancePage() {
         </label>
         <div className="form-actions">
           <button className="button" disabled={isSaving} onClick={saveDefault} type="button">
-            {isSaving ? "Saving" : "Set as default"}
+            {isSaving ? "Saving" : "Save appearance"}
           </button>
           <button className="button secondary" onClick={resetBrowserTheme} type="button">
             Reset this browser

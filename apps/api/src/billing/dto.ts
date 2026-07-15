@@ -152,6 +152,10 @@ export class VoidInvoiceDto {
 }
 
 export class VisitPriceAuditSettingsDto {
+  @IsString()
+  @MaxLength(500)
+  reason!: string;
+
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)

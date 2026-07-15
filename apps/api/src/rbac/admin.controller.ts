@@ -8,11 +8,13 @@ import { PermissionsGuard } from "./permissions.guard";
 import { Permissions } from "./require-permissions.decorator";
 import {
   AccountStatusChangeDto,
+  AccountSecurityActionDto,
   AdminOverrideDto,
   AppearanceSettingsDto,
   ClinicProfileSettingsDto,
   CreateAccountDto,
   CreateServiceItemDto,
+  ChangeOwnPasswordDto,
   ResetAccountPasswordDto,
   UpdateAccountDto,
   UpdateDoctorProfileDto,
@@ -117,6 +119,34 @@ export class AdminController {
 
     return this.rbac.controlCenterSummary(request.user);
   }
+
+  @Post("accounts/:id/revoke-sessions")
+  @Permissions("user.manage")
+  revokeAccountSessions(@Param("id") id: string, @Body() dto: AccountSecurityActionDto, @CurrentUser() user: AuthUser) { return this.rbac.revokeAccountSessions(id, dto, user); }
+
+  @Post("accounts/:id/lock")
+  @Permissions("user.manage")
+  lockAccount(@Param("id") id: string, @Body() dto: AccountSecurityActionDto, @CurrentUser() user: AuthUser) { return this.rbac.setAccountLock(id, true, dto, user); }
+
+  @Post("accounts/:id/unlock")
+  @Permissions("user.manage")
+  unlockAccount(@Param("id") id: string, @Body() dto: AccountSecurityActionDto, @CurrentUser() user: AuthUser) { return this.rbac.setAccountLock(id, false, dto, user); }
+
+  @Post("accounts/:id/2fa-reset/prepare")
+  @Permissions("user.manage")
+  prepareTwoFactorReset(@Param("id") id: string, @Body() dto: AccountSecurityActionDto, @CurrentUser() user: AuthUser) { return this.rbac.prepareTwoFactorReset(id, dto, user); }
+
+  @Post("accounts/:id/2fa-reset/confirm")
+  @Permissions("user.manage")
+  performTwoFactorReset(@Param("id") id: string, @Body() dto: AccountSecurityActionDto, @CurrentUser() user: AuthUser) { return this.rbac.performTwoFactorReset(id, dto, user); }
+
+  @Get("accounts/:id/audit-history")
+  @Permissions("user.manage")
+  accountAuditHistory(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.rbac.accountAuditHistory(id, user); }
+
+  @Post("accounts/me/change-password")
+  @Permissions("user.read")
+  changeOwnPassword(@Body() dto: ChangeOwnPasswordDto, @CurrentUser() user: AuthUser) { return this.rbac.changeOwnPassword(dto, user); }
 
   @Get("security-readiness")
   @Permissions("clinic_settings.manage")

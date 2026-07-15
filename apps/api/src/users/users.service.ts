@@ -55,7 +55,7 @@ export class UsersService {
   }
 
   async getPreferences(userId: string) {
-    return this.prisma.userPreference.upsert({
+    return (this.prisma as unknown as { userPreference: any }).userPreference.upsert({
       where: { userId },
       create: { userId },
       update: {},
@@ -64,12 +64,22 @@ export class UsersService {
   }
 
   async updatePreferences(userId: string, preferences: UserPreferencePatch) {
-    return this.prisma.userPreference.upsert({
+    return (this.prisma as unknown as { userPreference: any }).userPreference.upsert({
       where: { userId },
       create: { userId, ...preferences },
       update: preferences,
       select: preferenceSelect
     });
+  }
+
+  async resolveAppearance(user: AuthUser) {
+    const preferences = await this.getPreferences(user.id) as { appearanceJson?: Record<string, unknown> | null };
+    if (preferences.appearanceJson?.themeId) return { source: "ACCOUNT", appearance: preferences.appearanceJson };
+    const setting = await this.prisma.systemSetting.findUnique({ where: { key: "appearance" }, select: { valueJson: true } });
+    const value = setting?.valueJson && typeof setting.valueJson === "object" && !Array.isArray(setting.valueJson) ? setting.valueJson as Record<string, unknown> : {};
+    const roleDefaults = value.roleDefaults && typeof value.roleDefaults === "object" && !Array.isArray(value.roleDefaults) ? value.roleDefaults as Record<string, unknown> : {};
+    for (const role of user.roles) { const roleAppearance = roleDefaults[role]; if (roleAppearance && typeof roleAppearance === "object" && !Array.isArray(roleAppearance)) { const record = roleAppearance as Record<string, unknown>; return { source: "ROLE", appearance: { themeId: record.themeId, ...(record.configuration && typeof record.configuration === "object" ? record.configuration as object : {}) } }; } }
+    return { source: "CLINIC", appearance: { themeId: value.defaultTheme ?? "clinic-premium", ...(value.appearanceConfig && typeof value.appearanceConfig === "object" ? value.appearanceConfig as object : {}) } };
   }
 
   async listAdminUsers() {
@@ -144,6 +154,7 @@ const preferenceSelect = {
   interfaceMode: true,
   densityMode: true,
   mobileNavigationMode: true,
+  appearanceJson: true,
   updatedAt: true
 } as const;
 
@@ -151,6 +162,7 @@ export type UserPreferencePatch = {
   interfaceMode?: "OPTIMIZED" | "MINIMALISTIC";
   densityMode?: "COMPACT" | "COMFORTABLE" | "LARGE";
   mobileNavigationMode?: "AUTO" | "BOTTOM_NAV" | "DRAWER";
+  appearanceJson?: Record<string, unknown>;
 };
 
 function applyPermissionPreset(rolePermissionKeys: Set<string>, preset: string) {

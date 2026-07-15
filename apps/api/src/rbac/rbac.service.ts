@@ -9,6 +9,8 @@ import {
   AccountStatusChangeDto,
   AdminOverrideDto,
   AppearanceSettingsDto,
+  AccountSecurityActionDto,
+  ChangeOwnPasswordDto,
   ClinicProfileSettingsDto,
   CreateAccountDto,
   CreateServiceItemDto,
@@ -22,7 +24,9 @@ import {
 const defaultAppearanceSettings = {
   defaultTheme: "clinic-premium",
   allowUserThemeOverride: true,
-  defaultDoctorComfortMode: false
+  defaultDoctorComfortMode: false,
+  appearanceConfig: {},
+  roleDefaults: {}
 };
 
 const defaultClinicProfileSettings = {
@@ -37,7 +41,7 @@ const defaultClinicProfileSettings = {
   densityMode: "comfortable"
 };
 
-const allowedAppearanceThemes = new Set(["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]);
+const allowedAppearanceThemes = new Set(["prij-heritage", "clinic-premium", "lavender", "rose", "minimal-clean", "compact-operations", "high-contrast"]);
 const accountInclude = {
   branch: true,
   userRoles: {
@@ -147,8 +151,9 @@ export class RbacService {
           permissionPreset: dto.permissionPreset,
           protectedAccount: false,
           passwordHash,
+          forcePasswordChange: true,
           createdByUserId: actor?.id
-        }
+        } as never
       });
 
       await tx.userRole.create({
@@ -204,10 +209,12 @@ export class RbacService {
       await tx.user.update({
         where: { id },
         data: {
+          ...(dto.loginId !== undefined ? { loginId: normalizeLoginId(dto.loginId) } : {}),
           ...(dto.displayName !== undefined ? { displayName: dto.displayName.trim() } : {}),
           ...(dto.email !== undefined ? { email: dto.email.trim().toLowerCase() } : {}),
+          ...(dto.branchId !== undefined ? { branchId: dto.branchId } : {}),
           ...(dto.permissionPreset !== undefined ? { permissionPreset: dto.permissionPreset } : {})
-        }
+        } as never
       });
 
       if (role) {
@@ -288,8 +295,9 @@ export class RbacService {
       data: {
         passwordHash: await this.passwords.hash(dto.temporaryPassword),
         failedLoginCount: 0,
-        lockedUntil: null
-      },
+        lockedUntil: null,
+        forcePasswordChange: dto.forcePasswordChange ?? true
+      } as never,
       include: accountInclude
     });
 
@@ -306,7 +314,54 @@ export class RbacService {
 
     await this.sessions.revokeAllUserSessions(id, "Account password was reset by administrator.");
 
-    return { account: toAccountSummary(updated), temporaryPassword: dto.temporaryPassword };
+    return { account: toAccountSummary(updated) };
+  }
+
+  async revokeAccountSessions(id: string, dto: AccountSecurityActionDto, actor?: AuthUser) {
+    assertCanManageAccounts(actor); assertReasonForSensitiveChange(dto.reason); const existing = await this.requireAccount(id); assertCanEditAccount(existing, actor);
+    await this.sessions.revokeAllUserSessions(id, "Sessions revoked by account administrator.");
+    await this.audit.record({ actorUserId: actor?.id, action: "account.sessions_revoked", resourceType: "user", resourceId: id, branchId: existing.branchId, severity: "high", reason: dto.reason.trim() });
+    return { revoked: true };
+  }
+
+  async setAccountLock(id: string, locked: boolean, dto: AccountSecurityActionDto, actor?: AuthUser) {
+    assertCanManageAccounts(actor); assertReasonForSensitiveChange(dto.reason); const existing = await this.requireAccount(id); assertCanEditAccount(existing, actor);
+    const updated = await this.prisma.user.update({ where: { id }, data: { lockedUntil: locked ? new Date("2099-12-31T23:59:59.000Z") : null, failedLoginCount: 0 }, include: accountInclude });
+    if (locked) await this.sessions.revokeAllUserSessions(id, "Account locked by administrator.");
+    await this.audit.record({ actorUserId: actor?.id, action: locked ? "account.locked" : "account.unlocked", resourceType: "user", resourceId: id, branchId: updated.branchId, severity: "high", reason: dto.reason.trim() });
+    return { account: toAccountSummary(updated) };
+  }
+
+  async prepareTwoFactorReset(id: string, dto: AccountSecurityActionDto, actor?: AuthUser) {
+    assertCanManageAccounts(actor); assertReasonForSensitiveChange(dto.reason); const existing = await this.requireAccount(id); assertCanEditAccount(existing, actor);
+    await this.prisma.user.update({ where: { id }, data: { twoFactorResetPendingAt: new Date() } as never });
+    await this.audit.record({ actorUserId: actor?.id, action: "account.two_factor_reset_prepared", resourceType: "user", resourceId: id, branchId: existing.branchId, severity: "high", reason: dto.reason.trim() });
+    return { prepared: true, confirmationRequired: true };
+  }
+
+  async performTwoFactorReset(id: string, dto: AccountSecurityActionDto, actor?: AuthUser) {
+    assertCanManageAccounts(actor); assertReasonForSensitiveChange(dto.reason); const existing = await this.requireAccount(id); assertCanEditAccount(existing, actor);
+    const security = existing as AccountWithRelations & { twoFactorResetPendingAt?: Date | null };
+    if (!security.twoFactorResetPendingAt) throw new BadRequestException("Prepare the 2FA reset before confirming it.");
+    await this.prisma.user.update({ where: { id }, data: { twoFactorEnabled: false, twoFactorResetPendingAt: null } as never });
+    await this.sessions.revokeAllUserSessions(id, "Two-factor authentication reset by administrator.");
+    await this.audit.record({ actorUserId: actor?.id, action: "account.two_factor_reset_performed", resourceType: "user", resourceId: id, branchId: existing.branchId, severity: "high", reason: dto.reason.trim() });
+    return { reset: true };
+  }
+
+  async accountAuditHistory(id: string, actor?: AuthUser) {
+    assertCanManageAccounts(actor); await this.requireAccount(id);
+    return this.prisma.auditLog.findMany({ where: { resourceType: "user", resourceId: id }, orderBy: { createdAt: "desc" }, take: 50, select: { id: true, action: true, severity: true, reason: true, createdAt: true, actorUserId: true } });
+  }
+
+  async changeOwnPassword(dto: ChangeOwnPasswordDto, actor?: AuthUser) {
+    if (!actor) throw new ForbiddenException("Authentication is required."); assertReasonForSensitiveChange(dto.reason); assertProductionPasswordAllowed(dto.newPassword);
+    const existing = await this.prisma.user.findUnique({ where: { id: actor.id }, select: { id: true, passwordHash: true, branchId: true } });
+    if (!existing || !(await this.passwords.verify(dto.currentPassword, existing.passwordHash))) throw new ForbiddenException("Current password is incorrect.");
+    await this.prisma.user.update({ where: { id: actor.id }, data: { passwordHash: await this.passwords.hash(dto.newPassword), forcePasswordChange: false, failedLoginCount: 0, lockedUntil: null } as never });
+    await this.audit.record({ actorUserId: actor.id, action: "account.own_password_changed", resourceType: "user", resourceId: actor.id, branchId: existing.branchId, severity: "high", reason: dto.reason.trim() });
+    await this.sessions.revokeAllUserSessions(actor.id, "Password changed by account owner.");
+    return { changed: true, reauthenticationRequired: true };
   }
 
   async deactivateAccount(id: string, dto: AccountStatusChangeDto, actor?: AuthUser) {
@@ -456,18 +511,20 @@ export class RbacService {
     const next = {
       defaultTheme: dto.defaultTheme,
       allowUserThemeOverride: dto.allowUserThemeOverride,
-      defaultDoctorComfortMode: dto.defaultDoctorComfortMode ?? false
+      defaultDoctorComfortMode: dto.defaultDoctorComfortMode ?? false,
+      appearanceConfig: dto.appearanceConfig ?? {},
+      roleDefaults: dto.roleDefaults ?? {}
     };
 
     const setting = await this.prisma.systemSetting.upsert({
       where: { key: "appearance" },
       create: {
         key: "appearance",
-        valueJson: next,
+        valueJson: next as Prisma.InputJsonValue,
         updatedByUserId: user?.id
       },
       update: {
-        valueJson: next,
+        valueJson: next as Prisma.InputJsonValue,
         updatedByUserId: user?.id
       }
     });
@@ -895,6 +952,10 @@ function toAccountSummary(account: AccountWithRelations) {
     customAllowedPermissions,
     reservedPermissions,
     lastLoginAt: account.lastLoginAt,
+    lockedUntil: account.lockedUntil,
+    forcePasswordChange: Boolean((account as AccountWithRelations & { forcePasswordChange?: boolean }).forcePasswordChange),
+    twoFactorEnabled: Boolean((account as AccountWithRelations & { twoFactorEnabled?: boolean }).twoFactorEnabled),
+    twoFactorResetPendingAt: (account as AccountWithRelations & { twoFactorResetPendingAt?: Date | null }).twoFactorResetPendingAt ?? null,
     createdAt: account.createdAt
   };
 }

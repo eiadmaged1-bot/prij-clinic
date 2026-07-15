@@ -499,6 +499,7 @@ export class BillingService {
 
   async updateOwnerVisitPriceSettings(dto: VisitPriceAuditSettingsDto, user: AuthUser) {
     assertOwnerOnly(user);
+    if (!dto.reason.trim()) throw new BadRequestException("A reason is required for pricing changes.");
     await this.prisma.visitPriceAuditSetting.updateMany({ where: { active: true }, data: { active: false } });
     const setting = await this.prisma.visitPriceAuditSetting.create({
       data: {
@@ -517,6 +518,7 @@ export class BillingService {
       resourceId: setting.id,
       branchId: user.branchId,
       severity: "high",
+      reason: dto.reason.trim(),
       metadataJson: { changedFormula: true }
     });
     return { setting };

@@ -13,6 +13,7 @@ type Account = {
   email: string | null;
   loginId: string | null;
   displayName: string;
+  branchId: string | null;
   status: string;
   role: string;
   roles: string[];
@@ -23,6 +24,10 @@ type Account = {
   customAllowedPermissions: string[];
   reservedPermissions: string[];
   lastLoginAt: string | null;
+  lockedUntil: string | null;
+  forcePasswordChange: boolean;
+  twoFactorEnabled: boolean;
+  twoFactorResetPendingAt: string | null;
 };
 
 type Permission = {
@@ -50,7 +55,7 @@ const defaultCreateForm = {
 };
 
 export default function AccountsPage() {
-  const { isAdmin } = useSession();
+  const { isAdmin, user } = useSession();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -65,6 +70,8 @@ export default function AccountsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [showDemoAccounts, setShowDemoAccounts] = useState(false);
+  const [auditHistory, setAuditHistory] = useState<Array<{ id: string; action: string; severity: string; reason: string | null; createdAt: string }>>([]);
+  const [ownPassword, setOwnPassword] = useState({ currentPassword: "", newPassword: "", reason: "Owner password change." });
 
   const headers = useMemo(
     () => ({
@@ -150,6 +157,10 @@ export default function AccountsPage() {
     if (!selected) return;
     await send("POST", `/admin/accounts/${selected.id}/${status}`, { reason: editReason }, status === "activate" ? "Account activated." : "Account deactivated.");
   }
+
+  async function securityAction(action: "revoke-sessions" | "lock" | "unlock" | "2fa-reset/prepare" | "2fa-reset/confirm", success: string) { if (!selected) return; await send("POST", `/admin/accounts/${selected.id}/${action}`, { reason: editReason }, success); }
+  async function loadAuditHistory() { if (!selected) return; const response = await fetch(`${getApiBaseUrl()}/admin/accounts/${selected.id}/audit-history`, { credentials: "include", headers }); if (response.ok) setAuditHistory(await response.json() as typeof auditHistory); }
+  async function changeOwnPassword() { await send("POST", "/admin/accounts/me/change-password", ownPassword, "Password changed. Reauthentication is required."); setOwnPassword({ currentPassword: "", newPassword: "", reason: "Owner password change." }); }
 
   async function updatePermissions(permissionKey: string, checked: boolean) {
     if (!selected || selected.protectedAccount || reservedPermissions.includes(permissionKey)) return;
@@ -248,20 +259,11 @@ export default function AccountsPage() {
               Show test accounts
             </label>
           </div>
-          {!showDemoAccounts ? <p className="badge compact-safety-badge">Test accounts hidden</p> : null}
-          <div className="data-list">
+          {!showDemoAccounts ? <p className="badge compact-safety-badge">Demo/test accounts hidden</p> : null}
+          <div className="admin-table-wrap"><table className="admin-compact-table"><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody>
             {filteredAccounts.map((account) => (
-              <button className={`account-row ${selected?.id === account.id ? "active" : ""}`} key={account.id} onClick={() => setSelectedId(account.id)} type="button">
-                <span>
-                  <strong>{account.displayName}</strong>
-                  <small>{account.loginId ?? displayEmail(account.email)} - {account.role}</small>
-                </span>
-                <span className={`badge ${account.protectedAccount ? "danger" : account.status === "active" ? "accent" : "warning"}`}>
-                  {account.protectedAccount ? "Protected System Owner" : account.status}
-                </span>
-              </button>
-            ))}
-          </div>
+              <tr className={selected?.id === account.id ? "active" : ""} key={account.id}><td><strong>{account.displayName}</strong><small>{account.loginId ?? displayEmail(account.email)}</small></td><td>{account.role}</td><td><span className={`badge ${account.protectedAccount ? "danger" : account.status === "active" ? "accent" : "warning"}`}>{account.protectedAccount ? "Protected System Owner" : account.lockedUntil ? "locked" : account.status}</span></td><td><button className="button secondary compact" onClick={() => setSelectedId(account.id)} type="button">Edit</button></td></tr>
+            ))}</tbody></table></div>
         </div>
 
         <div className="panel">
@@ -300,7 +302,7 @@ export default function AccountsPage() {
               Temporary password
               <input onChange={(event) => setCreateForm((current) => ({ ...current, temporaryPassword: event.target.value }))} required type="password" value={createForm.temporaryPassword} />
             </label>
-            {createForm.temporaryPassword && createForm.temporaryPassword.length < 8 ? <p className="notice wide">Weak temporary password.</p> : null}
+            {createForm.temporaryPassword && createForm.temporaryPassword.length < 8 ? <p className="notice wide">Weak local demo password.</p> : null}
             <label className="wide">
               Reason
               <input onChange={(event) => setCreateForm((current) => ({ ...current, reason: event.target.value }))} required value={createForm.reason} />
@@ -328,6 +330,9 @@ export default function AccountsPage() {
               Change reason
               <input onChange={(event) => setEditReason(event.target.value)} value={editReason} />
             </label>
+            <label>Login ID<input disabled={selected.protectedAccount} onBlur={(event) => void updateSelected({ loginId: event.target.value }, "Login ID updated.")} defaultValue={selected.loginId ?? ""} /></label>
+            <label>Email<input disabled={selected.protectedAccount} onBlur={(event) => void updateSelected({ email: event.target.value }, "Email updated.")} defaultValue={selected.email ?? ""} /></label>
+            <label>Branch ID<input disabled={selected.protectedAccount} onBlur={(event) => { if (event.target.value.trim()) void updateSelected({ branchId: event.target.value.trim() }, "Branch updated."); }} defaultValue={selected.branchId ?? ""} /></label>
             <label>
               Display name
               <input disabled={selected.protectedAccount} onBlur={(event) => void updateSelected({ displayName: event.target.value }, "Account updated.")} defaultValue={selected.displayName} />
@@ -396,9 +401,16 @@ export default function AccountsPage() {
             <button className="button secondary" disabled={selected.protectedAccount} onClick={() => void changeStatus(selected.status === "active" ? "deactivate" : "activate")} type="button">
               {selected.status === "active" ? "Deactivate" : "Activate"}
             </button>
+            <button className="button secondary" disabled={selected.protectedAccount} onClick={() => void securityAction("revoke-sessions", "Sessions revoked.")} type="button">Revoke sessions</button>
+            <button className="button secondary" disabled={selected.protectedAccount} onClick={() => void securityAction(selected.lockedUntil ? "unlock" : "lock", selected.lockedUntil ? "Account unlocked." : "Account locked.")} type="button">{selected.lockedUntil ? "Unlock" : "Lock"}</button>
+            <button className="button secondary" disabled={selected.protectedAccount} onClick={() => void securityAction("2fa-reset/prepare", "2FA reset prepared; confirm to perform.")} type="button">Prepare 2FA reset</button>
+            <button className="button secondary" disabled={selected.protectedAccount || !selected.twoFactorResetPendingAt} onClick={() => void securityAction("2fa-reset/confirm", "2FA reset completed.")} type="button">Confirm 2FA reset</button>
+            <button className="button secondary" onClick={() => void loadAuditHistory()} type="button">View audit history</button>
           </div>
+          {auditHistory.length ? <div className="admin-table-wrap"><table className="admin-compact-table"><thead><tr><th>Time</th><th>Action</th><th>Severity</th><th>Reason</th></tr></thead><tbody>{auditHistory.map((entry) => <tr key={entry.id}><td>{new Date(entry.createdAt).toLocaleString()}</td><td>{entry.action}</td><td>{entry.severity}</td><td>{entry.reason || "Reason not recorded"}</td></tr>)}</tbody></table></div> : null}
         </section>
       ) : null}
+      {user?.roles.includes("Owner") ? <section className="panel"><h2>Change my Owner password</h2><p className="muted">The current password is verified server-side. All sessions are revoked after a successful change.</p><div className="form-grid"><label>Current password<input type="password" value={ownPassword.currentPassword} onChange={(event) => setOwnPassword((current) => ({ ...current, currentPassword: event.target.value }))} /></label><label>New password<input type="password" value={ownPassword.newPassword} onChange={(event) => setOwnPassword((current) => ({ ...current, newPassword: event.target.value }))} /></label><label className="wide">Reason<input value={ownPassword.reason} onChange={(event) => setOwnPassword((current) => ({ ...current, reason: event.target.value }))} /></label><button className="button wide" disabled={!ownPassword.currentPassword || ownPassword.newPassword.length < 12} onClick={() => void changeOwnPassword()} type="button">Change password securely</button></div></section> : null}
     </AppShell>
   );
 }

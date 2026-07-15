@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsNumber, IsOptional, IsString, MaxLength, Min, MinLength } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsEmail, IsIn, IsNumber, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateServiceItemDto {
   @IsString()
@@ -98,7 +98,7 @@ export class AdminOverrideDto {
 
 export class AppearanceSettingsDto {
   @IsString()
-  @IsIn(["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"])
+  @IsIn(["prij-heritage", "clinic-premium", "lavender", "rose", "minimal-clean", "compact-operations", "high-contrast"])
   defaultTheme!: string;
 
   @IsBoolean()
@@ -107,6 +107,12 @@ export class AppearanceSettingsDto {
   @IsOptional()
   @IsBoolean()
   defaultDoctorComfortMode?: boolean;
+
+  @IsOptional() @IsObject()
+  appearanceConfig?: Record<string, unknown>;
+
+  @IsOptional() @IsObject()
+  roleDefaults?: Record<string, unknown>;
 }
 
 export class CreateAccountDto {
@@ -143,6 +149,9 @@ export class CreateAccountDto {
 }
 
 export class UpdateAccountDto {
+  @IsOptional() @IsString() @MaxLength(80)
+  loginId?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(140)
@@ -152,6 +161,9 @@ export class UpdateAccountDto {
   @IsEmail()
   @MaxLength(160)
   email?: string;
+
+  @IsOptional() @IsUUID()
+  branchId?: string;
 
   @IsOptional()
   @IsString()
@@ -178,6 +190,10 @@ export class ResetAccountPasswordDto {
   @IsString()
   @MaxLength(500)
   reason!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  forcePasswordChange?: boolean;
 }
 
 export class AccountStatusChangeDto {
@@ -199,6 +215,16 @@ export class UpdateAccountPermissionsDto {
   @IsString()
   @MaxLength(500)
   reason!: string;
+}
+
+export class AccountSecurityActionDto {
+  @IsString() @MinLength(3) @MaxLength(500) reason!: string;
+}
+
+export class ChangeOwnPasswordDto {
+  @IsString() @MinLength(1) @MaxLength(200) currentPassword!: string;
+  @IsString() @MinLength(12) @MaxLength(200) newPassword!: string;
+  @IsString() @MinLength(3) @MaxLength(500) reason!: string;
 }
 
 export class ClinicProfileSettingsDto {

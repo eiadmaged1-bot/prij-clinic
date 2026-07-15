@@ -212,7 +212,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (theme === "incision-portal") {
+  if (theme === "lavender") {
     return (
       <AppShell>
         <section className="portal-header">
@@ -256,7 +256,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (theme === "medicolize-portal") {
+  if (theme === "rose") {
     return (
       <AppShell>
         <section className="owner-hero">

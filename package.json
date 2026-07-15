@@ -161,6 +161,7 @@
     "test:v149:linked-clinical-workflows": "node scripts/v149-linked-clinical-workflows-test.mjs",
     "test:v149:medication-governance": "node scripts/v149-medication-content-governance-test.mjs",
     "test:v149:modular-workspace": "node scripts/v149-modular-patient-workspace-test.mjs",
+    "test:v149:appearance-account-localization": "node scripts/v149-appearance-account-localization-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",
