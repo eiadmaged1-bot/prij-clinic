@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell } from "../mvp-page";
+import { useI18n } from "../../i18n/useI18n";
 
 type Encounter = {
   id: string;
@@ -16,6 +17,7 @@ type Encounter = {
 };
 
 export default function EncountersPage() {
+  const { t } = useI18n();
   const [encounters, setEncounters] = useState<Encounter[]>([]);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -47,11 +49,11 @@ export default function EncountersPage() {
   }), [encounters, query, statusFilter]);
 
   return <AppShell>
-    <section className="page-header"><div className="header-row"><div><p className="eyebrow">Clinical records</p><h1>Encounter history</h1><p className="muted">Browse prior visits here. Note editing remains in the patient Visit workspace.</p></div><Link className="button" href="/patients">Browse all patients</Link></div></section>
+    <section className="page-header"><div className="header-row"><div><p className="eyebrow">{t("clinicalRecords")}</p><h1>{t("encounterHistory")}</h1><p className="muted">{t("encounterHistoryHelp")}</p></div><Link className="button" href="/patients">{t("browseAllPatients")}</Link></div></section>
     <section className="panel">
-      <div className="section-heading"><h2>Visits</h2><span className="badge">{status}</span></div>
-      <div className="filter-row"><label>Patient or MRN<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Refine this list" /></label><label>Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All statuses</option><option value="draft">Draft</option><option value="signed">Signed</option><option value="voided">Voided</option></select></label></div>
-      <div className="data-list">{visible.map((encounter) => <article className="data-row" key={encounter.id}><div className="data-row-header"><strong>{[encounter.patient?.firstName, encounter.patient?.lastName].filter(Boolean).join(" ") || "Patient record"}</strong><span className="badge">{encounter.status}</span></div><p className="muted">MRN {encounter.patient?.medicalRecordNumber || "Not set"} · {formatDate(encounter.startedAt ?? encounter.createdAt)} · {encounter.doctor?.displayName || "Doctor attribution retained"}</p><Link className="button secondary compact" href={`/patients/${encodeURIComponent(encounter.patientId)}?tab=doctor-visit&encounterId=${encodeURIComponent(encounter.id)}`}>Open encounter</Link></article>)}{!visible.length ? <p className="empty-state compact">No encounters match these filters.</p> : null}</div>
+      <div className="section-heading"><h2>{t("visits")}</h2><span className="badge">{status}</span></div>
+      <div className="filter-row"><label>{t("patientOrMrn")}<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("refineList")} /></label><label>{t("statusLabel")}<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">{t("allStatuses")}</option><option value="draft">{t("draft")}</option><option value="signed">{t("signed")}</option><option value="voided">{t("voided")}</option></select></label></div>
+      <div className="data-list">{visible.map((encounter) => <article className="data-row" key={encounter.id}><div className="data-row-header"><strong>{[encounter.patient?.firstName, encounter.patient?.lastName].filter(Boolean).join(" ") || "Patient record"}</strong><span className="badge">{encounter.status}</span></div><p className="muted">MRN {encounter.patient?.medicalRecordNumber || "Not set"} · {formatDate(encounter.startedAt ?? encounter.createdAt)} · {encounter.doctor?.displayName || "Doctor attribution retained"}</p><Link className="button secondary compact" href={`/patients/${encodeURIComponent(encounter.patientId)}?tab=doctor-visit&encounterId=${encodeURIComponent(encounter.id)}`}>{t("openEncounter")}</Link></article>)}{!visible.length ? <p className="empty-state compact">{t("noEncounterMatches")}</p> : null}</div>
     </section>
   </AppShell>;
 }

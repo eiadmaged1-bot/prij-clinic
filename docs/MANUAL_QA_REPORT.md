@@ -48,3 +48,17 @@ Targeted contracts passed for queue transaction, shared patient search, visit en
 Final monorepo repair/seed/typecheck/build and consolidated suites are intentionally run once after documentation. Results belong in the sprint final report; no physical-device or credential-dependent result is inferred here.
 
 Not performed: physical rear-camera scanning/cleanup, mobile Safari PDF rendering/ranges, portrait/landscape visual walkthrough, authenticated Receptionist/Doctor/Owner browser synchronization, real printing, current HTTPS tunnel, backup restore drill, penetration/privacy review, and clinical-governance approval.
+
+## v1.4.8 checkpoint evidence — 2026-07-15
+
+Focused static/contract suites passed at checkpoints for Reception patient selection/queue, Owner aggregation/shared shell, exact-phone import/guideline inventory/PDF/Clinical Drug Atlas, connected clinical entry pages/account safety, and English/Arabic dictionary parity/RTL/persistence/mojibake. API and web package typechecks passed after each affected checkpoint.
+
+The final one-time repair, seed, monorepo typecheck, production build, and consolidated focused suites are run after this documentation update; their exact results belong in the final release report and must not be inferred from this checkpoint note.
+
+Manual QA not performed on this branch: authenticated Owner/Doctor/Receptionist browser walkthrough, iPhone/Android portrait and landscape, physical rear camera, mobile Safari PDF pages and range requests, real printer/export, LAN access, ngrok HTTPS, backup restore, and clinical-governance review.
+
+Final automated gate: `git diff --check`, Prisma client repair/generation, seed, full monorepo typecheck, and the one production build passed. The build generated all 81 routes and reported one non-blocking pre-existing autoprefixer warning recommending `flex-end` instead of `end`.
+
+All five v1.4.8 focused suites passed. Available RBAC, audit governance/coverage, PHI/log redaction, Arabic/RTL, same-origin proxy, single-tunnel login, patient workspace, autosave, queue handoff, investigation workflow/mobile, guideline range/viewer/search, and pharmacology model/UI/search contracts passed.
+
+Five older contracts are not claimed: v0.16 Reception navigation expects obsolete appointment surfaces; v1.3.5 login copy expects the removed phrase “Use owner login”; v1.4.6 search expects Load More on Reception Home rather than shared Check-in/Directory; v1.4.5 guideline summary expects the removed raw status “Needs review”; and v1.4.5 pharmacology summary expects the superseded quick-mode gap paragraph. Their replacement v1.4.8 contracts passed; the obsolete suites were not rewritten during the release gate.

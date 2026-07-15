@@ -43,3 +43,19 @@ Branch `fix/v1.4.7-connected-clinic-core-and-drug-atlas`, base `9e50efda633bba22
 - Four deterministic context rules connect structured facts to review links and missing-information prompts. They do not diagnose, order, prescribe, or change medication. Doctor decisions are audited and appear in the patient timeline.
 
 Forward-only migrations added: queue `IN_ROOM` and birth year; antibiotics metadata correction; deterministic generic-family joins; four context rule definitions; context-rule safety wording correction. No reset, migration rewrite, or record deletion was performed.
+
+## v1.4.8 owner dashboard and late QA recovery — 2026-07-15
+
+Branch `fix/v1.4.8-owner-dashboard-and-late-qa-recovery`, base `c5967824d0d53ffc1767cdf43ba68309a9d8b51a`.
+
+- Reception now defaults to active patients, uses persistent explicit shared selection, supports browse-all pagination/filters, and retains the authoritative idempotent patient-to-queue transaction.
+- Owner Control Center uses one Owner-authorized aggregation endpoint with bounded database counts, partial metric failure isolation, recorded-payment revenue, readiness checks, real task categories, five service rows, and five redacted audit rows.
+- The shared shell has one compact role-aware header/drawer/account sheet with scroll lock, Escape/outside/swipe close, safe areas, RTL direction, and language persistence.
+- External intake and spreadsheet import use exact normalized Egyptian phone duplicate detection. Guideline inventory is paginated and exact file hashes are rejected. New PDF imports retain parsed page counts.
+- Clinical Drug Atlas browse rooms, all-family/all-generic views, unlinked content, recent review, favorites, and content-being-completed views use the preserved canonical records without fabricating evidence.
+- Investigation baskets persist per patient encounter and prevent duplicate catalog items. Standalone Encounters and Ultrasound are history/index entry points into the patient Visit and Pregnancy workspaces.
+- Account administration now prevents demotion or deactivation of the final active Owner and retains session revocation/audit behavior.
+
+One forward-only migration was added: `20260715190000_guideline_authoritative_page_count`. No migration was rewritten and no database reset or record deletion was performed.
+
+Post-seed preserved inventory: 586 patient records (37 active), 180 queue tickets (4 currently active), 37 generic medicines, 53 drug families, 27 deterministic generic-family memberships, 4 prescription templates, 4 medication shortcuts, 249 guideline sources, 52 guideline documents, 14 guideline versions, 2,578 guideline sections, 135 investigation catalog items, and 38,939 audit records.

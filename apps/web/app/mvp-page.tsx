@@ -602,7 +602,7 @@ export function UserMenu({
       <button aria-label="Close account menu" className={`account-sheet-backdrop ${open ? "open" : ""}`} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} type="button" />
       {open ? <div aria-label="Account" aria-modal="true" className="account-menu-panel" id="account-menu-panel" ref={panelRef} role="dialog">
         <div className="account-sheet-heading">
-          <strong>Account</strong>
+          <strong>{t("account")}</strong>
           <button aria-label="Close account menu" className="account-sheet-close" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} type="button">&times;</button>
         </div>
         <div className="account-menu-profile">
@@ -611,7 +611,7 @@ export function UserMenu({
           <span className="muted">{user.branchName || "All assigned branches"}</span>
         </div>
         <LanguageSwitcher />
-        {canOpenAdmin ? <Link className="button secondary compact" href="/admin/appearance"><ThreeDMedicalIcon name="settings" size="sm" tone="slate" />Appearance settings</Link> : null}
+        {canOpenAdmin ? <Link className="button secondary compact" href="/admin/appearance"><ThreeDMedicalIcon name="settings" size="sm" tone="slate" />{t("appearanceSettings")}</Link> : null}
         {canOpenAdmin ? (
           <Link className="button secondary compact" href="/admin">
             <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />
@@ -671,7 +671,9 @@ function navText(label: string, t: ReturnType<typeof useI18n>["t"]) {
     Documents: "documents",
     Tasks: "tasks",
     "Smart Clinical Search": "smartClinicalSearch",
-    "External Intake Inbox": "externalIntake"
+    "External Intake Inbox": "externalIntake",
+    "Investigation Catalog": "investigationCatalog",
+    "Medication Data": "medicationData"
   };
   const key = map[label];
   return key ? t(key) : label;

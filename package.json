@@ -156,6 +156,7 @@
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",
+    "test:v148:translations": "node scripts/v148-translation-coverage-test.mjs",
     "test:v1444:doctor": "node scripts/v1444-doctor-dashboard-test.mjs",
     "test:v1444:prescription": "node scripts/v1444-patient-prescription-test.mjs",
     "test:production-launch:idempotency-concurrency": "node scripts/production-launch-idempotency-concurrency-test.mjs",

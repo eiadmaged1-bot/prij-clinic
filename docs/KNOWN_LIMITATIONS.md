@@ -43,3 +43,16 @@
 - Atlas browse lenses use the same preserved dataset; absent structured evidence can produce no results.
 - Connected-context links prepare review/draft destinations. They do not automatically insert investigations, medications, prescriptions, or follow-ups.
 - Physical camera, mobile Safari PDF, orientation, real printer, authenticated role, current tunnel, backup restore, and credential-dependent QA remain unperformed.
+
+## v1.4.8 exact remaining limitations
+
+- The PDF page count is authoritative for newly parsed PDFs, but the UI uses the maintained browser PDF renderer through the same-origin ranged asset route; a bundled PDF.js canvas renderer was not added. Mobile Safari rendering still requires physical-device QA.
+- Existing guidelines without stored `pageCount` use the highest indexed section page as a conservative fallback until re-imported or reparsed.
+- Protocol structured editing and verification remain in the existing Owner/Admin editor. A separate Protocol Completion Questionnaire was not completed in this sprint.
+- The existing patient Pregnancy/Ultrasound editor supplies recording and review controls; a complete signed amendment history, serial-measurement comparison UI, and physical print/export QA remain incomplete.
+- Secure admin password reset and session revocation exist. Self-service Owner password change, explicit force-change flag, 2FA reset, and a dedicated lock/unlock control were not completed.
+- The final active Owner is protected from deactivation/demotion. Broader replacement of every legacy admin card screen with paginated tables/drawers was not completed.
+- Central English/Arabic dictionaries, navigation, account sheet, new encounter/ultrasound entry screens, RTL, persistence, and mojibake checks are covered. Some legacy operational copy in older affected modules remains page-local bilingual copy rather than the central dictionary.
+- Pharmacology content remains incomplete and is not clinically verified: missing mechanisms, kinetics, renal/hepatic guidance, adverse effects, interactions, pregnancy/lactation, monitoring, sources, and unlinked family relationships remain visible as coverage gaps, never as verified facts.
+- Physical iPhone/Android orientation, rear-camera, swipe, PDF, print, authenticated role walkthrough, LAN, and ngrok QA were not performed.
+- Prisma client generation encountered a Windows query-engine DLL lock twice. Per the sprint repair limit it was not retried again; final repair output determines whether the local lock still affects release verification.
