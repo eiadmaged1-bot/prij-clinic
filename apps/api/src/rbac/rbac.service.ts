@@ -188,6 +188,9 @@ export class RbacService {
     assertCanManageAccounts(actor);
     const existing = await this.requireAccount(id);
     assertCanEditAccount(existing, actor);
+    if (dto.role && dto.role !== "Owner" && accountHasRole(existing, "Owner")) {
+      await this.assertAnotherActiveOwnerExists(id);
+    }
     if ((dto.role || dto.permissionPreset) && !dto.reason?.trim()) {
       throw new BadRequestException("A reason is required for role or permission preset changes.");
     }
@@ -712,6 +715,9 @@ export class RbacService {
     assertReasonForSensitiveChange(reason);
     const existing = await this.requireAccount(id);
     assertCanEditAccount(existing, actor);
+    if (status === "disabled" && accountHasRole(existing, "Owner")) {
+      await this.assertAnotherActiveOwnerExists(id);
+    }
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -735,6 +741,19 @@ export class RbacService {
     }
 
     return { account: toAccountSummary(updated) };
+  }
+
+  private async assertAnotherActiveOwnerExists(excludedUserId: string) {
+    const activeOwnerCount = await this.prisma.user.count({
+      where: {
+        id: { not: excludedUserId },
+        status: "active",
+        userRoles: { some: { role: { name: "Owner" } } }
+      }
+    });
+    if (activeOwnerCount < 1) {
+      throw new BadRequestException("The final active Owner cannot be deactivated or assigned another role.");
+    }
   }
 
   private async requireAccount(id: string) {
@@ -790,6 +809,10 @@ function assertCanEditAccount(account: AccountWithRelations, actor?: AuthUser) {
   if (actor?.id === account.id) {
     throw new BadRequestException("Use a separate account for self-management changes.");
   }
+}
+
+function accountHasRole(account: AccountWithRelations, roleName: string) {
+  return account.userRoles.some((userRole) => userRole.role.name === roleName);
 }
 
 function assertReasonForSensitiveChange(reason?: string | null) {

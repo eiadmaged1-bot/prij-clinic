@@ -30,14 +30,32 @@ export default function InvestigationsPage() {
   const [status, setStatus] = useState("Ready");
   const [savedRequestId, setSavedRequestId] = useState("");
   const [activeSection, setActiveSection] = useState<"catalog" | "sets" | "followup" | "manage">("catalog");
+  const [basketReady, setBasketReady] = useState(false);
   const hasPatientContext = Boolean(patientId && encounterId);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setPatientId(params.get("patientId") ?? "");
-    setEncounterId(params.get("encounterId") ?? params.get("visitId") ?? "");
+    const nextPatientId = params.get("patientId") ?? "";
+    const nextEncounterId = params.get("encounterId") ?? params.get("visitId") ?? "";
+    setPatientId(nextPatientId);
+    setEncounterId(nextEncounterId);
+    if (nextPatientId && nextEncounterId) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(basketStorageKey(nextPatientId, nextEncounterId)) ?? "null") as { selected?: CatalogItem[]; indications?: Record<string, string> } | null;
+        if (Array.isArray(saved?.selected)) setSelected(uniqueCatalogItems(saved.selected));
+        if (saved?.indications && typeof saved.indications === "object") setIndications(saved.indications);
+      } catch {
+        sessionStorage.removeItem(basketStorageKey(nextPatientId, nextEncounterId));
+      }
+    }
+    setBasketReady(true);
     void loadRequests();
   }, []);
+
+  useEffect(() => {
+    if (!basketReady || !patientId || !encounterId) return;
+    sessionStorage.setItem(basketStorageKey(patientId, encounterId), JSON.stringify({ selected, indications }));
+  }, [basketReady, encounterId, indications, patientId, selected]);
 
   const loadWorkspace = useCallback(async () => {
     const params = new URLSearchParams();
@@ -76,14 +94,6 @@ export default function InvestigationsPage() {
       [next[index], next[destination]] = [next[destination]!, next[index]!];
       return next;
     });
-  }
-
-  function duplicate(index: number) {
-    const source = selected[index];
-    if (!source) return;
-    const copy = { ...source, id: `${source.id}-copy-${Date.now()}` };
-    setSelected((current) => [...current.slice(0, index + 1), copy, ...current.slice(index + 1)]);
-    setIndications((current) => ({ ...current, [copy.id]: current[source.id] ?? "" }));
   }
 
   function remove(index: number) {
@@ -155,7 +165,7 @@ export default function InvestigationsPage() {
           <div className="wide investigation-quick-sections mobile-section mobile-catalog"><CatalogList title="Favorites" items={workspace.favorites ?? []} onAdd={add} /><CatalogList title="Common and high priority" items={workspace.highPriority ?? []} onAdd={add} /></div>
           <div className="wide data-list mobile-section mobile-catalog">{visibleCatalog.slice(0, 30).map((item) => <button className="picker-row" key={item.id} type="button" onClick={() => add(item)}><strong>{item.name}</strong><span>{[item.category, item.subcategory, item.modality].filter(Boolean).join(" · ")}</span></button>)}{!visibleCatalog.length ? <p className="empty-state compact smart-empty-state">No catalog items match this view.</p> : null}</div>
           <section className="wide compact-panel mobile-section mobile-sets"><div className="section-heading compact-section-heading"><h3>Reusable investigation sets</h3><span className="badge">{workspace.favoriteSets?.length ?? 0}</span></div><div className="dense-card-list">{(workspace.favoriteSets ?? []).map((set) => <div className="data-row" key={set.id}><button className="picker-row" type="button" onClick={() => applySet(set)}><strong>{set.name}{set.nameAr ? ` / ${set.nameAr}` : ""}</strong><span>{set.items.length} investigations · {set.scope ?? "personal"}</span></button><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "archive")}>Archive</button></div></div>)}</div></section>
-          <section className="wide selected-item-basket mobile-section mobile-catalog"><div className="section-heading compact-section-heading"><h3>Selected basket</h3><span className="badge">{selected.length}</span></div>{selected.map((item, index) => <article className="request-chip investigation-basket-row" key={item.id}><div><strong>{item.name}</strong><em>{item.category}</em></div><input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" /><div className="form-actions"><button type="button" onClick={() => move(index, -1)} aria-label={`Move ${item.name} up`}>↑</button><button type="button" onClick={() => move(index, 1)} aria-label={`Move ${item.name} down`}>↓</button><button type="button" onClick={() => duplicate(index)}>Duplicate</button><button type="button" onClick={() => remove(index)}>Remove</button></div></article>)}{removed ? <button className="button secondary compact" type="button" onClick={undoRemove}>Undo remove</button> : null}{!selected.length ? <p className="empty-state compact smart-empty-state">No investigations selected.</p> : null}</section>
+          <section className="wide selected-item-basket mobile-section mobile-catalog"><div className="section-heading compact-section-heading"><h3>Selected basket</h3><span className="badge">{selected.length}</span></div>{selected.map((item, index) => <article className="request-chip investigation-basket-row" key={item.id}><div><strong>{item.name}</strong><em>{item.category}</em></div><input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" /><div className="form-actions"><button type="button" onClick={() => move(index, -1)} aria-label={`Move ${item.name} up`}>↑</button><button type="button" onClick={() => move(index, 1)} aria-label={`Move ${item.name} down`}>↓</button><button type="button" onClick={() => remove(index)}>Remove</button></div></article>)}{removed ? <button className="button secondary compact" type="button" onClick={undoRemove}>Undo remove</button> : null}{!selected.length ? <p className="empty-state compact smart-empty-state">No investigations selected.</p> : null}</section>
           <div className="form-actions wide mobile-section mobile-sets"><input aria-label="Set English name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="Custom set name" /><input aria-label="Set Arabic name" dir="rtl" value={setNameAr} onChange={(event) => setSetNameAr(event.target.value)} placeholder="اسم المجموعة بالعربية" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveSet()}>Save as custom set</button></div>
           {hasPatientContext ? <div className="mobile-section mobile-catalog investigation-request-fields"><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Follow-up deadline<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>Save to visit</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); }}>Clear basket</button></div></div> : null}
         </form>
@@ -170,7 +180,9 @@ function CatalogList({ title, items, onAdd }: { title: string; items: CatalogIte
   return <section className="compact-panel"><div className="section-heading compact-section-heading"><h3>{title}</h3><span className="badge">{items.length}</span></div>{items.slice(0, 8).map((item) => <button className="picker-row" key={`${title}-${item.id}`} type="button" onClick={() => onAdd(item)}><strong>{item.name}</strong><span>{item.category}</span></button>)}{!items.length ? <p className="muted">No items yet.</p> : null}</section>;
 }
 
-function cleanCatalogId(id: string) { return id.includes("-copy-") ? id.split("-copy-")[0] : id; }
+function cleanCatalogId(id: string) { return id; }
+function basketStorageKey(patientId: string, encounterId: string) { return `prij-investigation-basket:${patientId}:${encounterId}`; }
+function uniqueCatalogItems(items: CatalogItem[]) { return items.filter((item, index) => Boolean(item?.id) && items.findIndex((candidate) => candidate.id === item.id) === index); }
 async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); return response.ok ? response.json() : {}; }
 async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
 async function apiRequest(endpoint: string, method: "GET" | "POST" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }
