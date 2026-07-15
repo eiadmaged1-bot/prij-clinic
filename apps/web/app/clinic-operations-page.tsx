@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon, type IconName } from "../components/ThreeDMedicalIcon";
 import { ActiveVisitLauncher } from "../components/clinic/ActiveVisitWorkspace";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { publishClinicDataChange } from "@/lib/clinic-data-events";
 import { visitTypeLabel } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "./mvp-page";
 import { useSession } from "./session";
@@ -146,7 +147,7 @@ function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: Op
   async function callPatient(ticketId: string) {
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/queue/${ticketId}/call`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
-    if (response?.ok) await onRefresh();
+    if (response?.ok) { publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"]); await onRefresh(); }
   }
   return (
     <section className="queue-board-compact">
@@ -220,7 +221,8 @@ function FlowPanel({ appointments, queue }: { appointments: Appointment[]; queue
 function DailyList({ title, rows, actionLabel = "Open patient", doctorSelect = false, currentPatientCompact = false, previewMode = false }: { title: string; actionLabel?: string; doctorSelect?: boolean; currentPatientCompact?: boolean; previewMode?: boolean; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {
   async function selectPatient(ticketId: string, patientId: string) {
     const token = sessionStorage.getItem("prijClinicToken");
-    await fetch(`${getApiBaseUrl()}/queue/${ticketId}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => undefined);
+    const response = await fetch(`${getApiBaseUrl()}/queue/${ticketId}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
+    if (response?.ok) publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], patientId);
     window.location.href = `/patients/${patientId}`;
   }
 

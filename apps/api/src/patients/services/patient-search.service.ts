@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { PatientStatus, PatientType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../../audit/audit.service";
-import { branchScope, isOwnerOrAdmin } from "../../auth/scope";
+import { isOwnerOrAdmin } from "../../auth/scope";
 import type { AuthUser } from "../../auth/auth.types";
 import { ClinicTimeService } from "../../clinic-time/clinic-time.service";
 
@@ -22,14 +22,16 @@ export class PatientSearchService {
     private readonly clinicTime: ClinicTimeService
   ) {}
 
-  async list(user: AuthUser, options: { query?: string; mode?: string; includeArchived?: string; page?: string; limit?: string; branchId?: string; patientType?: string; status?: string; sort?: string } = {}) {
+  async list(user: AuthUser, options: { query?: string; mode?: string; includeArchived?: string; page?: string; limit?: string; branchId?: string; patientType?: string; status?: string; view?: string; sort?: string } = {}) {
     const query = options.query?.trim() ?? "";
     const directoryMode = options.mode === "directory";
-    const allStatuses = options.status === "all";
+    const directoryView = options.view ?? "active";
+    if (directoryView === "qa_test" && !isOwnerOrAdmin(user)) throw new ForbiddenException("Only an Owner can review QA/test candidates.");
+    const allStatuses = options.status === "all" || directoryView === "all" || directoryView === "current_branch" || directoryView === "incomplete" || directoryView === "exact_phone_duplicates" || directoryView === "qa_test";
     const requestedStatus = isPatientStatus(options.status) ? options.status : directoryMode && !allStatuses ? PatientStatus.active : undefined;
     const includeArchived = options.includeArchived === "true" || requestedStatus === PatientStatus.archived || allStatuses;
     const requestedType = isPatientType(options.patientType) ? options.patientType : undefined;
-    const requestedBranchId = options.branchId && (isOwnerOrAdmin(user) || options.branchId === user.branchId) ? options.branchId : undefined;
+    const requestedBranchId = directoryView === "current_branch" ? user.branchId ?? undefined : options.branchId && (isOwnerOrAdmin(user) || options.branchId === user.branchId) ? options.branchId : undefined;
     const page = Math.max(1, Math.min(1000, Number.parseInt(options.page ?? "1", 10) || 1));
     const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
     if (!directoryMode && query.length < 2) return { patients: [], pageInfo: { page, limit, hasMore: false, total: 0 } };
@@ -39,12 +41,21 @@ export class PatientSearchService {
     const uuidLookup = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(qrToken);
     const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
     const where: Prisma.PatientWhereInput = {
-      ...branchScope(user),
       ...(requestedBranchId ? { branchId: requestedBranchId } : {}),
       ...(requestedStatus ? { status: requestedStatus } : includeArchived ? {} : { status: { not: PatientStatus.archived } }),
       ...(requestedType ? { patientType: requestedType } : {}),
-      NOT: demoPatientWhere()
     };
+    if (directoryView === "incomplete") where.AND = [{ OR: [{ phone: null }, { AND: [{ dateOfBirth: null }, { yearOfBirth: null }] }] }];
+    if (directoryView === "qa_test") where.AND = [{ OR: demoPatientWhere() }];
+    if (directoryView === "exact_phone_duplicates") {
+      const duplicatePhones = (await this.prisma.patient.groupBy({
+        by: ["phone"],
+        where: { phone: { not: null } },
+        _count: { phone: true },
+        having: { phone: { _count: { gt: 1 } } }
+      })).map((row) => row.phone).filter((phone): phone is string => Boolean(phone));
+      where.AND = [{ phone: { in: duplicatePhones.length ? duplicatePhones : ["__NO_EXACT_PHONE_DUPLICATES__"] } }];
+    }
     if (query) {
       where.OR = [
         { medicalRecordNumber: { equals: query, mode: "insensitive" } },

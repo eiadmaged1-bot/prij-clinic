@@ -271,7 +271,6 @@ export class PatientsService {
     const uuidLookup = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(token);
     const patient = await this.prisma.patient.findFirst({
       where: {
-        ...branchScope(user),
         OR: [
           ...(uuidLookup ? [{ qrToken: token }, { id: token }] : []),
           { medicalRecordNumber: { equals: trimmed, mode: "insensitive" } },

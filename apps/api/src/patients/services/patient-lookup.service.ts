@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../audit/audit.service";
 import type { AuthUser } from "../../auth/auth.types";
-import { branchScope } from "../../auth/scope";
 import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
@@ -9,7 +8,7 @@ export class PatientLookupService {
   constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
 
   async get(id: string, user: AuthUser) {
-    const patient = await this.prisma.patient.findFirst({ where: { id, ...branchScope(user) } });
+    const patient = await this.prisma.patient.findUnique({ where: { id } });
     if (!patient) throw new NotFoundException("Patient not found.");
     await this.audit.record({ actorUserId: user.id, action: "patient.read", resourceType: "patient", resourceId: patient.id, branchId: patient.branchId, severity: "medium" });
     return patient;
@@ -19,7 +18,7 @@ export class PatientLookupService {
     const now = new Date();
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1);
-    const patient = await this.prisma.patient.findFirst({ where: { id, ...branchScope(user) }, select: {
+    const patient = await this.prisma.patient.findUnique({ where: { id }, select: {
       id: true, medicalRecordNumber: true, firstName: true, lastName: true, dateOfBirth: true, phone: true, patientType: true, branchId: true,
       clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1, select: { phaseType: true, title: true } },
       appointments: { where: { startAt: { gte: todayStart }, status: { in: ["booked", "rescheduled"] } }, orderBy: { startAt: "asc" }, take: 2, select: { id: true, startAt: true, status: true, appointmentType: true } },

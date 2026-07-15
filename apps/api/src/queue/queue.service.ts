@@ -1,8 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
-import { assertCanReferenceAppointment, assertCanReferencePatient } from "../auth/reference-scope";
+import { assertCanReferenceAppointment } from "../auth/reference-scope";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { CheckInDto, QueueCancelDto } from "./dto";
@@ -24,8 +24,8 @@ export class QueueService {
       return this.prisma.$transaction(tx => this.checkInWithoutIdempotency(tx, dto, user));
     }
 
-    const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
-    const branchId = patient.branchId ?? (await this.resolveBranchId(user));
+    const patient = await this.findPatientForCheckIn(this.prisma, dto.patientId);
+    const branchId = this.resolveWorkingBranchId(user);
 
     const idempotency = await this.idempotency.beginOrReplay({
       userId: user.id,
@@ -37,10 +37,10 @@ export class QueueService {
 
     if (idempotency.isReplay) {
       if (!idempotency.resourceId) {
-        throw new BadRequestException("Queue check-in is still in progress.");
+        throw new ConflictException({ code: "QUEUE_LOCK_CONFLICT", message: "This check-in is already in progress. Retry with the same request." });
       }
       const replayed = await this.prisma.queueTicket.findUnique({ where: { id: idempotency.resourceId }, include: { patient: true, appointment: true } });
-      if (!replayed) throw new BadRequestException("Queue ticket no longer exists.");
+      if (!replayed) throw new ConflictException({ code: "QUEUE_LOCK_CONFLICT", message: "The earlier check-in could not be recovered. Retry with the same request." });
       return queueResponse(replayed, false);
     }
 
@@ -76,24 +76,28 @@ export class QueueService {
           return queueResponse(activeTicket, true);
         }
       }
-      const safeReason = error instanceof Error ? error.message : "Unknown error";
+      const safeReason = queueFailureReason(error);
       await this.idempotency.failOrRelease({
         recordId: idempotency.recordId,
         safeReason,
         releaseLock: true
       });
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        if (isActiveQueueLockConflict(error)) {
+          throw new ConflictException({ code: "QUEUE_LOCK_CONFLICT", message: "Another check-in is updating this patient. Retry with the same request." });
+        }
         throw new BadRequestException({ code: "QUEUE_NUMBER_CONFLICT", message: "Could not allocate a queue number. Please retry." });
       }
-      throw error;
+      if (error instanceof BadRequestException || error instanceof ConflictException || error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException({ code: "SERVER_ERROR", message: "The waiting line could not be updated safely. Use the request ID when asking for help." });
     }
   }
 
   private async checkInWithoutIdempotency(tx: Prisma.TransactionClient, dto: CheckInDto, user: AuthUser, preloadedPatient?: any, preloadedBranchId?: string) {
     const visitType = dto.visitType ?? "kashf";
 
-    const patient = preloadedPatient || await assertCanReferencePatient(this.prisma, dto.patientId, user);
-    const branchId = preloadedBranchId ?? patient.branchId ?? (await this.resolveBranchId(user));
+    const patient = preloadedPatient || await this.findPatientForCheckIn(tx, dto.patientId);
+    const branchId = preloadedBranchId ?? this.resolveWorkingBranchId(user);
 
     if (dto.appointmentId) {
       const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, {
@@ -101,7 +105,7 @@ export class QueueService {
       });
 
       if (!appointment || appointment.branchId !== branchId) {
-        throw new BadRequestException("Appointment does not match the selected patient and branch.");
+        throw new BadRequestException({ code: "QUEUE_VALIDATION_ERROR", message: "The appointment does not match the selected patient and working branch." });
       }
     }
 
@@ -122,6 +126,27 @@ export class QueueService {
 
     if (activeTicket) {
       return { ...activeTicket, alreadyQueued: true };
+    }
+
+    const activeLock = await tx.activeQueueTicketLock.findUnique({
+      where: { branchId_patientId_queueDate: { branchId, patientId: dto.patientId, queueDate } },
+      include: { queueTicket: true }
+    });
+    if (activeLock) {
+      const lockMatchesActiveTicket = activeLock.queueTicket.branchId === branchId
+        && activeLock.queueTicket.patientId === dto.patientId
+        && ["waiting", "called", "in_room"].includes(activeLock.queueTicket.status);
+      if (lockMatchesActiveTicket) return { ...activeLock.queueTicket, patient, appointment: null, alreadyQueued: true };
+      await tx.activeQueueTicketLock.delete({ where: { id: activeLock.id } });
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "queue.stale_lock_repaired",
+        resourceType: "active_queue_ticket_lock",
+        resourceId: activeLock.id,
+        branchId,
+        severity: "high",
+        metadataJson: { queueTicketId: activeLock.queueTicketId, repairReason: "ticket_not_active_or_scope_mismatch" }
+      });
     }
 
     let ticket;
@@ -163,7 +188,7 @@ export class QueueService {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
-        throw new BadRequestException("Referenced patient or appointment was not found.");
+        throw new NotFoundException({ code: "PATIENT_NOT_ACCESSIBLE", message: "The selected patient or appointment is not accessible." });
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw error;
@@ -292,15 +317,15 @@ export class QueueService {
     });
   }
 
-  private async resolveBranchId(user: AuthUser) {
-    if (user.branchId) {
-      return user.branchId;
-    }
-    const branch = await this.prisma.branch.findFirst({ orderBy: { createdAt: "asc" } });
-    if (!branch) {
-      throw new BadRequestException("Branch is not configured.");
-    }
-    return branch.id;
+  private resolveWorkingBranchId(user: AuthUser) {
+    if (!user.branchId) throw new BadRequestException({ code: "WORKING_BRANCH_REQUIRED", message: "Select a working branch before adding a patient to the waiting line." });
+    return user.branchId;
+  }
+
+  private async findPatientForCheckIn(db: Pick<PrismaService, "patient"> | Prisma.TransactionClient, patientId: string) {
+    const patient = await db.patient.findUnique({ where: { id: patientId } });
+    if (!patient) throw new NotFoundException({ code: "PATIENT_NOT_ACCESSIBLE", message: "The selected patient is not accessible." });
+    return patient;
   }
 }
 
@@ -332,4 +357,18 @@ function demoPatientWhere(): Prisma.PatientWhereInput[] {
     { notes: { contains: "training", mode: "insensitive" } },
     { notes: { contains: "local demo", mode: "insensitive" } }
   ];
+}
+
+function queueFailureReason(error: unknown) {
+  if (error instanceof BadRequestException || error instanceof ConflictException || error instanceof NotFoundException) {
+    const response = error.getResponse();
+    return typeof response === "string" ? response : String((response as { code?: string }).code ?? "QUEUE_REQUEST_FAILED");
+  }
+  if (error instanceof Prisma.PrismaClientKnownRequestError) return `PRISMA_${error.code}`;
+  return "QUEUE_REQUEST_FAILED";
+}
+
+function isActiveQueueLockConflict(error: Prisma.PrismaClientKnownRequestError) {
+  const target = Array.isArray(error.meta?.target) ? error.meta.target.join(",") : String(error.meta?.target ?? "");
+  return target.includes("patientId") || target.includes("queueTicketId") || target.includes("ActiveQueueTicketLock");
 }

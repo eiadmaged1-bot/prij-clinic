@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { patientTypeLabel, phaseTypeLabel } from "@/lib/patient-labels";
 
 export type PatientPickerPatient = {
   id: string;
@@ -55,6 +56,7 @@ export function PatientPicker({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [searchState, setSearchState] = useState<"idle" | "loading" | "ready" | "empty" | "permission" | "error">("idle");
   const resultsRef = useRef<HTMLDivElement>(null);
   const sourcePatients = liveSearch ? livePatients : patients;
   const selected = sourcePatients.find((patient) => patient.id === selectedPatientId) ?? patients.find((patient) => patient.id === selectedPatientId) ?? (selectedSnapshot?.id === selectedPatientId ? selectedSnapshot : null);
@@ -75,9 +77,10 @@ export function PatientPicker({
     const timer = window.setTimeout(() => {
       setPage(1);
       setSearchError("");
+      setSearchState("loading");
       void fetchPatients(text, 1)
-        .then((data) => { setLivePatients(data.patients); setHasMore(data.hasMore); })
-        .catch(() => setSearchError("Patient search is temporarily unavailable. Your selection and prior results were kept."));
+        .then((data) => { setLivePatients(data.patients); setHasMore(data.hasMore); setSearchState(data.patients.length ? "ready" : "empty"); })
+        .catch((error: PatientSearchError) => { setSearchState(error.kind); setSearchError(error.message); });
     }, 220);
     return () => window.clearTimeout(timer);
   }, [liveSearch, minSearchLength, query]);
@@ -86,9 +89,7 @@ export function PatientPicker({
     const text = query.trim().toLowerCase();
     if (text.length < minSearchLength) return [];
     return sourcePatients
-      .filter((patient) => patient.status !== "archived")
-      .filter((patient) => patientSearchText(patient).includes(text))
-      .filter((patient) => !isDemoLikePatient(patient));
+      .filter((patient) => patientSearchText(patient).includes(text));
   }, [minSearchLength, query, sourcePatients]);
 
   return (
@@ -100,12 +101,13 @@ export function PatientPicker({
       {selected ? <SelectedPatientSummary patient={selected} /> : <p className="empty-state compact smart-empty-state"><span>{required ? "No patient selected." : standaloneLabel}</span></p>}
       {expanded ? <div className="patient-picker-panel">
         <label>Search patient<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, MRN, or permanent QR" aria-label="Search patient" /></label>
-        {searchError ? <p className="notice" role="status">{searchError}</p> : null}
+        {searchState === "loading" ? <p className="muted" role="status">Searching permitted clinic patient files…</p> : null}
+        {searchError ? <p className={searchState === "permission" ? "form-error" : "notice"} role="alert">{searchError}</p> : null}
         <div className="dense-card-list patient-picker-results" ref={resultsRef} onScroll={(event) => sessionStorage.setItem(`prij:${storageKey}:scroll`, String(event.currentTarget.scrollTop))} aria-label="Patient results">
           {allowStandalone ? <button className={`picker-row ${!selectedPatientId ? "active" : ""}`} type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}><strong>{standaloneLabel}</strong><span>No patient file attached</span></button> : null}
           {query.trim().length < minSearchLength ? <p className="empty-state compact smart-empty-state"><span>Enter at least {minSearchLength} characters.</span></p> : null}
           {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
-          {query.trim().length >= minSearchLength && !matches.length && !searchError ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
+          {query.trim().length >= minSearchLength && searchState === "empty" && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
           {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }).catch(() => setSearchError("Could not load more patients. Existing results were kept.")); }}>Load more patients</button> : null}
         </div>
       </div> : null}
@@ -120,7 +122,7 @@ export function SelectedPatientSummary({ patient }: { patient: PatientPickerPati
 export function PatientSearchResult({ patient, selected = false, onSelect }: { patient: PatientPickerPatient; selected?: boolean; onSelect?: () => void }) {
   return <article className={`picker-row ${selected ? "active" : ""}`}>
     <strong>{patientLabel(patient)}</strong>
-    <span>{patient.medicalRecordNumber ?? "No MRN"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patientAgeLabel(patient)} | {patient.patientType ?? patient.currentPhase?.phaseType ?? "Unclassified"}</span>
+    <span>{patient.medicalRecordNumber ?? "No MRN"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patientAgeLabel(patient)} | {patient.patientType ? patientTypeLabel(patient.patientType) : phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
     <span>{patient.status ?? "active"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.queueState?.status ? `queue ${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not queued"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"}</span>
     {onSelect ? <button className="button secondary compact" type="button" onClick={onSelect}>Select</button> : null}
   </article>;
@@ -139,7 +141,13 @@ async function fetchPatients(query: string, page: number) {
   const token = sessionStorage.getItem("prijClinicToken");
   const params = new URLSearchParams({ q: query, page: String(page), limit: "20" });
   const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined });
-  if (!response.ok) throw new Error("Patient search failed");
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null;
+    const request = body?.error?.requestId ? ` Request ${body.error.requestId}.` : "";
+    if (response.status === 401) throw new PatientSearchError("permission", `Your session expired. Sign in again.${request}`);
+    if (response.status === 403) throw new PatientSearchError("permission", `You do not have permission to search patient files.${request}`);
+    throw new PatientSearchError("error", `${body?.error?.message ?? "Patient search is temporarily unavailable."} Your selection and prior results were kept.${request}`);
+  }
   const data = (await response.json()) as { patients?: PatientPickerPatient[]; pageInfo?: { hasMore?: boolean } };
   return { patients: data.patients ?? [], hasMore: Boolean(data.pageInfo?.hasMore) };
 }
@@ -154,6 +162,6 @@ function patientAgeLabel(patient: PatientPickerPatient) {
   return patient.yearOfBirth ? `approximately ${new Date().getUTCFullYear() - patient.yearOfBirth} years (born ${patient.yearOfBirth})` : "age unavailable";
 }
 
-function isDemoLikePatient(patient: PatientPickerPatient) {
-  return /\b(demo|test|qa|runtime|fixture|ux-)\b/i.test(`${patientLabel(patient)} ${patient.medicalRecordNumber ?? ""}`);
+class PatientSearchError extends Error {
+  constructor(readonly kind: "permission" | "error", message: string) { super(message); }
 }

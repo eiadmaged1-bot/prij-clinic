@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
-import { PatientPicker, SelectedPatientSummary, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
+import { PatientPicker, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
+import { publishClinicDataChange } from "@/lib/clinic-data-events";
+import { formatSafeApiError, readSafeApiError } from "@/lib/safe-api-error";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -50,24 +52,23 @@ export default function ReceptionCheckInPage() {
       headers: { "content-type": "application/json", "idempotency-key": idempotencyKey, ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ patientId: selectedPatient.id, visitType, priority: visitType === "urgent_kashf" ? "priority" : "routine", checkInMethod: "Reception Check-in" })
     }).catch(() => null);
-    if (!response) { setStatus("Could not add patient to the waiting line. Retry."); setSubmitting(false); return; }
+    if (!response) { setStatus(formatSafeApiError(await readSafeApiError(null, "The server could not be reached. Check the connection and retry with the same request."))); setSubmitting(false); return; }
     const body = await response.json().catch(() => null) as { queueNumber?: number; visitType?: string; queueState?: string; alreadyQueued?: boolean } | null;
     if (response.ok && body) {
       setTicket(body);
       setStatus(body.alreadyQueued ? "Patient is already waiting today" : "Patient added to waiting line");
-      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId: selectedPatient.id } }));
-    } else setStatus("Could not add patient to the waiting line. Retry.");
+      publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], selectedPatient.id);
+    } else setStatus(formatSafeApiError(await readSafeApiError(response, "The waiting line could not be updated safely.")));
     setSubmitting(false);
   }
 
   return <AppShell>
     <section className="page-header"><div className="header-row"><div><p className="eyebrow">Reception</p><h1>Check in patient</h1></div><Link className="button secondary compact" href="/reception">Back to Reception</Link></div><p className="muted">Permanent QR and manual lookup are available in patient selection.</p></section>
     <SafetyAlert />
-    <section className="panel compact-panel check-in-wizard">
-      <article className="compact-panel"><span className="badge">Step 1</span><PatientPicker patients={selectedPatient ? [selectedPatient] : []} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select existing patient" storageKey="check-in" /><div className="topbar-actions"><Link className="button secondary compact" href="/reception/qr-scan">Scan permanent QR</Link><Link className="button secondary compact" href="/patients/new">Create new patient</Link></div></article>
+    <section className="panel compact-panel reception-check-in-compact">
+      <article className="compact-panel"><PatientPicker patients={selectedPatient ? [selectedPatient] : []} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select patient" storageKey="check-in" /><div className="topbar-actions"><Link className="button secondary compact" href="/reception/qr-scan">Permanent QR</Link><Link className="button secondary compact" href="/patients/new">Create patient</Link></div></article>
       {selectedPatient ? <>
-        <article className="compact-panel"><span className="badge">Step 2</span><VisitTypeSelector value={visitType} onChange={setVisitType} compact /></article>
-        <article className="compact-panel"><span className="badge">Step 3</span><SelectedPatientSummary patient={selectedPatient} /><button className="button" type="button" onClick={() => void submit()} disabled={!visitType || submitting}><ThreeDMedicalIcon name="queue" size="sm" />{submitting ? "Adding…" : "Add to waiting line"}</button></article>
+        <article className="compact-panel"><VisitTypeSelector value={visitType} onChange={setVisitType} compact /><button className="button" type="button" onClick={() => void submit()} disabled={!visitType || submitting}><ThreeDMedicalIcon name="queue" size="sm" />{submitting ? "Adding…" : "Add to waiting line"}</button></article>
       </> : null}
       {status ? <p className={ticket ? "success-message" : "notice"} role="status">{status}</p> : null}
       {ticket ? <article className="queue-position-card"><strong>Queue number {ticket.queueNumber ?? "—"}</strong><span>Visit type: {ticket.visitType ?? visitType}</span><span>Status: {ticket.queueState === "WAITING" ? "Waiting" : ticket.queueState ?? "Waiting"}</span><Link className="button secondary compact" href="/queue">Open queue</Link></article> : null}

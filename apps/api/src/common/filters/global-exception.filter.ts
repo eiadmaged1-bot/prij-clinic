@@ -36,6 +36,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<RequestWithId>();
     const requestId = request.requestId || 'unknown';
+    const queueRequest = request.url?.startsWith('/queue') || request.url?.includes('/queue/');
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let code: StableErrorCode = 'INTERNAL_SERVER_ERROR';
@@ -99,6 +100,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else {
       this.logger.error(`[${requestId}] Unknown exception thrown`, String(exception));
     }
+
+    if (queueRequest && code === 'AUTHENTICATION_REQUIRED') code = 'SESSION_EXPIRED';
+    if (queueRequest && code === 'PERMISSION_DENIED') code = 'QUEUE_PERMISSION_DENIED';
+    if (queueRequest && code === 'VALIDATION_ERROR') code = 'QUEUE_VALIDATION_ERROR';
+    if (queueRequest && code === 'INTERNAL_SERVER_ERROR') code = 'SERVER_ERROR';
 
     if (status >= 500) {
       this.logger.error(`[${requestId}] ${code} - ${message}`);

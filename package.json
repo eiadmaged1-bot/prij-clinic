@@ -153,6 +153,7 @@
     "test:v1444:runtime-errors": "node scripts/v1444-runtime-error-test.mjs",
     "test:v1444:reception": "node scripts/v1444-reception-shell-test.mjs",
     "test:v148:reception": "node scripts/v148-reception-patient-queue-test.mjs",
+    "test:v149:patient-search-queue": "node scripts/v149-patient-search-queue-recovery-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

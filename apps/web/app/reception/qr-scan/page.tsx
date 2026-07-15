@@ -7,6 +7,8 @@ import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector"
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
+import { publishClinicDataChange } from "@/lib/clinic-data-events";
+import { formatSafeApiError, readSafeApiError } from "@/lib/safe-api-error";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 
@@ -93,8 +95,8 @@ export default function ReceptionQrScanPage() {
     const body = response ? await response.json().catch(() => null) as { alreadyQueued?: boolean; queueNumber?: number } | null : null;
     if (response?.ok) {
       setStatus(body?.alreadyQueued ? `${copy.already} #${body.queueNumber ?? "—"}` : `${copy.added} #${body?.queueNumber ?? "—"}`);
-      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId: patient.id } }));
-    } else setStatus(copy.failed);
+      publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], patient.id);
+    } else setStatus(formatSafeApiError(await readSafeApiError(response, copy.failed)));
   }
 
   return <AppShell>

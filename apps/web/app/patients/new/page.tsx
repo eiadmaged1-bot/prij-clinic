@@ -10,6 +10,7 @@ import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector"
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
+import { publishClinicDataChange } from "@/lib/clinic-data-events";
 import { patientTypeOptions } from "@/lib/patient-labels";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { PatientSearchResult, type PatientPickerPatient } from "@/components/clinic/PatientPicker";
@@ -86,7 +87,7 @@ function NewPatientContent() {
     if (response.status === 401 || response.status === 403) return { kind: "permission" as const };
     const body = await response.json().catch(() => null) as { queueNumber?: number; alreadyQueued?: boolean; error?: { code?: string }; code?: string } | null;
     if (response.ok) {
-      window.dispatchEvent(new CustomEvent("clinic-queue:changed", { detail: { patientId } }));
+      publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], patientId);
       router.refresh();
       return { kind: body?.alreadyQueued ? "already" as const : "queued" as const, queueNumber: body?.queueNumber };
     }

@@ -43,6 +43,7 @@ export default function PatientsPage() {
   const [rangeStart, setRangeStart] = useState(today);
   const [rangeEnd, setRangeEnd] = useState(today);
   const [patientStatus, setPatientStatus] = useState("active");
+  const [directoryView, setDirectoryView] = useState("active");
   const [patientType, setPatientType] = useState("all");
   const [branchId, setBranchId] = useState("all");
   const [branches, setBranches] = useState<BranchOption[]>([]);
@@ -57,7 +58,7 @@ export default function PatientsPage() {
     const timer = window.setTimeout(() => void loadPatients(text, page), 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId, page, patientStatus, patientType, query, sortMode]);
+  }, [branchId, directoryView, page, patientStatus, patientType, query, sortMode]);
 
   useEffect(() => {
     const savedCategory = localStorage.getItem("prijPatientDirectoryCategory");
@@ -75,8 +76,7 @@ export default function PatientsPage() {
       const phaseMatch = phaseType === "all" || patient.currentPhase?.phaseType === phaseType;
       const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
       const categoryMatch = matchesCategory(patient, category, today);
-      const trainingMatch = !isSeededTrainingRecord(patient);
-      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && categoryMatch && trainingMatch;
+      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && categoryMatch;
     });
     return sortPatients(rows, sortMode);
   }, [category, dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
@@ -87,7 +87,7 @@ export default function PatientsPage() {
     setError("");
 
     try {
-      const params = new URLSearchParams({ mode: "directory", page: String(requestedPage), limit: "20", status: patientStatus, sort: sortMode });
+      const params = new URLSearchParams({ mode: "directory", view: directoryView, page: String(requestedPage), limit: "20", status: patientStatus, sort: sortMode });
       if (search) params.set("q", search);
       if (patientType !== "all") params.set("patientType", patientType);
       if (branchId !== "all") params.set("branchId", branchId);
@@ -127,6 +127,7 @@ export default function PatientsPage() {
     setSortMode("created_newest");
     setDateFilter("all");
     setPatientStatus("active");
+    setDirectoryView("active");
     setPatientType("all");
     setBranchId("all");
     setPhaseType("all");
@@ -166,6 +167,17 @@ export default function PatientsPage() {
         </div>
 
         <div className="toolbar">
+          <label>
+            Directory view
+            <select onChange={(event) => { const view = event.target.value; setDirectoryView(view); setPatientStatus(view === "active" ? "active" : "all"); setPage(1); }} value={directoryView}>
+              <option value="all">All clinic patients</option>
+              <option value="current_branch">Current branch</option>
+              <option value="active">Active</option>
+              <option value="incomplete">Incomplete</option>
+              <option value="exact_phone_duplicates">Possible exact-phone duplicates</option>
+              {user?.roles.includes("Owner") ? <option value="qa_test">QA/test records — Owner only</option> : null}
+            </select>
+          </label>
           <label>
             Search by name, phone, MRN/file number, husband name, QR token
             <input
@@ -321,14 +333,11 @@ function friendlyStatus(value: string) {
 
 function patientDisplayName(patient: Patient) {
   const name = `${patient.firstName} ${patient.lastName}`.trim();
-  if (isSeededTrainingRecord(patient) || /^demo\b/i.test(name)) {
-    return "Filtered record";
-  }
   return name || "Patient file";
 }
 
 function patientFileNumber(patient: Patient) {
-  return isSeededTrainingRecord(patient) ? "Filtered file" : patient.medicalRecordNumber;
+  return patient.medicalRecordNumber;
 }
 
 function matchesPatientDate(value: string | null | undefined, mode: string, exactDate: string, rangeStart: string, rangeEnd: string, today: string) {
@@ -344,8 +353,4 @@ function matchesPatientDate(value: string | null | undefined, mode: string, exac
   if (mode === "exact") return date === exactDate;
   if (mode === "range") return date >= rangeStart && date <= rangeEnd;
   return true;
-}
-
-function isSeededTrainingRecord(patient: Patient) {
-  return /^DEMO[-_]/i.test(patient.medicalRecordNumber) || /^Demo\b/i.test(`${patient.firstName} ${patient.lastName}`.trim());
 }
