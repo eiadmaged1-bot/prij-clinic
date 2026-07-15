@@ -1070,17 +1070,29 @@ async function seedMedicationIntelligence(prisma) {
     familyByCode.set(code, family);
   }
 
-  // Generic identity only: no trade names and no clinical claims are seeded here.
-  for (const genericName of ["Salbutamol", "Terbutaline"]) {
+  const atcIdentitySource = await prisma.pharmacologySource.upsert({
+    where: { id: "00000000-0000-4000-8000-000000000149" },
+    update: { title: "ATC/DDD Index 2026", organization: "WHO Collaborating Centre for Drug Statistics Methodology", sourceUrl: "https://atcddd.fhi.no/atc_ddd_index/", versionLabel: "2026", provenanceType: "official_classification", reviewStatus: "approved" },
+    create: { id: "00000000-0000-4000-8000-000000000149", title: "ATC/DDD Index 2026", organization: "WHO Collaborating Centre for Drug Statistics Methodology", sourceUrl: "https://atcddd.fhi.no/atc_ddd_index/", versionLabel: "2026", provenanceType: "official_classification", reviewStatus: "approved" }
+  });
+
+  // Generic identity and broad family classification only. No clinical claims are seeded here.
+  const governedIdentityCatalog = [
+    ["Salbutamol", "SABA"], ["Terbutaline", "SABA"], ["Salmeterol", "LABA"], ["Formoterol", "LABA"], ["Tiotropium", "LAMA"], ["Glycopyrronium", "LAMA"], ["Budesonide", "INHALED_CORTICOSTEROID"], ["Beclometasone", "INHALED_CORTICOSTEROID"], ["Fluticasone", "INHALED_CORTICOSTEROID"],
+    ["Enalapril", "ACEI"], ["Lisinopril", "ACEI"], ["Losartan", "ARB"], ["Valsartan", "ARB"], ["Bisoprolol", "BETA_BLOCKER"], ["Metoprolol", "BETA_BLOCKER"], ["Amlodipine", "CCB"], ["Nifedipine", "CCB"], ["Hydrochlorothiazide", "THIAZIDE"], ["Indapamide", "THIAZIDE"], ["Furosemide", "LOOP_DIURETIC"], ["Spironolactone", "POTASSIUM_SPARING_DIURETIC"], ["Atorvastatin", "STATIN"], ["Rosuvastatin", "STATIN"],
+    ["Amoxicillin", "PENICILLIN"], ["Cefalexin", "CEPHALOSPORIN"], ["Azithromycin", "MACROLIDE"], ["Ciprofloxacin", "FLUOROQUINOLONE"], ["Doxycycline", "TETRACYCLINE"], ["Gentamicin", "AMINOGLYCOSIDE"], ["Fluconazole", "ANTIFUNGAL"], ["Aciclovir", "ANTIVIRAL"],
+    ["Omeprazole", "PPI"], ["Famotidine", "H2_BLOCKER"], ["Metoclopramide", "ANTIEMETIC"], ["Metformin", "METFORMIN_CLASS"], ["Levothyroxine", "THYROID_HORMONE"], ["Carbimazole", "ANTITHYROID"], ["Sertraline", "SSRI"], ["Amitriptyline", "TCA"], ["Ibuprofen", "NSAID"], ["Cetirizine", "ANTIHISTAMINE"], ["Ferrous sulfate", "IRON_SUPPLEMENT"], ["Folic acid", "FOLIC_ACID_SUPPLEMENT"]
+  ];
+  for (const [genericName, familyCode] of governedIdentityCatalog) {
     const medication = await prisma.medicationGeneric.upsert({
       where: { normalizedName: normalizeSearchText(genericName) },
-      update: { genericName, familyName: "SABA", className: "Short-acting beta2 agonist", pharmacologicClass: "Beta2 agonist", isActive: true },
-      create: { genericName, normalizedName: normalizeSearchText(genericName), familyName: "SABA", className: "Short-acting beta2 agonist", pharmacologicClass: "Beta2 agonist", sourceType: "curated_reference", reviewStatus: "needs_review", aliases: [] }
+      update: { genericName, familyName: familyByCode.get(familyCode).displayName, isActive: true },
+      create: { genericName, normalizedName: normalizeSearchText(genericName), familyName: familyByCode.get(familyCode).displayName, sourceType: "who_atc_identity", reviewStatus: "needs_review", aliases: [] }
     });
     await prisma.genericMedicationFamilyMembership.upsert({
-      where: { medicationGenericId_familyId: { medicationGenericId: medication.id, familyId: familyByCode.get("SABA").id } },
-      update: { reviewStatus: "catalog_only" },
-      create: { medicationGenericId: medication.id, familyId: familyByCode.get("SABA").id, reviewStatus: "catalog_only" }
+      where: { medicationGenericId_familyId: { medicationGenericId: medication.id, familyId: familyByCode.get(familyCode).id } },
+      update: { reviewStatus: "catalog_only", sourceId: atcIdentitySource.id },
+      create: { medicationGenericId: medication.id, familyId: familyByCode.get(familyCode).id, sourceId: atcIdentitySource.id, reviewStatus: "catalog_only" }
     });
   }
 

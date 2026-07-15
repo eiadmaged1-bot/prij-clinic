@@ -94,12 +94,13 @@ export class MedicationsService {
         familyCount: roomFamilies.length,
         genericCount: new Set(roomGenerics.map((medication) => medication.id)).size,
         exampleFamilies: roomFamilies.slice(0, 3).map((family) => family.displayName),
-        families: roomFamilies.map((family) => ({ id: family.id, code: family.code, name: family.displayName, generics: family.genericMemberships.map(({ medication }) => atlasGeneric(medication, family.displayName)) }))
+        families: roomFamilies.map((family) => ({ id: family.id, code: family.code, name: family.displayName, coverageState: family.genericMemberships.length ? "identity-linked-clinical-sections-may-be-incomplete" : "incomplete", generics: family.genericMemberships.map(({ medication }) => atlasGeneric(medication, family.displayName)) })),
+        incompleteFamilies: families.filter((family) => family.genericMemberships.length === 0 && roomForFamily(family.code, family.displayName) === room.name).map((family) => ({ id: family.id, code: family.code, name: family.displayName, coverageState: "incomplete" }))
       };
     });
     const unlinked = generics.filter((generic) => generic.familyMemberships.length === 0);
     const other = rooms.find((room) => room.name === "Other");
-    if (other && unlinked.length) other.families.push({ id: "unlinked", code: "UNLINKED", name: "Unlinked / other generics", generics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")) });
+    if (other && unlinked.length) other.families.push({ id: "unlinked", code: "UNLINKED", name: "Unlinked / other generics", coverageState: "unlinked", generics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")) });
     return {
       rooms,
       familyDirectory: families.map((family) => ({ id: family.id, code: family.code, name: family.displayName, genericCount: family.genericMemberships.length, coverage: family.genericMemberships.length ? "Linked generics available" : "Content being completed" })),
