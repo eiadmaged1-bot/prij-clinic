@@ -18,10 +18,10 @@ export function listExternalIntake(status = "pending_review") {
   return workflowRequest<{ submissions: ExternalIntakeSubmission[] }>(`/external-intake?${params.toString()}`);
 }
 
-export function createPatientFromSubmission(id: string, reviewReason: string, createInitialPhase: boolean) {
+export function createPatientFromSubmission(id: string, reviewReason: string) {
   return workflowRequest(`/external-intake/${id}/create-patient`, {
     method: "POST",
-    body: JSON.stringify({ reviewReason, createInitialPhase })
+    body: JSON.stringify({ reviewReason })
   });
 }
 

@@ -5,7 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { AttachSubmissionDto, CreatePatientFromSubmissionDto, GoogleFormIntakeDto, RejectSubmissionDto, RequestCorrectionDto } from "./dto";
+import { AttachSubmissionDto, CreatePatientFromSubmissionDto, GoogleFormIntakeDto, GoogleSheetBatchDto, RejectSubmissionDto, RequestCorrectionDto } from "./dto";
 import { ExternalIntakeService } from "./external-intake.service";
 
 @Controller()
@@ -65,6 +65,11 @@ export class ExternalIntakeController {
   @Permissions("external_intake.review")
   reject(@Param("id") id: string, @Body() dto: RejectSubmissionDto, @CurrentUser() user: AuthUser) {
     return this.intake.reject(id, dto, user);
+  }
+
+  @Post("external-intake/google-sheet")
+  receiveGoogleSheet(@Body() dto: GoogleSheetBatchDto, @Headers("x-prij-integration-key") integrationKey: string | undefined, @Headers("idempotency-key") idempotencyKey: string | undefined, @Req() request: Request) {
+    return this.intake.receiveGoogleSheet(dto, { integrationKey, idempotencyKey, remoteAddress: request.ip, secure: request.secure || request.headers["x-forwarded-proto"] === "https" });
   }
 
   @Post("external-intake/:id/request-correction")

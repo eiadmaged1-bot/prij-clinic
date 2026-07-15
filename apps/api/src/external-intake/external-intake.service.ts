@@ -5,7 +5,7 @@ import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferencePatient } from "../auth/reference-scope";
 import { PrismaService } from "../prisma/prisma.service";
-import { AttachSubmissionDto, CreatePatientFromSubmissionDto, GoogleFormIntakeDto, RejectSubmissionDto, RequestCorrectionDto } from "./dto";
+import { AttachSubmissionDto, CreatePatientFromSubmissionDto, GoogleFormIntakeDto, GoogleSheetBatchDto, RejectSubmissionDto, RequestCorrectionDto } from "./dto";
 
 @Injectable()
 export class ExternalIntakeService {
@@ -14,6 +14,25 @@ export class ExternalIntakeService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService
   ) {}
+
+  async receiveGoogleSheet(dto: GoogleSheetBatchDto, request: { integrationKey?: string; idempotencyKey?: string; remoteAddress?: string; secure: boolean }) {
+    if (!request.secure && process.env.APP_ENV !== "local") throw new BadRequestException("Google Sheets intake requires HTTPS.");
+    this.enforceRateLimit(request.remoteAddress);
+    const expected = process.env.PRIJ_GOOGLE_SHEETS_INTEGRATION_KEY;
+    if (!expected || !constantTimeTextEqual(expected, request.integrationKey ?? "")) throw new ForbiddenException("Google Sheets integration authentication failed.");
+    if (!request.idempotencyKey?.trim() || request.idempotencyKey.length > 120) throw new BadRequestException("A valid idempotency key is required.");
+    const received: Array<{ intakeId: string; rowHash: string; duplicate: boolean }> = [];
+    for (const row of dto.rows) {
+      if (!/^[a-f0-9]{64}$/i.test(row.rowHash)) throw new BadRequestException("Every reviewed row requires a SHA-256 row hash.");
+      const externalSubmissionId = `google-sheet:${createHash("sha256").update(`${dto.sheetId}:${request.idempotencyKey}:${row.rowHash}`).digest("hex")}`;
+      const existing = await this.prisma.externalPatientSubmission.findUnique({ where: { externalSubmissionId } });
+      if (existing) { received.push({ intakeId: existing.id, rowHash: row.rowHash, duplicate: true }); continue; }
+      const created = await this.prisma.externalPatientSubmission.create({ data: { id: randomUUID(), source: "google_sheet", language: /[\u0600-\u06ff]/.test(JSON.stringify(row.mappedPatient)) ? "ar" : "en", externalSubmissionId, payloadHash: row.rowHash.toLowerCase(), rawAnswersJson: { sourceRow: row.sourceRow, sourceMetadata: row.sourceMetadata ?? {}, reviewedRow: true } as Prisma.InputJsonValue, mappedPatientJson: row.mappedPatient as Prisma.InputJsonValue, status: "pending_review" } });
+      received.push({ intakeId: created.id, rowHash: row.rowHash, duplicate: false });
+    }
+    await this.audit.record({ action: "external_intake.google_sheet_staged", resourceType: "external_patient_submission", severity: "high", metadataJson: { rowCount: dto.rows.length, duplicateCount: received.filter((row) => row.duplicate).length, stagingOnly: true, idempotencyKeyHash: createHash("sha256").update(request.idempotencyKey).digest("hex") } });
+    return { status: "staged", rows: received, sideEffects: { patients: 0, phases: 0, appointments: 0, queueTickets: 0, encounters: 0 } };
+  }
 
   async receiveGoogleForm(dto: GoogleFormIntakeDto, request: ExternalIntakeRequest) {
     this.enforceRateLimit(request.remoteAddress);
@@ -164,19 +183,6 @@ export class ExternalIntakeService {
         createdByUserId: user.id
       }
     });
-    if (dto.createInitialPhase && caseType.suggestedPhase) {
-      await this.prisma.patientClinicalPhase.create({
-        data: {
-          patientId: patient.id,
-          phaseType: safePhase(String(caseType.suggestedPhase)),
-          title: phaseTitle(String(caseType.suggestedPhase)),
-          startDate: new Date(),
-          summaryJson: { sourceSubmissionId: id, draftOnly: true },
-          notes: clean(String(mapped.mainComplaint ?? "")),
-          createdByUserId: user.id
-        }
-      });
-    }
     const updated = await this.prisma.externalPatientSubmission.update({
       where: { id },
       data: { status: "approved", reviewedByUserId: user.id, reviewedAt: new Date(), reviewDecision: "created_patient", reviewReason: clean(dto.reviewReason), createdPatientId: patient.id }
@@ -217,7 +223,7 @@ export class ExternalIntakeService {
 
   async reject(id: string, dto: RejectSubmissionDto, user: AuthUser) {
     this.assertReviewer(user);
-    if (!dto.reason?.trim()) throw new BadRequestException("Reject/archive reason is required.");
+    if (!dto.reason?.trim()) throw new BadRequestException("A rejection reason is required.");
     await this.get(id, user);
     const updated = await this.prisma.externalPatientSubmission.update({
       where: { id },
@@ -322,20 +328,14 @@ function safePatientType(value: string): PatientType {
   return ["OB", "GYN", "INFERTILITY", "WOMEN_HEALTH", "GENERAL"].includes(value) ? value as PatientType : "WOMEN_HEALTH";
 }
 
-function safePhase(value: string) {
-  if (["pregnancy", "infertility", "gynecology", "general"].includes(value)) return value as never;
-  return "general" as never;
-}
-
-function phaseTitle(value: string) {
-  if (value === "pregnancy") return "External intake pregnancy review";
-  if (value === "infertility") return "External intake infertility review";
-  if (value === "gynecology") return "External intake gynecology review";
-  return "External intake general review";
-}
-
 function objectValue(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function constantTimeTextEqual(expected: string, supplied: string) {
+  const left = createHash("sha256").update(expected).digest();
+  const right = createHash("sha256").update(supplied).digest();
+  return timingSafeEqual(left, right);
 }
 
 type ExternalIntakeRequest = {

@@ -1,4 +1,5 @@
-import { IsBoolean, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsObject, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator";
+import { Type } from "class-transformer";
 
 export class GoogleFormIntakeDto {
   @IsString()
@@ -44,10 +45,6 @@ export class GoogleFormIntakeDto {
 
 export class CreatePatientFromSubmissionDto {
   @IsOptional()
-  @IsBoolean()
-  createInitialPhase?: boolean;
-
-  @IsOptional()
   @IsString()
   @MaxLength(1000)
   reviewReason?: string;
@@ -77,4 +74,16 @@ export class RequestCorrectionDto {
   @IsString()
   @MaxLength(1000)
   reason!: string;
+}
+
+export class GoogleSheetRowDto {
+  @IsString() @MaxLength(64) rowHash!: string;
+  @IsString() @MaxLength(80) sourceRow!: string;
+  @IsObject() mappedPatient!: Record<string, unknown>;
+  @IsOptional() @IsObject() sourceMetadata?: Record<string, unknown>;
+}
+
+export class GoogleSheetBatchDto {
+  @IsString() @MaxLength(120) sheetId!: string;
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(25) @ValidateNested({ each: true }) @Type(() => GoogleSheetRowDto) rows!: GoogleSheetRowDto[];
 }

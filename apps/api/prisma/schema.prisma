@@ -340,6 +340,16 @@ model Patient {
   classificationReason String?
   classifiedAt         DateTime?            @db.Timestamptz(3)
   classifiedByUserId   String?              @db.Uuid
+  address               String?
+  spouseName            String?
+  secondaryPhone        String?
+  externalFileNumber    String?
+  originalRegistrationDate DateTime?        @db.Date
+  importSource          String?
+  importBatchId         String?              @db.Uuid
+  dataVerificationState String                @default("VERIFIED")
+  validationWarnings    Json?
+  originalSourceMetadata Json?
 
   branch                      Branch?                           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   createdByUser               User?                             @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -390,6 +400,7 @@ model Patient {
   careAssistFindings          CareAssistFinding[]
   staffConversations          StaffConversation[]
   staffMessages               StaffMessage[]
+  importBatch                 PatientImportBatch?               @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
 
   @@index([branchId])
   @@index([status])
@@ -397,6 +408,9 @@ model Patient {
   @@index([lastName, firstName])
   @@index([phone])
   @@index([dataClassification, status])
+  @@index([externalFileNumber])
+  @@index([importBatchId])
+  @@index([dataVerificationState])
 }
 
 model ConsentRecord {
@@ -2369,6 +2383,7 @@ model PatientImportBatch {
 
   createdBy User               @relation(fields: [createdByUserId], references: [id], onDelete: Restrict)
   rows      PatientImportRow[]
+  patients  Patient[]
 
   @@index([createdByUserId, createdAt])
   @@index([fileHash])
@@ -2386,6 +2401,10 @@ model PatientImportRow {
   createdPatientId String?   @db.Uuid
   errorCode        String?
   importedAt       DateTime? @db.Timestamptz(3)
+  decision         String    @default("CONFIRM_CREATE")
+  selected         Boolean   @default(true)
+  decisionReason   String?
+  reviewerUpdatedAt DateTime? @db.Timestamptz(3)
 
   batch          PatientImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
   createdPatient Patient?           @relation(fields: [createdPatientId], references: [id], onDelete: SetNull)

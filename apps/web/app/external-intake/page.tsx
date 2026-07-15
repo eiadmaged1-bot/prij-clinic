@@ -89,7 +89,6 @@ export default function ExternalIntakePage() {
 function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntakeSubmission | null; onChanged(): Promise<void> }) {
   const [reviewReason, setReviewReason] = useState("");
   const [patientId, setPatientId] = useState("");
-  const [createInitialPhase, setCreateInitialPhase] = useState(false);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -123,7 +122,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
     }
     setStatus("Saving");
     try {
-      if (kind === "create") await createPatientFromSubmission(currentSubmission.id, reviewReason, createInitialPhase);
+      if (kind === "create") await createPatientFromSubmission(currentSubmission.id, reviewReason);
       if (kind === "attach") await attachSubmissionToPatient(currentSubmission.id, patientId, reviewReason);
       if (kind === "reject") await rejectExternalSubmission(currentSubmission.id, reviewReason);
       if (kind === "correction") await requestExternalIntakeCorrection(currentSubmission.id, reviewReason);
@@ -171,7 +170,6 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
 
       <form className="form-grid" onSubmit={(event) => void action(event, "create")}>
         <label className="wide">Review reason<input value={reviewReason} onChange={(event) => setReviewReason(event.target.value)} placeholder="Reviewed by doctor/admin before creating patient" /></label>
-        <label className="checkbox-row"><input checked={createInitialPhase} onChange={(event) => setCreateInitialPhase(event.target.checked)} type="checkbox" /> Create suggested initial clinical phase</label>
         <button className="button" type="submit"><ThreeDMedicalIcon name="patients" size="sm" />Create new patient</button>
       </form>
 
@@ -183,7 +181,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
 
       <div className="form-actions">
         <form onSubmit={(event) => void action(event, "correction")}><button className="button secondary" type="submit">Request correction</button></form>
-        <form onSubmit={(event) => void action(event, "reject")}><button className="button secondary danger-soft" type="submit">Reject/archive with reason</button></form>
+        <form onSubmit={(event) => void action(event, "reject")}><button className="button secondary danger-soft" type="submit">Reject submission</button></form>
       </div>
       {status ? <p className="muted">{status}</p> : null}
       <p className="form-warning">External text is untrusted and is not written to signed records, pregnancy episodes, investigations, or documents without review.</p>
