@@ -103,6 +103,12 @@ export class MedicationsController {
     return this.medications.searchPharmacology(q ?? "");
   }
 
+  @Get("pharmacology/atlas")
+  @Permissions("medications.read")
+  pharmacologyAtlas() {
+    return this.medications.pharmacologyAtlas();
+  }
+
   @Get("pharmacology/generics/:id")
   @Permissions("medications.read")
   pharmacologyProfile(@Param("id") id: string) {

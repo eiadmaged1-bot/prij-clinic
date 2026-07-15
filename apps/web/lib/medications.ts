@@ -62,6 +62,19 @@ export function searchPharmacology(query: string) {
   return request<{ query: string; expandedConcepts: string[]; results: PharmacologySearchResult[]; groupedResults: Array<{ family: string; generics: PharmacologySearchResult[] }>; genericFirst: boolean; tradeNamesAreAliasesOnly: boolean; susceptibilityReviewRequired: boolean }>(`/pharmacology/search?q=${encodeURIComponent(query)}`);
 }
 
+export type PharmacologyAtlasGeneric = PharmacologySearchResult;
+export type PharmacologyAtlasFamily = { id: string; code: string; name: string; generics: PharmacologyAtlasGeneric[] };
+export type PharmacologyAtlasRoom = { name: string; icon: string; familyCount: number; genericCount: number; exampleFamilies: string[]; families: PharmacologyAtlasFamily[] };
+export type PharmacologyAtlas = { rooms: PharmacologyAtlasRoom[]; totals: { families: number; generics: number; linkedGenerics: number; unlinkedGenerics: number }; browseViews: string[]; completeDatasetClaimed: false };
+
+export function getPharmacologyAtlas() {
+  return request<PharmacologyAtlas>("/pharmacology/atlas");
+}
+
+export function getPharmacologyCoverage() {
+  return request<{ generics: number; profiles: Record<string, number>; approvedFormulaVersions: number; completeDatasetClaimed: false; clinicalVerificationClaimed: false }>("/pharmacology/coverage");
+}
+
 export function getPharmacologyProfile(id: string) {
   return request<PharmacologyProfile>(`/pharmacology/generics/${encodeURIComponent(id)}`);
 }

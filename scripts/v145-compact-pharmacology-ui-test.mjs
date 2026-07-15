@@ -12,12 +12,13 @@ const [page, workspace, service, controller, css] = await Promise.all([
 assert(page.includes("Generic-first") && page.includes("PharmacologyWorkspace"), "generic-first pharmacology workspace missing");
 assert(workspace.includes("pharmacology-search-sticky") && css.includes("position: sticky"), "persistent pharmacology search missing");
 for (const field of ["generic medicine", "family", "mechanism", "target", "spectrum", "indication", "adverse effect", "renal/hepatic property"]) assert(workspace.includes(field), `search scope missing ${field}`);
-for (const field of ["Main use", "Key caution", "Clearance", "Open profile"]) assert(workspace.includes(field), `quick result missing ${field}`);
+for (const field of ["Profile sections being completed", "Open profile", "Why matched"]) assert(workspace.includes(field), `quick result missing ${field}`);
 for (const level of ["Quick", "Clinical", "Full source"]) assert(workspace.includes(`"${level}"`), `summary level missing ${level}`);
-for (const section of ["Clinical overview", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/Hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/Lactation", "Monitoring", "Calculators", "Sources"]) assert(workspace.includes(`"${section}"`), `collapsed profile section missing ${section}`);
+for (const section of ["Quick overview", "Uses", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/lactation", "Monitoring", "Calculators", "Sources"]) assert(workspace.includes(`"${section}"`), `collapsed profile section missing ${section}`);
 assert(workspace.includes("setOpenSection") && workspace.includes("current === section ? null : section"), "only one profile section may open at once");
 assert(workspace.includes("scrollY") && workspace.includes("searchRef.current?.focus"), "profile open/close must preserve search and scroll context");
-assert(workspace.includes("No source-reviewed") && workspace.includes("Doctor review is required"), "missing evidence must remain explicit and review-gated");
+assert(workspace.includes("Profile sections being completed") && workspace.includes("Doctor review is required"), "missing evidence must remain explicit and review-gated");
+assert(!workspace.includes('badge warning">{result.reviewStatus}'), "raw governance statuses must not appear on doctor-facing cards");
 assert(css.includes("justify-content: flex-end") && css.includes("align-items: flex-end"), "desktop side panel and mobile bottom sheet layouts missing");
 assert(controller.includes('@Get("pharmacology/search")') && controller.includes('@Get("pharmacology/generics/:id")'), "pharmacology endpoints missing");
 assert(service.includes("genericFirst: true") && service.includes("tradeNamesAreAliasesOnly: true"), "search response must guarantee generic-first identity");

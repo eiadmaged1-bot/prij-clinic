@@ -81,6 +81,28 @@ export class MedicationsService {
     return { query, expandedConcepts: concepts, results: results.slice(0, 50), groupedResults, genericFirst: true, tradeNamesAreAliasesOnly: true, susceptibilityReviewRequired: true };
   }
 
+  async pharmacologyAtlas() {
+    const [families, generics] = await Promise.all([
+      this.prisma.drugFamily.findMany({ include: { genericMemberships: { include: { medication: true } } }, orderBy: { displayName: "asc" } }),
+      this.prisma.medicationGeneric.findMany({ where: { isActive: true }, include: { familyMemberships: { include: { family: true } } }, orderBy: { genericName: "asc" } })
+    ]);
+    const rooms = pharmacologyRooms.map((room) => {
+      const roomFamilies = families.filter((family) => roomForFamily(family.code, family.displayName) === room.name);
+      const roomGenerics = roomFamilies.flatMap((family) => family.genericMemberships.map((membership) => membership.medication));
+      return {
+        ...room,
+        familyCount: roomFamilies.length,
+        genericCount: new Set(roomGenerics.map((medication) => medication.id)).size,
+        exampleFamilies: roomFamilies.slice(0, 3).map((family) => family.displayName),
+        families: roomFamilies.map((family) => ({ id: family.id, code: family.code, name: family.displayName, generics: family.genericMemberships.map(({ medication }) => atlasGeneric(medication, family.displayName)) }))
+      };
+    });
+    const unlinked = generics.filter((generic) => generic.familyMemberships.length === 0);
+    const other = rooms.find((room) => room.name === "Other");
+    if (other && unlinked.length) other.families.push({ id: "unlinked", code: "UNLINKED", name: "Unlinked / other generics", generics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")) });
+    return { rooms, totals: { families: families.length, generics: generics.length, linkedGenerics: generics.length - unlinked.length, unlinkedGenerics: unlinked.length }, browseViews: pharmacologyBrowseViews, completeDatasetClaimed: false };
+  }
+
   async pharmacologyProfile(id: string) {
     const medication = await this.prisma.medicationGeneric.findUnique({ where: { id }, include: pharmacologyInclude });
     if (!medication || !medication.isActive) throw new NotFoundException("Generic medication profile not found.");
@@ -408,6 +430,34 @@ export class MedicationsService {
 
 function clean(value: unknown) {
   return typeof value === "string" ? value.trim() || null : null;
+}
+
+const pharmacologyRooms = [
+  ["Respiratory", "🫁"], ["Cardiovascular", "♥"], ["Anti-infectives", "◉"], ["Obstetrics & Gynecology", "♀"], ["Endocrine", "◇"],
+  ["Neurology & Psychiatry", "⌁"], ["Pain & Inflammation", "+"], ["Gastrointestinal", "◌"], ["Renal & Urology", "≈"], ["Hematology", "●"],
+  ["Dermatology", "◐"], ["Allergy & Immunology", "✦"], ["Emergency medicines", "!"], ["Oncology", "◎"], ["Supplements", "✚"], ["Other", "…"]
+].map(([name, icon]) => ({ name, icon }));
+
+const pharmacologyBrowseViews = ["body system", "therapeutic function", "mechanism", "indication", "antimicrobial spectrum", "pregnancy/lactation", "renal handling", "hepatic handling", "monitoring requirement", "route"];
+
+function roomForFamily(code: string, name: string) {
+  const value = `${code} ${name}`.toUpperCase();
+  if (/SABA|LABA|LAMA|INHALED_CORTICOSTEROID/.test(value)) return "Respiratory";
+  if (/ACEI|ARB|BETA_BLOCKER|CCB|DIURETIC|THIAZIDE|STATIN/.test(value)) return "Cardiovascular";
+  if (/AMINOGLYCOSIDE|CEPHALOSPORIN|FLUOROQUINOLONE|MACROLIDE|PENICILLIN|TETRACYCLINE|ANTIFUNGAL|ANTIVIRAL/.test(value)) return "Anti-infectives";
+  if (/COC|CONTRACEPT|FERTILITY|MAGNESIUM_SULFATE|PROGESTIN|TOCOLYTIC|UTEROTONIC/.test(value)) return "Obstetrics & Gynecology";
+  if (/DPP4|GLP1|SGLT2|INSULIN|METFORMIN|ANTITHYROID|THYROID_HORMONE/.test(value)) return "Endocrine";
+  if (/SNRI|SSRI|TCA|ANTIEPILEPTIC|ANTIPSYCHOTIC|BENZODIAZEPINE|MOOD_STABILIZER/.test(value)) return "Neurology & Psychiatry";
+  if (/NSAID/.test(value)) return "Pain & Inflammation";
+  if (/H2_BLOCKER|PPI|ANTIEMETIC/.test(value)) return "Gastrointestinal";
+  if (/ANTICOAGULANT|ANTIPLATELET/.test(value)) return "Hematology";
+  if (/ANTIHISTAMINE/.test(value)) return "Allergy & Immunology";
+  if (/FOLIC_ACID|HERBAL_SUPPLEMENT|IRON_SUPPLEMENT|VITAMIN_SUPPLEMENT/.test(value)) return "Supplements";
+  return "Other";
+}
+
+function atlasGeneric(medication: { id: string; genericName: string; familyName: string | null; className: string | null; pharmacologicClass: string | null; reviewStatus: string }, family: string) {
+  return { id: medication.id, genericName: medication.genericName, family, pharmacologicClass: medication.pharmacologicClass || medication.className, reviewStatus: medication.reviewStatus, mainUse: "Profile sections being completed", keyCaution: "", clearance: "", matchReason: "Browse hierarchy", profileCompleteness: 0 };
 }
 
 const pharmacologyInclude = {
