@@ -12,6 +12,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { patientTypeOptions } from "@/lib/patient-labels";
 import type { VisitTypeValue } from "@/lib/visit-types";
+import { PatientSearchResult, type PatientPickerPatient } from "@/components/clinic/PatientPicker";
 
 type FormState = {
   medicalRecordNumber: string;
@@ -24,7 +25,7 @@ type FormState = {
   notes: string;
 };
 
-type ExistingPatient = { id: string; medicalRecordNumber?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null };
+type ExistingPatient = PatientPickerPatient;
 
 const initialState: FormState = {
   medicalRecordNumber: "",
@@ -112,15 +113,20 @@ function NewPatientContent() {
   }
 
   useEffect(() => {
+    const query = form.fullName.trim() || form.phone.trim();
+    if (query.length < 2) { setExistingPatients([]); return; }
+    const timer = window.setTimeout(() => {
     const token = sessionStorage.getItem("prijClinicToken");
-    fetch(`${getApiBaseUrl()}/patients`, {
+    fetch(`${getApiBaseUrl()}/patients?q=${encodeURIComponent(query)}&limit=10`, {
       credentials: "include",
       headers: token ? { authorization: `Bearer ${token}` } : undefined
     })
       .then(async (response) => response.ok ? (await response.json()) as { patients?: ExistingPatient[] } : { patients: [] })
       .then((body) => setExistingPatients(body.patients ?? []))
-      .catch(() => setExistingPatients([]));
-  }, []);
+      .catch(() => undefined);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [form.fullName, form.phone]);
 
   const duplicateWarnings = useMemo(() => possibleDuplicateWarnings(form, existingPatients, copy), [copy, existingPatients, form]);
   const calculatedAge = useMemo(() => ageFromYear(form.yearOfBirth, copy), [copy, form.yearOfBirth]);
@@ -308,6 +314,7 @@ function NewPatientContent() {
             <div className="alert warning wide" data-testid="duplicate-patient-warning">
               <strong>{copy.possibleMatch}</strong>
               <p className="muted">{duplicateWarnings.join(" ")}</p>
+              <div className="dense-card-list">{existingPatients.slice(0, 5).map((patient) => <PatientSearchResult key={patient.id} patient={patient} />)}</div>
             </div>
           ) : null}
 

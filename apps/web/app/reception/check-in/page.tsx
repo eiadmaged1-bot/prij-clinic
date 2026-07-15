@@ -27,6 +27,20 @@ export default function ReceptionCheckInPage() {
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
   const headers = useMemo(() => token ? { authorization: `Bearer ${token}` } : undefined, [token]);
 
+  useEffect(() => {
+    const saved = sessionStorage.getItem("prij:check-in:selected-patient");
+    if (saved) {
+      try { setSelectedPatient(JSON.parse(saved) as Patient); } catch { sessionStorage.removeItem("prij:check-in:selected-patient"); }
+    }
+  }, []);
+
+  function selectPatient(patient: Patient | null) {
+    setSelectedPatient(patient);
+    setSelectedAppointment(null);
+    if (patient) sessionStorage.setItem("prij:check-in:selected-patient", JSON.stringify(patient));
+    else sessionStorage.removeItem("prij:check-in:selected-patient");
+  }
+
   const load = useCallback(async () => {
     setStatus("Loading");
     const [patientResponse, appointmentResponse] = await Promise.all([
@@ -108,8 +122,10 @@ export default function ReceptionCheckInPage() {
         <div className="wizard-steps">
           <article className="compact-panel">
             <span className="badge">Step 1</span>
-            <PatientPicker patients={visiblePatients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { setSelectedPatient(patients.find((patient) => patient.id === id) ?? null); setSelectedAppointment(null); }} required label="Select patient" />
+            <PatientPicker patients={visiblePatients} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select patient" storageKey="check-in" />
           </article>
+          {selectedPatient?.status === "archived" ? <article className="notice wide"><strong>Archived patient</strong><span>This patient must be restored before Check-in.</span><div className="topbar-actions"><Link className="button secondary compact" href={`/patients/${selectedPatient.id}`}>Open read-only profile</Link><Link className="button compact" href={`/patients/${selectedPatient.id}`}>Restore patient</Link><button className="button secondary compact" type="button" onClick={() => selectPatient(null)}>Choose another patient</button></div></article> : null}
+          {selectedPatient?.status !== "archived" ? <>
           <article className="compact-panel">
             <span className="badge">Step 2</span>
             <label>Appointment or walk-in<input value={appointmentQuery} onChange={(event) => setAppointmentQuery(event.target.value)} placeholder="Search appointment or leave walk-in" /></label>
@@ -134,6 +150,7 @@ export default function ReceptionCheckInPage() {
             <button className="button" type="button" onClick={() => void submit()} disabled={!selectedPatient || !visitType}><ThreeDMedicalIcon name="queue" size="sm" />Check in</button>
             <p className="muted">Patient file, appointment link, and queue priority are saved for reception-to-doctor handoff.</p>
           </article>
+          </> : null}
         </div>
       </section>
     </AppShell>

@@ -1,44 +1,28 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { getApiBaseUrl } from "@/lib/api-base-url";
-import { DuplicateCandidate, PatientDuplicateCandidates } from "./PatientDuplicateCandidates";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { PatientPicker, type PatientPickerPatient } from "@/components/clinic/PatientPicker";
 
 export function PatientSearchMobile() {
-  const [query, setQuery] = useState("");
-  const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<PatientPickerPatient | null>(null);
 
-  async function search(event: FormEvent) {
-    event.preventDefault();
-    const value = query.trim();
-    if (!value) { setStatus("Enter a name, phone number, or MRN."); return; }
-    setLoading(true);
-    setStatus("");
-    try {
-      const params = new URLSearchParams(/^[\d+() -]+$/.test(value) ? { phone: value } : value.toUpperCase().startsWith("MRN-") || value.toUpperCase().startsWith("LOCAL-") ? { mrn: value } : { name: value });
-      const response = await fetch(`${getApiBaseUrl()}/patients/duplicate-candidates?${params}`, { credentials: "include" });
-      if (!response.ok) throw new Error("Patient search is unavailable.");
-      const body = await response.json() as { candidates?: DuplicateCandidate[] };
-      setCandidates(body.candidates ?? []);
-      setStatus(body.candidates?.length ? `${body.candidates.length} possible result(s).` : "No matching active patient was found in your branch.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Patient search is unavailable.");
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    const saved = sessionStorage.getItem("prij:doctor:selected-patient");
+    if (saved) {
+      try { setSelected(JSON.parse(saved) as PatientPickerPatient); } catch { sessionStorage.removeItem("prij:doctor:selected-patient"); }
     }
+  }, []);
+
+  function select(patient: PatientPickerPatient | null) {
+    setSelected(patient);
+    if (patient) sessionStorage.setItem("prij:doctor:selected-patient", JSON.stringify(patient));
+    else sessionStorage.removeItem("prij:doctor:selected-patient");
   }
 
-  return (
-    <section className="panel compact-panel doctor-patient-tool" id="doctor-patient-search">
-      <div className="section-heading"><h2>Search Patient</h2><span className="badge">Branch scoped</span></div>
-      <form className="toolbar" onSubmit={search}>
-        <label>Patient name, phone, or MRN<input value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <button className="button secondary" data-action-id="patient.search" disabled={loading} type="submit">{loading ? "Searching…" : "Search Patient"}</button>
-      </form>
-      {status ? <p className="muted" role="status">{status}</p> : null}
-      <PatientDuplicateCandidates candidates={candidates} />
-    </section>
-  );
+  return <section className="panel compact-panel doctor-patient-tool" id="doctor-patient-search">
+    <div className="section-heading"><h2>Search patient</h2><span className="badge">Branch scoped</span></div>
+    <PatientPicker patients={[]} selectedPatientId={selected?.id ?? ""} onSelect={(id) => { if (!id) select(null); }} onPatientSelect={select} required label="Select patient" storageKey="doctor-patient-search" />
+    {selected ? <div className="topbar-actions"><Link className="button secondary compact" href={`/patients/${selected.id}`}>Open patient file</Link><Link className="button compact" href={`/patients/${selected.id}?startVisit=1`}>Start direct visit</Link></div> : null}
+  </section>;
 }
