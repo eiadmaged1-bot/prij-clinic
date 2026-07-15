@@ -439,7 +439,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             <Link className="brand" href="/dashboard">
               <span className="brand-mark">P</span>
               <strong>{t("appName")}</strong>
-              <span>{t("appSubtitle")}</span>
+              <span>{primaryRole(roles)}</span>
             </Link>
 
             {shellNavGroups.map((group) => {
@@ -497,7 +497,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 <ThreeDMedicalIcon name={isReceptionistOnly ? "reception" : "dashboard"} size="sm" tone="slate" />
               </button>
             ) : null}
-            <strong className="mobile-topbar-brand">{OFFICIAL_CLINIC_NAME}</strong>
+            <strong aria-label={`${OFFICIAL_CLINIC_NAME} — ${primaryRole(roles)}`} className="mobile-topbar-brand" title={primaryRole(roles)}>{OFFICIAL_CLINIC_NAME}</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
@@ -538,7 +538,7 @@ export function UserMenu({
     const panel = panelRef.current;
     const focusable = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []);
     const previousOverflow = document.body.style.overflow;
-    if (window.matchMedia("(max-width: 767px)").matches) document.body.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
     focusable()[0]?.focus();
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -593,10 +593,10 @@ export function UserMenu({
           <span>{role}</span>
         </span>
       </button>
-      {open ? <button aria-label="Close account menu" className="account-sheet-backdrop" onClick={() => setOpen(false)} type="button" /> : null}
-      {open ? <div aria-label="Account and preferences" aria-modal="true" className="account-menu-panel" id="account-menu-panel" ref={panelRef} role="dialog">
+      <button aria-label="Close account menu" className={`account-sheet-backdrop ${open ? "open" : ""}`} onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} type="button" />
+      {open ? <div aria-label="Account" aria-modal="true" className="account-menu-panel" id="account-menu-panel" ref={panelRef} role="dialog">
         <div className="account-sheet-heading">
-          <strong>{t("accountPreferences")}</strong>
+          <strong>Account</strong>
           <button aria-label="Close account menu" className="account-sheet-close" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} type="button">×</button>
         </div>
         <div className="account-menu-profile">
@@ -605,10 +605,7 @@ export function UserMenu({
           <span className="muted">{user.branchName || "All assigned branches"}</span>
         </div>
         <LanguageSwitcher />
-        <Link className="button secondary compact" href={canOpenAdmin ? "/admin/appearance" : roleLandingPath(user)}>
-          <ThreeDMedicalIcon name="settings" size="sm" tone="slate" />
-          {t("accountPreferences")}
-        </Link>
+        {canOpenAdmin ? <Link className="button secondary compact" href="/admin/appearance"><ThreeDMedicalIcon name="settings" size="sm" tone="slate" />Appearance settings</Link> : null}
         {canOpenAdmin ? (
           <Link className="button secondary compact" href="/admin">
             <ThreeDMedicalIcon name="admin" size="sm" tone="violet" />

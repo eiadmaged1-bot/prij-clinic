@@ -1316,7 +1316,12 @@ body {
   z-index: 70;
   border: 0;
   background: rgb(15 23 42 / 35%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 180ms ease, visibility 180ms ease;
 }
+
+.account-sheet-backdrop.open { opacity: 1; visibility: visible; }
 
 .account-sheet-heading {
   display: flex;
@@ -4064,8 +4069,8 @@ button.obgyn-template-card {
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 40;
-    width: min(22rem, 92vw);
-    max-width: 92vw;
+    width: min(21.25rem, 92vw);
+    max-width: 21.25rem;
     height: 100dvh;
     max-height: none;
     overflow-y: auto;
@@ -6358,6 +6363,22 @@ select {
 .app-shell .button:not(.secondary):not(.danger) { background: var(--production-accent); }
 .app-shell .danger { color: var(--production-danger); }
 .app-shell :is(a, button, input, select, textarea):focus-visible { outline: 3px solid rgb(8 127 123 / 28%); outline-offset: 2px; }
+
+/* Shared compact mobile shell: one stable drawer DOM for portrait, landscape, LTR, and RTL. */
+@media (max-width: 1199px) {
+  .mobile-nav-backdrop { display: block; opacity: 0; visibility: hidden; transition: opacity 180ms ease, visibility 180ms ease; }
+  .mobile-nav-backdrop.open { display: block; opacity: 1; visibility: visible; }
+  html[dir="rtl"] .sidebar { inset: 0 0 0 auto; transform: translateX(calc(100% + 2rem)); border-right: 0; border-left: 1px solid rgb(255 255 255 / 10%); }
+  html[dir="rtl"] .sidebar.open { transform: translateX(0); }
+  html[dir="rtl"] .sidebar-close-button { right: auto; left: 0.8rem; }
+  .sidebar .brand { grid-template-columns: auto 1fr; grid-template-rows: auto auto; min-height: 3.25rem; padding: 0.25rem 3rem 0.25rem 0; }
+  .sidebar .brand-mark { grid-row: 1 / 3; }
+  .sidebar .brand strong, .sidebar .brand > span:last-child { margin: 0; line-height: 1.15; }
+}
+
+@media (max-width: 767px) {
+  .topbar, .theme-prij-heritage .topbar, .theme-medicolize-portal .topbar { min-height: calc(3.25rem + env(safe-area-inset-top)); padding: max(0.35rem, env(safe-area-inset-top)) 0.5rem 0.35rem; }
+}
 .workflow-band > :nth-child(n + 5) { display: none; }
 .appearance-options { display: grid; gap: 8px; margin-block: 16px; border: 0; padding: 0; }
 .appearance-option { display: flex; min-height: 48px; gap: 10px; align-items: center; padding: 12px; border: 1px solid #dbe4e8; border-radius: 10px; }
