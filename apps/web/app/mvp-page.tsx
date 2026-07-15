@@ -328,6 +328,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const navTouchStartX = useRef<number | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { doctorComfortMode, theme } = useTheme();
   const { interfaceMode, densityMode } = useInterfaceMode();
@@ -380,7 +381,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     if (!mobileNavOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") setMobileNavOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
     return () => {
+      document.removeEventListener("keydown", closeOnEscape);
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileNavOpen]);
@@ -432,9 +438,9 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             onClick={() => setMobileNavOpen(false)}
             type="button"
           />
-          <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation">
+          <aside className={`sidebar ${mobileNavOpen ? "open" : ""}`} id="clinic-mobile-navigation" onTouchStart={(event) => { navTouchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => { const startX = navTouchStartX.current; const endX = event.changedTouches[0]?.clientX; navTouchStartX.current = null; if (startX === null || endX === undefined) return; const delta = endX - startX; const rtl = document.documentElement.dir === "rtl"; if ((!rtl && delta < -56) || (rtl && delta > 56)) setMobileNavOpen(false); }}>
             <button className="sidebar-close-button" type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation">
-              ×
+              &times;
             </button>
             <Link className="brand" href="/dashboard">
               <span className="brand-mark">P</span>
@@ -497,7 +503,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 <ThreeDMedicalIcon name={isReceptionistOnly ? "reception" : "dashboard"} size="sm" tone="slate" />
               </button>
             ) : null}
-            <strong aria-label={`${OFFICIAL_CLINIC_NAME} — ${primaryRole(roles)}`} className="mobile-topbar-brand" title={primaryRole(roles)}>{OFFICIAL_CLINIC_NAME}</strong>
+          <strong aria-label={`${OFFICIAL_CLINIC_NAME} — ${primaryRole(roles)}`} className="mobile-topbar-brand" title={primaryRole(roles)}>{OFFICIAL_CLINIC_NAME}</strong>
             <div>
             <p className="eyebrow">{t("clinicOperations")}</p>
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
@@ -597,7 +603,7 @@ export function UserMenu({
       {open ? <div aria-label="Account" aria-modal="true" className="account-menu-panel" id="account-menu-panel" ref={panelRef} role="dialog">
         <div className="account-sheet-heading">
           <strong>Account</strong>
-          <button aria-label="Close account menu" className="account-sheet-close" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} type="button">×</button>
+          <button aria-label="Close account menu" className="account-sheet-close" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} type="button">&times;</button>
         </div>
         <div className="account-menu-profile">
           <strong>{displayName}</strong>

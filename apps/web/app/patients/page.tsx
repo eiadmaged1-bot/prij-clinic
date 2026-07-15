@@ -62,6 +62,8 @@ export default function PatientsPage() {
   useEffect(() => {
     const savedCategory = localStorage.getItem("prijPatientDirectoryCategory");
     if (savedCategory) setCategory(savedCategory);
+    const requestedSearch = new URLSearchParams(window.location.search).get("search");
+    if (requestedSearch) setQuery(requestedSearch);
   }, []);
 
   const filtered = useMemo(() => {
