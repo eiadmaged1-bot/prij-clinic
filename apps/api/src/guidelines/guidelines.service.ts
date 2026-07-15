@@ -97,13 +97,21 @@ export class GuidelinesService {
     return source;
   }
 
-  async listDocuments(user: AuthUser) {
+  async listDocuments(user: AuthUser, options: { page?: string; limit?: string; status?: string } = {}) {
+    const page = Math.max(1, Number.parseInt(options.page ?? "1", 10) || 1);
+    const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
+    const accessWhere = this.documentAccessWhere(user);
+    const where = { ...accessWhere, ...(isGuidelineStatus(options.status) ? { guidelineStatus: options.status } : {}) };
+    const total = await this.prisma.guidelineDocument.count({ where });
     const documents = await this.prisma.guidelineDocument.findMany({
-      where: this.documentAccessWhere(user),
+      where,
       orderBy: { updatedAt: "desc" },
+      skip: (page - 1) * limit,
+      take: limit,
       include: { source: true, _count: { select: { chunks: true, sections: true } } }
     });
-    return { documents: await this.withLastFileAccess(documents.map(safeDocument)) };
+    const grouped = await this.prisma.guidelineDocument.groupBy({ by: ["guidelineStatus"], where: accessWhere, _count: { _all: true } });
+    return { documents: await this.withLastFileAccess(documents.map(safeDocument)), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [item.guidelineStatus, item._count._all])) };
   }
 
   async getDocument(id: string, user: AuthUser) {
@@ -130,7 +138,8 @@ export class GuidelinesService {
       where: { documentId: document.id },
       _max: { pageStart: true, pageEnd: true }
     });
-    const pageCount = Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0) || null;
+    const storedPageCount = (document as typeof document & { pageCount?: number | null }).pageCount;
+    const pageCount = storedPageCount ?? (Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0) || null);
     return this.withLastFileAccess({ ...safeDocument(document), pageCount });
   }
 
@@ -285,7 +294,7 @@ export class GuidelinesService {
     });
 
     try {
-      const extractedText = await extractText(file.buffer, file.mimetype);
+      const extracted = await extractDocument(file.buffer, file.mimetype);
       const document = await this.createIndexedDocument({
         source,
         title: dto.title,
@@ -297,6 +306,7 @@ export class GuidelinesService {
         accessLevel: dto.accessLevel ?? "OWNER_DOCTOR",
         fileName: file.originalname,
         fileMimeType: file.mimetype,
+        pageCount: extracted.pageCount,
         fileSha256: hash,
         localFilePath,
         fileEncrypted: storedFile.encrypted,
@@ -304,7 +314,7 @@ export class GuidelinesService {
         fileEncryptionIv: storedFile.encryptionIv,
         fileEncryptionTag: storedFile.encryptionTag,
         importedByUserId: user.id,
-        text: extractedText
+        text: extracted.text
       });
       await this.finishJob(job.id, "SUCCEEDED", { documentId: document.id, chunkCount: document._count.chunks });
       await this.audit.record({
@@ -384,9 +394,7 @@ export class GuidelinesService {
       }
       const isPdf = contentType.includes("application/pdf") || url.pathname.toLowerCase().endsWith(".pdf") || buffer.subarray(0, 4).toString("utf8") === "%PDF";
       const localFile = isPdf ? await this.storeOpenImportFile(buffer, hash, ".pdf") : null;
-      const text = isPdf
-        ? await extractText(buffer, "application/pdf")
-        : htmlToText(buffer.toString("utf8"));
+      const extracted = isPdf ? await extractDocument(buffer, "application/pdf") : { text: htmlToText(buffer.toString("utf8")), pageCount: null };
       const document = await this.createIndexedDocument({
         source,
         title: dto.title,
@@ -399,13 +407,14 @@ export class GuidelinesService {
         localFilePath: localFile?.localFilePath,
         fileName: localFile?.fileName,
         fileMimeType: localFile?.fileMimeType,
+        pageCount: extracted.pageCount,
         fileSha256: hash,
         fileEncrypted: localFile?.fileEncrypted,
         fileEncryptionKeyId: localFile?.fileEncryptionKeyId,
         fileEncryptionIv: localFile?.fileEncryptionIv,
         fileEncryptionTag: localFile?.fileEncryptionTag,
         importedByUserId: user.id,
-        text
+        text: extracted.text
       });
       await this.finishJob(job.id, "SUCCEEDED", { documentId: document.id, chunkCount: document._count.chunks });
       await this.audit.record({
@@ -682,6 +691,7 @@ export class GuidelinesService {
     localFilePath?: string;
     fileName?: string;
     fileMimeType?: string;
+    pageCount?: number | null;
     fileSha256?: string;
     fileEncrypted?: boolean;
     fileEncryptionKeyId?: string | null;
@@ -706,6 +716,7 @@ export class GuidelinesService {
         localFilePath: input.localFilePath,
         fileName: input.fileName,
         fileMimeType: input.fileMimeType,
+        pageCount: input.pageCount,
         fileSha256: input.fileSha256,
         fileEncrypted: input.fileEncrypted ?? false,
         fileEncryptionKeyId: input.fileEncryptionKeyId,
@@ -713,7 +724,7 @@ export class GuidelinesService {
         fileEncryptionTag: input.fileEncryptionTag,
         importedByUserId: input.importedByUserId,
         accessLevel: input.accessLevel
-      }
+      } as unknown as Prisma.GuidelineDocumentUncheckedCreateInput
     });
     await this.indexText(document, input.text);
     return this.prisma.guidelineDocument.findUniqueOrThrow({
@@ -1195,26 +1206,26 @@ function classifyGuidelineSubtopic(value: string) {
   return "General clinical guidance";
 }
 
-async function extractText(buffer: Buffer, mimeType: string) {
-  if (mimeType === "text/plain" || mimeType === "text/markdown") return buffer.toString("utf8");
+async function extractDocument(buffer: Buffer, mimeType: string): Promise<{ text: string; pageCount: number | null }> {
+  if (mimeType === "text/plain" || mimeType === "text/markdown") return { text: buffer.toString("utf8"), pageCount: null };
   const pdfModule = (await import("pdf-parse")) as unknown as {
-    default?: (input: Buffer) => Promise<{ text: string }>;
-    PDFParse?: new (input: { data: Buffer }) => { getText: () => Promise<{ text: string }>; destroy?: () => Promise<void> | void };
-    legacyParser?: (input: Buffer) => Promise<{ text: string }>;
+    default?: (input: Buffer) => Promise<{ text: string; numpages?: number }>;
+    PDFParse?: new (input: { data: Buffer }) => { getText: () => Promise<{ text: string; total?: number }>; destroy?: () => Promise<void> | void };
+    legacyParser?: (input: Buffer) => Promise<{ text: string; numpages?: number }>;
   };
   if (typeof pdfModule.default === "function") {
     const parsed = await pdfModule.default(buffer);
-    return parsed.text;
+    return { text: parsed.text, pageCount: parsed.numpages ?? null };
   }
   if (typeof pdfModule.legacyParser === "function") {
     const parsed = await pdfModule.legacyParser(buffer);
-    return parsed.text;
+    return { text: parsed.text, pageCount: parsed.numpages ?? null };
   }
   if (typeof pdfModule.PDFParse === "function") {
     const parser = new pdfModule.PDFParse({ data: buffer });
     try {
       const parsed = await parser.getText();
-      return parsed.text;
+      return { text: parsed.text, pageCount: parsed.total ?? null };
     } finally {
       await parser.destroy?.();
     }
@@ -1233,4 +1244,8 @@ function htmlToText(value: string) {
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown guideline import error.";
+}
+
+function isGuidelineStatus(value?: string): value is GuidelineStatus {
+  return Boolean(value && Object.values(GuidelineStatus).includes(value as GuidelineStatus));
 }

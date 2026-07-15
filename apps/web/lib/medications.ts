@@ -65,7 +65,7 @@ export function searchPharmacology(query: string) {
 export type PharmacologyAtlasGeneric = PharmacologySearchResult;
 export type PharmacologyAtlasFamily = { id: string; code: string; name: string; generics: PharmacologyAtlasGeneric[] };
 export type PharmacologyAtlasRoom = { name: string; icon: string; familyCount: number; genericCount: number; exampleFamilies: string[]; families: PharmacologyAtlasFamily[] };
-export type PharmacologyAtlas = { rooms: PharmacologyAtlasRoom[]; totals: { families: number; generics: number; linkedGenerics: number; unlinkedGenerics: number }; browseViews: string[]; completeDatasetClaimed: false };
+export type PharmacologyAtlas = { rooms: PharmacologyAtlasRoom[]; familyDirectory: Array<{ id: string; code: string; name: string; genericCount: number; coverage: string }>; allGenerics: PharmacologyAtlasGeneric[]; unlinkedGenerics: PharmacologyAtlasGeneric[]; recentlyReviewed: PharmacologyAtlasGeneric[]; totals: { families: number; generics: number; linkedGenerics: number; unlinkedGenerics: number; familiesBeingCompleted: number }; browseViews: string[]; completeDatasetClaimed: false };
 
 export function getPharmacologyAtlas() {
   return request<PharmacologyAtlas>("/pharmacology/atlas");

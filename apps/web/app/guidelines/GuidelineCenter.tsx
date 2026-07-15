@@ -68,6 +68,9 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const canManagePrivate = Boolean(user?.roles.includes("Owner") || user?.permissions.includes("guidelines.manage_private"));
   const [sources, setSources] = useState<Source[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [inventoryPage, setInventoryPage] = useState(1);
+  const [inventoryPageInfo, setInventoryPageInfo] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
+  const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>({});
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState("");
@@ -79,15 +82,17 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     if (!canRead) return;
     void loadBasics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canRead]);
+  }, [canRead, inventoryPage]);
 
   async function loadBasics() {
     const [sourceBody, documentBody] = await Promise.all([
       apiGet("/guidelines/sources"),
-      apiGet("/guidelines/documents")
+      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`)
     ]);
     setSources(sourceBody.sources ?? []);
     setDocuments(documentBody.documents ?? []);
+    setInventoryPageInfo(documentBody.pageInfo ?? { page: inventoryPage, limit: 20, total: documentBody.documents?.length ?? 0, hasMore: false });
+    setInventoryCounts(documentBody.counts ?? {});
   }
 
   async function apiGet(path: string) {
@@ -196,7 +201,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
               <>
                 <DocumentList documents={filterTrainingDocuments(documents).filter((item) => item.guidelineStatus === "ACTIVE")} title="All active guidelines" />
                 <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed" />
-                {canManageSources ? <DocumentList documents={documents} title="Owner/Admin inventory — all records" /> : null}
+                {canManageSources ? <><section className="guideline-inventory-counts" aria-label="Guideline inventory counts">{["ACTIVE", "NEEDS_REVIEW", "ARCHIVED", "SUPERSEDED", "DRAFT_IMPORT"].map((item) => <span className="badge" key={item}>{humanGuidelineStatus(item)}: {inventoryCounts[item] ?? 0}</span>)}</section><DocumentList documents={documents} title={`Owner/Admin inventory — ${inventoryPageInfo.total} records`} /><div className="form-actions" aria-label="Guideline inventory pagination"><button className="button secondary compact" type="button" disabled={inventoryPage <= 1} onClick={() => setInventoryPage((page) => Math.max(1, page - 1))}>Previous</button><span className="muted">Page {inventoryPageInfo.page} of {Math.max(1, Math.ceil(inventoryPageInfo.total / inventoryPageInfo.limit))}</span><button className="button secondary compact" type="button" disabled={!inventoryPageInfo.hasMore} onClick={() => setInventoryPage((page) => page + 1)}>Next</button></div></> : null}
               </>
             ) : (
               <Empty text="No guidelines imported yet. Owner/Admin can import official sources." />
@@ -384,6 +389,11 @@ function filterTrainingDocuments(documents: Document[]) {
 function isTrainingDocument(document: Document) {
   const text = `${document.title} ${document.organization} ${document.topic}`.toLowerCase();
   return document.title.toLowerCase().startsWith("demo") || text.includes("route guideline") || text.includes("local demo") || text.includes("training");
+}
+
+function humanGuidelineStatus(value: string) {
+  const labels: Record<string, string> = { ACTIVE: "Active", NEEDS_REVIEW: "Needs review", ARCHIVED: "Archived", SUPERSEDED: "Superseded", DRAFT_IMPORT: "Failed/incomplete import" };
+  return labels[value] ?? value.replaceAll("_", " ").toLowerCase();
 }
 
 function PrivateVault({

@@ -249,23 +249,15 @@ export class ExternalIntakeService {
   }
 
   private async duplicates(mapped: Record<string, unknown>) {
-    const phone = clean(String(mapped.phone ?? ""));
-    const fullName = clean(String(mapped.fullName ?? ""));
-    const birth = parseDateOrNull(String(mapped.dateOfBirth ?? ""));
+    const phone = normalizeEgyptianPhone(String(mapped.phone ?? ""));
+    if (!phone) return [];
     const candidates = await this.prisma.patient.findMany({
-      where: {
-        OR: [
-          ...(phone ? [{ phone }] : []),
-          ...(fullName ? [{ firstName: { contains: fullName.split(/\s+/)[0], mode: "insensitive" as const } }] : []),
-          ...(birth ? [{ dateOfBirth: birth }] : [])
-        ]
-      },
+      where: { phone: { in: egyptianPhoneVariants(phone) } },
       select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true, branch: { select: { name: true } }, encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
       take: 10
     });
     return candidates.map((item) => {
-      const reasons = [phone && item.phone === phone ? "exact phone" : null, birth && item.dateOfBirth?.getTime() === birth.getTime() ? "exact date of birth" : null, fullName && normalizeName(`${item.firstName} ${item.lastName}`) === normalizeName(fullName) ? "exact normalized name" : null].filter(Boolean);
-      return { id: item.id, mrn: item.medicalRecordNumber, name: `${item.firstName} ${item.lastName}`.trim(), phone: item.phone, dateOfBirth: item.dateOfBirth, branch: item.branch?.name ?? null, lastVisit: item.encounters[0]?.createdAt ?? null, confidence: reasons.length >= 2 ? "high" : reasons.length === 1 ? "medium" : "review", matchingReason: reasons.join(" + ") || "name prefix candidate" };
+      return { id: item.id, mrn: item.medicalRecordNumber, name: `${item.firstName} ${item.lastName}`.trim(), phone: item.phone, dateOfBirth: item.dateOfBirth, branch: item.branch?.name ?? null, lastVisit: item.encounters[0]?.createdAt ?? null, confidence: "exact", matchingReason: "exact normalized phone" };
     });
   }
 
@@ -273,6 +265,18 @@ export class ExternalIntakeService {
     const count = await this.prisma.patient.count();
     return `EXT-${new Date().getUTCFullYear()}-${String(count + 1).padStart(5, "0")}`;
   }
+}
+
+function normalizeEgyptianPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  if (/^01\d{9}$/.test(digits)) return `+20${digits.slice(1)}`;
+  if (/^201\d{9}$/.test(digits)) return `+${digits}`;
+  return digits.length >= 8 ? `+${digits}` : "";
+}
+
+function egyptianPhoneVariants(normalized: string) {
+  const digits = normalized.replace(/\D/g, "");
+  return digits.startsWith("20") ? [normalized, digits, `0${digits.slice(2)}`] : [normalized, digits];
 }
 
 function mapPatient(source: Record<string, unknown>) {
@@ -332,10 +336,6 @@ function phaseTitle(value: string) {
 
 function objectValue(value: unknown) {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function normalizeName(value: string) {
-  return value.toLowerCase().replace(/[أإآ]/g, "ا").replace(/ى/g, "ي").replace(/\s+/g, " ").trim();
 }
 
 type ExternalIntakeRequest = {

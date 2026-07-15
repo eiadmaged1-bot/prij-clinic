@@ -31,13 +31,27 @@ export class PatientImportService {
     const batch = await this.get(id, user);
     if (batch.status !== "previewed") throw new BadRequestException("Only a previewed batch can be imported.");
     const selected = batch.rows.filter((row) => dto.rowIds.includes(row.id));
-    if (selected.some((row) => row.status !== "READY")) throw new BadRequestException("Only READY rows can be imported; duplicate and review rows require explicit correction first.");
     let imported = 0; let failed = 0;
     for (const row of selected) {
       const value = row.normalizedJson as Record<string, unknown>;
+      const decision = dto.decisions?.[row.id] ?? "create";
+      if (!['create', 'update', 'skip'].includes(decision)) throw new BadRequestException("Every selected row needs a valid create, update, or skip decision.");
+      if (decision === "skip") continue;
       try {
-        const patient = await this.prisma.patient.create({ data: { branchId: user.branchId, medicalRecordNumber: `IMP-${new Date().getUTCFullYear()}-${row.id.slice(0, 8).toUpperCase()}`, firstName: String(value.firstName), lastName: String(value.lastName), phone: text(value.primaryPhone), dateOfBirth: date(value.birthValue), patientType: patientType(value.patientType), notes: text(value.notes), createdByUserId: user.id } });
+        const birth = birthFields(value.birthValue);
+        const notes = importNotes(value);
+        let patient;
+        if (decision === "update") {
+          const duplicates = Array.isArray(row.duplicateJson) ? row.duplicateJson as Array<Record<string, unknown>> : [];
+          const patientId = duplicates.length === 1 ? text(duplicates[0]?.id) : null;
+          if (!patientId) throw new Error("EXACT_PHONE_MATCH_REQUIRED");
+          patient = await this.prisma.patient.update({ where: { id: patientId, ...(user.branchId ? { branchId: user.branchId } : {}) }, data: { firstName: String(value.firstName), lastName: String(value.lastName), phone: text(value.primaryPhone), ...birth, patientType: patientType(value.patientType), notes } });
+        } else {
+          if (row.status === "POSSIBLE_DUPLICATE") throw new Error("EXPLICIT_UPDATE_OR_SKIP_REQUIRED");
+          patient = await this.prisma.patient.create({ data: { branchId: user.branchId, medicalRecordNumber: `IMP-${new Date().getUTCFullYear()}-${row.id.slice(0, 8).toUpperCase()}`, firstName: String(value.firstName), lastName: String(value.lastName), phone: text(value.primaryPhone), ...birth, patientType: patientType(value.patientType), notes, status: "active", createdByUserId: user.id } });
+        }
         await this.prisma.patientImportRow.update({ where: { id: row.id }, data: { status: "IMPORTED", createdPatientId: patient.id, importedAt: new Date() } }); imported += 1;
+        await this.audit.record({ actorUserId: user.id, action: decision === "update" ? "patient_import.row_updated" : "patient_import.row_created", resourceType: "patient", resourceId: patient.id, branchId: user.branchId, severity: "high", metadataJson: { batchId: id, rowId: row.id, rowNumber: row.rowNumber, decision } });
       } catch { await this.prisma.patientImportRow.update({ where: { id: row.id }, data: { status: "FAILED", errorCode: "PATIENT_CREATE_FAILED" } }); failed += 1; }
     }
     const skipped = batch.rows.length - selected.length;
@@ -53,9 +67,7 @@ export class PatientImportService {
     const warnings: string[] = [];
     if (!validName(fullName) || !normalized.lastName) return { rowNumber, status: "INVALID", normalized, warnings: ["Valid full name is required."], duplicates: [] };
     if (normalized.birthValue && !date(normalized.birthValue)) warnings.push("Birth date/year needs review.");
-    const duplicateTerms: Prisma.PatientWhereInput[] = [{ firstName: { equals: normalized.firstName, mode: "insensitive" } }];
-    if (normalized.primaryPhone) duplicateTerms.push({ phone: normalized.primaryPhone });
-    const duplicates = await this.prisma.patient.findMany({ where: { ...(user.branchId ? { branchId: user.branchId } : {}), OR: duplicateTerms }, select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true }, take: 5 });
+    const duplicates = normalized.primaryPhone ? await this.prisma.patient.findMany({ where: { ...(user.branchId ? { branchId: user.branchId } : {}), phone: { in: egyptianPhoneVariants(normalized.primaryPhone) } }, select: { id: true, medicalRecordNumber: true, firstName: true, lastName: true, phone: true, dateOfBirth: true }, take: 5 }) : [];
     return { rowNumber, status: duplicates.length ? "POSSIBLE_DUPLICATE" : warnings.length ? "NEEDS_REVIEW" : "READY", normalized, warnings, duplicates };
   }
   private assertManager(user: AuthUser) { if (!user.roles.some((role) => ["Owner", "Admin"].includes(role))) throw new ForbiddenException("Patient import is restricted to Owner and Admin roles."); }
@@ -65,6 +77,9 @@ function text(value: unknown) { const result = typeof value === "string" || type
 function unsafeCell(value: unknown) { const item = text(value) ?? ""; return /^[=+@-]/.test(item) || item.includes("\uFFFD") || /\?{3,}/.test(item); }
 function safeFileName(value: string) { return value.replace(/[^a-zA-Z0-9._\-\u0600-\u06ff ]/g, "_").slice(0, 240); }
 function validName(value: string) { return /^[\p{L}][\p{L}\p{M} .'’-]{1,239}$/u.test(value); }
-function normalizePhone(value: string | null) { return value?.replace(/[^+\d]/g, "") || null; }
-function date(value: unknown) { const input = text(value); if (!input) return null; const full = /^\d{4}$/.test(input) ? `${input}-01-01` : input.slice(0, 10); const parsed = new Date(`${full}T00:00:00.000Z`); return Number.isNaN(parsed.getTime()) ? null : parsed; }
-function patientType(value: unknown): PatientType { const key = String(value ?? "GENERAL").toUpperCase(); return ["OB", "GYN", "INFERTILITY", "WOMEN_HEALTH", "GENERAL"].includes(key) ? key as PatientType : "GENERAL"; }
+function normalizePhone(value: string | null) { const digits = value?.replace(/\D/g, "") ?? ""; if (/^01\d{9}$/.test(digits)) return `+20${digits.slice(1)}`; if (/^201\d{9}$/.test(digits)) return `+${digits}`; return digits.length >= 8 ? `+${digits}` : null; }
+function egyptianPhoneVariants(normalized: string) { const digits = normalized.replace(/\D/g, ""); return digits.startsWith("20") ? [normalized, digits, `0${digits.slice(2)}`] : [normalized, digits]; }
+function date(value: unknown) { const input = text(value); if (!input || /^\d{4}$/.test(input)) return null; const parsed = new Date(`${input.slice(0, 10)}T00:00:00.000Z`); return Number.isNaN(parsed.getTime()) ? null : parsed; }
+function birthFields(value: unknown) { const input = text(value); return /^\d{4}$/.test(input ?? "") ? { yearOfBirth: Number(input), dateOfBirth: null } : { dateOfBirth: date(input), yearOfBirth: null }; }
+function importNotes(value: Record<string, unknown>) { return [text(value.notes), text(value.address) ? `Address: ${text(value.address)}` : null, text(value.spouseName) ? `Husband name: ${text(value.spouseName)}` : null].filter(Boolean).join("\n") || null; }
+function patientType(value: unknown): PatientType { const key = String(value ?? "GENERAL").trim().toUpperCase(); if (["OB", "OBSTETRIC", "PREGNANCY", "OBSTETRIC/PREGNANCY", "حمل", "حوامل"].includes(key)) return "OB"; if (["GYN", "GYNECOLOGY", "نساء", "أمراض نساء"].includes(key)) return "GYN"; if (["INFERTILITY", "FERTILITY", "تأخر الإنجاب", "عقم"].includes(key)) return "INFERTILITY"; if (["WOMEN_HEALTH", "WOMEN'S HEALTH", "WOMENS HEALTH", "صحة المرأة"].includes(key)) return "WOMEN_HEALTH"; return "GENERAL"; }

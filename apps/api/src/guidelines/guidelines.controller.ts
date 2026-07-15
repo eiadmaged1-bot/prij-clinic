@@ -55,8 +55,8 @@ export class GuidelinesController {
 
   @Get("documents")
   @Permissions("guidelines.read")
-  documents(@CurrentUser() user: AuthUser) {
-    return this.guidelines.listDocuments(user);
+  documents(@CurrentUser() user: AuthUser, @Query("page") page?: string, @Query("limit") limit?: string, @Query("status") status?: string) {
+    return this.guidelines.listDocuments(user, { page, limit, status });
   }
 
   @Get("documents/:id")

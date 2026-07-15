@@ -87,7 +87,7 @@ export class MedicationsService {
       this.prisma.medicationGeneric.findMany({ where: { isActive: true }, include: { familyMemberships: { include: { family: true } } }, orderBy: { genericName: "asc" } })
     ]);
     const rooms = pharmacologyRooms.map((room) => {
-      const roomFamilies = families.filter((family) => roomForFamily(family.code, family.displayName) === room.name);
+      const roomFamilies = families.filter((family) => family.genericMemberships.length > 0 && roomForFamily(family.code, family.displayName) === room.name);
       const roomGenerics = roomFamilies.flatMap((family) => family.genericMemberships.map((membership) => membership.medication));
       return {
         ...room,
@@ -100,7 +100,16 @@ export class MedicationsService {
     const unlinked = generics.filter((generic) => generic.familyMemberships.length === 0);
     const other = rooms.find((room) => room.name === "Other");
     if (other && unlinked.length) other.families.push({ id: "unlinked", code: "UNLINKED", name: "Unlinked / other generics", generics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")) });
-    return { rooms, totals: { families: families.length, generics: generics.length, linkedGenerics: generics.length - unlinked.length, unlinkedGenerics: unlinked.length }, browseViews: pharmacologyBrowseViews, completeDatasetClaimed: false };
+    return {
+      rooms,
+      familyDirectory: families.map((family) => ({ id: family.id, code: family.code, name: family.displayName, genericCount: family.genericMemberships.length, coverage: family.genericMemberships.length ? "Linked generics available" : "Content being completed" })),
+      allGenerics: generics.map((generic) => atlasGeneric(generic, generic.familyMemberships.map((item) => item.family.displayName).join(", ") || generic.familyName || "Family not linked")),
+      unlinkedGenerics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")),
+      recentlyReviewed: generics.filter((generic) => generic.reviewStatus === "reviewed").sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime()).slice(0, 10).map((generic) => atlasGeneric(generic, generic.familyMemberships.map((item) => item.family.displayName).join(", ") || generic.familyName || "Family not linked")),
+      totals: { families: families.length, generics: generics.length, linkedGenerics: generics.length - unlinked.length, unlinkedGenerics: unlinked.length, familiesBeingCompleted: families.filter((family) => !family.genericMemberships.length).length },
+      browseViews: pharmacologyBrowseViews,
+      completeDatasetClaimed: false
+    };
   }
 
   async pharmacologyProfile(id: string) {

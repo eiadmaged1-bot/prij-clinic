@@ -3671,6 +3671,7 @@ model GuidelineDocument {
   localFilePath       String?
   fileName            String?
   fileMimeType        String?
+  pageCount           Int?
   fileSha256          String?
   fileEncrypted       Boolean                @default(false)
   fileEncryptionKeyId String?

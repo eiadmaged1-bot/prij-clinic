@@ -5,6 +5,7 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { calculateMedicationFormula, getPharmacologyAtlas, getPharmacologyCoverage, getPharmacologyProfile, searchPharmacology, type ApprovedDoseFormula, type MedicationFormulaResult, type PharmacologyAtlas, type PharmacologyProfile, type PharmacologySearchResult } from "@/lib/medications";
 
 type SummaryLevel = "Quick" | "Clinical" | "Full source";
+type BrowseMode = "rooms" | "generics" | "families" | "unlinked" | "recent" | "favorites";
 const profileSections = ["Quick overview", "Uses", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/lactation", "Monitoring", "Calculators", "Sources"] as const;
 
 export function PharmacologyWorkspace() {
@@ -18,9 +19,12 @@ export function PharmacologyWorkspace() {
   const [familyId, setFamilyId] = useState("");
   const [level, setLevel] = useState<SummaryLevel>("Quick");
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [browseMode, setBrowseMode] = useState<BrowseMode>("rooms");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    try { setFavoriteIds(JSON.parse(localStorage.getItem("prij:pharmacology:favorites") ?? "[]") as string[]); } catch { setFavoriteIds([]); }
     void Promise.all([getPharmacologyAtlas(), getPharmacologyCoverage()]).then(([atlasData, coverageData]) => {
       setAtlas(atlasData);
       setCoverage(coverageData.profiles);
@@ -43,6 +47,7 @@ export function PharmacologyWorkspace() {
   }
 
   function closeProfile() { setSelected(null); setOpenSection(null); window.requestAnimationFrame(() => searchRef.current?.focus({ preventScroll: true })); }
+  function toggleFavorite(id: string) { setFavoriteIds((current) => { const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id]; localStorage.setItem("prij:pharmacology:favorites", JSON.stringify(next)); return next; }); }
   const groupedResults = results.reduce<Record<string, PharmacologySearchResult[]>>((groups, result) => { (groups[result.family || "Other generics"] ??= []).push(result); return groups; }, {});
 
   return <section className="pharmacology-workspace">
@@ -53,8 +58,10 @@ export function PharmacologyWorkspace() {
       <p className="muted">{status}</p>
     </form>
     {atlas ? <section className="panel pharmacology-coverage" aria-label="Pharmacology content coverage"><div className="section-heading"><div><h2>Content coverage</h2><p className="muted">Preserved catalog; not a complete or fully verified formulary.</p></div><span className="badge">{atlas.totals.generics} generics · {atlas.totals.families} families</span></div><p className="muted">Linked generics: {atlas.totals.linkedGenerics} · Unlinked: {atlas.totals.unlinkedGenerics}{coverage ? ` · Mechanism: ${coverage.mechanism ?? 0} · Pregnancy/lactation: ${coverage.pregnancyLactation ?? 0} · Renal: ${coverage.renal ?? 0}` : ""}</p></section> : null}
+    {atlas ? <nav className="pharmacology-directory-tabs" aria-label="Pharmacology directory views">{([['rooms', 'Clinical rooms'], ['generics', 'Browse all generics'], ['families', 'Browse all families'], ['unlinked', 'Unlinked generics'], ['recent', 'Recently reviewed'], ['favorites', 'Favorites']] as Array<[BrowseMode, string]>).map(([mode, label]) => <button className={browseMode === mode ? "active" : ""} type="button" key={mode} onClick={() => { setBrowseMode(mode); setRoomName(""); setFamilyId(""); }}>{label}</button>)}</nav> : null}
     {atlas ? <section className="pharmacology-browse-lenses" aria-label="Alternative browse views"><strong>Browse by:</strong>{atlas.browseViews.map((view) => <button className="badge clickable-chip" key={view} type="button" onClick={() => { setQuery(view); setRoomName(""); setFamilyId(""); }}>{view}</button>)}</section> : null}
-    {!query.trim() && atlas ? <AtlasBrowser atlas={atlas} roomName={roomName} familyId={familyId} onRoom={(name) => { setRoomName(name); setFamilyId(""); }} onFamily={setFamilyId} onGeneric={(generic) => void openProfile(generic)} /> : null}
+    {!query.trim() && atlas && browseMode === "rooms" ? <AtlasBrowser atlas={atlas} roomName={roomName} familyId={familyId} onRoom={(name) => { setRoomName(name); setFamilyId(""); }} onFamily={setFamilyId} onGeneric={(generic) => void openProfile(generic)} /> : null}
+    {!query.trim() && atlas && browseMode !== "rooms" ? <AtlasDirectory atlas={atlas} mode={browseMode} favoriteIds={favoriteIds} onGeneric={(generic) => void openProfile(generic)} /> : null}
     {results.length ? <p className="warning-text">Local susceptibility/culture review remains required. Spectrum terms never imply guaranteed susceptibility.</p> : null}
     {query.trim() ? <div className="pharmacology-result-list">{Object.entries(groupedResults).map(([family, generics]) => <section className="pharmacology-family-group" key={family}><h2>{family}</h2>{generics.map((result) => <article className="panel pharmacology-quick-card" key={result.id}>
       <div><h2>{result.genericName}</h2><p className="muted">{result.family || "Family not linked"} · {result.pharmacologicClass || "Class being completed"}</p></div>
@@ -66,10 +73,17 @@ export function PharmacologyWorkspace() {
       <header><div><p className="eyebrow">Generic medication profile</p><h2>{selected.genericName}</h2><p className="muted">{selected.family || "Family not linked"} · {selected.pharmacologicClass || selected.className || "Class not reviewed"}</p></div><button className="button secondary compact" type="button" onClick={closeProfile} aria-label="Close profile">Close</button></header>
       <nav className="summary-level-switch" aria-label="Summary level">{(["Quick", "Clinical", "Full source"] as SummaryLevel[]).map((item) => <button className={level === item ? "active" : ""} key={item} type="button" onClick={() => setLevel(item)}>{item}</button>)}</nav>
       <p className="notice">Assistive reference only. Doctor review is required; this profile does not diagnose, select treatment, prescribe, or dose.</p>
-      <div className="pharmacology-profile-actions"><Link href={`/clinical-tags?medication=${encodeURIComponent(selected.genericName)}`}>View patient cohort</Link><Link href={`/prescriptions?medicationGenericId=${selected.id}`}>Add generic to active prescription draft</Link><button type="button">Add to frequent medicines</button></div>
+      <div className="pharmacology-profile-actions"><Link href={`/clinical-tags?medication=${encodeURIComponent(selected.genericName)}`}>View patient cohort</Link><Link href={`/prescriptions?medicationGenericId=${selected.id}`}>Add generic to active prescription draft</Link><button type="button" onClick={() => toggleFavorite(selected.id)}>{favoriteIds.includes(selected.id) ? "Remove from favorites" : "Add to favorites"}</button></div>
       <div className="pharmacology-accordion">{profileSections.map((section) => <section key={section}><button aria-expanded={openSection === section} type="button" onClick={() => setOpenSection((current) => current === section ? null : section)}>{section}<span>{openSection === section ? "−" : "+"}</span></button>{openSection === section ? <ProfileSectionContent profile={selected} section={section} level={level} /> : null}</section>)}</div>
     </aside></div> : null}
   </section>;
+}
+
+function AtlasDirectory({ atlas, mode, favoriteIds, onGeneric }: { atlas: PharmacologyAtlas; mode: Exclude<BrowseMode, "rooms">; favoriteIds: string[]; onGeneric: (generic: PharmacologySearchResult) => void }) {
+  if (mode === "families") return <section className="panel atlas-level"><div className="section-heading"><h2>All medication families</h2><span className="badge">{atlas.familyDirectory.length}</span></div><div className="atlas-family-grid">{atlas.familyDirectory.filter((family) => family.genericCount > 0).map((family) => <article className="data-row" key={family.id}><strong>{family.name}</strong><span>{family.genericCount} linked generics</span></article>)}</div>{atlas.totals.familiesBeingCompleted ? <details><summary>Content being completed ({atlas.totals.familiesBeingCompleted} zero-member families)</summary><div className="clinical-chip-row">{atlas.familyDirectory.filter((family) => family.genericCount === 0).map((family) => <span className="badge" key={family.id}>{family.name}</span>)}</div></details> : null}</section>;
+  const generics = mode === "unlinked" ? atlas.unlinkedGenerics : mode === "recent" ? atlas.recentlyReviewed : mode === "favorites" ? atlas.allGenerics.filter((generic) => favoriteIds.includes(generic.id)) : atlas.allGenerics;
+  const title = mode === "unlinked" ? "Unlinked generics" : mode === "recent" ? "Recently reviewed" : mode === "favorites" ? "Favorite generics" : "All generics";
+  return <section className="panel atlas-level"><div className="section-heading"><h2>{title}</h2><span className="badge">{generics.length}</span></div>{generics.length ? <div className="atlas-generic-grid">{generics.map((generic) => <article className="data-row" key={generic.id}><strong>{generic.genericName}</strong><span className="muted">{generic.family || "Family not linked"} · {generic.pharmacologicClass || "Class being completed"}</span><p>{generic.profileCompleteness > 0 ? "Source-linked sections available" : "Profile sections being completed"}</p><button className="button secondary compact" type="button" onClick={() => onGeneric(generic)}>Open profile</button></article>)}</div> : <p className="empty-state compact">No records in this view.</p>}</section>;
 }
 
 function AtlasBrowser({ atlas, roomName, familyId, onRoom, onFamily, onGeneric }: { atlas: PharmacologyAtlas; roomName: string; familyId: string; onRoom: (name: string) => void; onFamily: (id: string) => void; onGeneric: (generic: PharmacologySearchResult) => void }) {

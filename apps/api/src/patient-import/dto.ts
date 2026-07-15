@@ -11,4 +11,5 @@ export class PreviewPatientImportDto {
 
 export class CommitPatientImportDto {
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(5000) @IsUUID("4", { each: true }) rowIds!: string[];
+  @IsOptional() @IsObject() decisions?: Record<string, "create" | "update" | "skip">;
 }

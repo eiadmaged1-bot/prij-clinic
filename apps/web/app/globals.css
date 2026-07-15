@@ -1819,6 +1819,11 @@ details.form-fieldset summary {
   }
 }
 
+.pharmacology-directory-tabs { display: flex; gap: 6px; margin-block: 10px 14px; overflow-x: auto; padding-bottom: 4px; }
+.pharmacology-directory-tabs button { background: #fff; border: 1px solid var(--border); border-radius: 999px; flex: 0 0 auto; min-height: 40px; padding: 7px 12px; }
+.pharmacology-directory-tabs button.active { background: #e8f5f1; border-color: var(--accent); color: var(--accent-dark); font-weight: 750; }
+.guideline-inventory-counts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+
 .compact-summary-list div {
   min-width: 0;
   border: 1px solid var(--border);
@@ -6232,7 +6237,7 @@ select {
 .pdf-toolbar label { display: flex; align-items: center; gap: 4px; }
 .pdf-toolbar input { width: 64px; min-height: 44px; }
 .native-pdf-frame { min-height: 70vh; transform-origin: center top; transition: transform 160ms ease; }
-.native-pdf-frame iframe { width: 100%; min-height: 70vh; border: 0; background: #e7ecee; }
+.native-pdf-frame iframe, .native-pdf-frame object { width: 100%; min-height: 70vh; border: 0; background: #e7ecee; }
 .guideline-page-fallback { min-height: 65vh; padding: clamp(16px, 4vw, 48px); border: 1px solid #d7e0e3; background: #fff; }
 .guideline-structured-summary details { padding: 8px 0; border-bottom: 1px solid #e1e8ea; }
 .guideline-structured-summary summary { cursor: pointer; font-weight: 700; }
@@ -6305,7 +6310,7 @@ select {
   .guideline-pdf-workspace > * { display: none; position: static; max-height: none; }
   .guideline-pdf-workspace > .mobile-active { display: block; }
   .native-pdf-frame,
-  .native-pdf-frame iframe { min-height: 68vh; }
+  .native-pdf-frame iframe, .native-pdf-frame object { min-height: 68vh; }
 }
 @media (max-width: 767px) {
   .topbar,

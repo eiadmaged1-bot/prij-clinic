@@ -5,7 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell } from "../mvp-page";
 import { attachSubmissionToPatient, createPatientFromSubmission, ExternalIntakeSubmission, listExternalIntake, rejectExternalSubmission, requestExternalIntakeCorrection } from "@/lib/external-intake";
-import { getApiBaseUrl } from "@/lib/api-base-url";
+import { PatientPicker } from "@/components/clinic/PatientPicker";
 
 const mappedFields = [
   ["fullName", "Full name"],
@@ -89,7 +89,7 @@ export default function ExternalIntakePage() {
 function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntakeSubmission | null; onChanged(): Promise<void> }) {
   const [reviewReason, setReviewReason] = useState("");
   const [patientId, setPatientId] = useState("");
-  const [createInitialPhase, setCreateInitialPhase] = useState(true);
+  const [createInitialPhase, setCreateInitialPhase] = useState(false);
   const [status, setStatus] = useState("");
 
   useEffect(() => {
@@ -157,7 +157,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
       </div>
 
       <div className="section-heading"><h3>Duplicate candidates</h3><span className="badge">{duplicates.length}</span></div>
-      {duplicates.length === 0 ? <p className="muted">No duplicate candidates found by phone, name, or date of birth.</p> : null}
+      {duplicates.length === 0 ? <p className="muted">No exact normalized phone duplicate was found. Names, MRNs, and birth dates remain available for manual comparison.</p> : null}
       <div className="clinical-chip-row">
         {duplicates.map((candidate) => (
           <button className={`clinical-chip ${patientId === String(candidate.id) ? "active" : ""}`} key={String(candidate.id)} type="button" onClick={() => setPatientId(String(candidate.id))}>
@@ -176,7 +176,7 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
       </form>
 
       <form className="form-grid" onSubmit={(event) => void action(event, "attach")}>
-        <div className="wide"><PatientSearchPicker selectedId={patientId} onSelect={setPatientId} /></div>
+        <div className="wide"><PatientPicker patients={[]} selectedPatientId={patientId} onSelect={setPatientId} onPatientSelect={(patient) => setPatientId(patient?.id ?? "")} required label="Find existing patient" storageKey="external-intake-patient" /></div>
         <button className="button secondary" type="submit" disabled={!patientId}>Attach selected patient</button>
         {patientId ? <Link className="button secondary" href={`/patients/${patientId}`}>Open selected patient</Link> : null}
       </form>
@@ -189,26 +189,6 @@ function SubmissionDetail({ submission, onChanged }: { submission: ExternalIntak
       <p className="form-warning">External text is untrusted and is not written to signed records, pregnancy episodes, investigations, or documents without review.</p>
     </section>
   );
-}
-
-type PatientCandidate = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string; phone?: string | null; dateOfBirth?: string | null; branch?: { name?: string } | null };
-
-function PatientSearchPicker({ selectedId, onSelect }: { selectedId: string; onSelect(id: string): void }) {
-  const [query, setQuery] = useState("");
-  const [candidates, setCandidates] = useState<PatientCandidate[]>([]);
-  useEffect(() => {
-    if (query.trim().length < 2) { setCandidates([]); return; }
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => {
-      const token = sessionStorage.getItem("prijClinicToken");
-      void fetch(`${getApiBaseUrl()}/patients?q=${encodeURIComponent(query.trim())}`, { credentials: "include", signal: controller.signal, headers: token ? { authorization: `Bearer ${token}` } : undefined })
-        .then(async (response) => response.ok ? response.json() : { patients: [] })
-        .then((data: { patients?: PatientCandidate[] }) => setCandidates(data.patients ?? []))
-        .catch(() => setCandidates([]));
-    }, 220);
-    return () => { window.clearTimeout(timeout); controller.abort(); };
-  }, [query]);
-  return <section className="compact-panel"><label>Find existing patient by name, phone, or MRN<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, or MRN" /></label><div className="dense-card-list">{candidates.map((candidate) => <button className={`picker-row ${selectedId === candidate.id ? "active" : ""}`} key={candidate.id} type="button" onClick={() => onSelect(candidate.id)}><strong>{[candidate.firstName, candidate.lastName].filter(Boolean).join(" ")}</strong><span>{[candidate.medicalRecordNumber, candidate.phone, candidate.dateOfBirth?.slice(0, 10), candidate.branch?.name].filter(Boolean).join(" · ")}</span></button>)}{query.trim().length >= 2 && !candidates.length ? <p className="muted">No permitted patient matches.</p> : null}</div></section>;
 }
 
 function objectValue(value: unknown) {
