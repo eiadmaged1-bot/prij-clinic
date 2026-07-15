@@ -90,7 +90,7 @@ function NewPatientContent() {
       router.refresh();
       return { kind: body?.alreadyQueued ? "already" as const : "queued" as const, queueNumber: body?.queueNumber };
     }
-    if (body?.error?.code === "QUEUE_ACTIVE_TICKET_EXISTS" || body?.code === "QUEUE_ACTIVE_TICKET_EXISTS" || response.status === 409) return { kind: "already" as const };
+    if (body?.error?.code === "QUEUE_ACTIVE_TICKET_EXISTS" || body?.code === "QUEUE_ACTIVE_TICKET_EXISTS") return { kind: "already" as const };
     if (response.status === 400 || response.status === 422) return { kind: "validation" as const };
     return { kind: "failed" as const };
   }

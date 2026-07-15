@@ -22,7 +22,7 @@ export function PatientSearchMobile() {
 
   return <section className="panel compact-panel doctor-patient-tool" id="doctor-patient-search">
     <div className="section-heading"><h2>Search patient</h2><span className="badge">Branch scoped</span></div>
-    <PatientPicker patients={[]} selectedPatientId={selected?.id ?? ""} onSelect={(id) => { if (!id) select(null); }} onPatientSelect={select} required label="Select patient" storageKey="doctor-patient-search" />
+    <PatientPicker patients={selected ? [selected] : []} selectedPatientId={selected?.id ?? ""} onSelect={(id) => { if (!id) select(null); }} onPatientSelect={select} required label="Select patient" storageKey="doctor-patient-search" />
     {selected ? <div className="topbar-actions"><Link className="button secondary compact" href={`/patients/${selected.id}`}>Open patient file</Link><Link className="button compact" href={`/patients/${selected.id}?startVisit=1`}>Start direct visit</Link></div> : null}
   </section>;
 }

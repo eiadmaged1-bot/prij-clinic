@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { PatientStatus, PatientType, Prisma } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuditService } from "../../audit/audit.service";
-import { branchScope } from "../../auth/scope";
+import { branchScope, isOwnerOrAdmin } from "../../auth/scope";
 import type { AuthUser } from "../../auth/auth.types";
 import { ClinicTimeService } from "../../clinic-time/clinic-time.service";
 
@@ -22,10 +22,14 @@ export class PatientSearchService {
     private readonly clinicTime: ClinicTimeService
   ) {}
 
-  async list(user: AuthUser, options: { query?: string; mode?: string; includeArchived?: string; page?: string; limit?: string } = {}) {
+  async list(user: AuthUser, options: { query?: string; mode?: string; includeArchived?: string; page?: string; limit?: string; branchId?: string; patientType?: string; status?: string; sort?: string } = {}) {
     const query = options.query?.trim() ?? "";
     const directoryMode = options.mode === "directory";
-    const includeArchived = options.includeArchived === "true";
+    const allStatuses = options.status === "all";
+    const requestedStatus = isPatientStatus(options.status) ? options.status : directoryMode && !allStatuses ? PatientStatus.active : undefined;
+    const includeArchived = options.includeArchived === "true" || requestedStatus === PatientStatus.archived || allStatuses;
+    const requestedType = isPatientType(options.patientType) ? options.patientType : undefined;
+    const requestedBranchId = options.branchId && (isOwnerOrAdmin(user) || options.branchId === user.branchId) ? options.branchId : undefined;
     const page = Math.max(1, Math.min(1000, Number.parseInt(options.page ?? "1", 10) || 1));
     const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
     if (!directoryMode && query.length < 2) return { patients: [], pageInfo: { page, limit, hasMore: false, total: 0 } };
@@ -36,7 +40,9 @@ export class PatientSearchService {
     const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
     const where: Prisma.PatientWhereInput = {
       ...branchScope(user),
-      ...(includeArchived ? {} : { status: { not: "archived" } }),
+      ...(requestedBranchId ? { branchId: requestedBranchId } : {}),
+      ...(requestedStatus ? { status: requestedStatus } : includeArchived ? {} : { status: { not: PatientStatus.archived } }),
+      ...(requestedType ? { patientType: requestedType } : {}),
       NOT: demoPatientWhere()
     };
     if (query) {
@@ -50,10 +56,13 @@ export class PatientSearchService {
         ...(normalizedPhone ? [{ phone: { contains: normalizedPhone } } satisfies Prisma.PatientWhereInput] : [])
       ];
     }
+    const orderBy = patientOrderBy(options.sort);
+    const useRankedWindow = Boolean(query) || options.sort === "last_visit_desc";
+    const total = await this.prisma.patient.count({ where });
     const candidates = await this.prisma.patient.findMany({
       where,
-      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
-      take: query ? 250 : 100,
+      orderBy,
+      ...(useRankedWindow ? { take: Math.min(total, 1000) } : { skip: (page - 1) * limit, take: limit }),
       include: {
         branch: { select: { id: true, name: true } },
         clinicalPhases: {
@@ -65,9 +74,17 @@ export class PatientSearchService {
         queueTickets: { where: { queueDate, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, status: true, queueDate: true, queueNumber: true, branchId: true, visitType: true } }
       }
     });
-    const ranked = candidates.sort((left, right) => patientSearchScore(right, query, normalizedPhone, qrToken) - patientSearchScore(left, query, normalizedPhone, qrToken) || right.updatedAt.getTime() - left.updatedAt.getTime());
-    const total = ranked.length;
-    const patients = ranked.slice((page - 1) * limit, page * limit);
+    const ranked = options.sort === "last_visit_desc"
+      ? candidates.sort((left, right) => encounterTime(right.encounters[0]) - encounterTime(left.encounters[0]))
+      : query
+        ? candidates.sort((left, right) => patientSearchScore(right, query, normalizedPhone, qrToken) - patientSearchScore(left, query, normalizedPhone, qrToken) || right.updatedAt.getTime() - left.updatedAt.getTime())
+        : candidates;
+    const patients = useRankedWindow ? ranked.slice((page - 1) * limit, page * limit) : ranked;
+    const branches = directoryMode ? await this.prisma.branch.findMany({
+      where: isOwnerOrAdmin(user) ? { status: "active" } : { id: user.branchId ?? undefined, status: "active" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true }
+    }) : [];
 
     await this.audit.record({
       actorUserId: user.id,
@@ -83,9 +100,30 @@ export class PatientSearchService {
         const { clinicalPhases, encounters, queueTickets, ...row } = patient;
         return { ...row, phoneSuffix: patient.phone ? patient.phone.replace(/\D/g, "").slice(-4) : null, currentPhase: clinicalPhases[0] ?? null, latestVisitDate: encounters[0]?.startedAt ?? encounters[0]?.createdAt ?? null, queueState: queueTickets[0] ?? null };
       }),
-      pageInfo: { page, limit, hasMore: page * limit < total, total }
+      pageInfo: { page, limit, hasMore: page * limit < total, total },
+      filters: { branches }
     };
   }
+}
+
+function isPatientStatus(value?: string): value is PatientStatus {
+  return Boolean(value && Object.values(PatientStatus).includes(value as PatientStatus));
+}
+
+function isPatientType(value?: string): value is PatientType {
+  return Boolean(value && Object.values(PatientType).includes(value as PatientType));
+}
+
+function patientOrderBy(sort?: string): Prisma.PatientOrderByWithRelationInput[] {
+  if (sort === "created_oldest") return [{ createdAt: "asc" }];
+  if (sort === "name_az") return [{ firstName: "asc" }, { lastName: "asc" }];
+  if (sort === "name_za") return [{ firstName: "desc" }, { lastName: "desc" }];
+  if (sort === "file_number") return [{ medicalRecordNumber: "asc" }];
+  return [{ createdAt: "desc" }, { updatedAt: "desc" }];
+}
+
+function encounterTime(encounter?: { startedAt: Date | null; createdAt: Date } | null) {
+  return (encounter?.startedAt ?? encounter?.createdAt)?.getTime() ?? 0;
 }
 
 function patientSearchScore(patient: { medicalRecordNumber: string; firstName: string; lastName: string; phone: string | null; qrToken: string }, query: string, normalizedPhone: string, qrToken: string) {

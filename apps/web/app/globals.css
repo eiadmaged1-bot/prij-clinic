@@ -1746,11 +1746,22 @@ details.form-fieldset summary {
 }
 
 .compact-action-grid .reception-action-card {
+  height: 100%;
   min-height: 5.25rem;
   padding: 0.85rem;
 }
 
+.compact-action-grid {
+  grid-auto-rows: 1fr;
+}
+
+.reception-action-card .medical-icon {
+  flex: 0 0 auto;
+}
+
 .reception-action-card span {
+  line-height: 1.25;
+  min-width: 0;
   word-break: normal;
   overflow-wrap: normal;
   hyphens: none;

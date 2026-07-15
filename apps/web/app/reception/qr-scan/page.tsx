@@ -83,7 +83,7 @@ export default function ReceptionQrScanPage() {
   }
 
   async function checkIn() {
-    if (!patient || !visitType || patient.status === "archived") return;
+    if (!patient || !visitType) return;
     setStatus(copy.adding);
     const response = await fetch(`${getApiBaseUrl()}/queue/check-in`, {
       method: "POST", credentials: "include",
@@ -112,9 +112,8 @@ export default function ReceptionQrScanPage() {
       </article>
       <article className="panel compact-panel">
         <div className="section-heading"><h2>{copy.manual}</h2><span className="badge">{status || copy.manualReady}</span></div>
-        <PatientPicker patients={[]} selectedPatientId={patient?.id ?? ""} onSelect={(id) => { if (!id) setPatient(null); }} onPatientSelect={(selected) => { setPatient(selected); setStatus(selected ? copy.found : ""); }} required label={copy.select} storageKey="qr-manual-lookup" />
-        {patient?.status === "archived" ? <div className="notice"><strong>{copy.archived}</strong><span>{copy.restore}</span><Link className="button secondary compact" href={`/patients/${patient.id}`}>{copy.open}</Link></div> : null}
-        {patient && patient.status !== "archived" ? <div className="selected-patient-card"><SelectedPatientSummary patient={patient} /><VisitTypeSelector value={visitType} onChange={setVisitType} compact /><div className="form-actions"><Link className="button secondary compact" href={`/patients/${patient.id}`}>{copy.open}</Link><button className="button" type="button" onClick={() => void checkIn()} disabled={!visitType}>{copy.confirm}</button></div></div> : null}
+        <PatientPicker patients={patient ? [patient] : []} selectedPatientId={patient?.id ?? ""} onSelect={(id) => { if (!id) setPatient(null); }} onPatientSelect={(selected) => { setPatient(selected); setStatus(selected ? copy.found : ""); }} required label={copy.select} storageKey="qr-manual-lookup" />
+        {patient ? <div className="selected-patient-card"><SelectedPatientSummary patient={patient} /><VisitTypeSelector value={visitType} onChange={setVisitType} compact /><div className="form-actions"><Link className="button secondary compact" href={`/patients/${patient.id}`}>{copy.open}</Link><button className="button" type="button" onClick={() => void checkIn()} disabled={!visitType}>{copy.confirm}</button></div></div> : null}
       </article>
     </section>
   </AppShell>;

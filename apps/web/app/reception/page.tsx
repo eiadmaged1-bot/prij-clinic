@@ -47,8 +47,8 @@ export default function ReceptionHomePage() {
     <section className="panel compact-panel today-summary-card" aria-label={copy.queuePreview}>
       <div className="section-heading"><h2>{copy.queuePreview}</h2><button className="button secondary compact" type="button" onClick={() => void refreshQueue()}>Refresh</button></div>
       {error ? <p className="notice" role="status">{error}</p> : null}
-      <p className="queue-compact-line queue-indicator-row-clean">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgent.length}</p>
-      <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {next ? `${patientLabel(next.patient)} · ${visitTypeLabel(next.visitType)}` : copy.noPatientWaiting}</p>
+      <p className="queue-compact-line queue-indicator-row-clean">{copy.waiting}: {waiting.length} {"\u00b7"} {copy.urgent}: {urgent.length}</p>
+      <p className="queue-compact-line"><strong>{copy.nextPatient}:</strong> {next ? `${patientLabel(next.patient)} \u00b7 ${visitTypeLabel(next.visitType)}` : copy.noPatientWaiting}</p>
       <Link className="button secondary compact" href="/queue">{copy.openQueue}</Link>
     </section>
   </AppShell>;

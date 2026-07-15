@@ -66,9 +66,13 @@ export class PatientsController {
     @Query("mode") mode?: string,
     @Query("includeArchived") includeArchived?: string,
     @Query("page") page?: string,
-    @Query("limit") limit?: string
+    @Query("limit") limit?: string,
+    @Query("branchId") branchId?: string,
+    @Query("patientType") patientType?: string,
+    @Query("status") status?: string,
+    @Query("sort") sort?: string
   ) {
-    return this.search.list(user, { query: query ?? search, mode, includeArchived, page, limit });
+    return this.search.list(user, { query: query ?? search, mode, includeArchived, page, limit, branchId, patientType, status, sort });
   }
 
   @Get(":id")

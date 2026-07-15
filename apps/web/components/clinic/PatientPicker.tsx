@@ -49,15 +49,15 @@ export function PatientPicker({
   storageKey = "patient-search"
 }: PatientPickerProps) {
   const [query, setQuery] = useState("");
-  const [expanded, setExpanded] = useState(!selectedPatientId);
-  const [includeArchived, setIncludeArchived] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<PatientPickerPatient | null>(null);
   const [livePatients, setLivePatients] = useState<PatientPickerPatient[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [searchError, setSearchError] = useState("");
   const resultsRef = useRef<HTMLDivElement>(null);
   const sourcePatients = liveSearch ? livePatients : patients;
-  const selected = sourcePatients.find((patient) => patient.id === selectedPatientId) ?? patients.find((patient) => patient.id === selectedPatientId) ?? null;
+  const selected = sourcePatients.find((patient) => patient.id === selectedPatientId) ?? patients.find((patient) => patient.id === selectedPatientId) ?? (selectedSnapshot?.id === selectedPatientId ? selectedSnapshot : null);
 
   useEffect(() => {
     const savedQuery = sessionStorage.getItem(`prij:${storageKey}:query`);
@@ -75,21 +75,21 @@ export function PatientPicker({
     const timer = window.setTimeout(() => {
       setPage(1);
       setSearchError("");
-      void fetchPatients(text, includeArchived, 1)
+      void fetchPatients(text, 1)
         .then((data) => { setLivePatients(data.patients); setHasMore(data.hasMore); })
         .catch(() => setSearchError("Patient search is temporarily unavailable. Your selection and prior results were kept."));
     }, 220);
     return () => window.clearTimeout(timer);
-  }, [includeArchived, liveSearch, minSearchLength, query]);
+  }, [liveSearch, minSearchLength, query]);
 
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase();
     if (text.length < minSearchLength) return [];
     return sourcePatients
-      .filter((patient) => includeArchived || patient.status !== "archived")
+      .filter((patient) => patient.status !== "archived")
       .filter((patient) => patientSearchText(patient).includes(text))
       .filter((patient) => !isDemoLikePatient(patient));
-  }, [includeArchived, minSearchLength, query, sourcePatients]);
+  }, [minSearchLength, query, sourcePatients]);
 
   return (
     <div className="patient-picker" data-patient-picker>
@@ -100,14 +100,13 @@ export function PatientPicker({
       {selected ? <SelectedPatientSummary patient={selected} /> : <p className="empty-state compact smart-empty-state"><span>{required ? "No patient selected." : standaloneLabel}</span></p>}
       {expanded ? <div className="patient-picker-panel">
         <label>Search patient<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, MRN, or permanent QR" aria-label="Search patient" /></label>
-        <label className="checkbox-row"><input checked={includeArchived} onChange={(event) => setIncludeArchived(event.target.checked)} type="checkbox" />Include archived</label>
         {searchError ? <p className="notice" role="status">{searchError}</p> : null}
         <div className="dense-card-list patient-picker-results" ref={resultsRef} onScroll={(event) => sessionStorage.setItem(`prij:${storageKey}:scroll`, String(event.currentTarget.scrollTop))} aria-label="Patient results">
-          {allowStandalone ? <button className={`picker-row ${!selectedPatientId ? "active" : ""}`} type="button" onClick={() => { onSelect(""); onPatientSelect?.(null); setExpanded(false); }}><strong>{standaloneLabel}</strong><span>No patient file attached</span></button> : null}
+          {allowStandalone ? <button className={`picker-row ${!selectedPatientId ? "active" : ""}`} type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}><strong>{standaloneLabel}</strong><span>No patient file attached</span></button> : null}
           {query.trim().length < minSearchLength ? <p className="empty-state compact smart-empty-state"><span>Enter at least {minSearchLength} characters.</span></p> : null}
-          {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { onSelect(patient.id); onPatientSelect?.(patient); setExpanded(false); }} />)}
+          {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
           {query.trim().length >= minSearchLength && !matches.length && !searchError ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
-          {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), includeArchived, nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }).catch(() => setSearchError("Could not load more patients. Existing results were kept.")); }}>Load more patients</button> : null}
+          {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }).catch(() => setSearchError("Could not load more patients. Existing results were kept.")); }}>Load more patients</button> : null}
         </div>
       </div> : null}
     </div>
@@ -136,9 +135,9 @@ export function patientSearchText(patient?: PatientPickerPatient | null) {
   return `${patientLabel(patient)} ${patient?.medicalRecordNumber ?? ""} ${patient?.phone ?? ""} ${patient?.status ?? ""} ${patient?.patientType ?? ""}`.toLowerCase();
 }
 
-async function fetchPatients(query: string, includeArchived: boolean, page: number) {
+async function fetchPatients(query: string, page: number) {
   const token = sessionStorage.getItem("prijClinicToken");
-  const params = new URLSearchParams({ q: query, includeArchived: String(includeArchived), page: String(page), limit: "20" });
+  const params = new URLSearchParams({ q: query, page: String(page), limit: "20" });
   const response = await fetch(`${getApiBaseUrl()}/patients?${params.toString()}`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined });
   if (!response.ok) throw new Error("Patient search failed");
   const data = (await response.json()) as { patients?: PatientPickerPatient[]; pageInfo?: { hasMore?: boolean } };
