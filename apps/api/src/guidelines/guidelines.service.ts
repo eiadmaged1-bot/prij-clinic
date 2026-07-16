@@ -110,8 +110,11 @@ export class GuidelinesService {
       take: limit,
       include: { source: true, _count: { select: { chunks: true, sections: true } } }
     });
-    const grouped = await this.prisma.guidelineDocument.groupBy({ by: ["guidelineStatus"], where: accessWhere, _count: { _all: true } });
-    return { documents: await this.withLastFileAccess(documents.map(safeDocument)), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [item.guidelineStatus, item._count._all])) };
+    const [grouped, departments] = await Promise.all([
+      this.prisma.guidelineDocument.groupBy({ by: ["guidelineStatus"], where: accessWhere, _count: { _all: true } }),
+      this.prisma.guidelineDocument.groupBy({ by: ["specialty"], where: accessWhere, _count: { _all: true }, orderBy: { specialty: "asc" } })
+    ]);
+    return { documents: await this.withLastFileAccess(documents.map(safeDocument)), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [item.guidelineStatus, item._count._all])), departmentCounts: Object.fromEntries(departments.map((item) => [item.specialty, item._count._all])) };
   }
 
   async getDocument(id: string, user: AuthUser) {
@@ -119,6 +122,7 @@ export class GuidelinesService {
       where: { id, ...this.documentAccessWhere(user) },
       include: {
         source: true,
+        versions: { orderBy: { createdAt: "desc" }, take: 20, select: { id: true, versionLabel: true, publishedYear: true, publicationDate: true, status: true, fileSha256: true, createdAt: true } },
         sections: { orderBy: { orderIndex: "asc" }, take: 20 },
         chunks: { orderBy: { chunkIndex: "asc" }, take: 20 },
         summaries: { orderBy: { createdAt: "desc" }, take: 3, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: { orderBy: [{ bulletIndex: "asc" }, { pageStart: "asc" }] } } }, reviewedBy: { select: { id: true, displayName: true } } } },

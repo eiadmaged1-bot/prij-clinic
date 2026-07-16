@@ -36,6 +36,7 @@ type Document = {
   fileMimeType?: string;
   lastFileAccess?: { action: string; at: string } | null;
   _count?: { chunks: number };
+  updatedAt?: string;
 };
 
 type SearchResult = {
@@ -71,6 +72,9 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [inventoryPage, setInventoryPage] = useState(1);
   const [inventoryPageInfo, setInventoryPageInfo] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
   const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>({});
+  const [departmentCounts, setDepartmentCounts] = useState<Record<string, number>>({});
+  const [activeProtocolCount, setActiveProtocolCount] = useState(0);
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState("");
@@ -84,16 +88,23 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead, inventoryPage]);
 
+  useEffect(() => { try { setFavoriteIds(JSON.parse(localStorage.getItem("prij:guideline:favorites") ?? "[]") as string[]); } catch { setFavoriteIds([]); } }, []);
+
   async function loadBasics() {
-    const [sourceBody, documentBody] = await Promise.all([
+    const [sourceBody, documentBody, protocolBody] = await Promise.all([
       apiGet("/guidelines/sources"),
-      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`)
+      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`),
+      apiGet("/protocol-atlas")
     ]);
     setSources(sourceBody.sources ?? []);
     setDocuments(documentBody.documents ?? []);
     setInventoryPageInfo(documentBody.pageInfo ?? { page: inventoryPage, limit: 20, total: documentBody.documents?.length ?? 0, hasMore: false });
     setInventoryCounts(documentBody.counts ?? {});
+    setDepartmentCounts(documentBody.departmentCounts ?? {});
+    setActiveProtocolCount(Array.isArray(protocolBody) ? protocolBody.length : 0);
   }
+
+  function toggleFavorite(id: string) { setFavoriteIds((current) => { const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id]; localStorage.setItem("prij:guideline:favorites", JSON.stringify(next)); return next; }); }
 
   async function apiGet(path: string) {
     const response = await fetch(`${getApiBaseUrl()}${path}`, { credentials: "include" });
@@ -199,9 +210,12 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
             </section>
             {documents.length ? (
               <>
-                <DocumentList documents={filterTrainingDocuments(documents).filter((item) => item.guidelineStatus === "ACTIVE")} title="All active guidelines" />
-                <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recently indexed" />
-                {canManageSources ? <><section className="guideline-inventory-counts" aria-label="Guideline inventory counts">{["ACTIVE", "NEEDS_REVIEW", "ARCHIVED", "SUPERSEDED", "DRAFT_IMPORT"].map((item) => <span className="badge" key={item}>{humanGuidelineStatus(item)}: {inventoryCounts[item] ?? 0}</span>)}</section><DocumentList documents={documents} title={`Owner/Admin inventory — ${inventoryPageInfo.total} records`} /><div className="form-actions" aria-label="Guideline inventory pagination"><button className="button secondary compact" type="button" disabled={inventoryPage <= 1} onClick={() => setInventoryPage((page) => Math.max(1, page - 1))}>Previous</button><span className="muted">Page {inventoryPageInfo.page} of {Math.max(1, Math.ceil(inventoryPageInfo.total / inventoryPageInfo.limit))}</span><button className="button secondary compact" type="button" disabled={!inventoryPageInfo.hasMore} onClick={() => setInventoryPage((page) => page + 1)}>Next</button></div></> : null}
+                <section className="knowledge-metric-grid" aria-label="Knowledge Center metrics"><article><strong>{inventoryPageInfo.total}</strong><span>Total documents</span></article><article><strong>{activeProtocolCount}</strong><span>Active protocol records</span></article><article><strong>{inventoryCounts.NEEDS_REVIEW ?? 0}</strong><span>Needs review</span></article><article><strong>{favoriteIds.length}</strong><span>Device favorites</span></article><article><strong>{documents.filter((item) => item.updatedAt && Date.now() - new Date(item.updatedAt).getTime() < 30 * 86400000).length}</strong><span>Updates on this page</span></article><article><strong>{inventoryCounts.ARCHIVED ?? 0}</strong><span>Archived</span></article></section>
+                <section className="panel"><div className="section-heading"><div><p className="eyebrow">Featured collections</p><h2>Department folders</h2></div></div><div className="knowledge-collection-grid">{Object.entries(departmentCounts).map(([department, count]) => <Link href={`/guidelines/search?specialty=${encodeURIComponent(department)}`} key={department}><strong>{department}</strong><span>{count} documents</span></Link>)}</div></section>
+                <section className="panel"><div className="section-heading"><h2>Pinned clinic protocols</h2><Link className="button secondary compact" href="/protocol-atlas">Open Protocol Atlas</Link></div><p className="empty-state compact">No clinic protocol is pinned. Pin governance is not configured; no protocol is presented as pinned.</p></section>
+                <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recent revisions" favoriteIds={favoriteIds} onFavorite={toggleFavorite} />
+                <DocumentList documents={filterTrainingDocuments(documents)} title={`All documents · ${inventoryPageInfo.total} records`} favoriteIds={favoriteIds} onFavorite={toggleFavorite} />
+                <div className="form-actions" aria-label="Guideline inventory pagination"><button className="button secondary compact" type="button" disabled={inventoryPage <= 1} onClick={() => setInventoryPage((page) => Math.max(1, page - 1))}>Previous</button><span className="muted">Showing {inventoryPageInfo.total ? (inventoryPageInfo.page - 1) * inventoryPageInfo.limit + 1 : 0}–{Math.min(inventoryPageInfo.page * inventoryPageInfo.limit, inventoryPageInfo.total)} of {inventoryPageInfo.total}</span><button className="button secondary compact" type="button" disabled={!inventoryPageInfo.hasMore} onClick={() => setInventoryPage((page) => page + 1)}>Next</button></div>
               </>
             ) : (
               <Empty text="No guidelines imported yet. Owner/Admin can import official sources." />
@@ -353,7 +367,7 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
   );
 }
 
-function DocumentList({ documents, title, canReview = false }: { documents: Document[]; title: string; canReview?: boolean }) {
+function DocumentList({ documents, title, canReview = false, favoriteIds = [], onFavorite }: { documents: Document[]; title: string; canReview?: boolean; favoriteIds?: string[]; onFavorite?: (id: string) => void }) {
   return (
     <section className="panel">
       <div className="section-heading">
@@ -367,6 +381,7 @@ function DocumentList({ documents, title, canReview = false }: { documents: Docu
             <p>{document.organization} - {document.specialty} - {document.topic}</p>
             <p className="muted">{document.versionLabel ?? "No version label"} - {document._count?.chunks ?? 0} indexed chunks</p>
             <Link className="button secondary compact" href={`/guidelines/${document.id}`}>Open viewer</Link>
+            {onFavorite ? <button className="button secondary compact" type="button" aria-pressed={favoriteIds.includes(document.id)} onClick={() => onFavorite(document.id)}>{favoriteIds.includes(document.id) ? "Remove favorite" : "Add favorite"}</button> : null}
             {canReview ? <GuidelineReviewActions documentId={document.id} /> : null}
           </article>
         ))}

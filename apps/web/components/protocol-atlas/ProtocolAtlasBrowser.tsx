@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { searchProtocols, ProtocolSummary } from "../../lib/protocol-atlas";
 import { ProtocolGroupGrid } from "./ProtocolGroupGrid";
 import { ProtocolSearchBox } from "./ProtocolSearchBox";
 import { ProtocolStatusBadge } from "./ProtocolStatusBadge";
 
 export function ProtocolAtlasBrowser() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("query") ?? "");
   const [group, setGroup] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
@@ -17,7 +20,7 @@ export function ProtocolAtlasBrowser() {
   const [status, setStatus] = useState("Loading catalog");
 
   useEffect(() => {
-    void load({ nextQuery: "", nextGroup: "" });
+    void load({ nextQuery: searchParams.get("query") ?? "", nextGroup: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,6 +111,7 @@ export function ProtocolAtlasBrowser() {
               <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
               <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
             </details>
+            <Link className="button secondary compact" href={`/protocol-atlas/${protocol.id}`}>Open protocol</Link>
           </article>
         ))}
       </div>

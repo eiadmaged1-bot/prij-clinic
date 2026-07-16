@@ -90,6 +90,10 @@ export type ClinicalProtocol = ProtocolSummary & {
   sourceUrl?: string | null;
   structuredContent?: StructuredProtocolContent;
   safetyJson?: unknown;
+  completionQuestionnaireJson?: Record<string, unknown>;
+  connectionsJson?: Record<string, unknown>;
+  completionPercentage?: number;
+  completionVersion?: number;
 };
 
 export type StructuredProtocolContent = {
