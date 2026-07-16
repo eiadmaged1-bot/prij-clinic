@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import type { AuthUser } from "../auth/auth.types";
 import { branchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
@@ -34,26 +35,26 @@ export class DashboardService {
       orderedInvestigationsToday,
       followUpsDue
     ] = await Promise.all([
-      this.prisma.appointment.count({ where: { startAt: { gte: today, lt: tomorrow }, ...branchScope(user) } }),
-      this.prisma.queueTicket.count({ where: { status: "waiting", ...branchScope(user) } }),
-      this.prisma.report.count({ where: { status: "review_pending", ...branchScope(user) } }),
-      this.prisma.pregnancy.count({ where: { status: "active", ...branchScope(user) } }),
-      this.prisma.obUltrasound.count({ where: { status: "draft", ...branchScope(user) } }),
-      this.prisma.invoice.count({ where: { status: { in: ["draft", "issued", "partially_paid"] }, ...branchScope(user) } }),
+      this.prisma.appointment.count({ where: { startAt: { gte: today, lt: tomorrow }, ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.queueTicket.count({ where: { status: "waiting", ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.report.count({ where: { status: "review_pending", ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.pregnancy.count({ where: { status: "active", ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.obUltrasound.count({ where: { status: "draft", ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.invoice.count({ where: { status: { in: ["draft", "issued", "partially_paid"] }, ...branchScope(user), patient: operationalPatientRelation } }),
       this.prisma.payment.aggregate({
-        where: { status: "recorded", paidAt: { gte: today, lt: tomorrow }, ...branchScope(user) },
+        where: { status: "recorded", paidAt: { gte: today, lt: tomorrow }, ...branchScope(user), patient: operationalPatientRelation },
         _sum: { amount: true }
       }),
-      this.prisma.aiDraft.count({ where: { status: "pending_doctor_review", ...branchScope(user) } })
+      this.prisma.aiDraft.count({ where: { status: "pending_doctor_review", ...branchScope(user), patient: operationalPatientRelation } })
       ,
-      this.prisma.investigationResult.count({ where: { reviewStatus: "pending_review", ...branchScope(user) } }),
-      this.prisma.investigationResult.count({ where: { criticalFlag: true, reviewStatus: { in: ["pending_review", "needs_follow_up"] }, ...branchScope(user) } }),
-      this.prisma.referral.count({ where: { status: { in: ["draft", "sent", "accepted"] }, ...branchScope(user) } }),
-      this.prisma.patientTask.count({ where: { status: { in: ["open", "in_progress"] }, ...branchScope(user) } }),
-      this.prisma.consentRecord.count({ where: { status: { in: ["unknown", "declined"] }, patient: branchScope(user) } }),
-      this.prisma.patientDocument.count({ where: { status: { in: ["draft_metadata", "active"] }, ...branchScope(user) } }),
-      this.prisma.investigationOrder.count({ where: { requestedAt: { gte: today, lt: tomorrow }, ...patientBranchScopeForDashboard(user) } }),
-      this.prisma.patientTask.count({ where: { taskType: "schedule_follow_up", dueAt: { lte: tomorrow }, status: { in: ["open", "in_progress"] }, ...branchScope(user) } })
+      this.prisma.investigationResult.count({ where: { reviewStatus: "pending_review", ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.investigationResult.count({ where: { criticalFlag: true, reviewStatus: { in: ["pending_review", "needs_follow_up"] }, ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.referral.count({ where: { status: { in: ["draft", "sent", "accepted"] }, ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.patientTask.count({ where: { status: { in: ["open", "in_progress"] }, ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.consentRecord.count({ where: { status: { in: ["unknown", "declined"] }, patient: { ...branchScope(user), ...operationalPatientRelation } } }),
+      this.prisma.patientDocument.count({ where: { status: { in: ["draft_metadata", "active"] }, ...branchScope(user), patient: operationalPatientRelation } }),
+      this.prisma.investigationOrder.count({ where: { requestedAt: { gte: today, lt: tomorrow }, ...patientBranchScopeForDashboard(user), AND: [{ patient: operationalPatientRelation }] } }),
+      this.prisma.patientTask.count({ where: { taskType: "schedule_follow_up", dueAt: { lte: tomorrow }, status: { in: ["open", "in_progress"] }, ...branchScope(user), patient: operationalPatientRelation } })
     ]);
 
     return {
@@ -95,16 +96,16 @@ export class DashboardService {
     const [activeStaff, roles, activePatients, todayVisits, activeServices, externalReviews, importFailures, missingPrices, accountApprovals, guidelineReviews, lockedAccounts, revenueAggregate, paymentConfiguration, paymentRecords, servicePreview, recentAudit, activeOwners, activeBranches] = await Promise.all([
       safeMetric(() => this.prisma.user.count({ where: { status: "active" } })),
       safeMetric(() => this.prisma.role.count()),
-      safeMetric(() => this.prisma.patient.count({ where: { status: "active" } })),
-      safeMetric(() => this.prisma.encounter.count({ where: { startedAt: { gte: start, lt: tomorrow } } })),
+      safeMetric(() => this.prisma.patient.count({ where: operationalPatientRelation })),
+      safeMetric(() => this.prisma.encounter.count({ where: { startedAt: { gte: start, lt: tomorrow }, patient: operationalPatientRelation } })),
       safeMetric(() => this.prisma.serviceItem.count({ where: { active: true } })),
-      safeMetric(() => this.prisma.externalPatientSubmission.count({ where: { status: "pending_review" } })),
+      safeMetric(() => this.prisma.externalPatientSubmission.count({ where: { status: "pending_review", dataClassification: { notIn: ["TEST", "QUARANTINED"] } } })),
       safeMetric(() => this.prisma.patientImportRow.count({ where: { OR: [{ errorCode: { not: null } }, { status: { in: ["failed", "invalid", "validation_failed"] } }] } })),
       safeMetric(() => this.prisma.serviceItem.count({ where: { active: true, price: null } })),
       safeMetric(() => this.prisma.user.count({ where: { status: { in: ["pending", "pending_approval"] } } })),
       safeMetric(() => this.prisma.guidelineDocument.count({ where: { guidelineStatus: "NEEDS_REVIEW", archivedAt: null } })),
       safeMetric(() => this.prisma.user.count({ where: { lockedUntil: { gt: new Date() } } })),
-      safeMetric(() => this.prisma.payment.aggregate({ where: { status: "recorded", paidAt: { gte: start, lt: tomorrow } }, _sum: { amount: true } })),
+      safeMetric(() => this.prisma.payment.aggregate({ where: { status: "recorded", paidAt: { gte: start, lt: tomorrow }, patient: operationalPatientRelation }, _sum: { amount: true } })),
       safeMetric(() => this.prisma.systemSetting.findUnique({ where: { key: "billing.payments.configured" }, select: { valueJson: true } })),
       safeMetric(() => this.prisma.payment.count()),
       safeValue(() => this.prisma.serviceItem.findMany({ take: 5, orderBy: [{ active: "desc" }, { name: "asc" }], select: { id: true, name: true, category: true, price: true, costAmount: true, doctorShareAmount: true, currency: true, active: true } }), []),
@@ -178,3 +179,5 @@ function patientBranchScopeForDashboard(user: AuthUser) {
   if (user.roles.includes("Owner") || user.roles.includes("Admin")) return {};
   return { patient: { branchId: user.branchId ?? "00000000-0000-0000-0000-000000000000" } };
 }
+
+const operationalPatientRelation = { status: "active", dataClassification: { notIn: ["TEST", "QUARANTINED"] } } satisfies Prisma.PatientWhereInput;

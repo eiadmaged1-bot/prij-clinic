@@ -42,6 +42,8 @@ export class SearchService {
       .findMany({
         where: {
           ...branchPatientListScope(user),
+          status: "active",
+          dataClassification: { notIn: ["TEST", "QUARANTINED"] },
           OR: [
             { firstName: { contains: q, mode: "insensitive" } },
             { lastName: { contains: q, mode: "insensitive" } },
@@ -128,6 +130,7 @@ export class SearchService {
         where: {
           ...patientBranchScope(user),
           ...doctorScope(user),
+          AND: [{ patient: operationalPatientRelation }],
           OR: [
             { notes: { contains: q, mode: "insensitive" } },
             { clinicalQuestion: { contains: q, mode: "insensitive" } },
@@ -157,6 +160,7 @@ export class SearchService {
       .findMany({
         where: {
           ...patientBranchScope(user),
+          AND: [{ patient: operationalPatientRelation }],
           OR: [
             { appointmentType: { contains: q, mode: "insensitive" } },
             appointmentStatusValue(q) ? { status: { equals: appointmentStatusValue(q) } } : undefined,
@@ -186,6 +190,7 @@ export class SearchService {
       .findMany({
         where: {
           ...patientBranchScope(user),
+          AND: [{ patient: operationalPatientRelation }],
           OR: [
             { invoiceNumber: { contains: q, mode: "insensitive" } },
             { patient: { firstName: { contains: q, mode: "insensitive" } } },
@@ -214,6 +219,7 @@ export class SearchService {
       .findMany({
         where: {
           ...patientBranchScope(user),
+          AND: [{ patient: operationalPatientRelation }],
           OR: [
             { notes: { contains: q, mode: "insensitive" } },
             { patient: { firstName: { contains: q, mode: "insensitive" } } },
@@ -267,6 +273,7 @@ export class SearchService {
       .findMany({
         where: {
           ...patientBranchScope(user),
+          AND: [{ patient: operationalPatientRelation }],
           OR: [
             { title: { contains: q, mode: "insensitive" } },
             { category: { contains: q, mode: "insensitive" } },
@@ -344,3 +351,5 @@ function branchPatientListScope(user: AuthUser) {
 function normalize(value: string) {
   return value.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim();
 }
+
+const operationalPatientRelation = { status: "active", dataClassification: { notIn: ["TEST", "QUARANTINED"] } } satisfies Prisma.PatientWhereInput;

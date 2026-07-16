@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { AppShell } from "../../mvp-page";
 
-type ReviewRecord = { id: string; medicalRecordNumber?: string; firstName?: string; lastName?: string; dataClassification?: string; signal?: string };
+type ReviewRecord = { id: string; resource?: "patient" | "external-intake" | "ultrasound" | "queue-lock"; medicalRecordNumber?: string; firstName?: string; lastName?: string; dataClassification?: string; signal?: string };
 
 export default function DataHygienePage() {
   const [view, setView] = useState("candidates");
@@ -22,10 +22,11 @@ export default function DataHygienePage() {
     setStatus(body.records?.length ? `${body.records.length} records require review.` : "No records require review in this view.");
   }
 
-  async function classify(record: ReviewRecord, classification: "REAL" | "TEST" | "QUARANTINED") {
+  async function classify(record: ReviewRecord, classification: "REAL" | "TEST" | "NEEDS_REVIEW" | "QUARANTINED") {
+    if (record.resource === "queue-lock") return setStatus("Queue locks are detection-only here; queue recovery owns lock repair.");
     const reason = window.prompt(`Reason for marking this record ${classification}`)?.trim();
     if (!reason) return;
-    const response = await request(`/data-hygiene/patient/${record.id}/classification`, "PATCH", { classification, reason });
+    const response = await request(`/data-hygiene/${record.resource ?? "patient"}/${record.id}/classification`, "PATCH", { classification, reason });
     setStatus(response.ok ? "Classification saved and audited." : await errorMessage(response, "Classification could not be saved."));
     if (response.ok) await load();
   }
@@ -40,8 +41,8 @@ export default function DataHygienePage() {
 
   return <AppShell>
     <section className="page-header"><p className="eyebrow">Owner only</p><h1>Data Hygiene Center</h1><p className="muted">Signals are review candidates only. Nothing is classified or deleted automatically.</p></section>
-    <section className="panel compact-panel"><div className="toolbar"><label>Review view<select value={view} onChange={(event) => setView(event.target.value)}><option value="candidates">QA/test candidates</option><option value="incomplete">Incomplete records</option><option value="duplicates">Exact-phone duplicates</option></select></label><button className="button secondary compact" type="button" onClick={() => void exportReport()}>Export review report</button></div><p className="notice" role="status">{status}</p></section>
-    <section className="panel"><div className="data-list">{records.map((record) => <article className="data-row dense" key={record.id}><div className="data-row-header"><strong>{[record.firstName, record.lastName].filter(Boolean).join(" ") || "Operational record"}</strong><span className="badge">{record.dataClassification ?? "REAL"}</span></div><span>{record.medicalRecordNumber ?? "No MRN"} · {record.signal ?? "review"}</span><div className="form-actions"><button className="button secondary compact" onClick={() => void classify(record, "REAL")} type="button">Mark Real</button><button className="button secondary compact" onClick={() => void classify(record, "TEST")} type="button">Mark Test</button><button className="button secondary compact" onClick={() => void classify(record, "QUARANTINED")} type="button">Quarantine</button></div></article>)}{!records.length ? <p className="empty-state compact">No review candidates in this view.</p> : null}</div></section>
+    <section className="panel compact-panel"><div className="toolbar"><label>Review view<select value={view} onChange={(event) => setView(event.target.value)}><option value="candidates">QA/test candidates</option><option value="incomplete">Incomplete records</option><option value="duplicates">Exact-phone duplicates</option><option value="external-intake">External intake candidates</option><option value="empty-ultrasounds">Empty ultrasound candidates</option><option value="orphan-locks">Orphan queue locks</option></select></label><button className="button secondary compact" type="button" onClick={() => void exportReport()}>Export review report</button></div><p className="notice" role="status">{status}</p></section>
+    <section className="panel"><div className="data-list">{records.map((record) => <article className="data-row dense" key={`${record.resource ?? "patient"}:${record.id}`}><div className="data-row-header"><strong>{[record.firstName, record.lastName].filter(Boolean).join(" ") || "Operational record"}</strong><span className="badge">{record.dataClassification ?? "Detection only"}</span></div><span>{record.medicalRecordNumber ?? record.resource ?? "record"} · {record.signal ?? "review"}</span><div className="form-actions"><button className="button secondary compact" onClick={() => void classify(record, "REAL")} type="button">{record.dataClassification === "REAL" ? "Mark Real" : "Restore"}</button><button className="button secondary compact" onClick={() => void classify(record, "TEST")} type="button">Mark Test</button><button className="button secondary compact" onClick={() => void classify(record, "NEEDS_REVIEW")} type="button">Mark Needs Review</button><button className="button secondary compact" onClick={() => void classify(record, "QUARANTINED")} type="button">Quarantine</button></div></article>)}{!records.length ? <p className="empty-state compact">No review candidates in this view.</p> : null}</div></section>
   </AppShell>;
 }
 

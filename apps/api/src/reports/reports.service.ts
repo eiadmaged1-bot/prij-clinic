@@ -63,7 +63,7 @@ export class ReportsService {
 
   async list(user: AuthUser) {
     const reports = await this.prisma.report.findMany({
-      where: branchScope(user),
+      where: { ...branchScope(user), patient: operationalPatientRelation },
       orderBy: { createdAt: "desc" },
       take: 100,
       include: reportIncludes
@@ -83,7 +83,7 @@ export class ReportsService {
 
   async get(id: string, user: AuthUser) {
     const report = await this.prisma.report.findFirst({
-      where: { id, ...branchScope(user) },
+      where: { id, ...branchScope(user), patient: operationalPatientRelation },
       include: reportIncludes
     });
 
@@ -178,3 +178,5 @@ const reportIncludes = {
 function clean(value?: string) {
   return value?.trim() || null;
 }
+
+const operationalPatientRelation = { status: "active", dataClassification: { notIn: ["TEST", "QUARANTINED"] } } satisfies Prisma.PatientWhereInput;
