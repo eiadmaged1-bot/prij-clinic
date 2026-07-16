@@ -34,7 +34,7 @@ import { PatientsService } from "./patients.service";
 import { PatientSearchService } from "./services/patient-search.service";
 import { PatientLookupService } from "./services/patient-lookup.service";
 import { PatientWorkspaceLayoutService } from "./services/patient-workspace-layout.service";
-import { SaveWorkspaceLayoutDto } from "./workspace-layout.dto";
+import { MissingInformationDecisionDto, SaveWorkspaceLayoutDto } from "./workspace-layout.dto";
 
 @Controller("patients")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
@@ -113,6 +113,12 @@ export class PatientsController {
   @Permissions("patient.read")
   missingInformation(@Param("id") id: string) {
     return this.workspaceLayouts.missingInformation(id);
+  }
+
+  @Post(":id/missing-information/:findingKey/decision")
+  @Permissions("patient.update")
+  decideMissingInformation(@Param("id") id: string, @Param("findingKey") findingKey: string, @Body() dto: MissingInformationDecisionDto, @CurrentUser() user: AuthUser) {
+    return this.workspaceLayouts.decideMissingInformation(id, findingKey, dto, user);
   }
 
   @Get(":id/qr")

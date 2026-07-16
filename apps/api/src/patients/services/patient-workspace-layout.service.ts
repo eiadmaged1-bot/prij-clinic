@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { AuditService } from "../../audit/audit.service";
 import type { AuthUser } from "../../auth/auth.types";
 import { PrismaService } from "../../prisma/prisma.service";
-import type { SaveWorkspaceLayoutDto } from "../workspace-layout.dto";
+import type { MissingInformationDecisionDto, SaveWorkspaceLayoutDto } from "../workspace-layout.dto";
 
 const PANEL_KEYS = new Set(["overview", "allergies", "doctor-visit", "history", "medications", "prescriptions", "investigations", "pregnancy", "infertility", "ultrasound", "timeline", "tasks", "referrals", "documents", "consents", "billing", "internal-notes", "ai-snapshot", "more"]);
 const MANDATORY_PANELS = new Set(["overview"]);
@@ -12,6 +12,8 @@ const PRESETS: Record<string, string[]> = {
   MINIMAL_VISIT: ["overview", "allergies", "doctor-visit", "timeline"],
   GENERAL_WOMENS_HEALTH: ["overview", "allergies", "history", "doctor-visit", "investigations", "prescriptions", "timeline"],
   GYNECOLOGY: ["overview", "allergies", "history", "doctor-visit", "pregnancy", "ultrasound", "investigations", "prescriptions", "timeline"],
+  AUB_FIBROID: ["overview", "allergies", "history", "doctor-visit", "ultrasound", "investigations", "medications", "tasks", "timeline"],
+  PCOS_OVARIAN_MONITORING: ["overview", "allergies", "history", "infertility", "ultrasound", "investigations", "medications", "timeline"],
   INFERTILITY: ["overview", "allergies", "infertility", "ultrasound", "investigations", "prescriptions", "timeline"],
   ROUTINE_OBSTETRICS: ["overview", "allergies", "pregnancy", "ultrasound", "investigations", "prescriptions", "timeline"],
   HIGH_RISK_OBSTETRICS: ["overview", "allergies", "pregnancy", "ultrasound", "investigations", "tasks", "referrals", "prescriptions", "timeline"],
@@ -92,7 +94,23 @@ export class PatientWorkspaceLayoutService {
     for (const order of patient.investigationOrders.filter((item) => !item.results.length)) add(`ORDER_RESULT_${order.id}`, "Investigation result", "investigation-order", "An ordered investigation has no result attached.", order.requestedFollowUpDate && order.requestedFollowUpDate < new Date() ? "high" : "medium", "required", `/patients/${patientId}?module=investigations`, order.requestedFollowUpDate && order.requestedFollowUpDate < new Date() ? "Overdue" : "Awaiting result");
     for (const result of patient.investigationResults) add(`RESULT_REVIEW_${result.id}`, "Result review", "investigation-result", "A received result is awaiting doctor review.", "high", "required", `/patients/${patientId}?module=investigations`, "Needs doctor review");
     if (encounter && !patient.consentRecords.length) add("TREATMENT_CONSENT_ABSENT", "Treatment consent", "visit", "No granted treatment consent is linked to the active visit context.", "high", "required", `/patients/${patientId}?module=consents`);
-    return { findings, ruleSource: "PRIJ_WORKSPACE_MISSING_INFORMATION", ruleVersion: "1.0.0", diagnosticOutput: false, prescribingOutput: false };
+    const decisions = await this.prisma.auditLog.findMany({ where: { action: "patient.missing_information_decision", resourceType: "patient", resourceId: patientId }, orderBy: { createdAt: "desc" }, take: 100, select: { metadataJson: true } });
+    const latest = new Map<string, { decision?: string; snoozedUntil?: string }>();
+    for (const row of decisions) { const metadata = row.metadataJson && typeof row.metadataJson === "object" && !Array.isArray(row.metadataJson) ? row.metadataJson as Record<string, unknown> : {}; const key = typeof metadata.findingKey === "string" ? metadata.findingKey : ""; if (key && !latest.has(key)) latest.set(key, { decision: typeof metadata.decision === "string" ? metadata.decision : undefined, snoozedUntil: typeof metadata.snoozedUntil === "string" ? metadata.snoozedUntil : undefined }); }
+    const visibleFindings = findings.filter((finding) => { const decision = latest.get(String(finding.key)); if (!decision) return true; if (["NOT_APPLICABLE", "PATIENT_DECLINED", "DISMISS"].includes(decision.decision ?? "")) return false; if (decision.decision === "SNOOZE" && decision.snoozedUntil && new Date(decision.snoozedUntil) > new Date()) return false; if (decision.decision === "AWAITING_EXTERNAL_RESULT") finding.state = "Awaiting external result"; return true; });
+    return { findings: visibleFindings, ruleSource: "PRIJ_WORKSPACE_MISSING_INFORMATION", ruleVersion: "1.0.0", diagnosticOutput: false, prescribingOutput: false };
+  }
+
+  async decideMissingInformation(patientId: string, findingKey: string, dto: MissingInformationDecisionDto, user: AuthUser) {
+    if (!dto.reason?.trim()) throw new BadRequestException("A reason is required.");
+    const current = await this.missingInformation(patientId);
+    const finding = current.findings.find((item) => item.key === findingKey);
+    if (!finding) throw new NotFoundException("Missing-information item is no longer active.");
+    if (dto.decision === "DISMISS" && finding.severity === "high" && finding.requirement === "required") throw new BadRequestException("Mandatory safety information cannot be dismissed.");
+    const snoozedUntil = dto.decision === "SNOOZE" ? new Date(dto.snoozedUntil ?? "") : null;
+    if (dto.decision === "SNOOZE" && (!snoozedUntil || Number.isNaN(snoozedUntil.getTime()) || snoozedUntil <= new Date())) throw new BadRequestException("A future snooze date is required.");
+    await this.audit.record({ actorUserId: user.id, action: "patient.missing_information_decision", resourceType: "patient", resourceId: patientId, branchId: user.branchId, severity: finding.severity === "high" ? "high" : "medium", reason: dto.reason.trim(), metadataJson: { findingKey, decision: dto.decision, snoozedUntil: snoozedUntil?.toISOString() ?? null } });
+    return { patientId, findingKey, decision: dto.decision, snoozedUntil: snoozedUntil?.toISOString() ?? null, audited: true };
   }
 }
 

@@ -166,6 +166,7 @@
     "db:v150:activate-operational-patients:apply": "node scripts/v150-reconcile-operational-patients.mjs --apply --confirm ACTIVATE_REAL_OPERATIONAL_PATIENTS",
     "test:v150:core-stabilization": "node scripts/v150-core-stabilization-test.mjs",
     "test:v150:data-hygiene": "node scripts/v150-data-hygiene-test.mjs",
+    "test:v150:modular-workspace": "node scripts/v150-modular-workspace-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

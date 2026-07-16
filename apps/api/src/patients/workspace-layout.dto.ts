@@ -25,3 +25,11 @@ export class SaveWorkspaceLayoutDto {
   @IsArray() @ArrayMaxSize(60) @ValidateNested({ each: true }) @Type(() => WorkspacePanelLayoutDto)
   panels!: WorkspacePanelLayoutDto[];
 }
+
+export class MissingInformationDecisionDto {
+  @IsIn(["NOT_APPLICABLE", "PATIENT_DECLINED", "AWAITING_EXTERNAL_RESULT", "DISMISS", "SNOOZE"])
+  decision!: "NOT_APPLICABLE" | "PATIENT_DECLINED" | "AWAITING_EXTERNAL_RESULT" | "DISMISS" | "SNOOZE";
+
+  @IsString() @MaxLength(500) reason!: string;
+  @IsOptional() @IsString() @MaxLength(40) snoozedUntil?: string;
+}
