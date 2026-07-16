@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -174,6 +174,13 @@ export class AdminController {
         "Complete security stabilization and deployment preparation before real patient data entry."
       ]
     };
+  }
+
+  @Get("audit")
+  @Permissions("audit.read")
+  async auditPage(@Query("page") page: string | undefined, @Query("pageSize") pageSize: string | undefined, @Query("q") query: string | undefined, @Query("severity") severity: string | undefined, @Query("resourceType") resourceType: string | undefined, @Req() request: RequestWithUser) {
+    await this.auditAdminRead(request, "admin.audit.read", "audit_log");
+    return this.audit.listPage({ page: Number(page) || 1, pageSize: Number(pageSize) || 25, query, severity, resourceType });
   }
 
   @Get("services")

@@ -22,7 +22,7 @@ import {
 } from "./admin.dto";
 
 const defaultAppearanceSettings = {
-  defaultTheme: "clinic-premium",
+  defaultTheme: "prij-heritage",
   allowUserThemeOverride: true,
   defaultDoctorComfortMode: false,
   appearanceConfig: {},
@@ -326,6 +326,7 @@ export class RbacService {
 
   async setAccountLock(id: string, locked: boolean, dto: AccountSecurityActionDto, actor?: AuthUser) {
     assertCanManageAccounts(actor); assertReasonForSensitiveChange(dto.reason); const existing = await this.requireAccount(id); assertCanEditAccount(existing, actor);
+    if (locked && accountHasRole(existing, "Owner")) await this.assertAnotherActiveOwnerExists(id);
     const updated = await this.prisma.user.update({ where: { id }, data: { lockedUntil: locked ? new Date("2099-12-31T23:59:59.000Z") : null, failedLoginCount: 0 }, include: accountInclude });
     if (locked) await this.sessions.revokeAllUserSessions(id, "Account locked by administrator.");
     await this.audit.record({ actorUserId: actor?.id, action: locked ? "account.locked" : "account.unlocked", resourceType: "user", resourceId: id, branchId: updated.branchId, severity: "high", reason: dto.reason.trim() });
@@ -502,7 +503,7 @@ export class RbacService {
     if (user) assertOwnerOrAdmin(user);
     const setting = await this.prisma.systemSetting.findUnique({ where: { key: "appearance" } });
     const value = setting?.valueJson;
-    if (isAppearanceSettings(value)) return { ...defaultAppearanceSettings, ...value };
+    if (isAppearanceSettings(value)) { const record = value as Record<string, unknown>; return { ...defaultAppearanceSettings, ...record, appearanceConfig: sanitizeAppearanceConfig(record.appearanceConfig), roleDefaults: sanitizeRoleDefaults(record.roleDefaults) }; }
     return defaultAppearanceSettings;
   }
 
@@ -512,8 +513,8 @@ export class RbacService {
       defaultTheme: dto.defaultTheme,
       allowUserThemeOverride: dto.allowUserThemeOverride,
       defaultDoctorComfortMode: dto.defaultDoctorComfortMode ?? false,
-      appearanceConfig: dto.appearanceConfig ?? {},
-      roleDefaults: dto.roleDefaults ?? {}
+      appearanceConfig: sanitizeAppearanceConfig(dto.appearanceConfig),
+      roleDefaults: sanitizeRoleDefaults(dto.roleDefaults)
     };
 
     const setting = await this.prisma.systemSetting.upsert({
@@ -991,6 +992,24 @@ function isAppearanceSettings(value: Prisma.JsonValue | null | undefined): value
     typeof candidate.allowUserThemeOverride === "boolean" &&
     (candidate.defaultDoctorComfortMode === undefined || typeof candidate.defaultDoctorComfortMode === "boolean")
   );
+}
+
+function sanitizeAppearanceConfig(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const input = value as Record<string, unknown>; const output: Record<string, unknown> = {};
+  if (typeof input.accent === "string" && /^#[0-9a-f]{6}$/i.test(input.accent)) output.accent = input.accent;
+  for (const [key, allowed] of Object.entries({ sidebar: ["light", "dark", "accent"], typography: ["system", "clinical", "arabic-friendly"], density: ["compact", "comfortable"], shadow: ["none", "soft", "strong"], border: ["subtle", "clear"], tableDensity: ["compact", "comfortable"], iconDensity: ["minimal", "standard"], contrast: ["standard", "high"] })) if (typeof input[key] === "string" && allowed.includes(input[key] as string)) output[key] = input[key];
+  if (typeof input.fontScale === "number" && Number.isFinite(input.fontScale) && input.fontScale >= .8 && input.fontScale <= 1.5) output.fontScale = input.fontScale;
+  if (typeof input.cardRadius === "number" && Number.isFinite(input.cardRadius) && input.cardRadius >= 0 && input.cardRadius <= 32) output.cardRadius = input.cardRadius;
+  if (typeof input.reducedMotion === "boolean") output.reducedMotion = input.reducedMotion;
+  return output;
+}
+
+function sanitizeRoleDefaults(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const output: Record<string, unknown> = {}; const roles = new Set(["Owner", "Admin", "Doctor", "Nurse", "Receptionist", "Accountant"]);
+  for (const [role, raw] of Object.entries(value as Record<string, unknown>)) { if (!roles.has(role) || !raw || typeof raw !== "object" || Array.isArray(raw)) continue; const item = raw as Record<string, unknown>; if (!allowedAppearanceThemes.has(String(item.themeId ?? ""))) continue; output[role] = { themeId: item.themeId, configuration: sanitizeAppearanceConfig(item.configuration) }; }
+  return output;
 }
 
 function isClinicProfileSettings(value: Prisma.JsonValue | null | undefined): value is typeof defaultClinicProfileSettings {

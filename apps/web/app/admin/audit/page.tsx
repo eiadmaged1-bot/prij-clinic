@@ -1,117 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AppShell, SafetyAlert } from "../../mvp-page";
-
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
-type AuditEntry = {
-  id: string;
-  action: string;
-  resourceType: string;
-  resourceId?: string | null;
-  severity: string;
-  reason?: string | null;
-  createdAt: string;
-};
+type AuditEntry = { id: string; action: string; resourceType: string; resourceId?: string | null; severity: string; reason?: string | null; requestId?: string | null; createdAt: string };
+type AuditPage = { entries: AuditEntry[]; total: number; page: number; pageSize: number; pageCount: number; resources: string[] };
 
 export default function AdminAuditPage() {
-  const [entries, setEntries] = useState<AuditEntry[]>([]);
-  const [error, setError] = useState("");
-  const token = useMemo(() => (typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")), []);
-
-  useEffect(() => {
-    fetch(`${getApiBaseUrl()}/admin/control-center`, {
-      credentials: "include",
-      headers: token ? { authorization: `Bearer ${token}` } : undefined
-    })
-      .then(async (response) => {
-        if (response.status === 403) throw new Error("Owner or admin access is required.");
-        if (!response.ok) throw new Error("Could not load audit entries.");
-        const data = await response.json() as { auditLogs?: AuditEntry[] };
-        setEntries(data.auditLogs ?? []);
-      })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "Could not load audit entries."));
-  }, [token]);
-
-  return (
-    <AppShell>
-      <section className="page-header">
-        <div className="header-row">
-          <div>
-            <p className="eyebrow">Owner tools</p>
-            <h1>Audit Log</h1>
-          </div>
-          <span className="badge accent">Read only</span>
-        </div>
-        <p className="muted">Recent protected actions. Audit entries are not deleted from the app.</p>
-      </section>
-      <SafetyAlert />
-      {error ? <p className="form-error">{error}</p> : null}
-      <section className="panel">
-        <div className="data-list">
-          {entries.map((entry) => (
-            <article className="data-row" key={entry.id}>
-              <div className="data-row-header">
-                <strong>{auditActionLabel(entry.action)}</strong>
-                <span className={severityBadgeClass(entry.severity)}>{severityLabel(entry.severity)}</span>
-              </div>
-              <dl>
-                <div><dt>Record</dt><dd>{resourceLabel(entry.resourceType)}</dd></div>
-                <div><dt>When</dt><dd>{new Date(entry.createdAt).toLocaleString()}</dd></div>
-                {entry.resourceId ? <div><dt>Reference</dt><dd>{entry.resourceId.slice(0, 8)}</dd></div> : null}
-                {entry.reason ? <div className="wide"><dt>Reason</dt><dd>{entry.reason}</dd></div> : null}
-              </dl>
-            </article>
-          ))}
-        </div>
-      </section>
-    </AppShell>
-  );
+  const [data, setData] = useState<AuditPage>({ entries: [], total: 0, page: 1, pageSize: 25, pageCount: 1, resources: [] }); const [query, setQuery] = useState(""); const [severity, setSeverity] = useState("all"); const [resourceType, setResourceType] = useState("all"); const [page, setPage] = useState(1); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
+  const load = useCallback(async () => { setLoading(true); setError(""); const params = new URLSearchParams({ page: String(page), pageSize: "25", severity, resourceType }); if (query.trim()) params.set("q", query.trim()); const response = await request(`/admin/audit?${params}`); if (!response.ok) { setError(response.status === 403 ? "Owner/Admin audit permission is required." : "Audit entries could not be loaded."); setLoading(false); return; } setData(await response.json() as AuditPage); setLoading(false); }, [page, query, severity, resourceType]);
+  useEffect(() => { void load(); }, [load]); useEffect(() => { setPage(1); }, [query, severity, resourceType]);
+  const start = data.total ? (data.page - 1) * data.pageSize + 1 : 0; const end = Math.min(data.page * data.pageSize, data.total);
+  return <AppShell><section className="page-header"><div className="header-row"><div><p className="eyebrow">Owner / Admin</p><h1>Audit Log</h1><p className="muted">Read-only, redacted protected activity with server pagination.</p></div><span className="badge accent">{start}-{end} of {data.total}</span></div></section><SafetyAlert />
+    <section className="panel compact-panel"><div className="toolbar"><label>Search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Action, resource, reason, request ID" /></label><label>Severity<select value={severity} onChange={(event) => setSeverity(event.target.value)}><option value="all">All</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label><label>Resource<select value={resourceType} onChange={(event) => setResourceType(event.target.value)}><option value="all">All resources</option>{data.resources.map((value) => <option key={value}>{value}</option>)}</select></label><button className="button secondary compact" type="button" onClick={() => void load()}>Refresh</button></div>{error ? <p className="form-error" role="alert">{error}</p> : null}{loading ? <div className="skeleton" aria-label="Loading audit entries" /> : null}</section>
+    <section className="panel"><div className="data-table-wrap"><table className="data-table"><thead><tr><th>Time</th><th>Action</th><th>Resource</th><th>Severity</th><th>Reason</th><th>Request</th></tr></thead><tbody>{data.entries.map((entry) => <tr key={entry.id}><td>{new Date(entry.createdAt).toLocaleString()}</td><td><strong>{humanize(entry.action)}</strong></td><td>{humanize(entry.resourceType)}{entry.resourceId ? ` · ${entry.resourceId.slice(0, 8)}` : ""}</td><td><span className={severityBadgeClass(entry.severity)}>{humanize(entry.severity)}</span></td><td>{entry.reason || "Not recorded"}</td><td>{entry.requestId || "—"}</td></tr>)}</tbody></table></div>{!loading && !data.entries.length ? <p className="empty-state compact">No audit entries match these filters.</p> : null}<div className="pagination-row"><button className="button secondary compact" disabled={page <= 1} type="button" onClick={() => setPage((value) => value - 1)}>Previous</button><span>Page {data.page} of {data.pageCount}</span><button className="button secondary compact" disabled={page >= data.pageCount} type="button" onClick={() => setPage((value) => value + 1)}>Next</button></div></section>
+  </AppShell>;
 }
 
-function auditActionLabel(action: string) {
-  const known: Record<string, string> = {
-    "appointment.created": "Appointment created",
-    "queue.checked_in": "Patient checked in",
-    "encounter.created": "Visit draft created",
-    "encounter.updated": "Visit draft updated",
-    "encounter.signed": "Visit note signed",
-    "prescription.created": "Prescription draft created",
-    "investigation_order.created": "Investigation order created",
-    "report.created": "Report metadata created",
-    "invoice.created": "Invoice created",
-    "payment.recorded": "Payment recorded",
-    "consent.created": "Consent recorded",
-    "system_setting.appearance_updated": "Appearance settings updated"
-  };
-
-  return known[action] ?? action.replaceAll("_", " ").replaceAll(".", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function resourceLabel(resourceType: string) {
-  const known: Record<string, string> = {
-    system_setting: "System setting",
-    patient: "Patient file",
-    encounter: "Visit note",
-    prescription: "Prescription",
-    investigation_order: "Investigation order",
-    invoice: "Invoice",
-    payment: "Payment"
-  };
-
-  return known[resourceType] ?? resourceType.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function severityLabel(severity: string) {
-  if (severity === "high") return "High importance";
-  if (severity === "medium") return "Review";
-  if (severity === "low") return "Routine";
-  return severity || "Audit";
-}
-
-function severityBadgeClass(severity: string) {
-  if (severity === "high") return "badge danger";
-  if (severity === "medium") return "badge warning";
-  return "badge";
-}
+function humanize(value: string) { return value.replaceAll("_", " ").replaceAll(".", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function severityBadgeClass(severity: string) { if (["critical", "high"].includes(severity)) return "badge danger"; if (severity === "medium") return "badge warning"; return "badge"; }
+async function request(path: string) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${path}`, { credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : {} }).catch(() => new Response(null, { status: 503 })); }

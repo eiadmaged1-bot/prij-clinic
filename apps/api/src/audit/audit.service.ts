@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 export type AuditEventInput = {
@@ -61,6 +62,21 @@ export class AuditService {
         createdAt: true
       } as unknown as never
     });
+  }
+
+  async listPage(input: { page?: number; pageSize?: number; query?: string; severity?: string; resourceType?: string }) {
+    const page = Math.max(1, Math.floor(input.page ?? 1)); const pageSize = Math.min(100, Math.max(10, Math.floor(input.pageSize ?? 25))); const query = input.query?.trim();
+    const where: Prisma.AuditLogWhereInput = {
+      ...(input.severity && input.severity !== "all" ? { severity: input.severity } : {}),
+      ...(input.resourceType && input.resourceType !== "all" ? { resourceType: input.resourceType } : {}),
+      ...(query ? { OR: [{ action: { contains: query, mode: "insensitive" } }, { resourceType: { contains: query, mode: "insensitive" } }, { reason: { contains: query, mode: "insensitive" } }, { requestId: { contains: query, mode: "insensitive" } }] } : {})
+    };
+    const [total, entries, resources] = await Promise.all([
+      this.prisma.auditLog.count({ where }),
+      this.prisma.auditLog.findMany({ where, skip: (page - 1) * pageSize, take: pageSize, orderBy: { createdAt: "desc" }, select: { id: true, actorUserId: true, action: true, resourceType: true, resourceId: true, severity: true, reason: true, requestId: true, createdAt: true } }),
+      this.prisma.auditLog.findMany({ distinct: ["resourceType"], orderBy: { resourceType: "asc" }, select: { resourceType: true } })
+    ]);
+    return { entries, total, page, pageSize, pageCount: Math.max(1, Math.ceil(total / pageSize)), resources: resources.map((row) => row.resourceType) };
   }
 }
 
