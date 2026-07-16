@@ -6651,7 +6651,6 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .protocol-questionnaire .section-heading, .protocol-questionnaire > button, .protocol-questionnaire > label:last-of-type { grid-column: 1 / -1; }
 @media (max-width: 720px) { .knowledge-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .knowledge-collection-grid, .guideline-overview-grid, .protocol-questionnaire { grid-template-columns: 1fr; } .protocol-questionnaire > * { grid-column: 1 !important; } }
 :root[data-theme="rose"] { --accent: #be185d; --accent-strong: #9d174d; --soft: #fff1f2; --sidebar: #581c34; }
-.investigation-catalog-layout.library-context > .investigation-workspace-panel { display: none; }
 :root[data-theme="high-contrast"] { --accent: #005fcc; --accent-strong: #003f8f; --text: #000; --muted: #222; --border: #111; --panel: #fff; }
 :root[data-contrast="high"] .panel,
 :root[data-contrast="high"] .data-row,

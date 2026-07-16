@@ -16,6 +16,7 @@ const { seedV151MedicationIdentityAndDermatology } = require("./seeds/v151-medic
 const { seedV152Dermatology } = require("./seeds/v152-dermatology");
 const { seedV152GuidelineRegistry } = require("./seeds/v152-guideline-registry");
 const { seedV152ProtocolReferences } = require("./seeds/v152-protocol-references");
+const { seedV152InvestigationSets } = require("./seeds/v152-investigation-sets");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
@@ -1103,6 +1104,7 @@ async function seedMedicationIntelligence(prisma) {
   await seedV152Dermatology(prisma);
   await seedV152GuidelineRegistry(prisma);
   await seedV152ProtocolReferences(prisma);
+  await seedV152InvestigationSets(prisma);
 
   const countries = [
     ["EG", "Egypt", null, false],

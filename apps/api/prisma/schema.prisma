@@ -2502,6 +2502,16 @@ model InvestigationFavoriteSet {
   branchId         String?  @db.Uuid
   defaultVisitType String?
   active           Boolean  @default(true)
+  publicationState String   @default("LOCAL_DRAFT")
+  sourceIdentifier String?
+  sourceUrl        String?
+  sourceVersion    String?
+  sourceSection    String?
+  sourceRetrievedAt DateTime? @db.Timestamptz(3)
+  version          Int      @default(1)
+  patientTypesJson Json?
+  guidanceText     String?
+  actionable       Boolean  @default(true)
   createdAt        DateTime @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
@@ -2510,6 +2520,8 @@ model InvestigationFavoriteSet {
 
   @@index([userId, active])
   @@index([scope, branchId, active])
+  @@index([publicationState, active])
+  @@index([sourceIdentifier])
 }
 
 model PatientImportBatch {
@@ -2566,6 +2578,9 @@ model InvestigationFavoriteSetItem {
   favoriteSetId              String @db.Uuid
   investigationCatalogItemId String @db.Uuid
   position                   Int
+  required                   Boolean @default(false)
+  rationale                  String?
+  responsibilityJson         Json?
 
   favoriteSet              InvestigationFavoriteSet @relation(fields: [favoriteSetId], references: [id], onDelete: Cascade)
   investigationCatalogItem InvestigationCatalogItem @relation(fields: [investigationCatalogItemId], references: [id], onDelete: Restrict)

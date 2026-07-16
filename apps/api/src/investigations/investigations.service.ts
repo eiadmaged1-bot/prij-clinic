@@ -159,8 +159,8 @@ export class InvestigationsService {
     return { ok: true };
   }
 
-  listFavoriteSets(user: AuthUser, includeArchived = false) {
-    return this.prisma.investigationFavoriteSet.findMany({
+  async listFavoriteSets(user: AuthUser, includeArchived = false) {
+    const sets = await this.prisma.investigationFavoriteSet.findMany({
       where: {
         OR: [{ userId: user.id }, ...(user.branchId ? [{ scope: "branch", branchId: user.branchId }] : []), { scope: "clinic" }],
         ...(includeArchived ? {} : { active: true })
@@ -173,6 +173,7 @@ export class InvestigationsService {
       },
       orderBy: [{ active: "desc" }, { updatedAt: "desc" }]
     });
+    return sets.map((set) => ({ ...set, editable: set.userId === user.id }));
   }
 
   async createFavoriteSet(dto: InvestigationFavoriteSetDto, user: AuthUser) {
@@ -346,6 +347,8 @@ export class InvestigationsService {
       include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
+    await this.syncLifecycleTask(order, to, user);
+
     await this.audit.record({
       actorUserId: user.id,
       action: "investigation_order.status_updated",
@@ -441,6 +444,7 @@ export class InvestigationsService {
       },
       include: { items: true, patient: true, encounter: true }
     });
+    await this.prisma.patientTask.updateMany({ where: { relatedOrderId: order.id, taskType: "review_result", status: { in: ["open", "in_progress"] } }, data: { status: "done", completedAt: new Date() } });
     await this.audit.record({
       actorUserId: user.id,
       action: "clinical_request.reviewed",
@@ -462,6 +466,18 @@ export class InvestigationsService {
       throw new BadRequestException("Referenced patient, encounter, or doctor was not found.");
     }
     throw error;
+  }
+
+  private async syncLifecycleTask(order: { id: string; patientId: string; expectedResultDate?: Date | null; patient?: { branchId?: string | null } | null }, status: string, user: AuthUser) {
+    if (status === "result_received" || status === "needs_doctor_review") {
+      const existing = await this.prisma.patientTask.findFirst({ where: { relatedOrderId: order.id, taskType: "review_result", status: { in: ["open", "in_progress"] } } });
+      if (!existing) await this.prisma.patientTask.create({ data: { patientId: order.patientId, branchId: order.patient?.branchId ?? user.branchId, createdByUserId: user.id, relatedOrderId: order.id, taskType: "review_result", title: "Review investigation result", description: "A received investigation result requires Doctor review.", priority: "high", dueAt: order.expectedResultDate ?? null } });
+    }
+    if (status === "overdue") {
+      const existing = await this.prisma.patientTask.findFirst({ where: { relatedOrderId: order.id, taskType: "schedule_follow_up", status: { in: ["open", "in_progress"] } } });
+      if (!existing) await this.prisma.patientTask.create({ data: { patientId: order.patientId, branchId: order.patient?.branchId ?? user.branchId, createdByUserId: user.id, relatedOrderId: order.id, taskType: "schedule_follow_up", title: "Follow up overdue investigation", description: "Confirm responsibility and next action for the overdue investigation.", priority: "high", dueAt: new Date() } });
+    }
+    if (["reviewed", "closed", "cancelled", "voided", "not_completed"].includes(status)) await this.prisma.patientTask.updateMany({ where: { relatedOrderId: order.id, status: { in: ["open", "in_progress"] } }, data: { status: status === "reviewed" || status === "closed" ? "done" : "cancelled", completedAt: status === "reviewed" || status === "closed" ? new Date() : null, cancellationReason: status === "reviewed" || status === "closed" ? null : `Investigation ${status}` } });
   }
 
   private async validateFavoriteSetItems(inputIds: string[]) {
