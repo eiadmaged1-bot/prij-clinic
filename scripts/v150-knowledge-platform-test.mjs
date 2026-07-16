@@ -5,7 +5,7 @@ const [viewer, renderer, css, controller, guidelineService, protocolService, pro
   readFile("apps/web/app/guidelines/[id]/page.tsx", "utf8"), readFile("apps/web/components/guidelines/PdfCanvasViewer.tsx", "utf8"), readFile("apps/web/app/globals.css", "utf8"), readFile("apps/api/src/guidelines/guidelines.controller.ts", "utf8"), readFile("apps/api/src/guidelines/guidelines.service.ts", "utf8"), readFile("apps/api/src/protocol-atlas/protocol-atlas.service.ts", "utf8"), readFile("apps/web/app/admin/protocol-atlas/page.tsx", "utf8"), readFile("apps/api/src/ai-drafts/ai-drafts.service.ts", "utf8")
 ]);
 
-for (const contract of ["getDocument", "GlobalWorkerOptions", "pdf.worker.min.mjs", "canvas", "getTextContent", "pdf-search-highlight", "PdfThumbnail", "withCredentials"]) assert.match(renderer, new RegExp(contract.replace(".", "\\.")));
+for (const contract of ["getDocument", "GlobalWorkerOptions", "/api/pdfjs/pdf.worker.mjs", "canvas", "getTextContent", "pdf-search-highlight", "PdfThumbnail", "withCredentials"]) assert.match(renderer, new RegExp(contract.replaceAll("/", "\\/").replaceAll(".", "\\.")));
 assert.match(viewer, /PDF rendering unavailable — Text fallback mode/); assert.match(viewer, /Retry PDF/); assert.match(viewer, /Open Original/);
 assert.match(controller, /accept-ranges["'], ["']bytes/); assert.match(controller, /content-range/); assert.match(controller, /status\(206\)/);
 for (const guard of ["assertGuidelineFileSignature", "file signature does not match", "active content or embedded actions", "sanitizeRetrievedEvidence", "untrusted document instruction removed"]) assert.match(guidelineService, new RegExp(guard, "i"));

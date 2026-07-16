@@ -52,8 +52,10 @@ type SearchResult = {
   status: string;
   reviewStatus: string;
   publicationDate?: string | null;
-  pageStart: number;
-  pageEnd?: number;
+  pageStart: number | null;
+  pageEnd?: number | null;
+  originalUrl?: string | null;
+  assetAvailable?: boolean;
   citedBullets: string[];
   clinicalSubtopic: string;
   matchReason: string;
@@ -284,9 +286,9 @@ function SearchPanel(props: {
             <div className="data-row-header"><strong>{result.title}</strong><span className="badge">{result.status}</span></div>
             <p>{result.snippet}</p>
             {result.citedBullets.length ? <ul>{result.citedBullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
-            <p className="muted">{result.organization} · {result.versionLabel ?? result.publicationDate?.slice(0, 4) ?? "Version not recorded"} · {result.sectionHeading} · Page {result.pageStart}</p>
+            <p className="muted">{result.organization} · {result.versionLabel ?? result.publicationDate?.slice(0, 4) ?? "Version not recorded"} · {result.sectionHeading}{result.pageStart ? ` · Page ${result.pageStart}` : " · Metadata only"}</p>
             <p className="muted">Why matched: {result.matchReason}</p>
-            <div className="form-actions"><Link className="button secondary compact" href={`/guidelines/${result.documentId}?tab=summary`}>Open summary</Link><Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open exact PDF page</Link></div>
+            <div className="form-actions"><Link className="button secondary compact" href={`/guidelines/${result.documentId}?tab=summary`}>Open record</Link>{result.pageStart ? <Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open exact PDF page</Link> : result.originalUrl ? <a className="button secondary compact" href={result.originalUrl} target="_blank" rel="noreferrer">Open official source</a> : null}</div>
           </article>
         ))}</section>)}
         {!props.results.length ? <Empty text="No matching source found in your local guideline library." /> : null}

@@ -184,6 +184,8 @@
     "test:v152:smart-patient-workspace": "node scripts/v152-smart-patient-workspace-test.mjs",
     "test:v152:medication-provenance": "node scripts/v152-medication-provenance-test.mjs",
     "test:v152:dermatology": "node scripts/v152-dermatology-test.mjs",
+    "test:v152:guidelines": "node scripts/v152-guideline-knowledge-test.mjs",
+    "verify:v152:guideline-assets": "node scripts/v152-verify-guideline-assets.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

@@ -574,13 +574,53 @@ export class GuidelinesService {
       take: 500,
       orderBy: { createdAt: "desc" }
     });
-    const ranked = chunks
+    const rankedChunks = chunks
       .filter((chunk) => !query.clinicalArea || normalizeText(`${chunk.document.specialty} ${chunk.document.topic} ${chunk.document.subtopic ?? ""} ${chunk.section?.heading ?? ""} ${chunk.text}`).includes(normalizeText(query.clinicalArea)))
       .map((chunk) => ({ chunk, score: rankChunk(chunk, terms, query) }))
       .filter((item) => (terms.length ? item.score > 0 : true))
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
       .map(({ chunk, score }) => formatSearchResult(chunk, score));
+
+    const metadataDocuments = await this.prisma.guidelineDocument.findMany({
+      where: {
+        ...this.documentAccessWhere(user),
+        documentType: "official_metadata_link",
+        ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
+        ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
+        ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
+        ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : {}),
+        ...(query.reviewStatus ? { reviewStatus: query.reviewStatus } : {}),
+        ...(Number.isInteger(requestedYear) ? { publicationDate: { gte: new Date(`${requestedYear}-01-01T00:00:00.000Z`), lt: new Date(`${requestedYear + 1}-01-01T00:00:00.000Z`) } } : {}),
+        ...(terms.length ? { OR: terms.flatMap((term) => [
+          { title: { contains: term, mode: "insensitive" as const } },
+          { topic: { contains: term, mode: "insensitive" as const } },
+          { specialty: { contains: term, mode: "insensitive" as const } },
+          { organization: { contains: term, mode: "insensitive" as const } }
+        ]) } : {})
+      },
+      include: { source: true },
+      orderBy: [{ publicationDate: "desc" }, { title: "asc" }],
+      take: limit
+    });
+    const metadataOnly = metadataDocuments.map((document) => ({
+      chunkId: `metadata:${document.id}`, documentId: document.id, title: document.title,
+      organization: document.organization, versionLabel: document.versionLabel,
+      publicationDate: document.publicationDate, status: document.guidelineStatus,
+      reviewStatus: document.reviewStatus, region: document.source.countryOrRegion,
+      sourceKind: "official", sectionHeading: "Official registry metadata",
+      snippet: `${document.topic}. Full text is not stored locally; open the official source and verify its current version before clinical use.`,
+      citedBullets: [] as string[], pageStart: null, pageEnd: null,
+      clinicalSubtopic: classifyGuidelineSubtopic(`${document.specialty} ${document.topic}`),
+      matchReason: "Matched official title, agency, specialty, or topic metadata",
+      citationLabel: document.citationLabel, accessLevel: document.accessLevel,
+      score: document.guidelineStatus === "ACTIVE" ? 6 : 1,
+      originalUrl: document.originalUrl, assetAvailable: false
+    }));
+    const ranked = [...rankedChunks, ...metadataOnly]
+      .sort((a, b) => b.score - a.score)
+      .filter((item, index, all) => all.findIndex((candidate) => candidate.documentId === item.documentId) === index)
+      .slice(0, limit);
 
     await this.prisma.guidelineQueryLog.create({
       data: {
@@ -604,7 +644,7 @@ export class GuidelinesService {
     const groupedResults = Object.entries(groupedMap).map(([clinicalSubtopic, results]) => ({ clinicalSubtopic, results }));
     const synthesis = query.synthesis === "true" && ranked.length ? {
       status: "DOCTOR_REVIEW_REQUIRED",
-      agreement: ranked.slice(0, 3).map((result) => ({ bullet: result.citedBullets[0] ?? result.snippet.slice(0, 220), documentId: result.documentId, page: result.pageStart })),
+      agreement: ranked.filter((result) => result.pageStart !== null).slice(0, 3).map((result) => ({ bullet: result.citedBullets[0] ?? result.snippet.slice(0, 220), documentId: result.documentId, page: result.pageStart })),
       differences: "Compare population, version, region, and recommendation wording in each cited source.",
       evidenceGaps: "No inference is made where the indexed sources do not provide a page-cited statement.",
       sourceLinks: ranked.slice(0, 5).map((result) => ({ documentId: result.documentId, page: result.pageStart }))
