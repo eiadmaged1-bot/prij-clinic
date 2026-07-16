@@ -19,8 +19,10 @@ import { AppActionButton } from "@/components/actions/AppActionButton";
 import { autosaveLabel, loadLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
 import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
-import { PatientWorkspaceEditor, type WorkspacePanelPlacement } from "../../../components/patients/PatientWorkspaceEditor";
+import type { WorkspacePanelPlacement } from "../../../components/patients/PatientWorkspaceEditor";
 import { PatientPanelErrorBoundary } from "../../../components/patients/PatientPanelErrorBoundary";
+import { PatientSmartIdentityBar } from "../../../components/patients/PatientSmartIdentityBar";
+import { MissingInformationCenter } from "../../../components/patients/MissingInformationCenter";
 
 const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
@@ -116,6 +118,23 @@ export default function PatientFilePage() {
   useEffect(() => {
     void loadLocalDraft<Record<string, string>>(draftKey).then((record) => { if (record?.payload) setDraftFields(record.payload); });
   }, [draftKey]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const token = sessionStorage.getItem("prijClinicToken");
+    void fetch(`${getApiBaseUrl()}/patients/${patientId}/workspace-layout`, {
+      credentials: "include",
+      signal: controller.signal,
+      headers: token ? { authorization: `Bearer ${token}` } : undefined
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("layout");
+      const data = await response.json() as { layout?: { panels?: WorkspacePanelPlacement[] } };
+      setWorkspacePanels(data.layout?.panels ?? []);
+    }).catch((error) => {
+      if ((error as Error).name !== "AbortError") setWorkspacePanels([]);
+    });
+    return () => controller.abort();
+  }, [patientId]);
 
   useEffect(() => {
     if (activeTab !== "doctor-visit") return;
@@ -349,7 +368,7 @@ export default function PatientFilePage() {
 
   return (
     <AppShell>
-      <section className="patient-context-bar" aria-label="Current patient context">
+      <section className="patient-context-bar legacy-patient-context-bar" aria-hidden="true">
         <div className="patient-context-identity">
           <strong>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</strong>
           <span>{patient ? `MRN ${patient.medicalRecordNumber} · ${ageLabel}` : "Loading patient details"}</span>
@@ -397,7 +416,8 @@ export default function PatientFilePage() {
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
           <ImportantPatientBanner patient={patient} related={related} />
           <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
-          <PatientWorkspaceEditor patientId={patientId} patientType={patient.patientType ?? "GENERAL"} permissions={permissions} roles={roles} onApply={setWorkspacePanels} />
+          <PatientSmartIdentityBar patient={patient} currentPhase={currentPhase} related={related} infertility={infertilityWorkspace} autosaveStatus={autosaveStatus} onOpenVisit={() => setActiveTab("doctor-visit")} onOpenMore={() => setActiveTab("more")} />
+          <MissingInformationCenter patientId={patientId} canUpdate={permissions.includes("patient.update")} />
 
           <section className="patient-tabs simple" aria-label="Patient file sections">
             {visibleTabs.map((tab) => (

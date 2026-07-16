@@ -181,6 +181,7 @@
     "test:v151:intake-data-hygiene": "node scripts/v151-intake-data-hygiene-rescue-test.mjs",
     "test:v151:owner-admin": "node scripts/v151-owner-admin-rescue-test.mjs",
     "test:v151:localization-responsive-print": "node scripts/v151-localization-responsive-print-test.mjs",
+    "test:v152:smart-patient-workspace": "node scripts/v152-smart-patient-workspace-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

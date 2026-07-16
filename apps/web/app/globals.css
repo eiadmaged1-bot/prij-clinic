@@ -6558,6 +6558,38 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .missing-information-groups > details { border: 1px solid var(--border); border-radius: 8px; padding: .45rem; }
 .missing-information-groups > details > summary { display: flex; justify-content: space-between; gap: .5rem; cursor: pointer; }
 .patient-workspace-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .8rem; align-items: start; }
+.legacy-patient-context-bar { display: none !important; }
+.patient-smart-identity-bar {
+  --patient-type-accent: var(--accent, #0f766e);
+  position: sticky;
+  top: calc(58px + env(safe-area-inset-top));
+  z-index: 24;
+  display: grid;
+  grid-template-columns: minmax(13rem, .85fr) minmax(20rem, 2fr) auto;
+  gap: .65rem;
+  align-items: center;
+  margin: 0 0 .75rem;
+  padding: .65rem .8rem;
+  border: 1px solid color-mix(in srgb, var(--patient-type-accent) 52%, var(--border));
+  border-inline-start: 5px solid var(--patient-type-accent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface, #fff) 94%, var(--patient-type-accent));
+  box-shadow: 0 8px 26px rgb(15 23 42 / 10%);
+}
+.patient-smart-primary, .patient-smart-signals, .patient-smart-actions { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; min-width: 0; }
+.patient-smart-primary strong { flex-basis: 100%; color: var(--navy, #0f2744); font-size: 1.02rem; }
+.patient-smart-primary span, .patient-smart-signals span { font-size: .78rem; line-height: 1.25; }
+.patient-smart-signals span { padding: .22rem .42rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface, #fff); }
+.patient-smart-signals .warning { border-color: #b7791f; color: #7a4b00; background: #fff8e6; }
+.patient-smart-signals .risk { border-color: #b42318; color: #8a1c13; background: #fff0ee; font-weight: 700; }
+.patient-smart-identity-bar.patient-type-obstetric { --patient-type-accent: #087f8c; }
+.patient-smart-identity-bar.patient-type-high-risk-obstetric { --patient-type-accent: #b42318; }
+.patient-smart-identity-bar.patient-type-gynecology { --patient-type-accent: #c45d2d; }
+.patient-smart-identity-bar.patient-type-infertility { --patient-type-accent: #7656a6; }
+.patient-smart-identity-bar.patient-type-postpartum { --patient-type-accent: #9a7218; }
+.patient-smart-identity-bar.patient-type-preventive-well-woman { --patient-type-accent: #2f7d4a; }
+.patient-smart-identity-bar.patient-type-other { --patient-type-accent: #64748b; }
+.patient-type-badge { border-color: var(--patient-type-accent) !important; font-weight: 700; }
 .patient-workspace-panel { min-width: 0; border: 1px solid var(--border); border-radius: var(--theme-card-radius, 12px); background: var(--surface, #fff); box-shadow: var(--shadow-sm); overflow: clip; }
 .patient-workspace-panel.is-pinned { border-color: var(--accent); }
 .patient-workspace-panel-body { min-width: 0; padding: .75rem; }
@@ -6658,3 +6690,8 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .dermatology-topic-card.danger { border-inline-start: .3rem solid var(--danger); }
 .dermatology-topic-card ul { margin-block-end: 0; padding-inline-start: 1.2rem; }
 @media (max-width: 720px) { .dermatology-topic-grid { grid-template-columns: 1fr; } .dermatology-topic-nav { overflow-x: auto; flex-wrap: nowrap; } }
+.patient-smart-identity-bar { container-type: inline-size; }
+@media (max-width: 760px) {
+  .patient-smart-identity-bar { position: static; grid-template-columns: 1fr; padding: .65rem; }
+  .patient-smart-actions .button { flex: 1 1 auto; min-height: 44px; }
+}
