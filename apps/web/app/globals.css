@@ -6585,3 +6585,14 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .admin-compact-table td:first-child { display: grid; gap: .15rem; }
 .admin-compact-table tr.active { background: var(--soft); }
 @media (max-width: 720px) { .appearance-context-previews { grid-template-columns: 1fr; } }
+.pdfjs-viewer { display: grid; gap: .75rem; min-width: 0; }
+.pdfjs-page { position: relative; margin: 0 auto; max-width: 100%; overflow: auto; background: white; box-shadow: var(--shadow-sm); }
+.pdfjs-page canvas { display: block; max-width: none; }
+.pdfjs-text-layer { position: absolute; inset: 0; overflow: hidden; line-height: 1; opacity: .16; }
+.pdfjs-text-layer span { position: absolute; color: transparent; white-space: pre; transform-origin: 0 0; cursor: text; user-select: text; }
+.pdfjs-text-layer span::selection { background: rgb(45 112 220 / .55); }
+.pdfjs-text-layer .pdf-search-highlight { color: transparent; background: rgb(255 210 40 / .72); border-radius: 2px; }
+.pdfjs-thumbnails { display: flex; gap: .5rem; overflow-x: auto; padding: .5rem 0; }
+.pdfjs-thumbnails button { display: grid; flex: 0 0 auto; gap: .25rem; padding: .35rem; border: 1px solid var(--border-color); background: var(--surface); }
+.pdfjs-thumbnails button.active { outline: 2px solid var(--accent); }
+.pdfjs-thumbnails canvas { width: 88px; height: auto; background: white; }

@@ -128,6 +128,8 @@ export function SafeAiAssistantPanel({ patientId: fixedPatientId }: { patientId?
         {!fixedPatientId ? <Link className="button secondary compact" href="/ai-drafts">Open draft review list</Link> : null}
       </div>
 
+      <p className="notice">document text, OCR, patient-entered content, and copied text are treated as untrusted content. Instructions found inside that content are ignored, and provider configuration are not shown.</p>
+
       {!fixedPatientId ? (
         <article className="panel compact-panel">
           <div className="section-heading">

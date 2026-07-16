@@ -12,7 +12,7 @@ for (const control of ["Previous page", "Next page", "Fit width", "Fit page", "R
 for (const tab of ["PDF", "Clinical Summary", "Sections", "Sources"]) assert(viewer.includes(`"${tab}"`), `mobile viewer tab missing ${tab}`);
 assert(viewer.includes("requestFullscreen") && viewer.includes("onTouchStart") && viewer.includes("onTouchEnd"), "fullscreen and mobile swipe navigation missing");
 assert(viewer.includes("guideline:last-page:") && viewer.includes("localStorage.setItem"), "last page memory missing");
-assert(viewer.includes("GuidelinePageFallback") && viewer.includes("PDF rendering failed"), "safe rendering fallback missing");
+assert(viewer.includes("GuidelinePageFallback") && viewer.includes("PDF rendering unavailable — Text fallback mode"), "truthful rendering fallback missing");
 assert(viewer.includes('fileMimeType === "application/pdf"'), "original PDF must be the default authoritative view");
 assert(viewer.includes("downloadsAllowed ?"), "download action must remain permission-controlled");
 assert(controller.includes('@Get("documents/:id/view")') && controller.includes('@Get("documents/:id/download")'), "secure original file routes missing");

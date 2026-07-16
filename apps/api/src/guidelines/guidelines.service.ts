@@ -264,6 +264,7 @@ export class GuidelinesService {
     if (!accepted) {
       throw new BadRequestException("Only matching PDF, TXT, and Markdown files are accepted.");
     }
+    assertGuidelineFileSignature(file.buffer, file.mimetype);
 
     const documentsBefore = await this.prisma.guidelineDocument.count();
     const hash = sha256(file.buffer);
@@ -393,6 +394,7 @@ export class GuidelinesService {
         return { document: safeDocument(duplicate), importJobId: job.id, skippedExisting: true };
       }
       const isPdf = contentType.includes("application/pdf") || url.pathname.toLowerCase().endsWith(".pdf") || buffer.subarray(0, 4).toString("utf8") === "%PDF";
+      if (isPdf) assertGuidelineFileSignature(buffer, "application/pdf");
       const localFile = isPdf ? await this.storeOpenImportFile(buffer, hash, ".pdf") : null;
       const extracted = isPdf ? await extractDocument(buffer, "application/pdf") : { text: htmlToText(buffer.toString("utf8")), pageCount: null };
       const document = await this.createIndexedDocument({
@@ -620,7 +622,7 @@ export class GuidelinesService {
       };
     }
     const sentences = search.results
-      .flatMap((result) => result.snippet.split(/(?<=[.!?])\s+/).slice(0, 2))
+      .flatMap((result) => sanitizeRetrievedEvidence(result.snippet).split(/(?<=[.!?])\s+/).slice(0, 2))
       .filter(Boolean)
       .slice(0, 5);
     return {
@@ -1051,6 +1053,20 @@ function isPathInsideVault(path: string) {
 
 function safeDownloadName(value: string) {
   return basename(value).replace(/[^\w.\- ]/g, "_") || "guideline-document";
+}
+
+function assertGuidelineFileSignature(buffer: Buffer, mimeType: string) {
+  if (mimeType === "application/pdf") {
+    if (buffer.subarray(0, 5).toString("ascii") !== "%PDF-") throw new BadRequestException("The file signature does not match an authoritative PDF.");
+    const pdfSyntax = buffer.toString("latin1");
+    if (/\/(?:JavaScript|JS|OpenAction|Launch|RichMedia|EmbeddedFile|XFA)\b/i.test(pdfSyntax)) throw new BadRequestException("PDF active content or embedded actions are not accepted.");
+    return;
+  }
+  if (buffer.includes(0)) throw new BadRequestException("The text file contains binary content and cannot be indexed safely.");
+}
+
+function sanitizeRetrievedEvidence(value: string) {
+  return value.replace(/(?:ignore|disregard) (?:all )?(?:previous|prior) instructions|system prompt|developer message|reveal (?:secrets|credentials)|execute (?:this )?(?:command|script)/gi, "[untrusted document instruction removed]");
 }
 
 function encryptForVault(buffer: Buffer): StoredFilePayload {
