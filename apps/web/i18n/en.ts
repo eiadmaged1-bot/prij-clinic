@@ -134,5 +134,21 @@ export const en = {
   deterministicPrompts: "Deterministic prompts only; no diagnosis or prescribing.",
   recordOrReview: "Record or review",
   noRuleBasedGaps: "No current rule-based gaps were found.",
-  missingRulesLoadError: "Missing-information rules could not be loaded."
+  missingRulesLoadError: "Missing-information rules could not be loaded.",
+  intakeCenter: "Intake Center",
+  googleForms: "Google Forms",
+  googleSheets: "Google Sheets",
+  excelCsv: "Excel/CSV",
+  manual: "Manual",
+  history: "History",
+  corrections: "Corrections",
+  testQuarantinedOwner: "Test/Quarantined Owner-only",
+  securityMatrix: "Actionable readiness matrix",
+  area: "Area",
+  automatedManual: "Automated/manual",
+  evidence: "Evidence",
+  owner: "Owner",
+  lastChecked: "Last checked",
+  blocker: "Blocker",
+  action: "Action"
 } as const;

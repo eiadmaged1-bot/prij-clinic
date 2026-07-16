@@ -6,6 +6,7 @@ import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 import { AppShell } from "../mvp-page";
 import { attachSubmissionToPatient, createPatientFromSubmission, ExternalIntakeSubmission, listExternalIntake, rejectExternalSubmission, requestExternalIntakeCorrection } from "@/lib/external-intake";
 import { PatientPicker } from "@/components/clinic/PatientPicker";
+import { useI18n } from "../../i18n/useI18n";
 
 const mappedFields = [
   ["fullName", "Full name"],
@@ -19,16 +20,19 @@ const mappedFields = [
 ] as const;
 
 export default function ExternalIntakePage() {
+  const { t } = useI18n();
   const [submissions, setSubmissions] = useState<ExternalIntakeSubmission[]>([]);
   const [status, setStatus] = useState("Loading");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"google-forms" | "google-sheets" | "excel-csv" | "manual" | "history" | "corrections" | "quarantined">("google-forms");
 
-  const selected = submissions.find((submission) => submission.id === selectedId) ?? submissions[0] ?? null;
+  const visibleSubmissions = submissions.filter((submission) => tab === "google-forms" ? submission.source === "google_form" : tab === "google-sheets" ? submission.source === "google_sheet" : tab === "corrections" ? submission.status === "correction_requested" : tab === "history" ? submission.status !== "pending_review" : tab === "manual" ? submission.source === "manual" : true);
+  const selected = visibleSubmissions.find((submission) => submission.id === selectedId) ?? visibleSubmissions[0] ?? null;
 
   async function load() {
     setStatus("Loading");
     try {
-      const result = await listExternalIntake();
+      const result = await listExternalIntake(["history", "corrections"].includes(tab) ? "" : "pending_review");
       setSubmissions(result.submissions);
       setSelectedId((current) => current ?? result.submissions[0]?.id ?? null);
       setStatus("Ready");
@@ -40,14 +44,14 @@ export default function ExternalIntakePage() {
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [tab]);
 
   return (
     <AppShell>
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">External Intake Inbox</p>
+            <p className="eyebrow">{t("intakeCenter")}</p>
             <h1>Patient Submissions Review</h1>
             <p className="muted">Google Form submissions stay pending until Owner/Admin/Doctor review.</p>
           </div>
@@ -57,12 +61,17 @@ export default function ExternalIntakePage() {
         </div>
       </section>
 
-      <section className="content-grid intake-review-grid">
+      <nav className="patient-tabs simple" aria-label="Intake Center sources"><button className={tab === "google-forms" ? "active" : ""} type="button" onClick={() => setTab("google-forms")}>{t("googleForms")}</button><button className={tab === "google-sheets" ? "active" : ""} type="button" onClick={() => setTab("google-sheets")}>{t("googleSheets")}</button><button className={tab === "excel-csv" ? "active" : ""} type="button" onClick={() => setTab("excel-csv")}>{t("excelCsv")}</button><button className={tab === "manual" ? "active" : ""} type="button" onClick={() => setTab("manual")}>{t("manual")}</button><button className={tab === "history" ? "active" : ""} type="button" onClick={() => setTab("history")}>{t("history")}</button><button className={tab === "corrections" ? "active" : ""} type="button" onClick={() => setTab("corrections")}>{t("corrections")}</button><button className={tab === "quarantined" ? "active" : ""} type="button" onClick={() => setTab("quarantined")}>{t("testQuarantinedOwner")}</button></nav>
+
+      {tab === "excel-csv" ? <section className="panel"><h2>Excel/CSV staged import</h2><p className="muted">Files are parsed locally, validated, and staged for row-by-row review. No patient or clinical record is created during preview.</p><Link className="button" href="/patients/import">Open Excel/CSV review center</Link></section> : null}
+      {tab === "quarantined" ? <section className="panel"><h2>Owner review</h2><p className="muted">Confirmed TEST and QUARANTINED submissions remain outside the operational inbox.</p><Link className="button secondary" href="/admin/data-hygiene">Open Data Hygiene</Link></section> : null}
+
+      {!['excel-csv', 'quarantined'].includes(tab) ? <section className="content-grid intake-review-grid">
         <div className="panel compact-panel">
           <div className="section-heading"><h2>Pending submissions</h2><span className="badge">{status}</span></div>
           {submissions.length === 0 ? <p className="empty-state"><ThreeDMedicalIcon name="files" size="sm" tone="slate" /><span>No pending external submissions.</span></p> : null}
           <div className="data-list">
-            {submissions.map((submission) => {
+            {visibleSubmissions.map((submission) => {
               const mapped = objectValue(submission.mappedPatientJson);
               const caseType = objectValue(submission.mappedCaseTypeJson);
               const duplicates = Array.isArray(submission.duplicateCandidatesJson) ? submission.duplicateCandidatesJson.length : 0;
@@ -81,7 +90,7 @@ export default function ExternalIntakePage() {
         </div>
 
         <SubmissionDetail submission={selected} onChanged={load} />
-      </section>
+      </section> : null}
     </AppShell>
   );
 }

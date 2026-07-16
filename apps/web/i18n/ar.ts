@@ -134,5 +134,21 @@ export const ar = {
   deterministicPrompts: "تنبيهات حتمية فقط؛ بلا تشخيص أو وصف علاج.",
   recordOrReview: "تسجيل أو مراجعة",
   noRuleBasedGaps: "لا توجد نواقص حالية وفق القواعد.",
-  missingRulesLoadError: "تعذر تحميل قواعد المعلومات الناقصة."
+  missingRulesLoadError: "تعذر تحميل قواعد المعلومات الناقصة.",
+  intakeCenter: "مركز الاستقبال الخارجي",
+  googleForms: "نماذج جوجل",
+  googleSheets: "جداول جوجل",
+  excelCsv: "إكسل/CSV",
+  manual: "يدوي",
+  history: "السجل",
+  corrections: "التصحيحات",
+  testQuarantinedOwner: "اختباري/معزول — للمالك فقط",
+  securityMatrix: "مصفوفة الجاهزية القابلة للتنفيذ",
+  area: "المجال",
+  automatedManual: "آلي/يدوي",
+  evidence: "الدليل",
+  owner: "المسؤول",
+  lastChecked: "آخر فحص",
+  blocker: "العائق",
+  action: "الإجراء"
 } as const;

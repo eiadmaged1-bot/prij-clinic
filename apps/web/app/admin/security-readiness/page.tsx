@@ -5,11 +5,16 @@ import Link from "next/link";
 import { AppShell, SafetyAlert } from "../../mvp-page";
 import { useSession } from "../../session";
 import { getApiBaseUrl } from "@/lib/api-base-url";
+import { useI18n } from "../../../i18n/useI18n";
 
 type ReadinessSection = {
   label: string;
   status: string;
   detail: string;
+  checkType?: "Automated" | "Manual" | "Mixed";
+  owner?: string;
+  blocker?: string;
+  action?: string;
 };
 
 type SecurityReadiness = {
@@ -33,6 +38,7 @@ const fallbackSections: ReadinessSection[] = [
 ];
 
 export default function SecurityReadinessPage() {
+  const { t } = useI18n();
   const { status, isAdmin } = useSession();
   const [readiness, setReadiness] = useState<SecurityReadiness | null>(null);
   const [error, setError] = useState("");
@@ -108,17 +114,7 @@ export default function SecurityReadinessPage() {
         <Metric label="AI status" value="Draft-only" />
       </section>
 
-      <section className="module-grid">
-        {sections.map((section) => (
-          <article className="module-card" key={section.label}>
-            <div className="data-row-header">
-              <strong>{section.label}</strong>
-              <span className={`badge ${badgeTone(section.status)}`}>{section.status}</span>
-            </div>
-            <span className="muted">{section.detail}</span>
-          </article>
-        ))}
-      </section>
+      <section className="panel"><div className="section-heading"><h2>{t("securityMatrix")}</h2><span className="badge">{t("evidence")}, {t("owner")}, {t("blocker")}, {t("action")}</span></div><div className="table-scroll"><table><thead><tr><th>{t("area")}</th><th>Status</th><th>{t("automatedManual")}</th><th>{t("evidence")}</th><th>{t("owner")}</th><th>{t("lastChecked")}</th><th>{t("blocker")}</th><th>{t("action")}</th></tr></thead><tbody>{sections.map((section) => <tr key={section.label}><td><strong>{section.label}</strong></td><td><span className={`badge ${badgeTone(section.status)}`}>{section.status}</span></td><td>{section.checkType ?? readinessCheckType(section.label)}</td><td><details><summary>View evidence</summary><p className="muted">{section.detail}</p></details></td><td>{section.owner ?? readinessOwner(section.label)}</td><td>{readiness?.generatedAt ? new Date(readiness.generatedAt).toLocaleString() : "Not checked in this session"}</td><td>{section.blocker ?? (section.status === "Configured" || section.status === "Guarded" ? "None recorded" : "Owner review required")}</td><td>{section.action ?? readinessAction(section.label)}</td></tr>)}</tbody></table></div></section>
 
       <section className="panel">
         <div className="section-heading">
@@ -157,3 +153,7 @@ function badgeTone(status: string) {
   if (value.includes("limited") || value.includes("local") || value.includes("draft")) return "warning";
   return "";
 }
+
+function readinessCheckType(label: string) { return /consent|backup|production/i.test(label) ? "Mixed" : "Automated"; }
+function readinessOwner(label: string) { return /consent/i.test(label) ? "Clinic Owner / legal reviewer" : /backup|production/i.test(label) ? "Deployment Owner" : "Clinic Owner / Admin"; }
+function readinessAction(label: string) { if (/backup/i.test(label)) return "Run and evidence a restore drill"; if (/consent/i.test(label)) return "Complete clinic policy and legal review"; if (/production/i.test(label)) return "Run production readiness validation"; return "Review current evidence and blockers"; }
