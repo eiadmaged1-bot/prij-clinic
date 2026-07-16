@@ -412,7 +412,7 @@ export default function PatientFilePage() {
             {visibleTabs.map((tab) => {
               const placement = workspacePanels.find((panel) => panel.panelKey === tab.key);
               const size = placement?.size ?? (tab.key === "overview" ? "FULL" : "MEDIUM");
-              return <article className={`patient-workspace-panel workspace-panel-size-${size.toLowerCase()} ${placement?.pinned ? "is-pinned" : ""}`} id={`patient-panel-${tab.key}`} key={tab.key}>
+              return <article className={`patient-workspace-panel workspace-panel-size-${size.toLowerCase()} ${placement?.pinned ? "is-pinned" : ""}`} style={{ gridColumn: workspaceGridColumn(placement) }} id={`patient-panel-${tab.key}`} key={tab.key}>
                 <PatientPanelErrorBoundary panelKey={tab.key} ownerDiagnostics={roles.some((role) => ["Owner", "Admin"].includes(role))}>
                   <details open={!placement?.collapsed} onToggle={(event) => { if ((event.currentTarget as HTMLDetailsElement).open) setActiveTabState(tab.key); }}>
                     <summary className="workspace-panel-collapse-summary"><span><ThreeDMedicalIcon name={tab.icon} size="sm" />{tab.label}</span><span className="badge">{placement?.pinned ? "Pinned" : size.toLowerCase()}</span></summary>
@@ -450,4 +450,11 @@ export default function PatientFilePage() {
       }} /> : null}
     </AppShell>
   );
+}
+
+function workspaceGridColumn(placement?: WorkspacePanelPlacement) {
+  if (!placement || placement.size === "FULL" || placement.column <= 1) return undefined;
+  const span = placement.size === "SMALL" ? 4 : placement.size === "MEDIUM" ? 6 : 8;
+  const start = Math.min(placement.column, 13 - span);
+  return `${start} / span ${span}`;
 }

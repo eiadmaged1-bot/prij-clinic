@@ -4,7 +4,7 @@ import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Ma
 export class WorkspacePanelLayoutDto {
   @IsString() @MaxLength(80) panelKey!: string;
   @IsInt() @Min(0) @Max(100) order!: number;
-  @IsInt() @Min(1) @Max(4) column!: number;
+  @IsInt() @Min(1) @Max(12) column!: number;
   @IsIn(["SMALL", "MEDIUM", "WIDE", "FULL"]) size!: "SMALL" | "MEDIUM" | "WIDE" | "FULL";
   @IsBoolean() collapsed!: boolean;
   @IsBoolean() pinned!: boolean;
