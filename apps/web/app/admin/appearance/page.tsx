@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, SafetyAlert } from "../../mvp-page";
-import { AppThemeId, isThemeId, themes, useTheme, type ThemeConfiguration } from "../../theme";
+import { AppThemeId, getTheme, resolveThemeId, sanitizeThemeConfiguration, themes, useTheme, type ThemeConfiguration } from "../../theme";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { InterfaceModeSettings } from "@/components/settings/InterfaceModeSettings";
@@ -17,7 +17,7 @@ type AppearanceSettings = {
 };
 
 const fallbackSettings: AppearanceSettings = {
-  defaultTheme: "clinic-premium",
+  defaultTheme: "prij-heritage",
   allowUserThemeOverride: true,
   defaultDoctorComfortMode: false,
   appearanceConfig: {},
@@ -72,13 +72,15 @@ export default function AppearancePage() {
       return;
     }
 
-    const data = (await response.json()) as Partial<AppearanceSettings>;
-    const defaultTheme = isThemeId(data.defaultTheme) ? data.defaultTheme : fallbackSettings.defaultTheme;
+    const data = (await response.json().catch(() => null)) as Partial<AppearanceSettings> | null;
+    const defaultTheme = resolveThemeId(data?.defaultTheme) ?? fallbackSettings.defaultTheme;
+    const defaultConfiguration = getTheme(defaultTheme).configuration;
     const next = {
       defaultTheme,
-      allowUserThemeOverride: typeof data.allowUserThemeOverride === "boolean" ? data.allowUserThemeOverride : true,
-      defaultDoctorComfortMode: typeof data.defaultDoctorComfortMode === "boolean" ? data.defaultDoctorComfortMode : false
-      ,appearanceConfig: data.appearanceConfig && typeof data.appearanceConfig === "object" ? data.appearanceConfig : {}, roleDefaults: data.roleDefaults && typeof data.roleDefaults === "object" ? data.roleDefaults : {}
+      allowUserThemeOverride: typeof data?.allowUserThemeOverride === "boolean" ? data.allowUserThemeOverride : true,
+      defaultDoctorComfortMode: typeof data?.defaultDoctorComfortMode === "boolean" ? data.defaultDoctorComfortMode : false,
+      appearanceConfig: sanitizeThemeConfiguration(data?.appearanceConfig, defaultConfiguration),
+      roleDefaults: data?.roleDefaults && typeof data.roleDefaults === "object" && !Array.isArray(data.roleDefaults) ? data.roleDefaults : {}
     };
     setSettings(next);
     setSelectedTheme(defaultTheme);
@@ -134,7 +136,7 @@ export default function AppearancePage() {
   function applyForThisBrowser(themeId: AppThemeId) {
     setSelectedTheme(themeId);
     setTheme(themeId);
-    setConfiguration(themes.find((item) => item.id === themeId)!.configuration);
+    setConfiguration(getTheme(themeId).configuration);
     setMessage("Theme applied to this browser.");
     setError("");
   }
@@ -144,6 +146,15 @@ export default function AppearancePage() {
     setDoctorComfortMode(settings.defaultDoctorComfortMode);
     setSelectedTheme(settings.defaultTheme);
     setMessage("This browser will use the default theme again.");
+    setError("");
+  }
+
+  function prepareSharedReset() {
+    const premium = getTheme("prij-heritage");
+    setSelectedTheme(premium.id);
+    setConfiguration(premium.configuration);
+    setSettings((current) => ({ ...current, defaultTheme: premium.id, appearanceConfig: premium.configuration, roleDefaults: {} }));
+    setMessage("Safe Dr Maged Premium defaults are ready. Save the selected scope to replace corrupted server settings.");
     setError("");
   }
 
@@ -195,7 +206,7 @@ export default function AppearancePage() {
         </div>
       </section>
 
-      {error ? <p className="form-error">{error}</p> : null}
+      {error ? <section className="panel compact-panel" role="alert"><p className="form-error">{error}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => void loadSettings()}>Retry appearance settings</button><button className="button secondary compact" type="button" onClick={resetBrowserTheme}>Reset corrupted device state</button></div></section> : null}
       {message ? <p className="success-message">{message}</p> : null}
 
       <section className="theme-preview-grid" aria-label="Theme choices">
@@ -212,7 +223,7 @@ export default function AppearancePage() {
               <p className="muted">{appTheme.description}</p>
             </div>
             <div className="form-actions">
-              <button className="button compact" onClick={() => { setSelectedTheme(appTheme.id); setConfiguration(appTheme.configuration); }} type="button">
+              <button className="button compact" onClick={() => { setSelectedTheme(appTheme.id); setConfiguration(sanitizeThemeConfiguration(appTheme.configuration, getTheme(appTheme.id).configuration)); }} type="button">
                 Select
               </button>
               <button className="button secondary compact" onClick={() => applyForThisBrowser(appTheme.id)} type="button">
@@ -224,6 +235,8 @@ export default function AppearancePage() {
       </section>
 
       <section className="panel"><div className="section-heading"><h2>Theme details</h2><span className="badge">Live preview</span></div><div className="form-grid"><label>Accent<input type="color" value={configuration.accent} onChange={(event) => setConfiguration({ ...configuration, accent: event.target.value })} /></label><label>Sidebar<select value={configuration.sidebar} onChange={(event) => setConfiguration({ ...configuration, sidebar: event.target.value as ThemeConfiguration["sidebar"] })}><option value="light">Light</option><option value="dark">Dark</option><option value="accent">Accent</option></select></label><label>Font scale<input type="range" min="0.9" max="1.3" step="0.05" value={configuration.fontScale} onChange={(event) => setConfiguration({ ...configuration, fontScale: Number(event.target.value) })} /></label><label>Card radius<input type="range" min="0" max="24" value={configuration.cardRadius} onChange={(event) => setConfiguration({ ...configuration, cardRadius: Number(event.target.value) })} /></label><label>Density<select value={configuration.density} onChange={(event) => setConfiguration({ ...configuration, density: event.target.value as ThemeConfiguration["density"] })}><option value="compact">Compact</option><option value="comfortable">Comfortable</option></select></label><label className="toggle-row"><input type="checkbox" checked={configuration.reducedMotion} onChange={(event) => setConfiguration({ ...configuration, reducedMotion: event.target.checked })} /> Reduced motion</label><label className="toggle-row"><input type="checkbox" checked={configuration.contrast === "high"} onChange={(event) => setConfiguration({ ...configuration, contrast: event.target.checked ? "high" : "standard" })} /> High contrast</label></div><div className="appearance-context-previews"><article className="data-row"><strong>Reception</strong><span>Queue and patient search preview</span></article><article className="data-row"><strong>Doctor patient file</strong><span>Panels remain independently configured</span></article><article className="data-row"><strong>Owner · desktop / tablet / mobile</strong><span>Compact administration preview</span></article></div></section>
+
+      <div className="form-actions"><button className="button secondary compact" type="button" onClick={prepareSharedReset}>Prepare safe shared reset</button></div>
 
       <section className="panel">
         <div className="section-heading">

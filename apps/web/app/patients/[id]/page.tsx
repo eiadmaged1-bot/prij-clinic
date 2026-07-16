@@ -413,7 +413,7 @@ export default function PatientFilePage() {
             ))}
           </section>
 
-          <PatientPanelErrorBoundary panelKey={active.key}><details className={`workspace-panel-size-${(workspacePanels.find((panel) => panel.panelKey === active.key)?.size ?? "FULL").toLowerCase()}`} open={!workspacePanels.find((panel) => panel.panelKey === active.key)?.collapsed}><summary className="workspace-panel-collapse-summary">{active.label}</summary><WorkspaceModuleRenderer
+          <PatientPanelErrorBoundary panelKey={active.key} ownerDiagnostics={roles.some((role) => ["Owner", "Admin"].includes(role))}><details className={`workspace-panel-size-${(workspacePanels.find((panel) => panel.panelKey === active.key)?.size ?? "FULL").toLowerCase()}`} open={!workspacePanels.find((panel) => panel.panelKey === active.key)?.collapsed}><summary className="workspace-panel-collapse-summary">{active.label}</summary><WorkspaceModuleRenderer
             active={active}
             patient={patient}
             related={related}

@@ -42,7 +42,6 @@ export default function PatientsPage() {
   const [exactDate, setExactDate] = useState(today);
   const [rangeStart, setRangeStart] = useState(today);
   const [rangeEnd, setRangeEnd] = useState(today);
-  const [patientStatus, setPatientStatus] = useState("active");
   const [directoryView, setDirectoryView] = useState("active");
   const [patientType, setPatientType] = useState("all");
   const [branchId, setBranchId] = useState("all");
@@ -58,7 +57,7 @@ export default function PatientsPage() {
     const timer = window.setTimeout(() => void loadPatients(text, page), 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchId, directoryView, page, patientStatus, patientType, query, sortMode]);
+  }, [branchId, directoryView, page, patientType, query, sortMode]);
 
   useEffect(() => {
     const savedCategory = localStorage.getItem("prijPatientDirectoryCategory");
@@ -71,15 +70,14 @@ export default function PatientsPage() {
     const q = query.trim().toLowerCase();
     const rows = patients.filter((patient) => {
       const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
-      const statusMatch = patientStatus === "all" || patient.status === patientStatus;
       const typeMatch = patientType === "all" || patient.patientType === patientType;
       const phaseMatch = phaseType === "all" || patient.currentPhase?.phaseType === phaseType;
       const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
       const categoryMatch = matchesCategory(patient, category, today);
-      return textMatch && statusMatch && typeMatch && phaseMatch && dateMatch && categoryMatch;
+      return textMatch && typeMatch && phaseMatch && dateMatch && categoryMatch;
     });
     return sortPatients(rows, sortMode);
-  }, [category, dateFilter, exactDate, patientStatus, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
+  }, [category, dateFilter, exactDate, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
 
   async function loadPatients(search = query.trim(), requestedPage = page) {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -87,7 +85,7 @@ export default function PatientsPage() {
     setError("");
 
     try {
-      const params = new URLSearchParams({ mode: "directory", view: directoryView, page: String(requestedPage), limit: "20", status: patientStatus, sort: sortMode });
+      const params = new URLSearchParams({ mode: "directory", view: directoryView, page: String(requestedPage), limit: "20", sort: sortMode });
       if (search) params.set("q", search);
       if (patientType !== "all") params.set("patientType", patientType);
       if (branchId !== "all") params.set("branchId", branchId);
@@ -126,7 +124,6 @@ export default function PatientsPage() {
     setCategory("all");
     setSortMode("created_newest");
     setDateFilter("all");
-    setPatientStatus("active");
     setDirectoryView("active");
     setPatientType("all");
     setBranchId("all");
@@ -169,13 +166,12 @@ export default function PatientsPage() {
         <div className="toolbar">
           <label>
             Directory view
-            <select onChange={(event) => { const view = event.target.value; setDirectoryView(view); setPatientStatus(view === "active" ? "active" : "all"); setPage(1); }} value={directoryView}>
+            <select onChange={(event) => { setDirectoryView(event.target.value); setPage(1); }} value={directoryView}>
               <option value="all">All clinic patients</option>
               <option value="current_branch">Current branch</option>
               <option value="active">Active</option>
               <option value="incomplete">Incomplete</option>
               <option value="exact_phone_duplicates">Possible exact-phone duplicates</option>
-              {user?.roles.includes("Owner") ? <option value="qa_test">QA/test records — Owner only</option> : null}
             </select>
           </label>
           <label>
@@ -221,7 +217,6 @@ export default function PatientsPage() {
             {dateFilter === "exact" ? <label>Exact date<input type="date" value={exactDate} onChange={(event) => setExactDate(event.target.value)} /></label> : null}
             {dateFilter === "range" ? <label>From<input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label> : null}
             {dateFilter === "range" ? <label>To<input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label> : null}
-            <label>Status<select onChange={(event) => { setPatientStatus(event.target.value); setPage(1); }} value={patientStatus}><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></label>
             <label>Patient type<select onChange={(event) => { setPatientType(event.target.value); setPage(1); }} value={patientType}><option value="all">All patient types</option>{patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
             <label>Branch<select onChange={(event) => { setBranchId(event.target.value); setPage(1); }} value={branchId}><option value="all">All permitted branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
             <label>Current phase<select onChange={(event) => setPhaseType(event.target.value)} value={phaseType}><option value="all">All phases</option><option value="infertility">Infertility</option><option value="pregnancy">Pregnancy</option><option value="gynecology">Gynecology</option><option value="postpartum">Postpartum</option><option value="general">General</option></select></label>

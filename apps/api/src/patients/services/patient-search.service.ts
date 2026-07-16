@@ -27,9 +27,8 @@ export class PatientSearchService {
     const directoryMode = options.mode === "directory";
     const directoryView = options.view ?? "active";
     if (directoryView === "qa_test" && !isOwnerOrAdmin(user)) throw new ForbiddenException("Only an Owner can review QA/test candidates.");
-    const allStatuses = options.status === "all" || directoryView === "all" || directoryView === "current_branch" || directoryView === "incomplete" || directoryView === "exact_phone_duplicates" || directoryView === "qa_test";
-    const requestedStatus = isPatientStatus(options.status) ? options.status : directoryMode && !allStatuses ? PatientStatus.active : undefined;
-    const includeArchived = options.includeArchived === "true" || requestedStatus === PatientStatus.archived || allStatuses;
+    const hygieneCandidateView = directoryView === "qa_test";
+    const requestedStatus = hygieneCandidateView && isPatientStatus(options.status) ? options.status : PatientStatus.active;
     const requestedType = isPatientType(options.patientType) ? options.patientType : undefined;
     const requestedBranchId = directoryView === "current_branch" ? user.branchId ?? undefined : options.branchId && (isOwnerOrAdmin(user) || options.branchId === user.branchId) ? options.branchId : undefined;
     const page = Math.max(1, Math.min(1000, Number.parseInt(options.page ?? "1", 10) || 1));
@@ -42,7 +41,7 @@ export class PatientSearchService {
     const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
     const where: Prisma.PatientWhereInput = {
       ...(requestedBranchId ? { branchId: requestedBranchId } : {}),
-      ...(requestedStatus ? { status: requestedStatus } : includeArchived ? {} : { status: { not: PatientStatus.archived } }),
+      status: requestedStatus,
       ...(requestedType ? { patientType: requestedType } : {}),
     };
     if (directoryView !== "qa_test") (where as Prisma.PatientWhereInput & { dataClassification?: unknown }).dataClassification = { notIn: ["TEST", "QUARANTINED"] };
