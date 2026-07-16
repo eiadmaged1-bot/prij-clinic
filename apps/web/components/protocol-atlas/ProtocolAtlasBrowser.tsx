@@ -99,9 +99,10 @@ export function ProtocolAtlasBrowser() {
           <article className={view === "cards" ? "protocol-card compact-panel" : "data-row dense"} key={protocol.id}>
             <div className="data-row-header">
               <strong>{protocol.title}</strong>
-              <ProtocolStatusBadge status={protocol.implementationStatus} />
+              <ProtocolStatusBadge status={protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? "verified" : protocol.implementationStatus} />
             </div>
             <p className="muted protocol-row-meta">{protocol.specialtyGroup} | {protocol.riskLevel}</p>
+            {protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? <span className="badge accent">SOURCE VERIFIED REFERENCE</span> : null}
             <dl className="profile-grid">
               <div><dt>Source</dt><dd>{shortSource(protocol.sourceName)}</dd></div>
               <div><dt>Risk</dt><dd>{protocol.riskLevel}</dd></div>
@@ -109,7 +110,7 @@ export function ProtocolAtlasBrowser() {
             <details className="collapsible-help-panel protocol-details">
               <summary>Open details</summary>
               <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
-              <p className="muted">{protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
+              <p className="muted">{protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? "Official-source reference available for Doctor review. It cannot execute a clinical action." : protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
             </details>
             <Link className="button secondary compact" href={`/protocol-atlas/${protocol.id}`}>Open protocol</Link>
           </article>

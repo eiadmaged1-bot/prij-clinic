@@ -67,7 +67,7 @@ export class ProtocolAtlasService {
   }
 
   async get(id: string, user: AuthUser) {
-    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { id, implementationStatus: { not: "retired" } } });
+    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { id, implementationStatus: { not: "retired" } }, include: { versions: { orderBy: { createdAt: "desc" }, take: 20 } } });
     if (!protocol) throw new NotFoundException("Protocol not found.");
     await this.audit.record({ actorUserId: user.id, action: "protocol_atlas.read", resourceType: "clinical_protocol", branchId: user.branchId, severity: "medium", metadataJson: { protocolId: protocol.id, code: protocol.code, status: protocol.implementationStatus } });
     return protocol;
@@ -116,7 +116,7 @@ export class ProtocolAtlasService {
 
   async getEditor(id: string, user: AuthUser) {
     if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can open the protocol editor.");
-    const protocol = await this.prisma.clinicalProtocol.findUnique({ where: { id } });
+    const protocol = await this.prisma.clinicalProtocol.findUnique({ where: { id }, include: { versions: { orderBy: { createdAt: "desc" }, take: 20 } } });
     if (!protocol) throw new NotFoundException("Protocol not found.");
     await this.audit.record({ actorUserId: user.id, action: "protocol_editor_opened", resourceType: "clinical_protocol", branchId: user.branchId, severity: "medium", metadataJson: { protocolId: protocol.id, code: protocol.code, status: protocol.implementationStatus } });
     return { ...protocol, structuredContent: normalizeProtocolContent(protocol.contentJson) };
@@ -236,6 +236,10 @@ const protocolSummarySelect = {
   sourceName: true,
   sourceYear: true,
   sourceVersion: true
+  ,publicationState: true
+  ,completionPercentage: true
+  ,patientTypesJson: true
+  ,sourceCitationsJson: true
 } satisfies Prisma.ClinicalProtocolSelect;
 
 function assertReason(reason?: string | null) {

@@ -4205,16 +4205,45 @@ model ClinicalProtocol {
   completionReviewerUserId String? @db.Uuid
   completionApprovedAt DateTime? @db.Timestamptz(3)
   completionVersion    Int      @default(1)
+  publicationState     String   @default("LOCAL_DRAFT")
+  sourceIdentifier     String?
+  sourceRetrievedAt    DateTime? @db.Timestamptz(3)
+  sourceCitationsJson  Json?
+  patientTypesJson     Json?
+  locallyCustomized    Boolean  @default(false)
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @db.Timestamptz(3)
 
   managementSnapshots AIManagementSnapshot[]
+  versions            ClinicalProtocolVersion[]
 
   @@index([specialtyGroup])
   @@index([condition])
   @@index([implementationStatus])
   @@index([riskLevel])
   @@index([completionPercentage])
+  @@index([publicationState])
+  @@index([sourceIdentifier])
+}
+
+model ClinicalProtocolVersion {
+  id                  String   @id @default(cuid())
+  protocolId          String
+  versionLabel        String
+  publicationState    String
+  sourceIdentifier    String
+  sourceName          String
+  sourceUrl           String
+  sourceRetrievedAt   DateTime @db.Timestamptz(3)
+  contentJson         Json
+  sourceCitationsJson Json
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
+
+  protocol ClinicalProtocol @relation(fields: [protocolId], references: [id], onDelete: Restrict)
+
+  @@unique([protocolId, versionLabel, sourceIdentifier])
+  @@index([protocolId, createdAt])
+  @@index([publicationState])
 }
 
 model AIManagementSnapshot {

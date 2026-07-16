@@ -82,6 +82,10 @@ export type ProtocolSummary = {
   sourceName: string;
   sourceYear?: number | null;
   sourceVersion?: string | null;
+  publicationState?: string;
+  completionPercentage?: number;
+  patientTypesJson?: string[];
+  sourceCitationsJson?: Array<{ sourceIdentifier: string; sourceTitle?: string; source?: string; version: string; sourceUrl?: string; section: string; page?: number | null }>;
   updatedAt?: string;
 };
 
@@ -94,6 +98,9 @@ export type ClinicalProtocol = ProtocolSummary & {
   connectionsJson?: Record<string, unknown>;
   completionPercentage?: number;
   completionVersion?: number;
+  sourceIdentifier?: string | null;
+  sourceRetrievedAt?: string | null;
+  patientTypesJson?: string[];
 };
 
 export type StructuredProtocolContent = {

@@ -4956,6 +4956,25 @@ body {
   background: #edf8f8;
 }
 
+.protocol-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin: 1rem 0;
+}
+
+.protocol-reference-grid .panel {
+  border-top: 3px solid var(--color-clinical-teal, #167d78);
+  background: color-mix(in srgb, var(--color-surface, #fff) 94%, var(--color-clinical-teal, #167d78));
+}
+
+.protocol-reference-grid h2 { font-size: 1rem; }
+.protocol-reference-grid ul { margin: 0; padding-inline-start: 1.15rem; }
+
+@media (max-width: 900px) {
+  .protocol-reference-grid { grid-template-columns: 1fr; }
+}
+
 .prescription-tabs {
   flex-wrap: nowrap;
   overflow-x: auto;
