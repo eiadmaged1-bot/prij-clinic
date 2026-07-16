@@ -3001,8 +3001,11 @@ enum PregnancyStatus {
 
 enum ObUltrasoundStatus {
   draft
+  complete_for_review
   final
   reviewed
+  signed
+  amended
   voided
 }
 

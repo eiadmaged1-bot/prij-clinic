@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
@@ -417,8 +417,19 @@ export class PregnancyService {
   async listObUltrasounds(user: AuthUser, query: Record<string, string | undefined> = {}) {
     const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
     const limit = Math.max(5, Math.min(50, Number.parseInt(query.limit ?? "20", 10) || 20));
-    const status = query.status === "signed" ? "final" : query.status;
-    const where = { ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] }, ...(status && ["draft", "reviewed", "final", "voided"].includes(status) ? { status } : {}), ...(query.context ? { clinicalContext: query.context } : {}), ...(query.q ? { OR: [{ patient: { firstName: { contains: query.q, mode: "insensitive" } } }, { patient: { lastName: { contains: query.q, mode: "insensitive" } } }, { patient: { medicalRecordNumber: { contains: query.q, mode: "insensitive" } } }, { scanType: { contains: query.q, mode: "insensitive" } }] } : {}) } as unknown as Prisma.ObUltrasoundWhereInput;
+    const status = query.status;
+    const statusFilter = status === "incomplete" ? { in: ["draft"] } : status === "needs_review" ? { in: ["complete_for_review", "reviewed"] } : status === "signed" ? { in: ["signed", "final", "amended"] } : status && ["draft", "complete_for_review", "reviewed", "signed", "amended", "final", "voided"].includes(status) ? status : undefined;
+    const day = query.date ? new Date(`${query.date}T00:00:00.000Z`) : null;
+    const nextDay = day && !Number.isNaN(day.getTime()) ? new Date(day.getTime() + 86_400_000) : null;
+    const where = {
+      ...branchScope(user),
+      dataClassification: { notIn: ["TEST", "QUARANTINED"] },
+      ...(statusFilter ? { status: statusFilter } : {}),
+      ...(query.context ? { clinicalContext: query.context } : {}),
+      ...(day && nextDay && !Number.isNaN(day.getTime()) ? { performedAt: { gte: day, lt: nextDay } } : {}),
+      ...(query.doctor ? { createdByUser: { displayName: { contains: query.doctor, mode: "insensitive" } } } : {}),
+      ...(query.q ? { OR: [{ patient: { firstName: { contains: query.q, mode: "insensitive" } } }, { patient: { lastName: { contains: query.q, mode: "insensitive" } } }, { patient: { medicalRecordNumber: { contains: query.q, mode: "insensitive" } } }, { scanType: { contains: query.q, mode: "insensitive" } }] } : {})
+    } as unknown as Prisma.ObUltrasoundWhereInput;
     const [obUltrasounds, total] = await Promise.all([
       this.prisma.obUltrasound.findMany({ where, orderBy: { performedAt: "desc" }, skip: (page - 1) * limit, take: limit, include: obUltrasoundIncludes }),
       this.prisma.obUltrasound.count({ where })
@@ -465,8 +476,8 @@ export class PregnancyService {
       throw new BadRequestException("Patient and active visit context are required before updating an ultrasound report.");
     }
 
-    if (existing.status === "reviewed" && dto.status !== "voided") {
-      throw new BadRequestException("Reviewed OB ultrasound records require a correction workflow before edits.");
+    if (["reviewed", "signed", "final"].includes(existing.status) && dto.status !== "voided" && !dto.amendmentReason?.trim()) {
+      throw new BadRequestException("Reviewed or signed ultrasound records require an amendment reason before edits.");
     }
 
     await assertCanReferencePatient(this.prisma, existing.patientId, user);
@@ -535,11 +546,12 @@ export class PregnancyService {
   }
 
   async reviewObUltrasound(id: string, user: AuthUser) {
+    this.assertUltrasoundClinician(user);
     const existing = await this.getObUltrasound(id, user);
     if (existing.status === "voided") {
       throw new BadRequestException("Voided OB ultrasound records cannot be reviewed.");
     }
-    if (!hasMeaningfulUltrasoundContent(existing)) throw new BadRequestException("A scan type and meaningful structured measurement, finding, or impression are required before review.");
+    assertUltrasoundComplete(existing, false);
 
     const ultrasound = await this.prisma.obUltrasound.update({
       where: { id },
@@ -557,6 +569,39 @@ export class PregnancyService {
     });
 
     return ultrasound;
+  }
+
+  async completeObUltrasoundForReview(id: string, user: AuthUser) {
+    const existing = await this.getObUltrasound(id, user);
+    if (existing.status !== "draft") throw new BadRequestException("Only a draft scan can be completed for review.");
+    assertUltrasoundComplete(existing, false);
+    const ultrasound = await this.prisma.obUltrasound.update({ where: { id }, data: { status: "complete_for_review" as never }, include: obUltrasoundIncludes });
+    await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.completed_for_review", resourceType: "ob_ultrasound", resourceId: id, severity: "high", metadataJson: { patientId: existing.patientId, fromStatus: existing.status } });
+    return ultrasound;
+  }
+
+  async signObUltrasound(id: string, user: AuthUser) {
+    this.assertUltrasoundClinician(user);
+    const existing = await this.getObUltrasound(id, user);
+    if (existing.status !== "reviewed") throw new BadRequestException("A scan must be reviewed before it can be signed.");
+    assertUltrasoundComplete(existing, true);
+    const ultrasound = await this.prisma.obUltrasound.update({ where: { id }, data: { status: "signed" as never, signedAt: new Date(), signedByUserId: user.id }, include: obUltrasoundIncludes });
+    await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.signed", resourceType: "ob_ultrasound", resourceId: id, severity: "critical", metadataJson: { patientId: existing.patientId, fromStatus: existing.status, amendmentVersion: existing.amendmentVersion } });
+    return ultrasound;
+  }
+
+  async amendObUltrasound(id: string, dto: UpdateObUltrasoundDto, user: AuthUser) {
+    this.assertUltrasoundClinician(user);
+    const existing = await this.getObUltrasound(id, user);
+    if (!["signed", "final"].includes(existing.status)) throw new BadRequestException("Only a signed scan can enter the amendment workflow.");
+    if (!dto.amendmentReason?.trim()) throw new BadRequestException("An amendment reason is required.");
+    const ultrasound = await this.updateObUltrasound(id, { ...dto, status: "amended" as never }, user);
+    await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.amended", resourceType: "ob_ultrasound", resourceId: id, severity: "critical", metadataJson: { patientId: existing.patientId, fromStatus: existing.status, reasonRecorded: true } });
+    return ultrasound;
+  }
+
+  private assertUltrasoundClinician(user: AuthUser) {
+    if (!user.roles.some((role) => ["Doctor", "Owner"].includes(role))) throw new ForbiddenException("Ultrasound review and signing require clinical Doctor authority.");
   }
 
   private handlePrismaReferenceError(error: unknown): never {
@@ -607,7 +652,9 @@ const obUltrasoundIncludes = {
   patient: true,
   pregnancy: true,
   fetus: true,
-  encounter: true
+  encounter: true,
+  createdByUser: true,
+  reviewedByUser: true
 } satisfies Prisma.ObUltrasoundInclude;
 
 function clean(value?: string) {
@@ -635,6 +682,12 @@ function decimalOrNull(value: number | undefined) {
 
 function hasMeaningfulUltrasoundContent(scan: { scanType: string | null; impressionText: string | null; fetalHeartRateBpm: number | null; bpdMm: Prisma.Decimal | null; hcMm: Prisma.Decimal | null; acMm: Prisma.Decimal | null; flMm: Prisma.Decimal | null } & { structuredFindingsJson?: unknown }) {
   return Boolean(scan.scanType?.trim() && (scan.impressionText?.trim() || scan.fetalHeartRateBpm || scan.bpdMm || scan.hcMm || scan.acMm || scan.flMm || (scan.structuredFindingsJson && Object.keys(scan.structuredFindingsJson as object).length)));
+}
+
+function assertUltrasoundComplete(scan: { patientId: string; encounterId: string | null; clinicalContext: string; performedAt: Date; createdByUserId: string | null; scanType: string | null; impressionText: string | null; fetalHeartRateBpm: number | null; bpdMm: Prisma.Decimal | null; hcMm: Prisma.Decimal | null; acMm: Prisma.Decimal | null; flMm: Prisma.Decimal | null; structuredFindingsJson?: unknown }, impressionRequired: boolean) {
+  if (!scan.patientId || !scan.encounterId || !scan.clinicalContext || !scan.performedAt || !scan.createdByUserId) throw new BadRequestException("Patient, context, encounter, scan date, and operator are required before review or signing.");
+  if (!hasMeaningfulUltrasoundContent(scan)) throw new BadRequestException("A scan type and meaningful structured measurement, finding, or impression are required before review.");
+  if (impressionRequired && !scan.impressionText?.trim()) throw new BadRequestException("A doctor-authored impression is required before signing.");
 }
 
 function previousPregnancyTagCodes(history: { outcome: string; outcomeType?: string | null; modeOfDelivery?: string | null }) {

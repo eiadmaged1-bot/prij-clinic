@@ -168,6 +168,7 @@
     "test:v150:data-hygiene": "node scripts/v150-data-hygiene-test.mjs",
     "test:v150:modular-workspace": "node scripts/v150-modular-workspace-test.mjs",
     "test:v150:investigations": "node scripts/v150-investigation-workflow-test.mjs",
+    "test:v150:ultrasound": "node scripts/v150-ultrasound-workspaces-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",

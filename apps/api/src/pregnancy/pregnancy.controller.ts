@@ -121,4 +121,22 @@ export class PregnancyController {
   reviewObUltrasound(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.pregnancy.reviewObUltrasound(id, user);
   }
+
+  @Patch("ob-ultrasounds/:id/complete-for-review")
+  @Permissions("ob_ultrasound.manage")
+  completeObUltrasoundForReview(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.completeObUltrasoundForReview(id, user);
+  }
+
+  @Patch("ob-ultrasounds/:id/sign")
+  @Permissions("ob_ultrasound.manage")
+  signObUltrasound(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.signObUltrasound(id, user);
+  }
+
+  @Patch("ob-ultrasounds/:id/amend")
+  @Permissions("ob_ultrasound.manage")
+  amendObUltrasound(@Param("id") id: string, @Body() dto: UpdateObUltrasoundDto, @CurrentUser() user: AuthUser) {
+    return this.pregnancy.amendObUltrasound(id, dto, user);
+  }
 }

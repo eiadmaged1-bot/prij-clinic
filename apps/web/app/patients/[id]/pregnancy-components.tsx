@@ -375,23 +375,35 @@ export function AntenatalVisitCard({ patient, pregnancy }: { patient: Patient; p
 
 export function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patient: Patient; pregnancy?: PregnancyRecord; fetuses: FetusRecord[] }) {
     const [status, setStatus] = useState("");
+    const [clinicalContext, setClinicalContext] = useState<"OB" | "GYN" | "FERTILITY">("OB");
 
     async function saveUltrasound(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         const token = sessionStorage.getItem("prijClinicToken");
+        const encounterId = new URLSearchParams(window.location.search).get("encounterId") ?? new URLSearchParams(window.location.search).get("visitId");
+        if (!encounterId) { setStatus("Open this workspace from an active encounter before saving the scan."); return; }
+        const form = new FormData(event.currentTarget);
+        let follicleMeasurementsMm: number[] = [];
+        try { follicleMeasurementsMm = parseUltrasoundMeasurements(String(form.get("follicleMeasurements") ?? "")); } catch { setStatus("Follicle measurements must be comma-separated positive numbers."); return; }
+        const specialtyKeys = ["uterusPosition", "uterusDimensions", "endometriumThickness", "endometriumPattern", "rightOvary", "leftOvary", "lesionId", "lesionLocation", "lesionFigo", "lesionDimensions", "follicleMeasurements"];
+        const base = formPayload(event.currentTarget, {
+          gestationalAgeWeeks: "number", gestationalAgeDays: "number", cycleDay: "number", fetalHeartRateBpm: "number", bpdMm: "number", hcMm: "number", acMm: "number", flMm: "number", efwGrams: "number"
+        });
+        for (const key of specialtyKeys) delete base[key];
+        const value = (key: string) => String(form.get(key) ?? "").trim();
+        const structuredFindingsJson = clinicalContext === "OB" ? undefined : {
+          uterus: { position: value("uterusPosition") || undefined, dimensions: value("uterusDimensions") || undefined },
+          endometrium: { thicknessMm: value("endometriumThickness") ? Number(value("endometriumThickness")) : undefined, pattern: value("endometriumPattern") || undefined },
+          ovaries: { right: value("rightOvary") || undefined, left: value("leftOvary") || undefined, follicleMeasurementsMm },
+          lesions: value("lesionDimensions") ? [{ id: value("lesionId") || crypto.randomUUID(), location: value("lesionLocation") || undefined, figoClassification: value("lesionFigo") || undefined, dimensions: value("lesionDimensions") }] : []
+        };
         const payload = {
                               patientId: patient.id,
+                              encounterId,
                               ...(pregnancy?.id ? { pregnancyId: pregnancy.id } : {}),
-                              ...formPayload(event.currentTarget, {
-                                gestationalAgeWeeks: "number",
-                                gestationalAgeDays: "number",
-                                fetalHeartRateBpm: "number",
-                                bpdMm: "number",
-                                hcMm: "number",
-                                acMm: "number",
-                                flMm: "number",
-                                efwGrams: "number"
-                              })
+                              ...base,
+                              clinicalContext,
+                              ...(structuredFindingsJson ? { structuredFindingsJson } : {})
                             };
         const response = await fetch(`${getApiBaseUrl()}/ob-ultrasounds`, {
                               method: "POST",
@@ -430,7 +442,10 @@ export function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patie
           <label>Scan date and time<input name="performedAt" type="datetime-local" /></label>
           <label>Scan type<input name="scanType" placeholder="Dating, anatomy, growth, follow-up" /></label>
           <label>Indication<input name="indication" placeholder="Doctor-entered indication" /></label>
+          <label>Clinical context<select name="clinicalContext" value={clinicalContext} onChange={(event) => setClinicalContext(event.target.value as "OB" | "GYN" | "FERTILITY")}><option value="OB">Obstetric</option><option value="GYN">Gynecology / pelvic</option><option value="FERTILITY">Fertility / follicular monitoring</option></select></label>
+          {clinicalContext === "FERTILITY" ? <label>Cycle day<input name="cycleDay" type="number" min="1" max="60" /></label> : null}
         </fieldset>
+        {clinicalContext !== "OB" ? <fieldset className="obgyn-fieldset wide"><legend>Pelvic structured findings</legend><label>Uterus position<input name="uterusPosition" /></label><label>Uterus dimensions<input name="uterusDimensions" placeholder="Three dimensions with units" /></label><label>Endometrium thickness (mm)<input name="endometriumThickness" type="number" min="0" step="0.1" /></label><label>Endometrium pattern<input name="endometriumPattern" /></label><label>Right ovary<input name="rightOvary" placeholder="Dimensions and recorded findings" /></label><label>Left ovary<input name="leftOvary" placeholder="Dimensions and recorded findings" /></label>{clinicalContext === "FERTILITY" ? <label className="wide">Follicle measurements (mm)<input name="follicleMeasurements" placeholder="12, 14.5, 18" /></label> : null}<label>Stable lesion ID<input name="lesionId" placeholder="Leave blank to assign a stable ID" /></label><label>Lesion location<input name="lesionLocation" /></label><label>FIGO classification<input name="lesionFigo" placeholder="Doctor-entered classification" /></label><label>Lesion dimensions<input name="lesionDimensions" placeholder="Three dimensions with units" /></label></fieldset> : null}
         <fieldset className="obgyn-fieldset">
           <legend>Pregnancy and fetus context</legend>
           <label>Gestational age<input name="gestationalAgeDisplay" placeholder="Weeks + days" /></label>
@@ -495,4 +510,11 @@ export function UltrasoundReportBuilder({ patient, pregnancy, fetuses }: { patie
       </form>
     </article>
     );
+}
+
+function parseUltrasoundMeasurements(raw: string) {
+    if (!raw.trim()) return [];
+    const values = raw.split(",").map((entry) => Number(entry.trim()));
+    if (values.some((value) => !Number.isFinite(value) || value <= 0 || value > 100)) throw new Error("invalid_measurement");
+    return values;
 }
