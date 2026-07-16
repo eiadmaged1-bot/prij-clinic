@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell, SafetyAlert } from "../mvp-page";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
@@ -26,6 +26,8 @@ type Patient = {
   latestVisitDate?: string | null;
   yearOfBirth?: number | null;
   createdAt?: string | null;
+  favorited?: boolean;
+  queueState?: { status: string; queueNumber: number; visitType?: string | null } | null;
 };
 
 type PageInfo = { page: number; limit: number; hasMore: boolean; total: number };
@@ -37,17 +39,10 @@ export default function PatientsPage() {
   const [status, setStatus] = useState("Loading patient files");
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
-  const [dateFilter, setDateFilter] = useState("all");
-  const [exactDate, setExactDate] = useState(today);
-  const [rangeStart, setRangeStart] = useState(today);
-  const [rangeEnd, setRangeEnd] = useState(today);
-  const [directoryView, setDirectoryView] = useState("active");
+  const [directoryView, setDirectoryView] = useState("all");
   const [patientType, setPatientType] = useState("all");
   const [branchId, setBranchId] = useState("all");
   const [branches, setBranches] = useState<BranchOption[]>([]);
-  const [phaseType, setPhaseType] = useState("all");
-  const [category, setCategory] = useState("all");
   const [sortMode, setSortMode] = useState("created_newest");
   const [page, setPage] = useState(1);
   const [pageInfo, setPageInfo] = useState<PageInfo>({ page: 1, limit: 20, hasMore: false, total: 0 });
@@ -60,24 +55,11 @@ export default function PatientsPage() {
   }, [branchId, directoryView, page, patientType, query, sortMode]);
 
   useEffect(() => {
-    const savedCategory = localStorage.getItem("prijPatientDirectoryCategory");
-    if (savedCategory) setCategory(savedCategory);
     const requestedSearch = new URLSearchParams(window.location.search).get("search");
     if (requestedSearch) setQuery(requestedSearch);
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const rows = patients.filter((patient) => {
-      const textMatch = !q || `${patient.medicalRecordNumber} ${patient.firstName} ${patient.lastName} ${patient.phone ?? ""}`.toLowerCase().includes(q);
-      const typeMatch = patientType === "all" || patient.patientType === patientType;
-      const phaseMatch = phaseType === "all" || patient.currentPhase?.phaseType === phaseType;
-      const dateMatch = matchesPatientDate(patient.createdAt, dateFilter, exactDate, rangeStart, rangeEnd, today);
-      const categoryMatch = matchesCategory(patient, category, today);
-      return textMatch && typeMatch && phaseMatch && dateMatch && categoryMatch;
-    });
-    return sortPatients(rows, sortMode);
-  }, [category, dateFilter, exactDate, patientType, phaseType, patients, query, rangeEnd, rangeStart, sortMode, today]);
+  const filtered = patients;
 
   async function loadPatients(search = query.trim(), requestedPage = page) {
     const token = sessionStorage.getItem("prijClinicToken");
@@ -113,23 +95,21 @@ export default function PatientsPage() {
     }
   }
 
-  function selectCategory(nextCategory: string) {
-    setCategory(nextCategory);
-    setPage(1);
-    localStorage.setItem("prijPatientDirectoryCategory", nextCategory);
-  }
-
   function clearFilters() {
     setQuery("");
-    setCategory("all");
     setSortMode("created_newest");
-    setDateFilter("all");
-    setDirectoryView("active");
+    setDirectoryView("all");
     setPatientType("all");
     setBranchId("all");
-    setPhaseType("all");
     setPage(1);
-    localStorage.removeItem("prijPatientDirectoryCategory");
+  }
+
+  async function toggleFavorite(patient: Patient) {
+    const token = sessionStorage.getItem("prijClinicToken");
+    const response = await fetch(`${getApiBaseUrl()}/patients/${patient.id}/favorite`, { method: patient.favorited ? "DELETE" : "POST", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
+    if (!response?.ok) return setError("Favorite could not be updated. Retry.");
+    if (directoryView === "favorites" && patient.favorited) void loadPatients(query.trim(), page);
+    else setPatients((current) => current.map((row) => row.id === patient.id ? { ...row, favorited: !row.favorited } : row));
   }
 
   return (
@@ -154,7 +134,7 @@ export default function PatientsPage() {
         <div className="section-heading">
           <div>
             <h2>Patient directory</h2>
-            <p className="muted">{status === "Loaded" ? `${pageInfo.total} patient files · page ${pageInfo.page}` : status}</p>
+            <p className="muted">{status === "Loaded" ? `${pageInfo.total} patient files · showing ${pageInfo.total ? (pageInfo.page - 1) * pageInfo.limit + 1 : 0}–${Math.min(pageInfo.page * pageInfo.limit, pageInfo.total)}` : status}</p>
             <p className="muted">Browse active patients by default, or refine by name, phone, file number, branch, and type.</p>
           </div>
           <button className="button secondary compact" onClick={() => void loadPatients(query.trim(), page)} type="button">
@@ -168,10 +148,10 @@ export default function PatientsPage() {
             Directory view
             <select onChange={(event) => { setDirectoryView(event.target.value); setPage(1); }} value={directoryView}>
               <option value="all">All clinic patients</option>
-              <option value="current_branch">Current branch</option>
-              <option value="active">Active</option>
-              <option value="incomplete">Incomplete</option>
-              <option value="exact_phone_duplicates">Possible exact-phone duplicates</option>
+              <option value="today">Today</option>
+              <option value="waiting">Waiting</option>
+              <option value="recent">Recent</option>
+              <option value="favorites">Favorites</option>
             </select>
           </label>
           <label>
@@ -181,20 +161,6 @@ export default function PatientsPage() {
               placeholder="Search by file number, name, phone, husband name, or QR"
               value={query}
             />
-          </label>
-          <label>
-            Category
-            <select onChange={(event) => selectCategory(event.target.value)} value={category}>
-              <option value="all">All patients</option>
-              <option value="today">Today&apos;s patients</option>
-              <option value="ob">Obstetric / Pregnancy</option>
-              <option value="gyn">Gynecology</option>
-              <option value="infertility">Infertility</option>
-              <option value="womens">Women&apos;s Health / General</option>
-              <option value="high_risk">High-risk</option>
-              <option value="needs_review">Needs review</option>
-              <option value="follow_up_due">Follow-up due</option>
-            </select>
           </label>
           <label>
             Sort by
@@ -210,18 +176,7 @@ export default function PatientsPage() {
           </label>
         </div>
 
-        <details className="filter-drawer">
-          <summary>More Filters</summary>
-          <div className="toolbar more-filter-grid">
-            <label>Date<select onChange={(event) => setDateFilter(event.target.value)} value={dateFilter}><option value="all">Any date</option><option value="today">Seen / created today</option><option value="yesterday">Yesterday</option><option value="exact">Exact date</option><option value="range">Date range</option></select></label>
-            {dateFilter === "exact" ? <label>Exact date<input type="date" value={exactDate} onChange={(event) => setExactDate(event.target.value)} /></label> : null}
-            {dateFilter === "range" ? <label>From<input type="date" value={rangeStart} onChange={(event) => setRangeStart(event.target.value)} /></label> : null}
-            {dateFilter === "range" ? <label>To<input type="date" value={rangeEnd} onChange={(event) => setRangeEnd(event.target.value)} /></label> : null}
-            <label>Patient type<select onChange={(event) => { setPatientType(event.target.value); setPage(1); }} value={patientType}><option value="all">All patient types</option>{patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-            <label>Branch<select onChange={(event) => { setBranchId(event.target.value); setPage(1); }} value={branchId}><option value="all">All permitted branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label>
-            <label>Current phase<select onChange={(event) => setPhaseType(event.target.value)} value={phaseType}><option value="all">All phases</option><option value="infertility">Infertility</option><option value="pregnancy">Pregnancy</option><option value="gynecology">Gynecology</option><option value="postpartum">Postpartum</option><option value="general">General</option></select></label>
-          </div>
-        </details>
+        <div className="toolbar more-filter-grid"><label>Patient type<select onChange={(event) => { setPatientType(event.target.value); setPage(1); }} value={patientType}><option value="all">All patient types</option>{patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label>Branch<select onChange={(event) => { setBranchId(event.target.value); setPage(1); }} value={branchId}><option value="all">All permitted branches</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</select></label></div>
         <div className="form-actions"><button className="button secondary compact" type="button" onClick={clearFilters}>Clear filters</button></div>
 
         {error ? <p className="form-error">{error}</p> : null}
@@ -259,6 +214,7 @@ export default function PatientsPage() {
                 <div className="workflow-band compact">
                   <span>{patientTypeLabel(patient.patientType)}</span>
                   <span>{phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
+                  <span>{patient.queueState ? `Queue #${patient.queueState.queueNumber} · ${patient.queueState.status}` : "Not in today’s queue"}</span>
                 </div>
                 <dl>
                   <div>
@@ -283,6 +239,7 @@ export default function PatientsPage() {
                   Open file
                 </Link>
                 <Link className="button secondary compact" href={`/reception/check-in?patientId=${patient.id}`}>Add to queue</Link>
+                <button className="button secondary compact" type="button" aria-pressed={Boolean(patient.favorited)} onClick={() => void toggleFavorite(patient)}>{patient.favorited ? "Remove favorite" : "Add favorite"}</button>
               </article>
             ))}
             <div className="form-actions" aria-label="Patient directory pagination">

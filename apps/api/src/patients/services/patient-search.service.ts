@@ -38,13 +38,16 @@ export class PatientSearchService {
     const queryTokens = query.split(/\s+/).map((token) => token.trim()).filter(Boolean).slice(0, 6);
     const qrToken = /^PRIJ-PATIENT:/i.test(query) ? query.replace(/^PRIJ-PATIENT:/i, "") : query;
     const uuidLookup = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(qrToken);
-    const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
+    const { start: queueDate, end: queueDateEnd } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
     const where: Prisma.PatientWhereInput = {
       ...(requestedBranchId ? { branchId: requestedBranchId } : {}),
       status: requestedStatus,
       ...(requestedType ? { patientType: requestedType } : {}),
     };
     if (directoryView !== "qa_test") (where as Prisma.PatientWhereInput & { dataClassification?: unknown }).dataClassification = { notIn: ["TEST", "QUARANTINED"] };
+    if (directoryView === "today") where.AND = [{ OR: [{ encounters: { some: { createdAt: { gte: queueDate, lt: queueDateEnd } } } }, { queueTickets: { some: { queueDate: { gte: queueDate, lt: queueDateEnd } } } }] }];
+    if (directoryView === "waiting") where.queueTickets = { some: { queueDate: { gte: queueDate, lt: queueDateEnd }, status: { in: ["waiting", "called", "in_room"] } } };
+    if (directoryView === "favorites") where.favorites = { some: { userId: user.id } };
     if (directoryView === "incomplete") where.AND = [{ OR: [{ phone: null }, { AND: [{ dateOfBirth: null }, { yearOfBirth: null }] }] }];
     if (directoryView === "qa_test") where.AND = [{ OR: demoPatientWhere() }];
     if (directoryView === "exact_phone_duplicates") {
@@ -67,8 +70,9 @@ export class PatientSearchService {
         ...(normalizedPhone ? [{ phone: { contains: normalizedPhone } } satisfies Prisma.PatientWhereInput] : [])
       ];
     }
-    const orderBy = patientOrderBy(options.sort);
-    const useRankedWindow = Boolean(query) || options.sort === "last_visit_desc";
+    const effectiveSort = directoryView === "recent" ? "last_visit_desc" : options.sort;
+    const orderBy = patientOrderBy(effectiveSort);
+    const useRankedWindow = Boolean(query) || effectiveSort === "last_visit_desc";
     const total = await this.prisma.patient.count({ where });
     const candidates = await this.prisma.patient.findMany({
       where,
@@ -82,17 +86,18 @@ export class PatientSearchService {
           take: 1
         },
         encounters: { orderBy: [{ startedAt: "desc" }, { createdAt: "desc" }], take: 1, select: { startedAt: true, createdAt: true } },
-        queueTickets: { where: { queueDate, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, status: true, queueDate: true, queueNumber: true, branchId: true, visitType: true } }
+        queueTickets: { where: { queueDate, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, status: true, queueDate: true, queueNumber: true, branchId: true, visitType: true } },
+        favorites: { where: { userId: user.id }, select: { id: true }, take: 1 }
       }
     });
-    const ranked = options.sort === "last_visit_desc"
+    const ranked = effectiveSort === "last_visit_desc"
       ? candidates.sort((left, right) => encounterTime(right.encounters[0]) - encounterTime(left.encounters[0]))
       : query
         ? candidates.sort((left, right) => patientSearchScore(right, query, normalizedPhone, qrToken) - patientSearchScore(left, query, normalizedPhone, qrToken) || right.updatedAt.getTime() - left.updatedAt.getTime())
         : candidates;
     const patients = useRankedWindow ? ranked.slice((page - 1) * limit, page * limit) : ranked;
     const branches = directoryMode ? await this.prisma.branch.findMany({
-      where: isOwnerOrAdmin(user) ? { status: "active" } : { id: user.branchId ?? undefined, status: "active" },
+      where: { status: "active" },
       orderBy: { name: "asc" },
       select: { id: true, name: true }
     }) : [];
@@ -108,12 +113,25 @@ export class PatientSearchService {
 
     return {
       patients: patients.map((patient) => {
-        const { clinicalPhases, encounters, queueTickets, ...row } = patient;
-        return { ...row, phoneSuffix: patient.phone ? patient.phone.replace(/\D/g, "").slice(-4) : null, currentPhase: clinicalPhases[0] ?? null, latestVisitDate: encounters[0]?.startedAt ?? encounters[0]?.createdAt ?? null, queueState: queueTickets[0] ?? null };
+        const { clinicalPhases, encounters, queueTickets, favorites, ...row } = patient;
+        return { ...row, favorited: favorites.length > 0, phoneSuffix: patient.phone ? patient.phone.replace(/\D/g, "").slice(-4) : null, currentPhase: clinicalPhases[0] ?? null, latestVisitDate: encounters[0]?.startedAt ?? encounters[0]?.createdAt ?? null, queueState: queueTickets[0] ?? null };
       }),
       pageInfo: { page, limit, hasMore: page * limit < total, total },
       filters: { branches }
     };
+  }
+
+  async favorite(patientId: string, user: AuthUser) {
+    const patient = await this.prisma.patient.findFirstOrThrow({ where: { id: patientId, status: "active", dataClassification: { notIn: ["TEST", "QUARANTINED"] } }, select: { id: true, branchId: true } });
+    const favorite = await this.prisma.patientFavorite.upsert({ where: { patientId_userId: { patientId, userId: user.id } }, create: { patientId, userId: user.id }, update: {} });
+    await this.audit.record({ actorUserId: user.id, action: "patient.favorite_added", resourceType: "patient", resourceId: patientId, branchId: patient.branchId, severity: "low" });
+    return { patientId, favorited: true, favoriteId: favorite.id };
+  }
+
+  async unfavorite(patientId: string, user: AuthUser) {
+    const removed = await this.prisma.patientFavorite.deleteMany({ where: { patientId, userId: user.id } });
+    await this.audit.record({ actorUserId: user.id, action: "patient.favorite_removed", resourceType: "patient", resourceId: patientId, branchId: user.branchId, severity: "low", metadataJson: { removed: removed.count } });
+    return { patientId, favorited: false };
   }
 }
 

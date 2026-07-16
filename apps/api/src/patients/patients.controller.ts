@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Header, Headers, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Headers, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -76,6 +76,18 @@ export class PatientsController {
     @Query("sort") sort?: string
   ) {
     return this.search.list(user, { query: query ?? search, mode, includeArchived, page, limit, branchId, patientType, status, view, sort });
+  }
+
+  @Post(":id/favorite")
+  @Permissions("patient.read")
+  favorite(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.search.favorite(id, user);
+  }
+
+  @Delete(":id/favorite")
+  @Permissions("patient.read")
+  unfavorite(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.search.unfavorite(id, user);
   }
 
   @Get(":id")

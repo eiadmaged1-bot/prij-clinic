@@ -37,11 +37,24 @@ export type CaseLibraryCase = {
   links: { patient: string; visit: string };
 };
 
+export type CaseLibraryResponse = {
+  cases: CaseLibraryCase[];
+  canViewAll: boolean;
+  scope: string;
+  scopeLabel: string;
+  summary: { caseCount: number; patientCount: number; draftCount: number; completedCount: number; needsSignatureCount: number };
+  pageInfo: { page: number; limit: number; total: number; hasMore: boolean };
+};
+
 export function listCaseLibrary(params: Record<string, string>) {
   const search = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])));
-  return request<{ cases: CaseLibraryCase[]; canViewAll: boolean; scope: string }>(`/doctor/case-library?${search.toString()}`);
+  return request<CaseLibraryResponse>(`/doctor/case-library?${search.toString()}`);
 }
 
 export function listCaseLibraryDoctors() {
   return request<{ id: string; displayName: string; doctorColor?: string | null; doctorShortLabel?: string | null }[]>("/doctor/case-library/doctors");
+}
+
+export function getCaseLibraryFilters() {
+  return request<{ doctors: Array<{ id: string; displayName: string }>; branches: Array<{ id: string; name: string }> }>("/doctor/case-library/filters");
 }

@@ -22,4 +22,10 @@ export class CaseLibraryController {
   doctors(@CurrentUser() user: AuthUser) {
     return this.cases.doctors(user);
   }
+
+  @Get("filters")
+  @Permissions("clinical_case_library.view_own")
+  filters(@CurrentUser() user: AuthUser) {
+    return this.cases.filters(user);
+  }
 }

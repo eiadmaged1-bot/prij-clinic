@@ -68,6 +68,7 @@ model User {
   updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
 
   preferences UserPreference?
+  patientFavorites PatientFavorite[]
 
   branch                             Branch?                        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   createdByUser                      User?                          @relation("UsersCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -420,6 +421,7 @@ model Patient {
   appointments                Appointment[]
   queueTickets                QueueTicket[]
   activeQueueLocks            ActiveQueueTicketLock[]
+  favorites                   PatientFavorite[]
   encounters                  Encounter[]
   patientIntakes              PatientIntake[]
   prescriptions               Prescription[]
@@ -475,6 +477,19 @@ model Patient {
   @@index([externalFileNumber])
   @@index([importBatchId])
   @@index([dataVerificationState])
+}
+
+model PatientFavorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  patientId String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, userId])
+  @@index([userId, createdAt])
 }
 
 model ConsentRecord {
