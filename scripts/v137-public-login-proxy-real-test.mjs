@@ -25,7 +25,7 @@ async function request(path, init = {}) {
 async function main() {
   const health = await request("/api/backend/health");
   assert.equal(health.response.status, 200, "web proxy health must return 200");
-  assert.equal(health.body?.status, "ok", "web proxy health body must be ok");
+  assert(["ok", "up"].includes(health.body?.status), "web proxy health body must report healthy");
 
   const me = await request("/api/backend/auth/me");
   assert.equal(me.response.status, 401, "unauthenticated auth/me through web proxy must stay 401");
@@ -36,7 +36,8 @@ async function main() {
     body: JSON.stringify({ identifier: ownerIdentifier, password: ownerPassword })
   });
   assert.equal(login.response.status, 201, "valid seeded owner login through web proxy must succeed");
-  assert(login.body?.token && login.body?.user?.loginId === "eyad", "valid proxy login must return the session payload");
+  assert(login.body?.csrfToken && login.body?.user?.loginId === "eyad", "valid proxy login must return the cookie-session payload");
+  assert.match(login.response.headers.get("set-cookie") ?? "", /HttpOnly/i, "valid proxy login must set an HttpOnly session cookie");
 
   const invalid = await request("/api/backend/auth/login", {
     method: "POST",

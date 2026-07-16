@@ -1,5 +1,13 @@
 # Next Steps
 
+## After v1.5.1
+
+1. Configure a distinct disposable `TEST_DATABASE_URL` and run the database-writing RBAC/audit/clinical suites there only.
+2. Have the Owner and clinical reviewers approve or reject the 13 Dermatology drafts and source-incomplete medication sections; do not infer missing content.
+3. Stage a non-PHI Arabic XLSX fixture and a signed Google Sheets payload through review without committing real patients.
+4. Perform physical-device/mobile Safari, camera, Arabic/A5 print, and current-branch web-only ngrok QA.
+5. Review the remaining Next hook/image/CSS warnings without changing clinical behavior.
+
 ## After v1.5.0
 
 1. Open a stored authoritative PDF and verify canvas, selectable text, highlights, thumbnails, range requests, print, and Arabic/mobile layout.

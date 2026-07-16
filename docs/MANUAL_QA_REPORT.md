@@ -1,5 +1,11 @@
 # Manual QA Report
 
+## v1.5.1 session record
+
+Automated authenticated Chromium acceptance passed for 19 repaired production routes at 1440×900 and eight major routes at 390×844 with no page-level overflow. A stored guideline PDF was opened: range `206`, full `200`, `%PDF-` signature, 2,043,060 bytes, PDF.js canvas 444×628. API live/ready and web-proxied ready checks passed.
+
+This is browser automation, not physical-device or clinical-user signoff. No queue/order/scan/import browser mutations were performed against clinic data. Real printer, camera, mobile Safari, ngrok, spreadsheet staging, and Doctor clinical-content approval were not performed. Database-writing RBAC/audit suites were safely unavailable because `TEST_DATABASE_URL` is not configured.
+
 ## v1.5.0 session record
 
 Manual browser, physical-device, ngrok, RDP, PDF visual, print, and real spreadsheet staging QA were not performed. Automated focused contracts, TypeScript checks, Prisma validation, and the final production build are recorded in the final sprint report. Do not interpret source-contract tests as physical-device or visual approval.

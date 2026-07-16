@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [artifactText, seed, service, controller, pharmacology, dermatology] = await Promise.all([
+const [artifactText, seed, service, controller, pharmacology, dermatology, en] = await Promise.all([
   readFile("apps/api/prisma/reference/v151-rxnav-atc-identity.json", "utf8"),
   readFile("apps/api/prisma/seeds/v151-medication-dermatology.js", "utf8"),
   readFile("apps/api/src/medications/medications.service.ts", "utf8"),
   readFile("apps/api/src/medications/medications.controller.ts", "utf8"),
   readFile("apps/web/components/medications/PharmacologyWorkspace.tsx", "utf8"),
-  readFile("apps/web/components/medications/DermatologyWorkspace.tsx", "utf8")
+  readFile("apps/web/components/medications/DermatologyWorkspace.tsx", "utf8"),
+  readFile("apps/web/i18n/en.ts", "utf8")
 ]);
 const artifact = JSON.parse(artifactText);
 assert.equal(artifact.source.identity, "RxNorm");
@@ -25,8 +26,11 @@ for (const room of ["Respiratory", "Cardiovascular", "Anti-infectives", "Obstetr
 assert.match(controller, /dermatology\/atlas/);
 assert.match(service, /noAutomaticDiagnosisOrTreatment/);
 assert.match(pharmacology, /sectionStatuses/);
-for (const control of ["Back to topics", "Previous topic", "Next topic", "Reset", "Open source", "Red flags", "When to refer", "Pregnancy and lactation"]) assert.match(dermatology, new RegExp(control));
-assert.match(dermatology, /never diagnoses or selects treatment/i);
+for (const key of ["backToTopics", "previousTopic", "nextTopic", "reset", "openSource", "redFlagsEscalation", "whenToRefer", "pregnancyLactation", "dermatologySafety"]) {
+  assert.match(dermatology, new RegExp(`t\\(\"${key}\"\\)`));
+  assert.match(en, new RegExp(`${key}:\\s*\"[^\"]+\"`));
+}
+assert.match(en, /never diagnoses or selects treatment/i);
 assert.doesNotMatch(dermatology, /auto(?:matically)?[- ](?:diagnos|prescrib|treat)/i);
 
 console.log(`v1.5.1 source-governed pharmacology identities (${artifact.records.length}) and 13-topic Dermatology workspace contracts PASS`);

@@ -1,5 +1,15 @@
 # Known Limitations
 
+## v1.5.1 limitations
+
+- No physical-device, mobile Safari, camera, real printer, LAN, ngrok, or public-tunnel QA was performed. Automated Chromium checks covered 1440×900 and 390×844 only.
+- No real CSV/XLSX workbook or Google Sheet was staged or committed. Import behavior is covered by focused contracts; no successful real import is claimed.
+- All 13 Dermatology topics require local clinical review. Medication clinical profile coverage remains source-incomplete: mechanism, PD/PK, adverse effects, contraindications, interactions, monitoring, pregnancy/lactation, renal, hepatic, and antimicrobial rows were not fabricated.
+- The database contains 442 protocol rows, but row count is not clinical completion. Unanswered questionnaire items remain draft and require Doctor review/approval.
+- Database-writing RBAC/audit/clinical integration suites require a distinct `TEST_DATABASE_URL`; the safety gate refused clinic-database execution. The older demo-account RBAC script remains incompatible with the protected clinic fixture.
+- The production build passes with non-blocking React hook-dependency, one ultrasound image-optimization, and CSS compatibility warnings recorded in the v1.5.1 report.
+- Physical print output for A5 prescription, Arabic prescription, investigation, ultrasound, patient summary, and guideline documents was not inspected.
+
 ## v1.5.0 limitations
 
 - Physical-device, ngrok, RDP-width, signed-report print, Arabic print, and end-user manual QA were not performed in this Codex session.

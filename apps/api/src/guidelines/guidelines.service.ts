@@ -1039,7 +1039,7 @@ function sourceData(dto: CreateGuidelineSourceDto | UpdateGuidelineSourceDto, pa
 
 function safeDocument<T extends { localFilePath?: string | null }>(document: T) {
   const { localFilePath: _localFilePath, ...safe } = document;
-  return safe;
+  return { ...safe, fileAvailable: Boolean(_localFilePath) };
 }
 
 function isOwner(user: AuthUser) {

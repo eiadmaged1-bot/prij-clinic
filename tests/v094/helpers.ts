@@ -63,8 +63,8 @@ async function loginWithAccount(page: Page, account: DemoAccount) {
   await page.getByRole("button", { name: /^sign in$/i }).click();
 
   try {
-    await page.waitForURL(/\/dashboard$/, { timeout: 15_000 });
-    await expect(page.getByRole("heading", { name: /dashboard|clinic home|today/i }).first()).toBeVisible();
+    await page.waitForURL(/\/(dashboard|owner-control|doctor|reception)$/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /dashboard|owner|clinic home|doctor|reception|today/i }).first()).toBeVisible();
     return true;
   } catch (error) {
     if (account.required) {

@@ -43,3 +43,9 @@ Captured before v1.5.1 product changes on 2026-07-16. This map identifies the co
 - `/ultrasound` is only an alias of the center; there is no dedicated structured patient scan editor route.
 
 These findings define the replacement scope. New components must be imported by the listed live routes or the old route must explicitly redirect.
+
+## Final route acceptance
+
+Authenticated read-only Playwright acceptance on 2026-07-16 opened the mapped Doctor, Reception, Patient Directory, Case Library, Guidelines, Protocol Atlas, Investigations, Ultrasound, Medication, dedicated Dermatology, Intake, Owner, Appearance, Accounts, Services, Investigation Catalog, Security Readiness, Audit, and Messages/staff-chat production routes at 1440×900. Patient Directory, Guidelines, Investigations, Ultrasound, Medication, dedicated Dermatology, Intake, and Appearance also passed at 390×844 without page-level overflow.
+
+The guideline document test selected an API-declared stored PDF asset, verified range and full responses, and observed an actual PDF.js canvas. Tests did not create or modify clinical records. See `tests/v151/read-only-live-routes.spec.ts` and `docs/V151_COMPREHENSIVE_CLINICAL_PRODUCT_RESCUE.md`.

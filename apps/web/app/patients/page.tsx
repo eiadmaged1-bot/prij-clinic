@@ -254,31 +254,6 @@ export default function PatientsPage() {
   );
 }
 
-function matchesCategory(patient: Patient, category: string, today: string) {
-  if (category === "all") return true;
-  if (category === "today") return patient.createdAt?.slice(0, 10) === today;
-  if (category === "ob") return patient.patientType === "OB" || patient.currentPhase?.phaseType === "pregnancy";
-  if (category === "gyn") return patient.patientType === "GYN" || patient.currentPhase?.phaseType === "gynecology";
-  if (category === "infertility") return patient.patientType === "INFERTILITY" || patient.currentPhase?.phaseType === "infertility";
-  if (category === "womens") return patient.patientType === "WOMEN_HEALTH" || patient.patientType === "GENERAL";
-  if (category === "high_risk") return /high.?risk/i.test(`${patient.currentPhase?.title ?? ""} ${patient.currentPhase?.status ?? ""}`);
-  if (category === "needs_review") return /review/i.test(`${patient.status} ${patient.currentPhase?.status ?? ""}`);
-  if (category === "follow_up_due") return /follow/i.test(`${patient.currentPhase?.status ?? ""} ${patient.currentPhase?.title ?? ""}`);
-  return true;
-}
-
-function sortPatients(rows: Patient[], mode: string) {
-  return [...rows].sort((left, right) => {
-    if (mode === "name_az") return patientDisplayName(left).localeCompare(patientDisplayName(right));
-    if (mode === "name_za") return patientDisplayName(right).localeCompare(patientDisplayName(left));
-    if (mode === "created_oldest") return String(left.createdAt ?? "").localeCompare(String(right.createdAt ?? ""));
-    if (mode === "file_number") return left.medicalRecordNumber.localeCompare(right.medicalRecordNumber);
-    if (mode === "last_visit_desc") return String(right.latestVisitDate ?? "").localeCompare(String(left.latestVisitDate ?? ""));
-    if (mode === "age_year") return String(left.dateOfBirth ?? "").localeCompare(String(right.dateOfBirth ?? ""));
-    return String(right.createdAt ?? "").localeCompare(String(left.createdAt ?? ""));
-  });
-}
-
 function friendlyStatus(value: string) {
   return value ? value.replaceAll("_", " ") : "Not set";
 }
@@ -290,19 +265,4 @@ function patientDisplayName(patient: Patient) {
 
 function patientFileNumber(patient: Patient) {
   return patient.medicalRecordNumber;
-}
-
-function matchesPatientDate(value: string | null | undefined, mode: string, exactDate: string, rangeStart: string, rangeEnd: string, today: string) {
-  if (mode === "all") return true;
-  if (!value) return false;
-  const date = value.slice(0, 10);
-  if (mode === "today") return date === today;
-  if (mode === "yesterday") {
-    const yesterday = new Date(`${today}T00:00:00`);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return date === yesterday.toISOString().slice(0, 10);
-  }
-  if (mode === "exact") return date === exactDate;
-  if (mode === "range") return date >= rangeStart && date <= rangeEnd;
-  return true;
 }

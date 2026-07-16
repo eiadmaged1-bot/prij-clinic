@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 class PayloadTooLargeError extends Error {
   constructor() {
     super("PAYLOAD_TOO_LARGE");
@@ -258,6 +260,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
 
   const responseHeaders = forwardedResponseHeaders(upstream);
   appendSetCookieHeaders(upstream, responseHeaders);
+  const contentType = upstream.headers.get("content-type")?.toLowerCase() ?? "";
+  const responseBody = contentType.includes("application/pdf")
+    ? await upstream.arrayBuffer()
+    : upstream.body;
 
   // If the upstream responded with a raw 502, 503, 504 without a structured body (e.g., node crashed)
   // We can choose to wrap it or pass it. Next.js might fail to pass it if it's not a JSON error.
@@ -266,7 +272,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path?: s
   // Which we did in the catch blocks above (for fetch errors). For actual HTTP responses from backend, the backend is expected to format them, but if the backend is a raw 502 (e.g. from a middle load balancer) we might not catch it.
   // We will assume `executeFetch` either throws or returns a valid response.
 
-  return new NextResponse(upstream.body, {
+  return new NextResponse(responseBody, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders

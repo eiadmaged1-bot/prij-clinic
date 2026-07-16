@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [patientPage, queueService, queueController, queueDate, audit] = await Promise.all([
+const [patientPage, queueService, queueController, queueDate, audit, clinicEvents] = await Promise.all([
   readFile(new URL("../apps/web/app/patients/new/page.tsx", import.meta.url), "utf8"),
   readFile(new URL("../apps/api/src/queue/queue.service.ts", import.meta.url), "utf8"),
   readFile(new URL("../apps/api/src/queue/queue.controller.ts", import.meta.url), "utf8"),
   readFile(new URL("../apps/api/src/queue/queue-date.ts", import.meta.url), "utf8"),
-  readFile(new URL("../apps/api/src/audit/audit.service.ts", import.meta.url), "utf8")
+  readFile(new URL("../apps/api/src/audit/audit.service.ts", import.meta.url), "utf8"),
+  readFile(new URL("../apps/web/lib/clinic-data-events.ts", import.meta.url), "utf8")
 ]);
 
 assert.equal((patientPage.match(/useIdempotencyKey\(\)/g) ?? []).length, 2);
@@ -19,7 +20,8 @@ assert.match(patientPage, /retry without recreating the patient/);
 assert.match(patientPage, /patientAlreadyQueued/);
 assert.match(patientPage, /queuePermissionDenied/);
 assert.match(patientPage, /queueUnavailable/);
-assert.match(patientPage, /clinic-queue:changed/);
+assert.match(patientPage, /publishClinicDataChange\(\["queue", "patient", "timeline", "owner-operations"\]/);
+assert.match(clinicEvents, /clinic-queue:changed/);
 assert.match(patientPage, /patientId, visitType, priority/);
 assert.match(patientPage, /checkInMethod: "New Patient"/);
 assert.match(patientPage, /تم إنشاء ملف المريضة/);

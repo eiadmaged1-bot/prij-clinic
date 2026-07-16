@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AppShell, SafetyAlert } from "@/app/mvp-page";
 import { useSession } from "@/app/session";
-import { PatientWorkspaceEditor, type WorkspacePanelPlacement } from "@/components/patients/PatientWorkspaceEditor";
+import { PatientWorkspaceEditor } from "@/components/patients/PatientWorkspaceEditor";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 
 export default function PatientWorkspaceEditorPage() {
@@ -14,7 +14,7 @@ export default function PatientWorkspaceEditorPage() {
   const [patientType, setPatientType] = useState("GENERAL");
   const [patientLabel, setPatientLabel] = useState("Patient workspace");
   const [status, setStatus] = useState("Loading patient context…");
-  const preview = useCallback((_panels: WorkspacePanelPlacement[]) => undefined, []);
+  const preview = useCallback(() => undefined, []);
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(path, "utf8");
-const [service, controller, dto, hashRoute, importPage, intakeService, intakeController, intakePage, hygienePage, docs, cli] = await Promise.all([
+const [service, controller, dto, hashRoute, importPage, intakeService, intakeController, intakePage, hygienePage, docs, cli, en] = await Promise.all([
   read("apps/api/src/patient-import/patient-import.service.ts"),
   read("apps/api/src/patient-import/patient-import.controller.ts"),
   read("apps/api/src/patient-import/dto.ts"),
@@ -13,7 +13,8 @@ const [service, controller, dto, hashRoute, importPage, intakeService, intakeCon
   read("apps/web/app/external-intake/page.tsx"),
   read("apps/web/app/admin/data-hygiene/page.tsx"),
   read("docs/PATIENT_IMPORT_AND_GOOGLE_SHEETS.md"),
-  read("scripts/patient-import.mjs")
+  read("scripts/patient-import.mjs"),
+  read("apps/web/i18n/en.ts")
 ]);
 
 assert.match(service, /decision: duplicates\.length \? "RESOLVE_EXISTING" : "CONFIRM_CREATE"/);
@@ -43,7 +44,8 @@ assert.match(intakeService, /if \(!phone\) return \[\]/);
 const duplicateMethod = intakeService.slice(intakeService.indexOf("private async duplicates"), intakeService.indexOf("private async nextExternalMrn"));
 assert.match(duplicateMethod, /where: \{ phone: \{ in: egyptianPhoneVariants\(phone\) \} \}/);
 assert.doesNotMatch(duplicateMethod, /where:[\s\S]*?\bOR\b/);
-assert.match(intakePage, /Patient Data Intake Center/);
+assert.match(intakePage, /t\("intakeCenter"\)/);
+assert.match(en, /intakeCenter:\s*"Intake Center"/);
 for (const tab of ["google-forms", "google-sheets", "excel-csv", "manual", "import-history", "data-hygiene"]) assert.match(intakePage, new RegExp(tab));
 assert.match(intakePage, /Constrained rollback/);
 assert.match(hygienePage, /Merge unavailable/);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
-type Props = { url: string; page: number; zoom: number; rotation: number; fit: "width" | "page" | "custom"; search: string; token?: string | null; onLoaded: (pages: number) => void; onError: () => void; onPageSelect: (page: number) => void };
+type Props = { url: string; page: number; zoom: number; rotation: number; fit: "width" | "page" | "custom"; search: string; token?: string | null; onLoaded: (pages: number) => void; onError: (reason: string) => void; onPageSelect: (page: number) => void };
 
 export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token, onLoaded, onError, onPageSelect }: Props) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
@@ -15,12 +15,12 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
   useEffect(() => {
     let cancelled = false;
     let loaded: PDFDocumentProxy | null = null;
-    void import("pdfjs-dist").then(async (pdfjs) => {
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
-      loaded = await pdfjs.getDocument({ url, withCredentials: true, httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined }).promise;
-      if (cancelled) return void loaded.destroy();
-      setPdf(loaded); onLoaded(loaded.numPages);
-    }).catch(onError);
+    void loadPdfJs().then(async (pdfjs) => {
+      const documentProxy = await pdfjs.getDocument({ url, withCredentials: true, httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined }).promise;
+      loaded = documentProxy;
+      if (cancelled) return void documentProxy.destroy();
+      setPdf(documentProxy); onLoaded(documentProxy.numPages);
+    }).catch((error) => onError(error instanceof Error ? error.message : "pdf_load_failed"));
     return () => { cancelled = true; if (loaded) void loaded.destroy(); setPdf(null); };
   }, [token, url]);
 
@@ -41,7 +41,7 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
       renderTask = pdfPage.render({ canvas, canvasContext: context, viewport, transform: window.devicePixelRatio === 1 ? undefined : [window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0] });
       await renderTask.promise;
       if (!cancelled) await renderSelectableText(pdfPage, viewport, layerRef.current!, search);
-    }).catch((error) => { if (!(error instanceof Error && error.name === "RenderingCancelledException")) onError(); });
+    }).catch((error) => { if (!(error instanceof Error && error.name === "RenderingCancelledException")) onError(error instanceof Error ? error.message : "pdf_render_failed"); });
     return () => { cancelled = true; renderTask?.cancel(); };
   }, [fit, page, pdf, rotation, search, zoom]);
 
@@ -49,7 +49,7 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
 }
 
 async function renderSelectableText(pdfPage: PDFPageProxy, viewport: ReturnType<PDFPageProxy["getViewport"]>, layer: HTMLDivElement, search: string) {
-  const pdfjs = await import("pdfjs-dist");
+  const pdfjs = await loadPdfJs();
   const text = await pdfPage.getTextContent();
   layer.replaceChildren(); layer.style.width = `${viewport.width}px`; layer.style.height = `${viewport.height}px`;
   const needle = search.trim().toLocaleLowerCase();
@@ -61,6 +61,13 @@ async function renderSelectableText(pdfPage: PDFPageProxy, viewport: ReturnType<
     if (needle && item.str.toLocaleLowerCase().includes(needle)) span.className = "pdf-search-highlight";
     layer.append(span);
   }
+}
+
+async function loadPdfJs() {
+  const moduleUrl = "/api/pdfjs/pdf.mjs";
+  const pdfjs = await import(/* webpackIgnore: true */ moduleUrl) as typeof import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = "/api/pdfjs/pdf.worker.mjs";
+  return pdfjs;
 }
 
 function PdfThumbnail({ pdf, page, active, onSelect }: { pdf: PDFDocumentProxy; page: number; active: boolean; onSelect: (page: number) => void }) {

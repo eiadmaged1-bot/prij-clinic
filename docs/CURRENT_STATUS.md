@@ -1,5 +1,11 @@
 # Current Status
 
+## v1.5.1 comprehensive clinical product rescue (2026-07-16)
+
+The live production routes were audited and repaired on `fix/v1.5.1-comprehensive-clinical-product-rescue` from approved base `13ab5e45f359e3f47b8fbeb7ff0e5e7c0e6c5e8d`. Authenticated read-only Playwright acceptance passed at desktop and mobile widths. A preserved stored PDF was opened through the same-origin range endpoint and rendered by PDF.js to a real canvas.
+
+Protected clinical counts are preserved. The governed reference seed expanded the database to 392 active generic identities and 424 families with 6 unlinked identities; unsupported clinical monograph sections remain empty/unverified. Thirteen Dermatology topics are source-linked and `needs_clinical_review`. Full details, exact counts, validation, and limitations are in `docs/V151_COMPREHENSIVE_CLINICAL_PRODUCT_RESCUE.md`.
+
 ## v1.5.0 connected-platform sprint (2026-07-16)
 
 Eight implementation checkpoints are committed on `fix/v1.5.0-connected-clinical-platform-completion`. The approved base is `afc5b4205954506b844b26a6c556a52d70eccc0a`; the v1.4.9 Data Hygiene authentication wiring repair remains in history.

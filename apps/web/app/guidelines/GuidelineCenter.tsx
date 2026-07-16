@@ -406,11 +406,6 @@ function isTrainingDocument(document: Document) {
   return document.title.toLowerCase().startsWith("demo") || text.includes("route guideline") || text.includes("local demo") || text.includes("training");
 }
 
-function humanGuidelineStatus(value: string) {
-  const labels: Record<string, string> = { ACTIVE: "Active", NEEDS_REVIEW: "Needs review", ARCHIVED: "Archived", SUPERSEDED: "Superseded", DRAFT_IMPORT: "Failed/incomplete import" };
-  return labels[value] ?? value.replaceAll("_", " ").toLowerCase();
-}
-
 function PrivateVault({
   documents,
   canManagePrivate,
