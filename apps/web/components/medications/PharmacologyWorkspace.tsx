@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { calculateMedicationFormula, getPharmacologyAtlas, getPharmacologyCoverage, getPharmacologyProfile, searchPharmacology, type ApprovedDoseFormula, type MedicationFormulaResult, type PharmacologyAtlas, type PharmacologyProfile, type PharmacologySearchResult } from "@/lib/medications";
 
 type SummaryLevel = "Quick" | "Clinical" | "Full source";
@@ -9,7 +10,8 @@ type BrowseMode = "rooms" | "generics" | "families" | "unlinked" | "recent" | "f
 const profileSections = ["Quick overview", "Uses", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/lactation", "Monitoring", "Calculators", "Sources"] as const;
 
 export function PharmacologyWorkspace() {
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("query") ?? "");
   const [results, setResults] = useState<PharmacologySearchResult[]>([]);
   const [selected, setSelected] = useState<PharmacologyProfile | null>(null);
   const [status, setStatus] = useState("Loading clinical rooms…");
