@@ -1,5 +1,11 @@
 # Medication Content Governance
 
+## v1.5.0 inventory and blocker
+
+Current database inventory: 63 active generic identities, 53 families, 56 memberships, and 7 unlinked identities (11.1%). The only approved source registered is **ATC/DDD Index 2026**, WHO Collaborating Centre for Drug Statistics Methodology. It supports identity/classification only.
+
+Clinical section counts are zero for mechanism, pharmacodynamics, pharmacokinetics, renal, hepatic, pregnancy/lactation, and antimicrobial spectrum. The UI therefore reports Source incomplete or Needs review per section. Empty rooms are hidden from the Doctor room browser; Admin governance retains incomplete coverage. No uses, mechanisms, safety claims, pregnancy statements, renal guidance, or doses were fabricated.
+
 ## Safety boundary
 
 The Clinical Drug Atlas is an assistive reference. A medication identity, alias, family membership, or attached source is not a verified clinical profile. Clinical facts remain incomplete until a pharmacology reviewer and an authorized clinical approver review the relevant section. The atlas does not automatically select treatment, diagnose, dose, or finalize a prescription.

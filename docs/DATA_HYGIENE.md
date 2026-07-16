@@ -1,5 +1,11 @@
 # Data Hygiene and Test Isolation
 
+## v1.5.0 results
+
+The operational activation repair updated 549 eligible REAL patients and was idempotent. Candidate discovery found 563 patient candidates and 4 external-intake candidates; it found zero empty-ultrasound and zero orphan-queue-lock candidates at the recorded run. Candidate detection is proposal-only. Actual Owner-reviewed classifications performed: zero.
+
+TEST/QUARANTINED filtering covers operational search, queues, case library, ultrasound, intake defaults, metrics, reports, and global search. Integration tests require a distinct `TEST_DATABASE_URL`; absence is a deliberate refusal, not a passing clinical integration result.
+
 ## Classification policy
 
 Operational records use an auditable `DataClassification`: `REAL`, `TEST`, `NEEDS_REVIEW`, or `QUARANTINED`. The field covers patients, external submissions, ultrasounds, encounters, and queue tickets. Newly created/imported records default to `REAL`/active unless an authorized workflow explicitly chooses another state.

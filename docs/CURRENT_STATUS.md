@@ -1,5 +1,13 @@
 # Current Status
 
+## v1.5.0 connected-platform sprint (2026-07-16)
+
+Eight implementation checkpoints are committed on `fix/v1.5.0-connected-clinical-platform-completion`. The approved base is `afc5b4205954506b844b26a6c556a52d70eccc0a`; the v1.4.9 Data Hygiene authentication wiring repair remains in history.
+
+Delivered: audited legacy-patient activation; resilient Appearance; panel-isolated modular workspace; persisted investigation drafts and audited lifecycle; structured ultrasound lifecycle and specialty fields; PDF.js rendering and guarded local knowledge retrieval; truthful Drug Atlas section governance; staged XLSX/CSV/Google Sheets intake; account protections; security readiness matrix; and English/Arabic keys for changed checkpoint-8 controls.
+
+Pre-repair protected counts were Patient 587, Encounter 318, QueueTicket 182, GuidelineDocument 52, ClinicalProtocol 442, ObUltrasound 213, InvestigationOrder 196, InvestigationResult 5, Prescription 195, MedicationGeneric 63, DrugFamily 53, ExternalPatientSubmission 4, and AuditLog 39,091. The activation repair changed 549 eligible REAL patients to active and left the second dry run at zero eligible rows.
+
 ## v1.4.9 clinic core recovery — 2026-07-15
 
 Branch `fix/v1.4.9-core-recovery-and-modular-workspace`, verified base `a63db212bfc84c6f52f6a388368c4463c1de6842`.

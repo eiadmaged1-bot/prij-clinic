@@ -1,5 +1,9 @@
 # Modular Patient Workspace
 
+## v1.5.0 behavior
+
+The patient file uses a responsive 12-column panel grid with persisted order, width, pin, collapse, visibility, preset, and scope. Supported scopes are account, patient, role, specialty, and clinic with permission checks. Each visible panel loads independently behind a PHI-safe error boundary. Missing-information prompts are grouped and support audited resolution actions; mandatory safety prompts cannot be silently dismissed. Layout presets never create or change clinical records.
+
 ## Registry and real-data boundary
 
 The typed panel registry is the single client-side catalog for patient modules. Each definition records its translation key, permitted roles and permissions, applicable patient contexts, supported sizes, authoritative endpoint/collection, eager or lazy loading, mandatory state, missing-data rules, and refresh dependencies. Layout records contain panel keys and presentation state only; they never copy patient or clinical values.

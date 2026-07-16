@@ -1,5 +1,15 @@
 # Known Limitations
 
+## v1.5.0 limitations
+
+- Physical-device, ngrok, RDP-width, signed-report print, Arabic print, and end-user manual QA were not performed in this Codex session.
+- PDF.js has automated contract/type coverage. A stored authoritative PDF must still be opened in the running browser before claiming visual rendering success.
+- No spreadsheet was staged during this sprint; XLSX/CSV behavior is validated by focused source-contract tests only.
+- Drug Atlas remains 63 active identities and 53 families. Seven identities are unlinked (11.1%). The only approved classification source present is WHO Collaborating Centre ATC/DDD Index 2026. Mechanism, PD, PK, renal, hepatic, pregnancy/lactation, and spectrum rows remain empty/source-incomplete.
+- The 300–400 generic and 100–140 family targets are blocked by absence of additional approved/licensed source data. No content was fabricated to meet them.
+- Candidate detection proposed 563 patient candidates and 4 intake candidates. Actual Owner-reviewed classification actions in this sprint: zero.
+- TEST database integration suites remain unavailable until a distinct `TEST_DATABASE_URL` is supplied; they must not run against the clinic database.
+
 ## v1.4.9 exact remaining limitations
 
 - Physical Receptionist/Doctor/Owner browser walkthroughs, iPhone/Android portrait/landscape, mobile Safari PDF behavior, rear camera, real printing, LAN, and ngrok QA were not performed.

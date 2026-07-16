@@ -1,5 +1,9 @@
 # Manual QA Report
 
+## v1.5.0 session record
+
+Manual browser, physical-device, ngrok, RDP, PDF visual, print, and real spreadsheet staging QA were not performed. Automated focused contracts, TypeScript checks, Prisma validation, and the final production build are recorded in the final sprint report. Do not interpret source-contract tests as physical-device or visual approval.
+
 ## v1.4.9 checkpoint evidence - 2026-07-15
 
 Checkpoint package typechecks passed after each checkpoint. New focused suites passed for patient search/queue (42 assertions), data hygiene/operational views (43), import default-confirm behavior (44), linked clinical workflows (55), medication governance (26), modular workspace (50), and appearance/account/pricing/localization (52). Existing focused queue, reception, Case Library, guidelines, investigations, prescriptions, pharmacology, workspace, autosave, admin, translation, owner-shell, and account-cleanup contracts used during checkpoints also passed after compatibility updates.
