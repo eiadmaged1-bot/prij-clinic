@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -10,6 +10,7 @@ import {
   CreateInvestigationOrderDto,
   InvestigationCatalogItemDto,
   InvestigationFavoriteSetDto,
+  InvestigationOrderDraftDto,
   UpdateInvestigationOrderStatusDto
 } from "./dto";
 import { InvestigationsService } from "./investigations.service";
@@ -23,6 +24,24 @@ export class InvestigationsController {
   @Permissions("investigation.create")
   createOrder(@Body() dto: CreateInvestigationOrderDto, @CurrentUser() user: AuthUser) {
     return this.investigations.createOrder(dto, user);
+  }
+
+  @Get("order-draft")
+  @Permissions("investigation.create")
+  getOrderDraft(@Query("patientId") patientId: string, @Query("encounterId") encounterId: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.getDraft(patientId, encounterId, user);
+  }
+
+  @Put("order-draft")
+  @Permissions("investigation.create")
+  saveOrderDraft(@Body() dto: InvestigationOrderDraftDto, @CurrentUser() user: AuthUser) {
+    return this.investigations.saveDraft(dto, user);
+  }
+
+  @Delete("order-draft")
+  @Permissions("investigation.create")
+  deleteOrderDraft(@Query("patientId") patientId: string, @Query("encounterId") encounterId: string, @CurrentUser() user: AuthUser) {
+    return this.investigations.deleteDraft(patientId, encounterId, user);
   }
 
   @Get("catalog")

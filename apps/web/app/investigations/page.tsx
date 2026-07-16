@@ -7,7 +7,7 @@ import { expandSearchShortcut } from "@/lib/search-shortcuts";
 
 type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean };
 type FavoriteSet = { id: string; name: string; nameAr?: string | null; scope?: string; items: Array<{ investigationCatalogItem: CatalogItem }> };
-type ClinicalRequest = { id: string; title: string; status: string; patientId: string; followUpHintActive?: boolean; patient?: { firstName?: string; lastName?: string; medicalRecordNumber?: string } };
+type ClinicalRequest = { id: string; title: string; status: string; patientId: string; createdAt?: string; followUpHintActive?: boolean; items?: Array<{ testName?: string }>; patient?: { firstName?: string; lastName?: string; medicalRecordNumber?: string } };
 type Workspace = { investigationCatalog?: CatalogItem[]; categories?: string[]; favorites?: CatalogItem[]; highPriority?: CatalogItem[]; favoriteSets?: FavoriteSet[] };
 
 const categoryTabs = ["Favorites", "Routine labs", "Antenatal", "High-risk pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Tumor markers", "Ultrasound", "Radiology", "Pathology", "Cervical screening", "Preoperative", "Postoperative", "Other"];
@@ -24,6 +24,9 @@ export default function InvestigationsPage() {
   const [priority, setPriority] = useState("routine");
   const [requestNote, setRequestNote] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
+  const [internalExternal, setInternalExternal] = useState<"internal" | "external">("internal");
+  const [followUpOwner, setFollowUpOwner] = useState("");
+  const [warningsConfirmed, setWarningsConfirmed] = useState(false);
   const [setName, setSetName] = useState("");
   const [setNameAr, setSetNameAr] = useState("");
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
@@ -47,6 +50,16 @@ export default function InvestigationsPage() {
       } catch {
         sessionStorage.removeItem(basketStorageKey(nextPatientId, nextEncounterId));
       }
+      void apiGet(`/investigations/order-draft?patientId=${encodeURIComponent(nextPatientId)}&encounterId=${encodeURIComponent(nextEncounterId)}`).then((data) => {
+        const draft = (data as { draft?: Record<string, unknown> | null }).draft;
+        if (!draft) return;
+        if (Array.isArray(draft.selected)) setSelected(uniqueCatalogItems(draft.selected as CatalogItem[]));
+        if (draft.indications && typeof draft.indications === "object") setIndications(draft.indications as Record<string, string>);
+        if (typeof draft.priority === "string") setPriority(draft.priority);
+        if (typeof draft.requestNote === "string") setRequestNote(draft.requestNote);
+        if (draft.internalExternal === "internal" || draft.internalExternal === "external") setInternalExternal(draft.internalExternal);
+        if (typeof draft.followUpOwner === "string") setFollowUpOwner(draft.followUpOwner);
+      }).catch(() => undefined);
     }
     setBasketReady(true);
     void loadRequests();
@@ -54,8 +67,13 @@ export default function InvestigationsPage() {
 
   useEffect(() => {
     if (!basketReady || !patientId || !encounterId) return;
-    sessionStorage.setItem(basketStorageKey(patientId, encounterId), JSON.stringify({ selected, indications }));
-  }, [basketReady, encounterId, indications, patientId, selected]);
+    const basket = { selected, indications, priority, requestNote, followUpDate, internalExternal, followUpOwner };
+    sessionStorage.setItem(basketStorageKey(patientId, encounterId), JSON.stringify(basket));
+    const timer = window.setTimeout(() => { void apiPut("/investigations/order-draft", { patientId, encounterId, basket }); }, 500);
+    return () => window.clearTimeout(timer);
+  }, [basketReady, encounterId, followUpDate, followUpOwner, indications, internalExternal, patientId, priority, requestNote, selected]);
+
+  useEffect(() => { setWarningsConfirmed(false); }, [selected]);
 
   const loadWorkspace = useCallback(async () => {
     const params = new URLSearchParams();
@@ -114,8 +132,12 @@ export default function InvestigationsPage() {
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!hasPatientContext || !selected.length) return setStatus("Open an active patient visit and select at least one investigation.");
+    const selectedNames = new Set(selected.map((item) => item.name.toLocaleLowerCase()));
+    const duplicateActive = requests.filter((request) => request.patientId === patientId && !["reviewed", "closed", "cancelled", "voided", "not_completed"].includes(request.status)).flatMap((request) => request.items ?? []).some((item) => selectedNames.has((item.testName ?? "").toLocaleLowerCase()));
+    const recentResult = requests.filter((request) => request.patientId === patientId && ["reviewed", "closed"].includes(request.status)).flatMap((request) => request.items ?? []).some((item) => selectedNames.has((item.testName ?? "").toLocaleLowerCase()));
+    if ((duplicateActive || recentResult) && !warningsConfirmed) { setWarningsConfirmed(true); return setStatus(`${duplicateActive ? "Duplicate active order warning. " : ""}${recentResult ? "A prior reviewed result exists. " : ""}Review the basket and submit again to confirm.`); }
     const response = await apiPost("/clinical-requests", {
-      patientId, encounterId, priority, requestedFollowUpDate: followUpDate || undefined, requestNote,
+      patientId, encounterId, priority, requestedFollowUpDate: followUpDate || undefined, expectedResultDate: followUpDate || undefined, requestNote, internalExternal, responsibilityJson: { followUpOwner: followUpOwner || "unassigned" },
       items: selected.map((item) => ({ title: item.name, catalogItemId: cleanCatalogId(item.id), requestType: item.category, requestNote: indications[item.id] || requestNote }))
     });
     if (!response.ok) return setStatus("The request could not be saved. Check the active visit and try again.");
@@ -124,6 +146,7 @@ export default function InvestigationsPage() {
     setStatus("Request saved to this visit. It is ready for the dedicated print view.");
     setSelected([]);
     setIndications({});
+    await apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE");
     await loadRequests();
   }
 
@@ -169,7 +192,7 @@ export default function InvestigationsPage() {
           <section className="wide compact-panel mobile-section mobile-sets"><div className="section-heading compact-section-heading"><h3>Reusable investigation sets</h3><span className="badge">{workspace.favoriteSets?.length ?? 0}</span></div><div className="dense-card-list">{(workspace.favoriteSets ?? []).map((set) => <div className="data-row" key={set.id}><button className="picker-row" type="button" onClick={() => applySet(set)}><strong>{set.name}{set.nameAr ? ` / ${set.nameAr}` : ""}</strong><span>{set.items.length} investigations · {set.scope ?? "personal"}</span></button><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "archive")}>Archive</button></div></div>)}</div></section>
           <section className="wide selected-item-basket mobile-section mobile-catalog"><div className="section-heading compact-section-heading"><h3>Selected basket</h3><span className="badge">{selected.length}</span></div>{selected.map((item, index) => <article className="request-chip investigation-basket-row" key={item.id}><div><strong>{item.name}</strong><em>{item.category}</em></div><input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" /><div className="form-actions"><button type="button" onClick={() => move(index, -1)} aria-label={`Move ${item.name} up`}>↑</button><button type="button" onClick={() => move(index, 1)} aria-label={`Move ${item.name} down`}>↓</button><button type="button" onClick={() => remove(index)}>Remove</button></div></article>)}{removed ? <button className="button secondary compact" type="button" onClick={undoRemove}>Undo remove</button> : null}{!selected.length ? <p className="empty-state compact smart-empty-state">No investigations selected.</p> : null}</section>
           <div className="form-actions wide mobile-section mobile-sets"><input aria-label="Set English name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="Custom set name" /><input aria-label="Set Arabic name" dir="rtl" value={setNameAr} onChange={(event) => setSetNameAr(event.target.value)} placeholder="اسم المجموعة بالعربية" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveSet()}>Save as custom set</button></div>
-          {hasPatientContext ? <div className="mobile-section mobile-catalog investigation-request-fields"><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Follow-up deadline<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>Save to visit</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); }}>Clear basket</button></div></div> : null}
+          {hasPatientContext ? <div className="mobile-section mobile-catalog investigation-request-fields"><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Internal / external<select value={internalExternal} onChange={(event) => setInternalExternal(event.target.value as "internal" | "external")}><option value="internal">Internal</option><option value="external">External</option></select></label><label>Follow-up owner<input value={followUpOwner} onChange={(event) => setFollowUpOwner(event.target.value)} placeholder="Role, staff member, branch, provider, or unassigned" /></label><label>Follow-up deadline / expected result date<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>{warningsConfirmed ? "Confirm and submit order · Save to visit" : "Review and submit order · Save to visit"}</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); void apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE"); }}>Clear basket</button></div></div> : null}
         </form>
       </article>
       <article className="panel"><div className="section-heading"><h2>Cross-patient result follow-up</h2><span className="badge">{requests.length}</span></div><div className="data-list">{requests.map((request) => <article className="data-row" key={request.id}><div className="data-row-header"><strong>{request.title}</strong><span className="badge">{request.status.replaceAll("_", " ")}</span></div><p className="muted">{request.followUpHintActive ? "Follow-up remains active until doctor review." : "Follow-up resolved."}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => printRequest(request.id)}>Print request</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "mark-result-received")}>Result received</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "review")}>Doctor reviewed</button></div></article>)}{!requests.length ? <p className="empty-state compact smart-empty-state">No requests are visible in your permitted scope.</p> : null}</div></article>
@@ -187,4 +210,5 @@ function basketStorageKey(patientId: string, encounterId: string) { return `prij
 function uniqueCatalogItems(items: CatalogItem[]) { return items.filter((item, index) => Boolean(item?.id) && items.findIndex((candidate) => candidate.id === item.id) === index); }
 async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); if (!response.ok) { const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null; throw new Error(`${body?.error?.message ?? "Investigation request failed."}${body?.error?.requestId ? ` Request ${body.error.requestId}.` : ""}`); } return response.json(); }
 async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
-async function apiRequest(endpoint: string, method: "GET" | "POST" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }
+async function apiPut(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "PUT", payload); }
+async function apiRequest(endpoint: string, method: "GET" | "POST" | "PUT" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }

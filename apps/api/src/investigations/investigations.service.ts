@@ -10,6 +10,7 @@ import {
   CreateInvestigationOrderDto,
   InvestigationCatalogItemDto,
   InvestigationFavoriteSetDto,
+  InvestigationOrderDraftDto,
   InvestigationOrderItemDto
 } from "./dto";
 
@@ -39,8 +40,13 @@ export class InvestigationsService {
           priority: dto.priority ?? "routine",
           notes: clean(dto.notes),
           requestedFollowUpDate: dto.requestedFollowUpDate ? new Date(dto.requestedFollowUpDate) : null,
+          internalExternal: dto.internalExternal ?? "internal",
+          templateVersion: dto.templateVersion ?? null,
+          responsibilityJson: dto.responsibilityJson as Prisma.InputJsonValue | undefined,
+          expectedResultDate: dto.expectedResultDate ? new Date(dto.expectedResultDate) : null,
+          lifecycleHistoryJson: [{ status: "requested", actorUserId: user.id, at: new Date().toISOString(), reason: "Doctor submitted order" }],
           items: { create: dto.items.map(toItemCreate) }
-        },
+        } as any,
         include: { items: true, patient: true, encounter: true }
       });
 
@@ -53,10 +59,35 @@ export class InvestigationsService {
         metadataJson: { patientId: order.patientId, priority: order.priority, itemCount: order.items.length }
       });
 
+      await (this.prisma as unknown as { investigationOrderDraft: any }).investigationOrderDraft.deleteMany({ where: { encounterId: dto.encounterId, userId: user.id } });
+
       return order;
     } catch (error) {
       this.handlePrismaReferenceError(error);
     }
+  }
+
+  async getDraft(patientId: string, encounterId: string, user: AuthUser) {
+    await assertCanReferencePatient(this.prisma, patientId, user);
+    await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
+    const draft = await (this.prisma as unknown as { investigationOrderDraft: any }).investigationOrderDraft.findUnique({ where: { encounterId_userId: { encounterId, userId: user.id } } });
+    return { draft: draft?.basketJson ?? null, updatedAt: draft?.updatedAt ?? null };
+  }
+
+  async saveDraft(dto: InvestigationOrderDraftDto, user: AuthUser) {
+    await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, { patientId: dto.patientId, requireDoctorScope: true });
+    const model = (this.prisma as unknown as { investigationOrderDraft: any }).investigationOrderDraft;
+    const draft = await model.upsert({ where: { encounterId_userId: { encounterId: dto.encounterId, userId: user.id } }, update: { patientId: dto.patientId, basketJson: dto.basket }, create: { patientId: dto.patientId, encounterId: dto.encounterId, userId: user.id, basketJson: dto.basket } });
+    await this.audit.record({ actorUserId: user.id, action: "investigation_order_draft.saved", resourceType: "investigation_order_draft", resourceId: draft.id, branchId: user.branchId, severity: "low", metadataJson: { patientId: dto.patientId, encounterId: dto.encounterId } });
+    return { id: draft.id, updatedAt: draft.updatedAt };
+  }
+
+  async deleteDraft(patientId: string, encounterId: string, user: AuthUser) {
+    await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
+    const result = await (this.prisma as unknown as { investigationOrderDraft: any }).investigationOrderDraft.deleteMany({ where: { patientId, encounterId, userId: user.id } });
+    if (result.count) await this.audit.record({ actorUserId: user.id, action: "investigation_order_draft.discarded", resourceType: "investigation_order_draft", branchId: user.branchId, severity: "medium", metadataJson: { patientId, encounterId } });
+    return { deleted: result.count };
   }
 
   async catalogWorkspace(user: AuthUser, q = "", category = "") {
@@ -292,6 +323,12 @@ export class InvestigationsService {
   async updateOrderStatus(id: string, status: InvestigationOrderStatus, user: AuthUser, reason?: string) {
     const existing = await this.getOrder(id, user);
     const trimmedReason = reason?.trim();
+    const from = String(existing.status);
+    const to = String(status);
+    const normalTransition = allowedInvestigationTransitions[from]?.includes(to) ?? false;
+    if (!normalTransition && !trimmedReason) throw new BadRequestException(`Transition from ${from} to ${to} requires an override reason.`);
+    if (!normalTransition && !user.roles.some((role) => ["Owner", "Doctor"].includes(role))) throw new ForbiddenException("Only an authorized clinician can override the investigation lifecycle.");
+    assertLifecycleRole(to, user);
 
     if ((status === "cancelled" || status === "voided") && !trimmedReason) {
       throw new BadRequestException("A reason is required to cancel or void an investigation order.");
@@ -303,8 +340,9 @@ export class InvestigationsService {
         status,
         ...(status === "cancelled" ? { cancellationReason: trimmedReason } : {}),
         ...(status === "voided" ? { voidReason: trimmedReason } : {}),
-        items: { updateMany: { where: {}, data: { status } } }
-      },
+        items: { updateMany: { where: {}, data: { status } } },
+        lifecycleHistoryJson: appendLifecycle(existing as unknown as { lifecycleHistoryJson?: unknown }, { status: to, actorUserId: user.id, at: new Date().toISOString(), reason: trimmedReason ?? null, override: !normalTransition })
+      } as any,
       include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
     });
 
@@ -329,6 +367,10 @@ export class InvestigationsService {
         priority: dto.priority,
         notes: dto.requestNote,
         requestedFollowUpDate: dto.requestedFollowUpDate,
+        internalExternal: dto.internalExternal,
+        templateVersion: dto.templateVersion,
+        responsibilityJson: dto.responsibilityJson,
+        expectedResultDate: dto.expectedResultDate,
         items: dto.items.map((item) => ({
           category: mapRequestType(item.requestType),
           testName: item.title,
@@ -479,6 +521,45 @@ function mapRequestType(value?: string): InvestigationCategory {
   if (key.includes("procedure") || key.includes("referral") || key.includes("specialist")) return "procedure";
   if (key.includes("radiology") || key.includes("xray") || key.includes("x ray") || key.includes("ct") || key.includes("mri")) return "radiology";
   return "laboratory";
+}
+
+const allowedInvestigationTransitions: Record<string, string[]> = {
+  draft: ["requested", "cancelled"],
+  requested: ["booking_required", "booked", "scheduled", "sent", "sample_collected", "cancelled"],
+  booking_required: ["booked", "not_completed", "overdue", "cancelled"],
+  booked: ["sample_collected", "performed", "not_completed", "overdue", "cancelled"],
+  scheduled: ["sample_collected", "performed", "not_completed", "overdue", "cancelled"],
+  sent: ["sent_out", "external_result_pending", "result_pending", "cancelled"],
+  sample_collected: ["in_progress", "sent_out", "rejected_sample", "result_pending"],
+  rejected_sample: ["sample_collected", "not_completed", "cancelled"],
+  in_progress: ["performed", "result_pending", "result_ready"],
+  performed: ["result_pending", "external_result_pending", "result_ready"],
+  sent_out: ["external_result_pending", "result_pending", "result_received"],
+  external_result_pending: ["result_received", "overdue", "not_completed"],
+  result_pending: ["result_ready", "result_received", "overdue"],
+  result_ready: ["result_received", "needs_review"],
+  result_received: ["needs_review", "correction_requested"],
+  needs_review: ["reviewed", "correction_requested"],
+  correction_requested: ["amended", "result_received"],
+  amended: ["needs_review", "reviewed"],
+  reviewed: ["patient_informed", "closed", "amended"],
+  patient_informed: ["closed"],
+  overdue: ["booked", "sample_collected", "performed", "result_received", "not_completed", "cancelled"]
+};
+
+function assertLifecycleRole(target: string, user: AuthUser) {
+  const roles = new Set(user.roles);
+  const clinician = roles.has("Doctor") || roles.has("Owner");
+  const nurse = roles.has("Nurse") || clinician;
+  const reception = roles.has("Reception") || roles.has("Receptionist") || roles.has("Admin") || clinician;
+  if (["booking_required", "booked", "scheduled", "sent", "not_completed", "overdue", "cancelled"].includes(target) && !reception) throw new ForbiddenException("Booking and administrative investigation transitions require Reception authority.");
+  if (["sample_collected", "in_progress", "performed", "rejected_sample"].includes(target) && !nurse) throw new ForbiddenException("Sample and performed transitions require Nurse or clinical authority.");
+  if (["needs_review", "reviewed", "correction_requested", "amended", "patient_informed", "closed"].includes(target) && !clinician) throw new ForbiddenException("Clinical investigation review requires Doctor authority.");
+}
+
+function appendLifecycle(order: { lifecycleHistoryJson?: unknown }, event: Record<string, unknown>) {
+  const history = Array.isArray(order.lifecycleHistoryJson) ? order.lifecycleHistoryJson.slice(-99) : [];
+  return [...history, event] as Prisma.InputJsonValue;
 }
 
 function toClinicalRequest(order: Record<string, any>) {

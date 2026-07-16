@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsOptional, IsString, IsUUID, MaxLength, ValidateNested } from "class-validator";
+import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { InvestigationCategory, InvestigationOrderStatus, InvestigationPriority } from "@prisma/client";
 
 export class InvestigationOrderItemDto {
@@ -37,11 +37,22 @@ export class CreateInvestigationOrderDto {
   @IsDateString()
   requestedFollowUpDate?: string;
 
+  @IsOptional() @IsIn(["internal", "external"]) internalExternal?: "internal" | "external";
+  @IsOptional() @IsInt() @Min(1) @Max(100000) templateVersion?: number;
+  @IsOptional() @IsObject() responsibilityJson?: Record<string, unknown>;
+  @IsOptional() @IsDateString() expectedResultDate?: string;
+
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => InvestigationOrderItemDto)
   items!: InvestigationOrderItemDto[];
+}
+
+export class InvestigationOrderDraftDto {
+  @IsUUID() patientId!: string;
+  @IsUUID() encounterId!: string;
+  @IsObject() basket!: Record<string, unknown>;
 }
 
 export class UpdateInvestigationOrderStatusDto {
@@ -173,6 +184,11 @@ export class CreateClinicalRequestDto {
   @IsOptional()
   @IsDateString()
   requestedFollowUpDate?: string;
+
+  @IsOptional() @IsIn(["internal", "external"]) internalExternal?: "internal" | "external";
+  @IsOptional() @IsInt() @Min(1) @Max(100000) templateVersion?: number;
+  @IsOptional() @IsObject() responsibilityJson?: Record<string, unknown>;
+  @IsOptional() @IsDateString() expectedResultDate?: string;
 
   @IsArray()
   @ArrayMinSize(1)

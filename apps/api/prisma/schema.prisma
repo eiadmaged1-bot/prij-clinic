@@ -606,17 +606,30 @@ enum PrescriptionStatus {
 }
 
 enum InvestigationOrderStatus {
+  draft
   requested
+  booking_required
+  booked
   scheduled
   pending_payment
   sent
   sample_collected
   in_progress
+  performed
   sent_out
   result_pending
   result_ready
   result_received
+  needs_review
   reviewed
+  patient_informed
+  closed
+  not_completed
+  overdue
+  rejected_sample
+  correction_requested
+  amended
+  external_result_pending
   cancelled
   voided
 }
@@ -2650,6 +2663,11 @@ model InvestigationOrder {
   cancellationReason    String?
   voidReason            String?
   notes                 String?
+  internalExternal      String                     @default("internal")
+  templateVersion       Int?
+  responsibilityJson    Json?
+  expectedResultDate    DateTime?                  @db.Date
+  lifecycleHistoryJson  Json                       @default("[]")
   createdAt             DateTime                   @default(now()) @db.Timestamptz(3)
   updatedAt             DateTime                   @updatedAt @db.Timestamptz(3)
 
@@ -2669,6 +2687,19 @@ model InvestigationOrder {
   @@index([status])
   @@index([billingStatus])
   @@index([requestedFollowUpDate])
+}
+
+model InvestigationOrderDraft {
+  id         String   @id @default(uuid()) @db.Uuid
+  patientId  String   @db.Uuid
+  encounterId String  @db.Uuid
+  userId     String   @db.Uuid
+  basketJson Json
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([encounterId, userId])
+  @@index([patientId, encounterId])
 }
 
 model InvestigationOrderItem {
