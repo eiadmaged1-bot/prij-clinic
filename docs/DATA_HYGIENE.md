@@ -1,5 +1,11 @@
 # Data Hygiene and Test Isolation
 
+## v1.5.1 intake integration
+
+The Patient Data Intake Center now links directly to Owner Data Hygiene and keeps TEST/QUARANTINED submissions out of operational inbox queries. Direct review by identifier also refuses those classifications until an Owner restores the record. Classification actions remain reasoned and audited; detection does not mutate records. A patient merge action is shown as unavailable because the repository does not yet contain a governed merge workflow capable of resolving dependent signed clinical references safely.
+
+No Owner classification or merge was performed during this checkpoint. No patient, intake, ultrasound, queue, or clinical record was deleted.
+
 ## v1.5.0 results
 
 The operational activation repair updated 549 eligible REAL patients and was idempotent. Candidate discovery found 563 patient candidates and 4 external-intake candidates; it found zero empty-ultrasound and zero orphan-queue-lock candidates at the recorded run. Candidate detection is proposal-only. Actual Owner-reviewed classifications performed: zero.

@@ -68,8 +68,8 @@ export class ExternalIntakeController {
   }
 
   @Post("external-intake/google-sheet")
-  receiveGoogleSheet(@Body() dto: GoogleSheetBatchDto, @Headers("x-prij-integration-key") integrationKey: string | undefined, @Headers("idempotency-key") idempotencyKey: string | undefined, @Req() request: Request) {
-    return this.intake.receiveGoogleSheet(dto, { integrationKey, idempotencyKey, remoteAddress: request.ip, secure: request.secure || request.headers["x-forwarded-proto"] === "https" });
+  receiveGoogleSheet(@Body() dto: GoogleSheetBatchDto, @Headers("x-prij-integration-key") integrationKey: string | undefined, @Headers("idempotency-key") idempotencyKey: string | undefined, @Headers("x-prij-timestamp") timestamp: string | undefined, @Headers("x-prij-signature") signature: string | undefined, @Req() request: RawBodyRequest<Request>) {
+    return this.intake.receiveGoogleSheet(dto, { integrationKey, idempotencyKey, timestamp, signature, rawBody: request.rawBody, remoteAddress: request.ip, secure: request.secure || request.headers["x-forwarded-proto"] === "https" });
   }
 
   @Post("external-intake/:id/request-correction")

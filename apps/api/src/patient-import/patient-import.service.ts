@@ -3,7 +3,7 @@ import { PatientType, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
-import { CommitPatientImportDto, PreviewPatientImportDto, UpdatePatientImportReviewDto } from "./dto";
+import { CommitPatientImportDto, PreviewPatientImportDto, RollbackPatientImportDto, UpdatePatientImportReviewDto } from "./dto";
 
 @Injectable()
 export class PatientImportService {
@@ -12,6 +12,8 @@ export class PatientImportService {
   async preview(dto: PreviewPatientImportDto, user: AuthUser) {
     this.assertManager(user);
     if (!/^[a-f0-9]{64}$/i.test(dto.fileHash)) throw new BadRequestException("A SHA-256 file hash is required.");
+    if (dto.rows.some((row) => Object.keys(row).length > 100)) throw new BadRequestException("Import stopped: the 100-column limit was exceeded.");
+    if (dto.rows.some((row) => Object.values(row).some((value) => String(value ?? "").length > 10_000))) throw new BadRequestException("Import stopped: a cell exceeds the safe text limit.");
     if (dto.rows.some((row) => Object.values(row).some((value) => unsafeCell(value)))) throw new BadRequestException("Import stopped: formula-like or corrupted text was detected.");
     const prepared = [];
     for (let index = 0; index < dto.rows.length; index += 1) prepared.push(await this.prepareRow(dto.rows[index]!, dto.mapping, index + 2, user));
@@ -26,7 +28,13 @@ export class PatientImportService {
     return batch;
   }
 
-  async get(id: string, user: AuthUser) { this.assertManager(user); const batch = await this.prisma.patientImportBatch.findFirst({ where: { id, createdByUserId: user.id }, include: { rows: { orderBy: { rowNumber: "asc" } } } }); if (!batch) throw new NotFoundException("Patient import batch not found."); return batch; }
+  async get(id: string, user: AuthUser) { this.assertManager(user); const batch = await this.prisma.patientImportBatch.findFirst({ where: { id, ...(user.roles.includes("Owner") ? {} : { createdByUserId: user.id }) }, include: { rows: { orderBy: { rowNumber: "asc" } } } }); if (!batch) throw new NotFoundException("Patient import batch not found."); return batch; }
+
+  async list(user: AuthUser) {
+    this.assertManager(user);
+    const batches = await this.prisma.patientImportBatch.findMany({ where: user.roles.includes("Owner") ? {} : { createdByUserId: user.id }, orderBy: { createdAt: "desc" }, take: 50, include: { createdBy: { select: { displayName: true } } } });
+    return { batches, totalShown: batches.length, limit: 50 };
+  }
 
   async updateReview(id: string, rowId: string, dto: UpdatePatientImportReviewDto, user: AuthUser) {
     await this.get(id, user);
@@ -71,6 +79,42 @@ export class PatientImportService {
     const updated = await this.prisma.patientImportBatch.update({ where: { id }, data: { status: failed ? "completed_with_errors" : "completed", importedCount: imported, skippedCount: skipped, failedCount: failed, completedAt: new Date() }, include: { rows: { orderBy: { rowNumber: "asc" } } } });
     await this.audit.record({ actorUserId: user.id, action: "patient_import.committed", resourceType: "patient_import_batch", resourceId: id, branchId: user.branchId, severity: "high", metadataJson: { imported, skipped, failed, automaticMerge: false } });
     return updated;
+  }
+
+  async rollback(id: string, dto: RollbackPatientImportDto, user: AuthUser) {
+    this.assertManager(user);
+    if (dto.reason.trim().length < 3) throw new BadRequestException("Rollback reason is required.");
+    const batch = await this.get(id, user);
+    if (!batch.status.startsWith("completed")) throw new BadRequestException("Only a completed import batch can be rolled back.");
+    const importedRows = batch.rows.filter((row) => row.createdPatientId && row.status === "IMPORTED");
+    const blocked: Array<{ rowId: string; code: string }> = [];
+    const eligible: typeof importedRows = [];
+    for (const row of importedRows) {
+      const references = await this.patientReferenceCount(row.createdPatientId!);
+      if (references > 0) blocked.push({ rowId: row.id, code: "PATIENT_HAS_DEPENDENT_RECORDS" }); else eligible.push(row);
+    }
+    if (blocked.length) return { batchId: id, rolledBack: 0, blocked, constrained: true, message: "Rollback refused: one or more imported patients now have dependent records." };
+    await this.prisma.$transaction(async (transaction) => {
+      for (const row of eligible) {
+        await transaction.patientImportRow.update({ where: { id: row.id }, data: { createdPatientId: null, status: "ROLLED_BACK", errorCode: null } });
+        await transaction.patient.delete({ where: { id: row.createdPatientId! } });
+      }
+      await transaction.patientImportBatch.update({ where: { id }, data: { status: "rolled_back", importedCount: 0 } });
+    });
+    await this.audit.record({ actorUserId: user.id, action: "patient_import.rolled_back", resourceType: "patient_import_batch", resourceId: id, branchId: user.branchId, severity: "critical", reason: dto.reason.trim(), metadataJson: { patientRecordsDeleted: eligible.length, dependentClinicalRecordsDeleted: 0, constrained: true } });
+    return { batchId: id, rolledBack: eligible.length, blocked: [], constrained: true };
+  }
+
+  private async patientReferenceCount(patientId: string) {
+    const foreignKeys = await this.prisma.$queryRaw<Array<{ tableName: string; columnName: string }>>`SELECT child.relname AS "tableName", attribute.attname AS "columnName" FROM pg_constraint constraint_row JOIN pg_class parent ON parent.oid = constraint_row.confrelid JOIN pg_class child ON child.oid = constraint_row.conrelid JOIN unnest(constraint_row.conkey) WITH ORDINALITY AS key(attnum, ordinal) ON true JOIN pg_attribute attribute ON attribute.attrelid = child.oid AND attribute.attnum = key.attnum WHERE constraint_row.contype = 'f' AND parent.relname = 'Patient'`;
+    let count = 0;
+    for (const foreignKey of foreignKeys) {
+      if (foreignKey.tableName === "PatientImportRow") continue;
+      const table = foreignKey.tableName.replace(/"/g, '""'); const column = foreignKey.columnName.replace(/"/g, '""');
+      const rows = await this.prisma.$queryRawUnsafe<Array<{ count: bigint }>>(`SELECT count(*)::bigint count FROM "${table}" WHERE "${column}" = $1::uuid`, patientId);
+      count += Number(rows[0]?.count ?? 0);
+    }
+    return count;
   }
 
   private async prepareRow(raw: Record<string, unknown>, mapping: Record<string, string>, rowNumber: number, user: AuthUser) {

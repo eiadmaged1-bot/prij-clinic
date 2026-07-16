@@ -15,23 +15,35 @@ export class ExternalIntakeService {
     private readonly audit: AuditService
   ) {}
 
-  async receiveGoogleSheet(dto: GoogleSheetBatchDto, request: { integrationKey?: string; idempotencyKey?: string; remoteAddress?: string; secure: boolean }) {
+  async receiveGoogleSheet(dto: GoogleSheetBatchDto, request: { integrationKey?: string; idempotencyKey?: string; timestamp?: string; signature?: string; rawBody?: Buffer; remoteAddress?: string; secure: boolean }) {
     if (!request.secure && process.env.APP_ENV !== "local") throw new BadRequestException("Google Sheets intake requires HTTPS.");
     this.enforceRateLimit(request.remoteAddress);
     const expected = process.env.PRIJ_GOOGLE_SHEETS_INTEGRATION_KEY;
     if (!expected || !constantTimeTextEqual(expected, request.integrationKey ?? "")) throw new ForbiddenException("Google Sheets integration authentication failed.");
     if (!request.idempotencyKey?.trim() || request.idempotencyKey.length > 120) throw new BadRequestException("A valid idempotency key is required.");
-    const received: Array<{ intakeId: string; rowHash: string; duplicate: boolean }> = [];
+    this.verifyGoogleSheetSignature(expected, request);
+    const received: Array<{ intakeId: string; rowHash: string; duplicate: boolean; exactPhoneMatch: boolean }> = [];
     for (const row of dto.rows) {
       if (!/^[a-f0-9]{64}$/i.test(row.rowHash)) throw new BadRequestException("Every reviewed row requires a SHA-256 row hash.");
       const externalSubmissionId = `google-sheet:${createHash("sha256").update(`${dto.sheetId}:${request.idempotencyKey}:${row.rowHash}`).digest("hex")}`;
       const existing = await this.prisma.externalPatientSubmission.findUnique({ where: { externalSubmissionId } });
-      if (existing) { received.push({ intakeId: existing.id, rowHash: row.rowHash, duplicate: true }); continue; }
-      const created = await this.prisma.externalPatientSubmission.create({ data: { id: randomUUID(), source: "google_sheet", language: /[\u0600-\u06ff]/.test(JSON.stringify(row.mappedPatient)) ? "ar" : "en", externalSubmissionId, payloadHash: row.rowHash.toLowerCase(), rawAnswersJson: { sourceRow: row.sourceRow, sourceMetadata: row.sourceMetadata ?? {}, reviewedRow: true } as Prisma.InputJsonValue, mappedPatientJson: row.mappedPatient as Prisma.InputJsonValue, status: "pending_review" } });
-      received.push({ intakeId: created.id, rowHash: row.rowHash, duplicate: false });
+      if (existing) { received.push({ intakeId: existing.id, rowHash: row.rowHash, duplicate: true, exactPhoneMatch: Array.isArray(existing.duplicateCandidatesJson) && existing.duplicateCandidatesJson.length > 0 }); continue; }
+      const mappedPhone = String(row.mappedPatient.phone ?? row.mappedPatient.primaryPhone ?? "");
+      const duplicateCandidates = await this.duplicates({ phone: mappedPhone });
+      const created = await this.prisma.externalPatientSubmission.create({ data: { id: randomUUID(), source: "google_sheet", language: /[\u0600-\u06ff]/.test(JSON.stringify(row.mappedPatient)) ? "ar" : "en", externalSubmissionId, payloadHash: row.rowHash.toLowerCase(), rawAnswersJson: { sourceRow: row.sourceRow, sourceMetadata: row.sourceMetadata ?? {}, reviewedRow: true } as Prisma.InputJsonValue, mappedPatientJson: row.mappedPatient as Prisma.InputJsonValue, duplicateCandidatesJson: duplicateCandidates as Prisma.InputJsonValue, status: "pending_review" } });
+      received.push({ intakeId: created.id, rowHash: row.rowHash, duplicate: false, exactPhoneMatch: duplicateCandidates.length > 0 });
     }
     await this.audit.record({ action: "external_intake.google_sheet_staged", resourceType: "external_patient_submission", severity: "high", metadataJson: { rowCount: dto.rows.length, duplicateCount: received.filter((row) => row.duplicate).length, stagingOnly: true, idempotencyKeyHash: createHash("sha256").update(request.idempotencyKey).digest("hex") } });
     return { status: "staged", rows: received, sideEffects: { patients: 0, phases: 0, appointments: 0, queueTickets: 0, encounters: 0 } };
+  }
+
+  private verifyGoogleSheetSignature(secret: string, request: { timestamp?: string; signature?: string; rawBody?: Buffer; idempotencyKey?: string }) {
+    if (!request.timestamp || !request.signature || !request.rawBody || !request.idempotencyKey) throw new UnauthorizedException("Signed Google Sheets request headers are required.");
+    const timestamp = Date.parse(request.timestamp);
+    if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 5 * 60 * 1000) throw new UnauthorizedException("Google Sheets request timestamp is outside the replay window.");
+    const canonical = `${request.timestamp}.${request.idempotencyKey}.${request.rawBody.toString("utf8")}`;
+    const expected = `sha256=${createHmac("sha256", secret).update(canonical).digest("hex")}`;
+    if (!constantTimeTextEqual(expected, request.signature)) throw new UnauthorizedException("Google Sheets request signature is invalid.");
   }
 
   async receiveGoogleForm(dto: GoogleFormIntakeDto, request: ExternalIntakeRequest) {
@@ -163,6 +175,7 @@ export class ExternalIntakeService {
 
   async createPatient(id: string, dto: CreatePatientFromSubmissionDto, user: AuthUser) {
     this.assertReviewer(user);
+    if (!dto.reviewReason?.trim()) throw new BadRequestException("A review reason is required before creating a patient.");
     const submission = await this.getPending(id, user);
     const mapped = objectValue(submission.mappedPatientJson);
     const caseType = objectValue(submission.mappedCaseTypeJson);
@@ -174,7 +187,7 @@ export class ExternalIntakeService {
         branchId: user.branchId,
         medicalRecordNumber: await this.nextExternalMrn(),
         firstName,
-        lastName: rest.join(" ") || "External",
+        lastName: rest.join(" ") || firstName,
         dateOfBirth: parseDateOrNull(String(mapped.dateOfBirth ?? "")),
         sex: "female",
         patientType: safePatientType(String(caseType.patientType ?? "WOMEN_HEALTH")),
@@ -202,6 +215,7 @@ export class ExternalIntakeService {
 
   async attach(id: string, dto: AttachSubmissionDto, user: AuthUser) {
     this.assertReviewer(user);
+    if (!dto.reviewReason?.trim()) throw new BadRequestException("A review reason is required before attaching a patient.");
     const submission = await this.getPending(id, user);
     const patient = await assertCanReferencePatient(this.prisma, dto.patientId, user);
     const updated = await this.prisma.externalPatientSubmission.update({
@@ -244,6 +258,7 @@ export class ExternalIntakeService {
 
   private async getPending(id: string, user: AuthUser) {
     const submission = await this.get(id, user);
+    if (["TEST", "QUARANTINED"].includes(submission.dataClassification)) throw new ForbiddenException("Test or quarantined submissions must be restored by the Owner before operational review.");
     if (submission.status !== "pending_review") throw new BadRequestException("Only pending submissions can be reviewed.");
     return submission;
   }

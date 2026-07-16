@@ -20,3 +20,7 @@ export class UpdatePatientImportReviewDto {
   @IsOptional() @IsBoolean() selected?: boolean;
   @IsOptional() @IsString() @MaxLength(500) reason?: string;
 }
+
+export class RollbackPatientImportDto {
+  @IsString() @MaxLength(500) reason!: string;
+}
