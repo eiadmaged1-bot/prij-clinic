@@ -6630,3 +6630,17 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .pdfjs-thumbnails button { display: grid; flex: 0 0 auto; gap: .25rem; padding: .35rem; border: 1px solid var(--border-color); background: var(--surface); }
 .pdfjs-thumbnails button.active { outline: 2px solid var(--accent); }
 .pdfjs-thumbnails canvas { width: 88px; height: auto; background: white; }
+
+.ultrasound-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.ultrasound-editor-grid { display: grid; grid-template-columns: minmax(13rem, 2fr) minmax(0, 7fr) minmax(15rem, 3fr); gap: 1rem; align-items: start; }
+.ultrasound-template-rail, .ultrasound-image-rail { position: sticky; top: 1rem; display: grid; gap: .75rem; max-height: calc(100vh - 2rem); overflow: auto; }
+.template-list { display: grid; gap: .35rem; }
+.template-list button { padding: .6rem .7rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: start; cursor: pointer; }
+.template-list button:hover, .template-list button:focus-visible { border-color: var(--accent); background: var(--soft); }
+.ultrasound-sticky-actions { position: sticky; bottom: 0; z-index: 3; grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem; border-top: 1px solid var(--border-color); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(8px); }
+.ultrasound-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.ultrasound-gallery a { display: grid; gap: .25rem; color: inherit; text-decoration: none; min-width: 0; }
+.ultrasound-gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.ultrasound-gallery span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1050px) { .ultrasound-editor-grid { grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr); } .ultrasound-image-rail { position: static; grid-column: 1 / -1; max-height: none; } }
+@media (max-width: 720px) { .ultrasound-editor-header, .ultrasound-sticky-actions { align-items: stretch; flex-direction: column; } .ultrasound-editor-grid { grid-template-columns: 1fr; } .ultrasound-template-rail, .ultrasound-image-rail { position: static; max-height: none; } .template-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ultrasound-sticky-actions .form-actions { width: 100%; } }

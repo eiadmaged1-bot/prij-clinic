@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, type ReactNode, useRef, useState } from "react";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
@@ -145,6 +146,8 @@ export function CalculatorsPanel({ patient }: { patient: Patient }) {
 }
 
 export function UltrasoundWorkspace({ patient, pregnancies, reports, orders }: { patient: Patient; pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[] }) {
+    const searchParams = useSearchParams();
+    const encounterId = searchParams.get("encounterId") ?? searchParams.get("visitId");
     const activePregnancy = pregnancies.find((item) => item.status === "active") ?? pregnancies[0];
     return (
     <section className="obgyn-workspace">
@@ -164,7 +167,11 @@ export function UltrasoundWorkspace({ patient, pregnancies, reports, orders }: {
         </dl>
       </article>
       <section className="obgyn-section-grid">
-        <UltrasoundReportBuilder patient={patient} pregnancy={activePregnancy} fetuses={[]} />
+        <article className="panel">
+          <div className="section-heading"><div><h2>Structured scan editor</h2><p className="muted">Open the dedicated editor for templates, images, comparisons, review, signing, and amendments.</p></div><ThreeDMedicalIcon name="ultrasound" size="sm" tone="violet" /></div>
+          {encounterId ? <Link className="button" href={`/patients/${encodeURIComponent(patient.id)}/ultrasounds/new?encounterId=${encodeURIComponent(encounterId)}${activePregnancy?.id ? `&pregnancyId=${encodeURIComponent(activePregnancy.id)}` : ""}`}>Create structured scan</Link> : <p className="notice">Start or open an active encounter before creating an ultrasound record.</p>}
+          <Link className="button secondary" href="/ob-ultrasounds">Open Ultrasound Center</Link>
+        </article>
       </section>
     </section>
     );

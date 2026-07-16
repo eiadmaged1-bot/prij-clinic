@@ -552,6 +552,7 @@ export class PregnancyService {
       throw new BadRequestException("Voided OB ultrasound records cannot be reviewed.");
     }
     assertUltrasoundComplete(existing, false);
+    await this.assertUltrasoundHasImage(existing.id, existing.patientId);
 
     const ultrasound = await this.prisma.obUltrasound.update({
       where: { id },
@@ -585,6 +586,7 @@ export class PregnancyService {
     const existing = await this.getObUltrasound(id, user);
     if (existing.status !== "reviewed") throw new BadRequestException("A scan must be reviewed before it can be signed.");
     assertUltrasoundComplete(existing, true);
+    await this.assertUltrasoundHasImage(existing.id, existing.patientId);
     const ultrasound = await this.prisma.obUltrasound.update({ where: { id }, data: { status: "signed" as never, signedAt: new Date(), signedByUserId: user.id }, include: obUltrasoundIncludes });
     await this.audit.record({ actorUserId: user.id, action: "ob_ultrasound.signed", resourceType: "ob_ultrasound", resourceId: id, severity: "critical", metadataJson: { patientId: existing.patientId, fromStatus: existing.status, amendmentVersion: existing.amendmentVersion } });
     return ultrasound;
@@ -602,6 +604,20 @@ export class PregnancyService {
 
   private assertUltrasoundClinician(user: AuthUser) {
     if (!user.roles.some((role) => ["Doctor", "Owner"].includes(role))) throw new ForbiddenException("Ultrasound review and signing require clinical Doctor authority.");
+  }
+
+  private async assertUltrasoundHasImage(scanId: string, patientId: string) {
+    const imageCount = await this.prisma.patientDocument.count({
+      where: {
+        patientId,
+        category: `Ultrasound scan ${scanId}`,
+        documentType: "ultrasound_report",
+        fileMimeType: { startsWith: "image/" },
+        status: { notIn: ["archived", "voided"] },
+        quarantineStatus: "PROMOTED"
+      }
+    });
+    if (!imageCount) throw new BadRequestException("At least one secured ultrasound image is required before review or signing.");
   }
 
   private handlePrismaReferenceError(error: unknown): never {
@@ -681,7 +697,16 @@ function decimalOrNull(value: number | undefined) {
 }
 
 function hasMeaningfulUltrasoundContent(scan: { scanType: string | null; impressionText: string | null; fetalHeartRateBpm: number | null; bpdMm: Prisma.Decimal | null; hcMm: Prisma.Decimal | null; acMm: Prisma.Decimal | null; flMm: Prisma.Decimal | null } & { structuredFindingsJson?: unknown }) {
-  return Boolean(scan.scanType?.trim() && (scan.impressionText?.trim() || scan.fetalHeartRateBpm || scan.bpdMm || scan.hcMm || scan.acMm || scan.flMm || (scan.structuredFindingsJson && Object.keys(scan.structuredFindingsJson as object).length)));
+  return Boolean(scan.scanType?.trim() && (scan.impressionText?.trim() || scan.fetalHeartRateBpm || scan.bpdMm || scan.hcMm || scan.acMm || scan.flMm || hasMeaningfulStructuredValue(scan.structuredFindingsJson)));
+}
+
+function hasMeaningfulStructuredValue(value: unknown): boolean {
+  if (typeof value === "string") return Boolean(value.trim());
+  if (typeof value === "number") return Number.isFinite(value);
+  if (typeof value === "boolean") return value;
+  if (Array.isArray(value)) return value.some(hasMeaningfulStructuredValue);
+  if (value && typeof value === "object") return Object.values(value).some(hasMeaningfulStructuredValue);
+  return false;
 }
 
 function assertUltrasoundComplete(scan: { patientId: string; encounterId: string | null; clinicalContext: string; performedAt: Date; createdByUserId: string | null; scanType: string | null; impressionText: string | null; fetalHeartRateBpm: number | null; bpdMm: Prisma.Decimal | null; hcMm: Prisma.Decimal | null; acMm: Prisma.Decimal | null; flMm: Prisma.Decimal | null; structuredFindingsJson?: unknown }, impressionRequired: boolean) {

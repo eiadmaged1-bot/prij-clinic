@@ -176,6 +176,7 @@
     "test:v151:workspace": "node scripts/v151-workspace-rescue-test.mjs",
     "test:v151:knowledge": "node scripts/v151-knowledge-routes-test.mjs",
     "test:v151:investigations": "node scripts/v151-investigation-rescue-test.mjs",
+    "test:v151:ultrasound": "node scripts/v151-ultrasound-rescue-test.mjs",
     "test:v148:owner-shell": "node scripts/v148-owner-shell-test.mjs",
     "test:v148:knowledge": "node scripts/v148-import-guidelines-knowledge-test.mjs",
     "test:v148:clinical-admin": "node scripts/v148-clinical-admin-test.mjs",
