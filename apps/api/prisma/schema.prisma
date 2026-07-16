@@ -1298,6 +1298,7 @@ model MedicationGeneric {
   antimicrobialSpectra       AntimicrobialSpectrum[]
   doseFormulas               DoseFormula[]
   dermatologyOptions         DermatologyGenericOption[]
+  officialProfile            MedicationOfficialProfile?
 
   @@index([genericName])
   @@index([familyName])
@@ -1366,6 +1367,10 @@ model DrugFamily {
   pharmacologicClass   String?
   restrictedFlag       Boolean  @default(false)
   verificationStatus   String   @default("catalog_only")
+  active               Boolean  @default(true)
+  bodySystem           String?
+  therapeuticGroup     String?
+  supersededReason     String?
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @db.Timestamptz(3)
 
@@ -1376,6 +1381,7 @@ model DrugFamily {
   @@index([displayName])
   @@index([normalizedSearchText])
   @@index([verificationStatus])
+  @@index([active, bodySystem])
 }
 
 model GenericMedicationFamilyMembership {
@@ -1425,6 +1431,12 @@ model PharmacologySource {
   publishedAt    DateTime? @db.Date
   provenanceType String
   reviewStatus   String    @default("needs_review")
+  sourceIdentifier String?
+  effectiveDate  DateTime? @db.Date
+  retrievedAt    DateTime? @db.Timestamptz(3)
+  checksum       String?
+  sourceSection  String?
+  publicationState String @default("SOURCE_INCOMPLETE")
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
 
@@ -1445,9 +1457,46 @@ model PharmacologySource {
   reviewRecords            ReviewRecord[]
   dermatologyConditions    DermatologyCondition[]
   dermatologyOptions       DermatologyGenericOption[]
+  officialMedicationProfiles MedicationOfficialProfile[]
 
   @@index([organization, reviewStatus])
   @@index([provenanceType])
+  @@index([sourceIdentifier])
+  @@index([publicationState])
+}
+
+model MedicationOfficialProfile {
+  id                  String             @id @default(uuid()) @db.Uuid
+  medicationGenericId String             @unique @db.Uuid
+  sourceId            String             @db.Uuid
+  publicationState    String             @default("SOURCE_INCOMPLETE")
+  sectionCoverageJson Json
+  indicationsJson     Json
+  mechanismJson       Json
+  contraindicationsJson Json
+  warningsJson        Json
+  adverseEffectsJson  Json
+  interactionsJson    Json
+  pregnancyJson       Json
+  lactationJson       Json
+  renalJson           Json
+  hepaticJson         Json
+  monitoringJson      Json
+  routesJson          Json
+  dosageFormsJson     Json
+  sourceSectionMapJson Json
+  conflictJson        Json?
+  boxedWarning        Boolean            @default(false)
+  effectiveDate       DateTime?          @db.Date
+  retrievedAt         DateTime            @db.Timestamptz(3)
+  createdAt           DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime            @updatedAt @db.Timestamptz(3)
+
+  medication MedicationGeneric  @relation(fields: [medicationGenericId], references: [id], onDelete: Cascade)
+  source     PharmacologySource @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@index([publicationState])
+  @@index([sourceId])
 }
 
 model MechanismSummary {
