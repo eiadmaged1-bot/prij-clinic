@@ -392,14 +392,18 @@ export class InvestigationsService {
     return toClinicalRequest(order);
   }
 
-  async listClinicalRequests(user: AuthUser, patientId?: string) {
-    const orders = await this.prisma.investigationOrder.findMany({
-      where: { ...(patientId ? { patientId } : {}), ...patientBranchScope(user), ...doctorScope(user) },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-      include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } }
-    });
-    return orders.map(toClinicalRequest);
+  async listClinicalRequests(user: AuthUser, patientId?: string, options: { page?: string; limit?: string; status?: string } = {}) {
+    const page = Math.max(1, Number.parseInt(options.page ?? "1", 10) || 1);
+    const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
+    const scope = { ...(patientId ? { patientId } : {}), ...patientBranchScope(user), ...doctorScope(user) };
+    const requestedStatus = Object.values(InvestigationOrderStatus).includes(options.status as InvestigationOrderStatus) ? options.status as InvestigationOrderStatus : undefined;
+    const where = { ...scope, ...(requestedStatus ? { status: requestedStatus } : {}) };
+    const [total, grouped, orders] = await this.prisma.$transaction([
+      this.prisma.investigationOrder.count({ where }),
+      this.prisma.investigationOrder.groupBy({ by: ["status"], where: scope, _count: { _all: true }, orderBy: { status: "asc" } }),
+      this.prisma.investigationOrder.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * limit, take: limit, include: { items: true, patient: true, encounter: true, doctor: { select: { displayName: true } } } })
+    ]);
+    return { clinicalRequests: orders.map(toClinicalRequest), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [clinicalStatus(item.status), typeof item._count === "object" ? item._count._all ?? 0 : 0])) };
   }
 
   async getClinicalRequest(id: string, user: AuthUser) {

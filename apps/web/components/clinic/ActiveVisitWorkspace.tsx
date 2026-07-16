@@ -267,7 +267,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
               <EncounterModule activeModule={activeModule} form={encounterForm} onChange={setEncounterForm} onSubmit={saveEncounter} />
             ) : null}
             {activeModule === "prescription" ? <PrescriptionModule query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
-            {activeModule === "investigations" ? <InvestigationsModule query={investigationQuery} setQuery={setInvestigationQuery} category={investigationCategory} setCategory={setInvestigationCategory} catalog={catalog} basket={basket} setBasket={setBasket} onAttach={attachInvestigations} /> : null}
+            {activeModule === "investigations" ? <InvestigationsModule patientId={patientId} visitId={visitId} /> : null}
             {activeModule === "ultrasound" ? <UltrasoundModule patientType={String(patient?.patientType ?? "")} /> : null}
             {activeModule === "follow-up" ? <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
             {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} /> : null}
@@ -385,25 +385,8 @@ function SafetyPanel({ safety }: { safety: Record<string, unknown> | null }) {
   );
 }
 
-function InvestigationsModule({ query, setQuery, category, setCategory, catalog, basket, setBasket, onAttach }: { query: string; setQuery: (value: string) => void; category: string; setCategory: (value: string) => void; catalog: Array<{ id: string; name: string; category: string; subcategory?: string | null }>; basket: Array<{ id: string; name: string; category: string; note?: string }>; setBasket: (updater: (current: Array<{ id: string; name: string; category: string; note?: string }>) => Array<{ id: string; name: string; category: string; note?: string }>) => void; onAttach: () => void }) {
-  return (
-    <div className="form-grid">
-      <label className="wide">Search investigation<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, Pap, HPV, ultrasound" /></label>
-      <div className="investigation-category-sidebar wide">{investigationCategories.map((item) => <button className={category === item ? "active" : ""} key={item} type="button" onClick={() => setCategory(category === item ? "" : item)}>{item}</button>)}</div>
-      <div className="data-list">
-        {catalog.slice(0, 20).map((item) => <button className="picker-row" key={item.id} type="button" onClick={() => setBasket((current) => current.some((row) => row.id === item.id) ? current : [...current, item])}><strong>{item.name}</strong><span>{item.category}</span></button>)}
-        {!catalog.length ? <p className="empty-state compact smart-empty-state">Search or choose a category to browse requests.</p> : null}
-      </div>
-      <div className="selected-request-chips wide">
-        {basket.map((item) => <span className="request-chip" key={item.id}><strong>{item.name}</strong><em>{item.category}</em><button type="button" onClick={() => setBasket((current) => current.filter((row) => row.id !== item.id))}>x</button></span>)}
-        {!basket.length ? <span className="empty-state compact smart-empty-state">No requests selected</span> : null}
-      </div>
-      <div className="form-actions wide">
-        <button className="button" type="button" disabled={!basket.length} onClick={onAttach}>Attach to locked visit</button>
-        <button className="button secondary" type="button" disabled={!basket.length} onClick={() => window.print()}>Print</button>
-      </div>
-    </div>
-  );
+function InvestigationsModule({ patientId, visitId }: { patientId: string; visitId: string }) {
+  return <section className="panel compact-panel"><h2>Order investigations</h2><p>Open the encounter-locked ordering workspace for favorites, smart sets, duplicate warnings, responsibilities, and the persistent basket.</p><p className="notice">Applying a set never submits an order. Review and submission remain separate Doctor actions.</p><Link className="button" href={`/investigations?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(visitId)}`}>Open connected investigation ordering</Link></section>;
 }
 
 function UltrasoundModule({ patientType }: { patientType: string }) {

@@ -146,8 +146,8 @@ export class ClinicalRequestsController {
 
   @Get()
   @Permissions("clinical_requests.read")
-  async list(@Query("patientId") patientId: string | undefined, @CurrentUser() user: AuthUser) {
-    return { clinicalRequests: await this.investigations.listClinicalRequests(user, patientId) };
+  async list(@Query("patientId") patientId: string | undefined, @Query("page") page: string | undefined, @Query("limit") limit: string | undefined, @Query("status") status: string | undefined, @CurrentUser() user: AuthUser) {
+    return this.investigations.listClinicalRequests(user, patientId, { page, limit, status });
   }
 
   @Get(":id/print")

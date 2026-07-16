@@ -6589,6 +6589,8 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 :root[data-theme="lavender"] { --accent: #7c3aed; --accent-strong: #5b21b6; --soft: #f5f3ff; --sidebar: #3b1764; }
 .knowledge-metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .65rem; margin-bottom: .8rem; }
 .knowledge-metric-grid > article { display: grid; gap: .2rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, #fff); }
+.knowledge-metric-grid > button { display: grid; gap: .2rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, #fff); text-align: start; }
+.knowledge-metric-grid > button.active { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent); }
 .knowledge-metric-grid strong { font-size: 1.35rem; color: var(--accent-strong); }
 .knowledge-collection-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .55rem; }
 .knowledge-collection-grid > a { display: grid; gap: .25rem; padding: .75rem; border: 1px solid var(--border); border-radius: 10px; text-decoration: none; background: color-mix(in srgb, var(--soft, #f7f4eb) 65%, white); }
@@ -6598,6 +6600,7 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .protocol-questionnaire .section-heading, .protocol-questionnaire > button, .protocol-questionnaire > label:last-of-type { grid-column: 1 / -1; }
 @media (max-width: 720px) { .knowledge-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .knowledge-collection-grid, .guideline-overview-grid, .protocol-questionnaire { grid-template-columns: 1fr; } .protocol-questionnaire > * { grid-column: 1 !important; } }
 :root[data-theme="rose"] { --accent: #be185d; --accent-strong: #9d174d; --soft: #fff1f2; --sidebar: #581c34; }
+.investigation-catalog-layout.library-context > .investigation-workspace-panel { display: none; }
 :root[data-theme="high-contrast"] { --accent: #005fcc; --accent-strong: #003f8f; --text: #000; --muted: #222; --border: #111; --panel: #fff; }
 :root[data-contrast="high"] .panel,
 :root[data-contrast="high"] .data-row,

@@ -11,6 +11,7 @@ type ClinicalRequest = { id: string; title: string; status: string; patientId: s
 type Workspace = { investigationCatalog?: CatalogItem[]; categories?: string[]; favorites?: CatalogItem[]; highPriority?: CatalogItem[]; favoriteSets?: FavoriteSet[] };
 
 const categoryTabs = ["Favorites", "Routine labs", "Antenatal", "High-risk pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Tumor markers", "Ultrasound", "Radiology", "Pathology", "Cervical screening", "Preoperative", "Postoperative", "Other"];
+const followUpStatuses: Array<[string, string]> = [["needs_review", "Needs review"], ["overdue", "Overdue"], ["result_received", "Received"], ["reviewed", "Reviewed"], ["patient_informed", "Patient informed"], ["closed", "Closed"]];
 
 export default function InvestigationsPage() {
   const [patientId, setPatientId] = useState("");
@@ -30,9 +31,13 @@ export default function InvestigationsPage() {
   const [setName, setSetName] = useState("");
   const [setNameAr, setSetNameAr] = useState("");
   const [requests, setRequests] = useState<ClinicalRequest[]>([]);
+  const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
+  const [requestPage, setRequestPage] = useState(1);
+  const [requestPageInfo, setRequestPageInfo] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
+  const [requestStatus, setRequestStatus] = useState("");
   const [status, setStatus] = useState("Ready");
   const [savedRequestId, setSavedRequestId] = useState("");
-  const [activeSection, setActiveSection] = useState<"catalog" | "sets" | "followup" | "manage">("catalog");
+  const [activeSection, setActiveSection] = useState<"catalog" | "sets" | "followup" | "manage">("followup");
   const [basketReady, setBasketReady] = useState(false);
   const hasPatientContext = Boolean(patientId && encounterId);
 
@@ -42,6 +47,7 @@ export default function InvestigationsPage() {
     const nextEncounterId = params.get("encounterId") ?? params.get("visitId") ?? "";
     setPatientId(nextPatientId);
     setEncounterId(nextEncounterId);
+    if (nextPatientId && nextEncounterId) setActiveSection("catalog");
     if (nextPatientId && nextEncounterId) {
       try {
         const saved = JSON.parse(sessionStorage.getItem(basketStorageKey(nextPatientId, nextEncounterId)) ?? "null") as { selected?: CatalogItem[]; indications?: Record<string, string> } | null;
@@ -62,7 +68,7 @@ export default function InvestigationsPage() {
       }).catch(() => undefined);
     }
     setBasketReady(true);
-    void loadRequests();
+    void loadRequests(1, "");
   }, []);
 
   useEffect(() => {
@@ -90,8 +96,9 @@ export default function InvestigationsPage() {
     return () => window.clearTimeout(timeout);
   }, [loadWorkspace]);
 
-  async function loadRequests() {
-    try { const data = await apiGet("/clinical-requests") as { clinicalRequests?: ClinicalRequest[] }; setRequests(data.clinicalRequests ?? []); }
+  async function loadRequests(nextPage = requestPage, nextStatus = requestStatus) {
+    const params = new URLSearchParams({ page: String(nextPage), limit: "20" }); if (nextStatus) params.set("status", nextStatus);
+    try { const data = await apiGet(`/clinical-requests?${params}`) as { clinicalRequests?: ClinicalRequest[]; counts?: Record<string, number>; pageInfo?: typeof requestPageInfo }; setRequests(data.clinicalRequests ?? []); setRequestCounts(data.counts ?? {}); setRequestPageInfo(data.pageInfo ?? { page: nextPage, limit: 20, total: data.clinicalRequests?.length ?? 0, hasMore: false }); }
     catch (error) { setStatus(error instanceof Error ? error.message : "Result follow-up API failed."); }
   }
 
@@ -170,6 +177,8 @@ export default function InvestigationsPage() {
     if (response.ok) await loadRequests();
   }
 
+  async function transition(id: string, target: string) { const response = await apiRequest(`/investigations/orders/${id}/status`, "PATCH", { status: target }); setStatus(response.ok ? `Investigation moved to ${target.replaceAll("_", " ")}.` : "Transition was refused. Check lifecycle order and role permission."); if (response.ok) await loadRequests(); }
+
   function printRequest(id: string) {
     window.open(`/clinical-requests/${encodeURIComponent(id)}/print`, "_blank", "noopener,noreferrer");
   }
@@ -178,8 +187,9 @@ export default function InvestigationsPage() {
     <section className="page-header"><div className="header-row"><div><p className="eyebrow">{hasPatientContext ? "Patient clinical workflow" : "Investigation center"}</p><h1>{hasPatientContext ? "New investigation request" : "Investigation Library, Templates & Result Follow-up"}</h1></div>{savedRequestId ? <button className="button secondary compact" type="button" onClick={() => printRequest(savedRequestId)}>Print saved request</button> : null}</div></section>
     <SafetyAlert />
     <nav className="investigation-mobile-tabs" aria-label="Investigation Center sections">
-      {(["catalog", "sets", "followup", "manage"] as const).map((section) => <button className={activeSection === section ? "active" : ""} key={section} type="button" onClick={() => setActiveSection(section)}>{section === "followup" ? "Follow-up" : `${section[0]?.toUpperCase()}${section.slice(1)}`}</button>)}
+      {(hasPatientContext ? (["catalog", "sets"] as const) : (["followup", "manage"] as const)).map((section) => <button className={activeSection === section ? "active" : ""} key={section} type="button" onClick={() => setActiveSection(section)}>{section === "followup" ? "Results follow-up" : section === "manage" ? "Catalog administration" : `${section[0]?.toUpperCase()}${section.slice(1)}`}</button>)}
     </nav>
+    {!hasPatientContext ? <section className="knowledge-metric-grid investigation-status-summary" aria-label="Investigation follow-up counts">{followUpStatuses.map(([key, label]) => <button type="button" className={requestStatus === key ? "active" : ""} key={key} onClick={() => { setRequestStatus(key); setRequestPage(1); void loadRequests(1, key); }}><strong>{requestCounts[key] ?? 0}</strong><span>{label}</span></button>)}</section> : null}
     <section className={`content-grid investigation-catalog-layout ${hasPatientContext ? "patient-context" : "library-context"}`} data-mobile-active={activeSection}>
       <article className="panel investigation-workspace-panel">
         <div className="section-heading"><div><h2>{hasPatientContext ? "Catalog and request basket" : "Catalog and reusable sets"}</h2><p className="muted">Click an investigation to add it. Applying a set never orders automatically.</p></div><span className="badge">{status}</span></div>
@@ -195,8 +205,8 @@ export default function InvestigationsPage() {
           {hasPatientContext ? <div className="mobile-section mobile-catalog investigation-request-fields"><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Internal / external<select value={internalExternal} onChange={(event) => setInternalExternal(event.target.value as "internal" | "external")}><option value="internal">Internal</option><option value="external">External</option></select></label><label>Follow-up owner<input value={followUpOwner} onChange={(event) => setFollowUpOwner(event.target.value)} placeholder="Role, staff member, branch, provider, or unassigned" /></label><label>Follow-up deadline / expected result date<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>{warningsConfirmed ? "Confirm and submit order · Save to visit" : "Review and submit order · Save to visit"}</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); void apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE"); }}>Clear basket</button></div></div> : null}
         </form>
       </article>
-      <article className="panel"><div className="section-heading"><h2>Cross-patient result follow-up</h2><span className="badge">{requests.length}</span></div><div className="data-list">{requests.map((request) => <article className="data-row" key={request.id}><div className="data-row-header"><strong>{request.title}</strong><span className="badge">{request.status.replaceAll("_", " ")}</span></div><p className="muted">{request.followUpHintActive ? "Follow-up remains active until doctor review." : "Follow-up resolved."}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => printRequest(request.id)}>Print request</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "mark-result-received")}>Result received</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "review")}>Doctor reviewed</button></div></article>)}{!requests.length ? <p className="empty-state compact smart-empty-state">No requests are visible in your permitted scope.</p> : null}</div></article>
-      <article className="panel mobile-manage-panel"><div className="section-heading"><h2>Catalog management</h2><span className="badge">Manage</span></div><p className="muted">Manage active catalog categories and reusable sets without mixing controls into a patient ordering workspace.</p><div className="investigation-category-sidebar">{categoryTabs.map((tab) => <button className={category === tab ? "active" : ""} key={`manage-${tab}`} type="button" onClick={() => setCategory(tab)}>{tab}</button>)}</div></article>
+      <article className="panel"><div className="section-heading"><div><h2>Cross-patient result follow-up</h2><p className="muted">Showing {requestPageInfo.total ? (requestPageInfo.page - 1) * requestPageInfo.limit + 1 : 0}–{Math.min(requestPageInfo.page * requestPageInfo.limit, requestPageInfo.total)} of {requestPageInfo.total}</p></div><span className="badge">{requests.length}</span></div><div className="data-list">{requests.map((request) => <article className="data-row" key={request.id}><div className="data-row-header"><strong>{request.title}</strong><span className="badge">{request.status.replaceAll("_", " ")}</span></div><p className="muted">{request.followUpHintActive ? "Follow-up remains active until doctor review." : "Follow-up resolved."}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => printRequest(request.id)}>Print request</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "mark-result-received")}>Result received</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "booked")}>Booked</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "sample_collected")}>Sample collected</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "performed")}>Performed</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "review")}>Doctor reviewed</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "patient_informed")}>Patient informed</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "closed")}>Close</button></div></article>)}{!requests.length ? <p className="empty-state compact smart-empty-state">No requests are visible in your permitted scope.</p> : null}</div><nav className="form-actions" aria-label="Investigation follow-up pagination"><button type="button" disabled={requestPage <= 1} onClick={() => { const next = Math.max(1, requestPage - 1); setRequestPage(next); void loadRequests(next); }}>Previous</button><button type="button" disabled={!requestPageInfo.hasMore} onClick={() => { const next = requestPage + 1; setRequestPage(next); void loadRequests(next); }}>Next</button></nav></article>
+      <article className="panel mobile-manage-panel"><div className="section-heading"><h2>Catalog and template administration</h2><span className="badge">Owner/Admin</span></div><p className="muted">Catalog editing is intentionally separate from Doctor ordering and result follow-up.</p><a className="button secondary" href="/admin/investigations">Open Investigation Catalog management</a></article>
     </section>
   </AppShell>;
 }
@@ -211,4 +221,4 @@ function uniqueCatalogItems(items: CatalogItem[]) { return items.filter((item, i
 async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); if (!response.ok) { const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null; throw new Error(`${body?.error?.message ?? "Investigation request failed."}${body?.error?.requestId ? ` Request ${body.error.requestId}.` : ""}`); } return response.json(); }
 async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
 async function apiPut(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "PUT", payload); }
-async function apiRequest(endpoint: string, method: "GET" | "POST" | "PUT" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }
+async function apiRequest(endpoint: string, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }
