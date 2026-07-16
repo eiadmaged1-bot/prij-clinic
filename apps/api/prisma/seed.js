@@ -12,6 +12,7 @@ const { seedAubMenstrualProtocols } = require("./seeds/womens-health-aub-menstru
 const { seedContraceptionProtocols } = require("./seeds/womens-health-contraception-protocols");
 const { seedAntenatalRoutineProtocols } = require("./seeds/womens-health-antenatal-routine-protocols");
 const { seedInvestigationCatalog } = require("./seeds/investigation-catalog");
+const { seedV151MedicationIdentityAndDermatology } = require("./seeds/v151-medication-dermatology");
 
 const scrypt = promisify(crypto.scrypt);
 const prisma = new PrismaClient();
@@ -1095,6 +1096,7 @@ async function seedMedicationIntelligence(prisma) {
       create: { medicationGenericId: medication.id, familyId: familyByCode.get(familyCode).id, sourceId: atcIdentitySource.id, reviewStatus: "catalog_only" }
     });
   }
+  await seedV151MedicationIdentityAndDermatology(prisma, normalizeSearchText);
 
   const countries = [
     ["EG", "Egypt", null, false],

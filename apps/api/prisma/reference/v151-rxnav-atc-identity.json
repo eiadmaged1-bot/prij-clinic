@@ -1,0 +1,3904 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "identity": "RxNorm",
+    "identityOrganization": "U.S. National Library of Medicine",
+    "classification": "ATC",
+    "classificationOrganization": "WHO Collaborating Centre for Drug Statistics Methodology",
+    "rxClassAtcVersion": "2026_01_28",
+    "retrievedAt": "2026-07-16T16:41:30.766Z",
+    "api": "https://rxnav.nlm.nih.gov/REST/rxclass",
+    "notice": "Public RxNorm ingredient identities mapped by NLM RxClass to ATC classes. Classification only; no indication, dose, pregnancy, renal, interaction, or monitoring claims."
+  },
+  "selection": {
+    "target": 340,
+    "actual": 340,
+    "populatedFamilies": 371,
+    "preferredPrefixes": [
+      "G",
+      "J01",
+      "J02",
+      "J05",
+      "R",
+      "C",
+      "A",
+      "B",
+      "D",
+      "H",
+      "M",
+      "N",
+      "P",
+      "S01",
+      "V03",
+      "L03",
+      "L04"
+    ],
+    "excludedCombinationClasses": true
+  },
+  "records": [
+    {
+      "rxcui": "16681",
+      "name": "acarbose",
+      "normalizedName": "acarbose",
+      "families": [
+        {
+          "code": "A10BF",
+          "name": "Alpha glucosidase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "132871",
+      "name": "acetyldigitoxin",
+      "normalizedName": "acetyldigitoxin",
+      "families": [
+        {
+          "code": "C01AA",
+          "name": "Digitalis glycosides"
+        }
+      ]
+    },
+    {
+      "rxcui": "16818",
+      "name": "acitretin",
+      "normalizedName": "acitretin",
+      "families": [
+        {
+          "code": "D05BB",
+          "name": "Retinoids for treatment of psoriasis"
+        }
+      ]
+    },
+    {
+      "rxcui": "1303097",
+      "name": "aclidinium bromide",
+      "normalizedName": "aclidinium bromide",
+      "families": [
+        {
+          "code": "R03BB",
+          "name": "Anticholinergics"
+        }
+      ]
+    },
+    {
+      "rxcui": "249",
+      "name": "acriflavine",
+      "normalizedName": "acriflavine",
+      "families": [
+        {
+          "code": "D08AA",
+          "name": "Acridine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "272",
+      "name": "activated charcoal",
+      "normalizedName": "activated charcoal",
+      "families": [
+        {
+          "code": "A07BA",
+          "name": "Charcoal preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "1359422",
+      "name": "alanylglutamine",
+      "normalizedName": "alanylglutamine",
+      "families": [
+        {
+          "code": "B05XB",
+          "name": "Amino acids"
+        }
+      ]
+    },
+    {
+      "rxcui": "1312358",
+      "name": "aldosterone",
+      "normalizedName": "aldosterone",
+      "families": [
+        {
+          "code": "H02AA",
+          "name": "Mineralocorticoids"
+        }
+      ]
+    },
+    {
+      "rxcui": "12062",
+      "name": "alfacalcidol",
+      "normalizedName": "alfacalcidol",
+      "families": [
+        {
+          "code": "A11CC",
+          "name": "Vitamin D and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "17300",
+      "name": "alfuzosin",
+      "normalizedName": "alfuzosin",
+      "families": [
+        {
+          "code": "G04CA",
+          "name": "Alpha-adrenoreceptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "325646",
+      "name": "aliskiren",
+      "normalizedName": "aliskiren",
+      "families": [
+        {
+          "code": "C09XA",
+          "name": "Renin-inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "17392",
+      "name": "aloglutamol",
+      "normalizedName": "aloglutamol",
+      "families": [
+        {
+          "code": "A02AB",
+          "name": "Aluminium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "85248",
+      "name": "alosetron",
+      "normalizedName": "alosetron",
+      "families": [
+        {
+          "code": "A03AE",
+          "name": "Serotonin receptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "598",
+      "name": "alprostadil",
+      "normalizedName": "alprostadil",
+      "families": [
+        {
+          "code": "C01EA",
+          "name": "Prostaglandins"
+        }
+      ]
+    },
+    {
+      "rxcui": "17627",
+      "name": "alverine",
+      "normalizedName": "alverine",
+      "families": [
+        {
+          "code": "A03AX",
+          "name": "Other drugs for functional gastrointestinal disorders"
+        }
+      ]
+    },
+    {
+      "rxcui": "732",
+      "name": "amphotericin B",
+      "normalizedName": "amphotericin b",
+      "families": [
+        {
+          "code": "J02AA",
+          "name": "Antibiotics"
+        }
+      ]
+    },
+    {
+      "rxcui": "1999003",
+      "name": "angiotensin II",
+      "normalizedName": "angiotensin ii",
+      "families": [
+        {
+          "code": "C01CX",
+          "name": "Other cardiac stimulants"
+        }
+      ]
+    },
+    {
+      "rxcui": "873",
+      "name": "anthralin",
+      "normalizedName": "anthralin",
+      "families": [
+        {
+          "code": "D05AC",
+          "name": "Antracen derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1009",
+      "name": "antithrombin III",
+      "normalizedName": "antithrombin iii",
+      "families": [
+        {
+          "code": "B01AB",
+          "name": "Heparin group"
+        }
+      ]
+    },
+    {
+      "rxcui": "1043",
+      "name": "apomorphine",
+      "normalizedName": "apomorphine",
+      "families": [
+        {
+          "code": "G04BE",
+          "name": "Drugs used in erectile dysfunction"
+        }
+      ]
+    },
+    {
+      "rxcui": "1054",
+      "name": "aprindine",
+      "normalizedName": "aprindine",
+      "families": [
+        {
+          "code": "C01BB",
+          "name": "Antiarrhythmics, class Ib"
+        }
+      ]
+    },
+    {
+      "rxcui": "2679059",
+      "name": "aprocitentan",
+      "normalizedName": "aprocitentan",
+      "families": [
+        {
+          "code": "C02KN",
+          "name": "Other antihypertensives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1056",
+      "name": "aprotinin",
+      "normalizedName": "aprotinin",
+      "families": [
+        {
+          "code": "B02AB",
+          "name": "Proteinase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "114464",
+      "name": "arginine glutamate",
+      "normalizedName": "arginine glutamate",
+      "families": [
+        {
+          "code": "A05BA",
+          "name": "Liver therapy"
+        }
+      ]
+    },
+    {
+      "rxcui": "1098",
+      "name": "argipressin",
+      "normalizedName": "argipressin",
+      "families": [
+        {
+          "code": "H01BA",
+          "name": "Vasopressin and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "1151",
+      "name": "ascorbic acid",
+      "normalizedName": "ascorbic acid",
+      "families": [
+        {
+          "code": "G01AD",
+          "name": "Organic acids"
+        },
+        {
+          "code": "A11GA",
+          "name": "Ascorbic acid (vitamin C), plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1202",
+      "name": "atenolol",
+      "normalizedName": "atenolol",
+      "families": [
+        {
+          "code": "C07AB",
+          "name": "Beta blocking agents, selective"
+        }
+      ]
+    },
+    {
+      "rxcui": "1223",
+      "name": "atropine",
+      "normalizedName": "atropine",
+      "families": [
+        {
+          "code": "A03BA",
+          "name": "Belladonna alkaloids, tertiary amines"
+        }
+      ]
+    },
+    {
+      "rxcui": "18602",
+      "name": "azelaic acid",
+      "normalizedName": "azelaic acid",
+      "families": [
+        {
+          "code": "D10AX",
+          "name": "Other anti-acne preparations for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "18609",
+      "name": "azidocillin",
+      "normalizedName": "azidocillin",
+      "families": [
+        {
+          "code": "J01CE",
+          "name": "Beta-lactamase sensitive penicillins"
+        }
+      ]
+    },
+    {
+      "rxcui": "1091642",
+      "name": "azilsartan medoxomil",
+      "normalizedName": "azilsartan medoxomil",
+      "families": [
+        {
+          "code": "C09CA",
+          "name": "Angiotensin II receptor blockers (ARBs), plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1272",
+      "name": "aztreonam",
+      "normalizedName": "aztreonam",
+      "families": [
+        {
+          "code": "J01DF",
+          "name": "Monobactams"
+        }
+      ]
+    },
+    {
+      "rxcui": "1291",
+      "name": "bacitracin",
+      "normalizedName": "bacitracin",
+      "families": [
+        {
+          "code": "J01XX",
+          "name": "Other antibacterials"
+        }
+      ]
+    },
+    {
+      "rxcui": "18747",
+      "name": "balsalazide",
+      "normalizedName": "balsalazide",
+      "families": [
+        {
+          "code": "A07EC",
+          "name": "Aminosalicylic acid and similar agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "1321",
+      "name": "bamethan",
+      "normalizedName": "bamethan",
+      "families": [
+        {
+          "code": "C04AA",
+          "name": "2-amino-1-phenylethanol derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "115238",
+      "name": "becaplermin",
+      "normalizedName": "becaplermin",
+      "families": [
+        {
+          "code": "A01AD",
+          "name": "Other agents for local oral treatment"
+        },
+        {
+          "code": "D03AX",
+          "name": "Other cicatrizants"
+        }
+      ]
+    },
+    {
+      "rxcui": "1347",
+      "name": "beclomethasone",
+      "normalizedName": "beclomethasone",
+      "families": [
+        {
+          "code": "A07EA",
+          "name": "Corticosteroids acting locally"
+        }
+      ]
+    },
+    {
+      "rxcui": "18867",
+      "name": "benazepril",
+      "normalizedName": "benazepril",
+      "families": [
+        {
+          "code": "C09AA",
+          "name": "ACE inhibitors, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1399",
+      "name": "benzocaine",
+      "normalizedName": "benzocaine",
+      "families": [
+        {
+          "code": "R02AD",
+          "name": "Anesthetics, local"
+        }
+      ]
+    },
+    {
+      "rxcui": "1418",
+      "name": "benzoyl peroxide",
+      "normalizedName": "benzoyl peroxide",
+      "families": [
+        {
+          "code": "D10AE",
+          "name": "Peroxides"
+        }
+      ]
+    },
+    {
+      "rxcui": "1425",
+      "name": "benzydamine",
+      "normalizedName": "benzydamine",
+      "families": [
+        {
+          "code": "G02CC",
+          "name": "Antiinflammatory products for vaginal administration"
+        },
+        {
+          "code": "R02AX",
+          "name": "Other throat preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "19084",
+      "name": "benzylthiouracil",
+      "normalizedName": "benzylthiouracil",
+      "families": [
+        {
+          "code": "H03BA",
+          "name": "Thiouracils"
+        }
+      ]
+    },
+    {
+      "rxcui": "1436",
+      "name": "bepridil",
+      "normalizedName": "bepridil",
+      "families": [
+        {
+          "code": "C08EA",
+          "name": "Phenylalkylamine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "19143",
+      "name": "beta carotene",
+      "normalizedName": "beta carotene",
+      "families": [
+        {
+          "code": "D02BB",
+          "name": "Protectives against UV-radiation for systemic use"
+        }
+      ]
+    },
+    {
+      "rxcui": "1523",
+      "name": "bethanidine",
+      "normalizedName": "bethanidine",
+      "families": [
+        {
+          "code": "C02CC",
+          "name": "Guanidine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1596",
+      "name": "bisacodyl",
+      "normalizedName": "bisacodyl",
+      "families": [
+        {
+          "code": "A06AG",
+          "name": "Enemas"
+        }
+      ]
+    },
+    {
+      "rxcui": "1102129",
+      "name": "boceprevir",
+      "normalizedName": "boceprevir",
+      "families": [
+        {
+          "code": "J05AP",
+          "name": "Antivirals for treatment of HCV infections"
+        }
+      ]
+    },
+    {
+      "rxcui": "1737",
+      "name": "bretylium tosylate",
+      "normalizedName": "bretylium tosylate",
+      "families": [
+        {
+          "code": "C01BD",
+          "name": "Antiarrhythmics, class III"
+        }
+      ]
+    },
+    {
+      "rxcui": "134615",
+      "name": "brimonidine",
+      "normalizedName": "brimonidine",
+      "families": [
+        {
+          "code": "D11AX",
+          "name": "Other dermatologicals"
+        }
+      ]
+    },
+    {
+      "rxcui": "1753",
+      "name": "bromhexine",
+      "normalizedName": "bromhexine",
+      "families": [
+        {
+          "code": "R05CB",
+          "name": "Mucolytics"
+        }
+      ]
+    },
+    {
+      "rxcui": "1760",
+      "name": "bromocriptine",
+      "normalizedName": "bromocriptine",
+      "families": [
+        {
+          "code": "G02CB",
+          "name": "Prolactine inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "19759",
+      "name": "bromodiphenhydramine",
+      "normalizedName": "bromodiphenhydramine",
+      "families": [
+        {
+          "code": "R06AA",
+          "name": "Aminoalkyl ethers"
+        }
+      ]
+    },
+    {
+      "rxcui": "1767",
+      "name": "brompheniramine",
+      "normalizedName": "brompheniramine",
+      "families": [
+        {
+          "code": "R06AB",
+          "name": "Substituted alkylamines"
+        }
+      ]
+    },
+    {
+      "rxcui": "1808",
+      "name": "bumetanide",
+      "normalizedName": "bumetanide",
+      "families": [
+        {
+          "code": "C03CA",
+          "name": "Sulfonamides, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1085787",
+      "name": "butylscopolamine",
+      "normalizedName": "butylscopolamine",
+      "families": [
+        {
+          "code": "A03BB",
+          "name": "Belladonna alkaloids, semisynthetic, quaternary ammonium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "1897",
+      "name": "calcium carbonate",
+      "normalizedName": "calcium carbonate",
+      "families": [
+        {
+          "code": "A12AA",
+          "name": "Calcium"
+        }
+      ]
+    },
+    {
+      "rxcui": "1901",
+      "name": "calcium chloride",
+      "normalizedName": "calcium chloride",
+      "families": [
+        {
+          "code": "G04BA",
+          "name": "Acidifiers"
+        }
+      ]
+    },
+    {
+      "rxcui": "1904",
+      "name": "calcium dobesilate",
+      "normalizedName": "calcium dobesilate",
+      "families": [
+        {
+          "code": "C05BX",
+          "name": "Other sclerosing agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "20063",
+      "name": "calcium polycarbophil",
+      "normalizedName": "calcium polycarbophil",
+      "families": [
+        {
+          "code": "A06AC",
+          "name": "Bulk-forming laxatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1311526",
+      "name": "calcium silicate",
+      "normalizedName": "calcium silicate",
+      "families": [
+        {
+          "code": "A02AC",
+          "name": "Calcium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "1373458",
+      "name": "canagliflozin",
+      "normalizedName": "canagliflozin",
+      "families": [
+        {
+          "code": "A10BK",
+          "name": "Sodium-glucose co-transporter 2 (SGLT2) inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1981",
+      "name": "canrenoate potassium",
+      "normalizedName": "canrenoate potassium",
+      "families": [
+        {
+          "code": "C03DA",
+          "name": "Aldosterone antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "2020",
+      "name": "carbimazole",
+      "normalizedName": "carbimazole",
+      "families": [
+        {
+          "code": "H03BB",
+          "name": "Sulfur-containing imidazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "20352",
+      "name": "carvedilol",
+      "normalizedName": "carvedilol",
+      "families": [
+        {
+          "code": "C07AG",
+          "name": "Alpha and beta blocking agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "140108",
+      "name": "caspofungin",
+      "normalizedName": "caspofungin",
+      "families": [
+        {
+          "code": "J02AX",
+          "name": "Other antimycotics for systemic use"
+        }
+      ]
+    },
+    {
+      "rxcui": "2177",
+      "name": "cefadroxil",
+      "normalizedName": "cefadroxil",
+      "families": [
+        {
+          "code": "J01DB",
+          "name": "First-generation cephalosporins"
+        }
+      ]
+    },
+    {
+      "rxcui": "20481",
+      "name": "cefepime",
+      "normalizedName": "cefepime",
+      "families": [
+        {
+          "code": "J01DE",
+          "name": "Fourth-generation cephalosporins"
+        }
+      ]
+    },
+    {
+      "rxcui": "20482",
+      "name": "cefetamet",
+      "normalizedName": "cefetamet",
+      "families": [
+        {
+          "code": "J01DD",
+          "name": "Third-generation cephalosporins"
+        }
+      ]
+    },
+    {
+      "rxcui": "19552",
+      "name": "cefprozil",
+      "normalizedName": "cefprozil",
+      "families": [
+        {
+          "code": "J01DC",
+          "name": "Second-generation cephalosporins"
+        }
+      ]
+    },
+    {
+      "rxcui": "1040004",
+      "name": "ceftaroline fosamil",
+      "normalizedName": "ceftaroline fosamil",
+      "families": [
+        {
+          "code": "J01DI",
+          "name": "Other cephalosporins and penems"
+        }
+      ]
+    },
+    {
+      "rxcui": "20610",
+      "name": "cetirizine",
+      "normalizedName": "cetirizine",
+      "families": [
+        {
+          "code": "R06AE",
+          "name": "Piperazine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "288088",
+      "name": "cetrimide",
+      "normalizedName": "cetrimide",
+      "families": [
+        {
+          "code": "D11AC",
+          "name": "Medicated shampoos"
+        }
+      ]
+    },
+    {
+      "rxcui": "2348",
+      "name": "chloramphenicol",
+      "normalizedName": "chloramphenicol",
+      "families": [
+        {
+          "code": "G01AA",
+          "name": "Antibiotics"
+        }
+      ]
+    },
+    {
+      "rxcui": "2397",
+      "name": "chlorotrianisene",
+      "normalizedName": "chlorotrianisene",
+      "families": [
+        {
+          "code": "G03CA",
+          "name": "Natural and semisynthetic estrogens, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1433887",
+      "name": "choline fenofibrate",
+      "normalizedName": "choline fenofibrate",
+      "families": [
+        {
+          "code": "C10AB",
+          "name": "Fibrates"
+        }
+      ]
+    },
+    {
+      "rxcui": "21914",
+      "name": "cicletanine",
+      "normalizedName": "cicletanine",
+      "families": [
+        {
+          "code": "C03BX",
+          "name": "Other low-ceiling diuretics"
+        }
+      ]
+    },
+    {
+      "rxcui": "21099",
+      "name": "cifenline",
+      "normalizedName": "cifenline",
+      "families": [
+        {
+          "code": "C01BG",
+          "name": "Other antiarrhythmics, class I and III"
+        }
+      ]
+    },
+    {
+      "rxcui": "21183",
+      "name": "citric acid",
+      "normalizedName": "citric acid",
+      "families": [
+        {
+          "code": "A09AB",
+          "name": "Acid preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "2582",
+      "name": "clindamycin",
+      "normalizedName": "clindamycin",
+      "families": [
+        {
+          "code": "J01FF",
+          "name": "Lincosamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "2590",
+      "name": "clobetasol",
+      "normalizedName": "clobetasol",
+      "families": [
+        {
+          "code": "D07AD",
+          "name": "Corticosteroids, very potent (group IV)"
+        }
+      ]
+    },
+    {
+      "rxcui": "2596",
+      "name": "clomiphene",
+      "normalizedName": "clomiphene",
+      "families": [
+        {
+          "code": "G03GB",
+          "name": "Ovulation stimulants, synthetic"
+        }
+      ]
+    },
+    {
+      "rxcui": "2599",
+      "name": "clonidine",
+      "normalizedName": "clonidine",
+      "families": [
+        {
+          "code": "C02AC",
+          "name": "Imidazoline receptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "2670",
+      "name": "codeine",
+      "normalizedName": "codeine",
+      "families": [
+        {
+          "code": "R05DA",
+          "name": "Opium alkaloids and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "141626",
+      "name": "colesevelam",
+      "normalizedName": "colesevelam",
+      "families": [
+        {
+          "code": "C10AC",
+          "name": "Bile acid sequestrants"
+        }
+      ]
+    },
+    {
+      "rxcui": "69782",
+      "name": "colfosceril palmitate",
+      "normalizedName": "colfosceril palmitate",
+      "families": [
+        {
+          "code": "R07AA",
+          "name": "Lung surfactants"
+        }
+      ]
+    },
+    {
+      "rxcui": "2709",
+      "name": "colistin",
+      "normalizedName": "colistin",
+      "families": [
+        {
+          "code": "J01XB",
+          "name": "Polymyxins"
+        }
+      ]
+    },
+    {
+      "rxcui": "302285",
+      "name": "conivaptan",
+      "normalizedName": "conivaptan",
+      "families": [
+        {
+          "code": "C03XA",
+          "name": "Vasopressin antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "2890",
+      "name": "cosyntropin",
+      "normalizedName": "cosyntropin",
+      "families": [
+        {
+          "code": "H01AA",
+          "name": "ACTH"
+        }
+      ]
+    },
+    {
+      "rxcui": "2262279",
+      "name": "crizanlizumab",
+      "normalizedName": "crizanlizumab",
+      "families": [
+        {
+          "code": "B06AX",
+          "name": "Other hematological agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "1364449",
+      "name": "crofelemer",
+      "normalizedName": "crofelemer",
+      "families": [
+        {
+          "code": "A07XA",
+          "name": "Other antidiarrheals"
+        }
+      ]
+    },
+    {
+      "rxcui": "42612",
+      "name": "cromolyn",
+      "normalizedName": "cromolyn",
+      "families": [
+        {
+          "code": "A07EB",
+          "name": "Antiallergic agents, excl. corticosteroids"
+        }
+      ]
+    },
+    {
+      "rxcui": "1310706",
+      "name": "crospovidone",
+      "normalizedName": "crospovidone",
+      "families": [
+        {
+          "code": "A07BC",
+          "name": "Other intestinal adsorbents"
+        }
+      ]
+    },
+    {
+      "rxcui": "21954",
+      "name": "cyclobutyrol",
+      "normalizedName": "cyclobutyrol",
+      "families": [
+        {
+          "code": "A05AX",
+          "name": "Other drugs for bile therapy"
+        }
+      ]
+    },
+    {
+      "rxcui": "3014",
+      "name": "cyproterone",
+      "normalizedName": "cyproterone",
+      "families": [
+        {
+          "code": "G03HA",
+          "name": "Antiandrogens, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "1037042",
+      "name": "dabigatran etexilate",
+      "normalizedName": "dabigatran etexilate",
+      "families": [
+        {
+          "code": "B01AE",
+          "name": "Direct thrombin inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "3102",
+      "name": "danazol",
+      "normalizedName": "danazol",
+      "families": [
+        {
+          "code": "G03XA",
+          "name": "Antigonadotropins and similar agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "2535233",
+      "name": "dasiglucagon",
+      "normalizedName": "dasiglucagon",
+      "families": [
+        {
+          "code": "H04AA",
+          "name": "Glycogenolytic hormones"
+        }
+      ]
+    },
+    {
+      "rxcui": "1311089",
+      "name": "defibrotide",
+      "normalizedName": "defibrotide",
+      "families": [
+        {
+          "code": "B01AX",
+          "name": "Other antithrombotic agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "22483",
+      "name": "demegestone",
+      "normalizedName": "demegestone",
+      "families": [
+        {
+          "code": "G03DB",
+          "name": "Pregnadien derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "42635",
+      "name": "dextran",
+      "normalizedName": "dextran",
+      "families": [
+        {
+          "code": "B05AA",
+          "name": "Blood substitutes and plasma protein fractions"
+        }
+      ]
+    },
+    {
+      "rxcui": "3327",
+      "name": "diazoxide",
+      "normalizedName": "diazoxide",
+      "families": [
+        {
+          "code": "C02DA",
+          "name": "Thiazide derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1011450",
+      "name": "didecyldimethylammonium chloride",
+      "normalizedName": "didecyldimethylammonium chloride",
+      "families": [
+        {
+          "code": "D08AJ",
+          "name": "Quaternary ammonium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "3368",
+      "name": "dienestrol",
+      "normalizedName": "dienestrol",
+      "families": [
+        {
+          "code": "G03CB",
+          "name": "Synthetic estrogens, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "3409",
+      "name": "dihydralazine",
+      "normalizedName": "dihydralazine",
+      "families": [
+        {
+          "code": "C02DB",
+          "name": "Hydrazinophthalazine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "3416",
+      "name": "dihydroergocristine",
+      "normalizedName": "dihydroergocristine",
+      "families": [
+        {
+          "code": "C04AE",
+          "name": "Ergot alkaloids"
+        }
+      ]
+    },
+    {
+      "rxcui": "3443",
+      "name": "diltiazem",
+      "normalizedName": "diltiazem",
+      "families": [
+        {
+          "code": "C05AE",
+          "name": "Muscle relaxants"
+        },
+        {
+          "code": "C08DB",
+          "name": "Benzothiazepine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "121069",
+      "name": "dimethoxanate",
+      "normalizedName": "dimethoxanate",
+      "families": [
+        {
+          "code": "R05DB",
+          "name": "Other cough suppressants"
+        }
+      ]
+    },
+    {
+      "rxcui": "3489",
+      "name": "diosmin",
+      "normalizedName": "diosmin",
+      "families": [
+        {
+          "code": "C05CA",
+          "name": "Bioflavonoids"
+        }
+      ]
+    },
+    {
+      "rxcui": "119771",
+      "name": "doripenem",
+      "normalizedName": "doripenem",
+      "families": [
+        {
+          "code": "J01DH",
+          "name": "Carbapenems"
+        }
+      ]
+    },
+    {
+      "rxcui": "3638",
+      "name": "doxepin",
+      "normalizedName": "doxepin",
+      "families": [
+        {
+          "code": "D04AX",
+          "name": "Other antipruritics"
+        }
+      ]
+    },
+    {
+      "rxcui": "10402",
+      "name": "dronabinol",
+      "normalizedName": "dronabinol",
+      "families": [
+        {
+          "code": "A04AD",
+          "name": "Other antiemetics"
+        }
+      ]
+    },
+    {
+      "rxcui": "11636",
+      "name": "drospirenone",
+      "normalizedName": "drospirenone",
+      "families": [
+        {
+          "code": "G03AC",
+          "name": "Progestogens"
+        }
+      ]
+    },
+    {
+      "rxcui": "23684",
+      "name": "drotaverin",
+      "normalizedName": "drotaverin",
+      "families": [
+        {
+          "code": "A03AD",
+          "name": "Papaverine and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "228790",
+      "name": "dutasteride",
+      "normalizedName": "dutasteride",
+      "families": [
+        {
+          "code": "G04CB",
+          "name": "Testosterone-5-alpha reductase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "2049846",
+      "name": "elagolix",
+      "normalizedName": "elagolix",
+      "families": [
+        {
+          "code": "H01CC",
+          "name": "Anti-gonadotropin-releasing hormones"
+        }
+      ]
+    },
+    {
+      "rxcui": "1653781",
+      "name": "eluxadoline",
+      "normalizedName": "eluxadoline",
+      "families": [
+        {
+          "code": "A07DA",
+          "name": "Antipropulsives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1306286",
+      "name": "elvitegravir",
+      "normalizedName": "elvitegravir",
+      "families": [
+        {
+          "code": "J05AJ",
+          "name": "Integrase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1989794",
+      "name": "emicizumab",
+      "normalizedName": "emicizumab",
+      "families": [
+        {
+          "code": "B02BX",
+          "name": "Other systemic hemostatics"
+        }
+      ]
+    },
+    {
+      "rxcui": "42368",
+      "name": "encainide",
+      "normalizedName": "encainide",
+      "families": [
+        {
+          "code": "C01BC",
+          "name": "Antiarrhythmics, class Ic"
+        }
+      ]
+    },
+    {
+      "rxcui": "139896",
+      "name": "enfuvirtide",
+      "normalizedName": "enfuvirtide",
+      "families": [
+        {
+          "code": "J05AX",
+          "name": "Other antivirals"
+        }
+      ]
+    },
+    {
+      "rxcui": "49626",
+      "name": "enoximone",
+      "normalizedName": "enoximone",
+      "families": [
+        {
+          "code": "C01CE",
+          "name": "Phosphodiesterase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "2687215",
+      "name": "ensifentrine",
+      "normalizedName": "ensifentrine",
+      "families": [
+        {
+          "code": "R03BX",
+          "name": "Other drugs for obstructive airway diseases, inhalants"
+        }
+      ]
+    },
+    {
+      "rxcui": "1310593",
+      "name": "eosine yellowish",
+      "normalizedName": "eosine yellowish",
+      "families": [
+        {
+          "code": "D08AX",
+          "name": "Other antiseptics and disinfectants"
+        }
+      ]
+    },
+    {
+      "rxcui": "3966",
+      "name": "ephedrine",
+      "normalizedName": "ephedrine",
+      "families": [
+        {
+          "code": "R03CA",
+          "name": "Alpha- and beta-adrenoreceptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "3992",
+      "name": "epinephrine",
+      "normalizedName": "epinephrine",
+      "families": [
+        {
+          "code": "R03AA",
+          "name": "Alpha- and beta-adrenoreceptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "4021",
+      "name": "ergonovine",
+      "normalizedName": "ergonovine",
+      "families": [
+        {
+          "code": "G02AB",
+          "name": "Ergot alkaloids"
+        }
+      ]
+    },
+    {
+      "rxcui": "4109",
+      "name": "ethacrynic acid",
+      "normalizedName": "ethacrynic acid",
+      "families": [
+        {
+          "code": "C03CC",
+          "name": "Aryloxyacetic acid derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "24453",
+      "name": "ethamivan",
+      "normalizedName": "ethamivan",
+      "families": [
+        {
+          "code": "R07AB",
+          "name": "Respiratory stimulants"
+        }
+      ]
+    },
+    {
+      "rxcui": "24460",
+      "name": "ethanolamine oleate",
+      "normalizedName": "ethanolamine oleate",
+      "families": [
+        {
+          "code": "C05BB",
+          "name": "Sclerosing agents for local injection"
+        }
+      ]
+    },
+    {
+      "rxcui": "4162",
+      "name": "ethylestrenol",
+      "normalizedName": "ethylestrenol",
+      "families": [
+        {
+          "code": "A14AB",
+          "name": "Estren derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "24591",
+      "name": "ethynodiol",
+      "normalizedName": "ethynodiol",
+      "families": [
+        {
+          "code": "G03DC",
+          "name": "Estren derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "4333",
+      "name": "fenoterol",
+      "normalizedName": "fenoterol",
+      "families": [
+        {
+          "code": "G02CA",
+          "name": "Sympathomimetics, labour repressants"
+        }
+      ]
+    },
+    {
+      "rxcui": "24856",
+      "name": "fenoxazoline",
+      "normalizedName": "fenoxazoline",
+      "families": [
+        {
+          "code": "R01AA",
+          "name": "Sympathomimetics, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "105655",
+      "name": "ferrous glycine sulfate",
+      "normalizedName": "ferrous glycine sulfate",
+      "families": [
+        {
+          "code": "B03AA",
+          "name": "Iron bivalent, oral preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "2264108",
+      "name": "fibrinogen, human",
+      "normalizedName": "fibrinogen human",
+      "families": [
+        {
+          "code": "B02BB",
+          "name": "Fibrinogen"
+        }
+      ]
+    },
+    {
+      "rxcui": "1665509",
+      "name": "flibanserin",
+      "normalizedName": "flibanserin",
+      "families": [
+        {
+          "code": "G02CX",
+          "name": "Other gynecologicals"
+        }
+      ]
+    },
+    {
+      "rxcui": "25089",
+      "name": "flosequinan",
+      "normalizedName": "flosequinan",
+      "families": [
+        {
+          "code": "C01DB",
+          "name": "Quinolone vasodilators"
+        }
+      ]
+    },
+    {
+      "rxcui": "108091",
+      "name": "fluclorolone",
+      "normalizedName": "fluclorolone",
+      "families": [
+        {
+          "code": "D07AC",
+          "name": "Corticosteroids, potent (group III)"
+        }
+      ]
+    },
+    {
+      "rxcui": "25112",
+      "name": "flumequine",
+      "normalizedName": "flumequine",
+      "families": [
+        {
+          "code": "J01MB",
+          "name": "Other quinolones"
+        }
+      ]
+    },
+    {
+      "rxcui": "4511",
+      "name": "folic acid",
+      "normalizedName": "folic acid",
+      "families": [
+        {
+          "code": "B03BB",
+          "name": "Folic acid and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "33562",
+      "name": "foscarnet",
+      "normalizedName": "foscarnet",
+      "families": [
+        {
+          "code": "J05AD",
+          "name": "Phosphonic acid derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "4608",
+      "name": "fusidic acid",
+      "normalizedName": "fusidic acid",
+      "families": [
+        {
+          "code": "J01XC",
+          "name": "Steroid antibacterials"
+        }
+      ]
+    },
+    {
+      "rxcui": "12449",
+      "name": "gemeprost",
+      "normalizedName": "gemeprost",
+      "families": [
+        {
+          "code": "G02AD",
+          "name": "Prostaglandins"
+        }
+      ]
+    },
+    {
+      "rxcui": "4793",
+      "name": "gestronol",
+      "normalizedName": "gestronol",
+      "families": [
+        {
+          "code": "G03DA",
+          "name": "Pregnen (4) derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "102846",
+      "name": "glibornuride",
+      "normalizedName": "glibornuride",
+      "families": [
+        {
+          "code": "A10BB",
+          "name": "Sulfonylureas"
+        }
+      ]
+    },
+    {
+      "rxcui": "4850",
+      "name": "glucose",
+      "normalizedName": "glucose",
+      "families": [
+        {
+          "code": "B05CX",
+          "name": "Other irrigating solutions"
+        }
+      ]
+    },
+    {
+      "rxcui": "1546438",
+      "name": "glycopyrronium",
+      "normalizedName": "glycopyrronium",
+      "families": [
+        {
+          "code": "D11AA",
+          "name": "Antihidrotics"
+        }
+      ]
+    },
+    {
+      "rxcui": "102848",
+      "name": "glymidine",
+      "normalizedName": "glymidine",
+      "families": [
+        {
+          "code": "A10BC",
+          "name": "Sulfonamides (heterocyclic)"
+        }
+      ]
+    },
+    {
+      "rxcui": "5021",
+      "name": "griseofulvin",
+      "normalizedName": "griseofulvin",
+      "families": [
+        {
+          "code": "D01AA",
+          "name": "Antibiotics"
+        }
+      ]
+    },
+    {
+      "rxcui": "1309795",
+      "name": "Hedera helix leaf extract",
+      "normalizedName": "hedera helix leaf extract",
+      "families": [
+        {
+          "code": "R05CA",
+          "name": "Expectorants"
+        }
+      ]
+    },
+    {
+      "rxcui": "5175",
+      "name": "hemin",
+      "normalizedName": "hemin",
+      "families": [
+        {
+          "code": "B06AB",
+          "name": "Heme products"
+        }
+      ]
+    },
+    {
+      "rxcui": "260020",
+      "name": "horse chestnut seed",
+      "normalizedName": "horse chestnut seed",
+      "families": [
+        {
+          "code": "C05CX",
+          "name": "Other capillary stabilizing agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "5492",
+      "name": "hydrocortisone",
+      "normalizedName": "hydrocortisone",
+      "families": [
+        {
+          "code": "D07AA",
+          "name": "Corticosteroids, weak (group I)"
+        }
+      ]
+    },
+    {
+      "rxcui": "103468",
+      "name": "hydrocortisone butyrate",
+      "normalizedName": "hydrocortisone butyrate",
+      "families": [
+        {
+          "code": "D07AB",
+          "name": "Corticosteroids, moderately potent (group II)"
+        }
+      ]
+    },
+    {
+      "rxcui": "27220",
+      "name": "hydroquinidine",
+      "normalizedName": "hydroquinidine",
+      "families": [
+        {
+          "code": "C01BA",
+          "name": "Antiarrhythmics, class Ia"
+        }
+      ]
+    },
+    {
+      "rxcui": "1148138",
+      "name": "icatibant",
+      "normalizedName": "icatibant",
+      "families": [
+        {
+          "code": "B06AC",
+          "name": "Drugs used in hereditary angioedema"
+        }
+      ]
+    },
+    {
+      "rxcui": "114289",
+      "name": "indinavir",
+      "normalizedName": "indinavir",
+      "families": [
+        {
+          "code": "J05AE",
+          "name": "Protease inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1242806",
+      "name": "ingenol mebutate",
+      "normalizedName": "ingenol mebutate",
+      "families": [
+        {
+          "code": "D06BX",
+          "name": "Other chemotherapeutics"
+        }
+      ]
+    },
+    {
+      "rxcui": "1483575",
+      "name": "inosine",
+      "normalizedName": "inosine",
+      "families": [
+        {
+          "code": "G01AX",
+          "name": "Other antiinfectives and antiseptics"
+        }
+      ]
+    },
+    {
+      "rxcui": "27604",
+      "name": "inositol niacinate",
+      "normalizedName": "inositol niacinate",
+      "families": [
+        {
+          "code": "C04AC",
+          "name": "Nicotinic acid and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "139825",
+      "name": "insulin detemir",
+      "normalizedName": "insulin detemir",
+      "families": [
+        {
+          "code": "A10AE",
+          "name": "Insulins and analogues for injection, long-acting"
+        }
+      ]
+    },
+    {
+      "rxcui": "253182",
+      "name": "insulin, regular, human",
+      "normalizedName": "insulin regular human",
+      "families": [
+        {
+          "code": "A10AF",
+          "name": "Insulins and analogues for inhalation"
+        }
+      ]
+    },
+    {
+      "rxcui": "221109",
+      "name": "insulin, regular, pork",
+      "normalizedName": "insulin regular pork",
+      "families": [
+        {
+          "code": "A10AB",
+          "name": "Insulins and analogues for injection, fast-acting"
+        },
+        {
+          "code": "A10AC",
+          "name": "Insulins and analogues for injection, intermediate-acting"
+        },
+        {
+          "code": "A10AD",
+          "name": "Insulins and analogues for injection, intermediate- or long-acting combined with fast-acting"
+        }
+      ]
+    },
+    {
+      "rxcui": "5933",
+      "name": "iodine",
+      "normalizedName": "iodine",
+      "families": [
+        {
+          "code": "D08AG",
+          "name": "Iodine products"
+        }
+      ]
+    },
+    {
+      "rxcui": "6054",
+      "name": "isoproterenol",
+      "normalizedName": "isoproterenol",
+      "families": [
+        {
+          "code": "R03AB",
+          "name": "Non-selective beta-adrenoreceptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "28004",
+      "name": "isosorbide mononitrate",
+      "normalizedName": "isosorbide mononitrate",
+      "families": [
+        {
+          "code": "C01DA",
+          "name": "Organic nitrates"
+        }
+      ]
+    },
+    {
+      "rxcui": "6064",
+      "name": "isotretinoin",
+      "normalizedName": "isotretinoin",
+      "families": [
+        {
+          "code": "D10BA",
+          "name": "Retinoids for treatment of acne"
+        }
+      ]
+    },
+    {
+      "rxcui": "1243041",
+      "name": "ivacaftor",
+      "normalizedName": "ivacaftor",
+      "families": [
+        {
+          "code": "R07AX",
+          "name": "Other respiratory system products"
+        }
+      ]
+    },
+    {
+      "rxcui": "6131",
+      "name": "ketanserin",
+      "normalizedName": "ketanserin",
+      "families": [
+        {
+          "code": "C02KD",
+          "name": "Serotonin antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "6135",
+      "name": "ketoconazole",
+      "normalizedName": "ketoconazole",
+      "families": [
+        {
+          "code": "J02AB",
+          "name": "Imidazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "6095",
+      "name": "kininogenase",
+      "normalizedName": "kininogenase",
+      "families": [
+        {
+          "code": "C04AF",
+          "name": "Enzymes"
+        }
+      ]
+    },
+    {
+      "rxcui": "41397",
+      "name": "lactase",
+      "normalizedName": "lactase",
+      "families": [
+        {
+          "code": "A09AA",
+          "name": "Enzyme preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "135056",
+      "name": "lercanidipine",
+      "normalizedName": "lercanidipine",
+      "families": [
+        {
+          "code": "C08CA",
+          "name": "Dihydropyridine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "6390",
+      "name": "lidoflazine",
+      "normalizedName": "lidoflazine",
+      "families": [
+        {
+          "code": "C08EX",
+          "name": "Other non-selective calcium channel blockers"
+        }
+      ]
+    },
+    {
+      "rxcui": "1307404",
+      "name": "linaclotide",
+      "normalizedName": "linaclotide",
+      "families": [
+        {
+          "code": "A06AX",
+          "name": "Other drugs for constipation"
+        }
+      ]
+    },
+    {
+      "rxcui": "1100699",
+      "name": "linagliptin",
+      "normalizedName": "linagliptin",
+      "families": [
+        {
+          "code": "A10BH",
+          "name": "Dipeptidyl peptidase 4 (DPP-4) inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1440051",
+      "name": "lixisenatide",
+      "normalizedName": "lixisenatide",
+      "families": [
+        {
+          "code": "A10BJ",
+          "name": "Glucagon-like peptide-1 (GLP-1) analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "1364479",
+      "name": "lomitapide",
+      "normalizedName": "lomitapide",
+      "families": [
+        {
+          "code": "C10AX",
+          "name": "Other lipid modifying agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "1300701",
+      "name": "lorcaserin",
+      "normalizedName": "lorcaserin",
+      "families": [
+        {
+          "code": "A08AA",
+          "name": "Centrally acting antiobesity products"
+        }
+      ]
+    },
+    {
+      "rxcui": "1426865",
+      "name": "lysozyme",
+      "normalizedName": "lysozyme",
+      "families": [
+        {
+          "code": "D06BB",
+          "name": "Antivirals"
+        }
+      ]
+    },
+    {
+      "rxcui": "1666106",
+      "name": "magnesium peroxide",
+      "normalizedName": "magnesium peroxide",
+      "families": [
+        {
+          "code": "A06AD",
+          "name": "Osmotically acting laxatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "116240",
+      "name": "magnesium pidolate",
+      "normalizedName": "magnesium pidolate",
+      "families": [
+        {
+          "code": "A12CC",
+          "name": "Magnesium"
+        }
+      ]
+    },
+    {
+      "rxcui": "1310566",
+      "name": "magnesium silicate",
+      "normalizedName": "magnesium silicate",
+      "families": [
+        {
+          "code": "A02AA",
+          "name": "Magnesium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "6673",
+      "name": "mecamylamine",
+      "normalizedName": "mecamylamine",
+      "families": [
+        {
+          "code": "C02BB",
+          "name": "Secondary and tertiary amines"
+        }
+      ]
+    },
+    {
+      "rxcui": "107770",
+      "name": "mepenzolate",
+      "normalizedName": "mepenzolate",
+      "families": [
+        {
+          "code": "A03AB",
+          "name": "Synthetic anticholinergics, quaternary ammonium compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "6774",
+      "name": "mersalyl",
+      "normalizedName": "mersalyl",
+      "families": [
+        {
+          "code": "C03BC",
+          "name": "Mercurial diuretics"
+        }
+      ]
+    },
+    {
+      "rxcui": "6781",
+      "name": "mesterolone",
+      "normalizedName": "mesterolone",
+      "families": [
+        {
+          "code": "G03BB",
+          "name": "5-androstanon (3) derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "6809",
+      "name": "metformin",
+      "normalizedName": "metformin",
+      "families": [
+        {
+          "code": "A10BA",
+          "name": "Biguanides"
+        }
+      ]
+    },
+    {
+      "rxcui": "6818",
+      "name": "methandrostenolone",
+      "normalizedName": "methandrostenolone",
+      "families": [
+        {
+          "code": "D11AE",
+          "name": "Androgens for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "2181306",
+      "name": "methicillin",
+      "normalizedName": "methicillin",
+      "families": [
+        {
+          "code": "J01CF",
+          "name": "Beta-lactamase resistant penicillins"
+        }
+      ]
+    },
+    {
+      "rxcui": "235829",
+      "name": "methoserpidine",
+      "normalizedName": "methoserpidine",
+      "families": [
+        {
+          "code": "C02AA",
+          "name": "Rauwolfia alkaloids"
+        }
+      ]
+    },
+    {
+      "rxcui": "29704",
+      "name": "methoxyphenamine",
+      "normalizedName": "methoxyphenamine",
+      "families": [
+        {
+          "code": "R03CB",
+          "name": "Non-selective beta-adrenoreceptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "6876",
+      "name": "methyldopa",
+      "normalizedName": "methyldopa",
+      "families": [
+        {
+          "code": "C02AB",
+          "name": "Methyldopa"
+        }
+      ]
+    },
+    {
+      "rxcui": "1491625",
+      "name": "metreleptin",
+      "normalizedName": "metreleptin",
+      "families": [
+        {
+          "code": "A16AA",
+          "name": "Amino acids and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "266604",
+      "name": "metyrosine",
+      "normalizedName": "metyrosine",
+      "families": [
+        {
+          "code": "C02KB",
+          "name": "Tyrosine hydroxylase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "83213",
+      "name": "mibefradil",
+      "normalizedName": "mibefradil",
+      "families": [
+        {
+          "code": "C08CX",
+          "name": "Other selective calcium channel blockers with mainly vascular effects"
+        }
+      ]
+    },
+    {
+      "rxcui": "6932",
+      "name": "miconazole",
+      "normalizedName": "miconazole",
+      "families": [
+        {
+          "code": "A07AC",
+          "name": "Imidazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "6972",
+      "name": "mineral oil",
+      "normalizedName": "mineral oil",
+      "families": [
+        {
+          "code": "A06AA",
+          "name": "Softeners, emollients"
+        }
+      ]
+    },
+    {
+      "rxcui": "6984",
+      "name": "minoxidil",
+      "normalizedName": "minoxidil",
+      "families": [
+        {
+          "code": "C02DC",
+          "name": "Pyrimidine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "42331",
+      "name": "misoprostol",
+      "normalizedName": "misoprostol",
+      "families": [
+        {
+          "code": "A02BB",
+          "name": "Prostaglandins"
+        }
+      ]
+    },
+    {
+      "rxcui": "135091",
+      "name": "mosapride",
+      "normalizedName": "mosapride",
+      "families": [
+        {
+          "code": "A03FA",
+          "name": "Propulsives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10561",
+      "name": "moxisylyte",
+      "normalizedName": "moxisylyte",
+      "families": [
+        {
+          "code": "C04AX",
+          "name": "Other peripheral vasodilators"
+        }
+      ]
+    },
+    {
+      "rxcui": "28656",
+      "name": "nafarelin",
+      "normalizedName": "nafarelin",
+      "families": [
+        {
+          "code": "H01CA",
+          "name": "Gonadotropin-releasing hormones"
+        }
+      ]
+    },
+    {
+      "rxcui": "1551777",
+      "name": "naloxegol",
+      "normalizedName": "naloxegol",
+      "families": [
+        {
+          "code": "A06AH",
+          "name": "Peripheral opioid receptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "31563",
+      "name": "nedocromil",
+      "normalizedName": "nedocromil",
+      "families": [
+        {
+          "code": "R03BC",
+          "name": "Antiallergic agents, excl. corticosteroids"
+        }
+      ]
+    },
+    {
+      "rxcui": "104486",
+      "name": "nicofuranose",
+      "normalizedName": "nicofuranose",
+      "families": [
+        {
+          "code": "C10AD",
+          "name": "Nicotinic acid and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "31782",
+      "name": "nifuroxazide",
+      "normalizedName": "nifuroxazide",
+      "families": [
+        {
+          "code": "A07AX",
+          "name": "Other intestinal antiinfectives"
+        }
+      ]
+    },
+    {
+      "rxcui": "7454",
+      "name": "nitrofurantoin",
+      "normalizedName": "nitrofurantoin",
+      "families": [
+        {
+          "code": "J01XE",
+          "name": "Nitrofuran derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "7455",
+      "name": "nitrofurazone",
+      "normalizedName": "nitrofurazone",
+      "families": [
+        {
+          "code": "D08AF",
+          "name": "Nitrofuran derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "7476",
+      "name": "nitroprusside",
+      "normalizedName": "nitroprusside",
+      "families": [
+        {
+          "code": "C02DD",
+          "name": "Nitroferricyanide derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "13369",
+      "name": "octinoxate",
+      "normalizedName": "octinoxate",
+      "families": [
+        {
+          "code": "D02BA",
+          "name": "Protectives against UV-radiation for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "135391",
+      "name": "olopatadine",
+      "normalizedName": "olopatadine",
+      "families": [
+        {
+          "code": "R01AC",
+          "name": "Antiallergic agents, excl. corticosteroids"
+        }
+      ]
+    },
+    {
+      "rxcui": "26225",
+      "name": "ondansetron",
+      "normalizedName": "ondansetron",
+      "families": [
+        {
+          "code": "A04AA",
+          "name": "Serotonin (5HT3) antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "37925",
+      "name": "orlistat",
+      "normalizedName": "orlistat",
+      "families": [
+        {
+          "code": "A08AB",
+          "name": "Peripherally acting antiobesity products"
+        }
+      ]
+    },
+    {
+      "rxcui": "260101",
+      "name": "oseltamivir",
+      "normalizedName": "oseltamivir",
+      "families": [
+        {
+          "code": "J05AH",
+          "name": "Neuraminidase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "2286252",
+      "name": "osilodrostat",
+      "normalizedName": "osilodrostat",
+      "families": [
+        {
+          "code": "H02CA",
+          "name": "Anticorticosteroids"
+        }
+      ]
+    },
+    {
+      "rxcui": "1370971",
+      "name": "ospemifene",
+      "normalizedName": "ospemifene",
+      "families": [
+        {
+          "code": "G03XC",
+          "name": "Selective estrogen receptor modulators"
+        }
+      ]
+    },
+    {
+      "rxcui": "7762",
+      "name": "ouabain",
+      "normalizedName": "ouabain",
+      "families": [
+        {
+          "code": "C01AC",
+          "name": "Strophanthus glycosides"
+        }
+      ]
+    },
+    {
+      "rxcui": "110",
+      "name": "oxyquinoline",
+      "normalizedName": "oxyquinoline",
+      "families": [
+        {
+          "code": "G01AC",
+          "name": "Quinoline derivatives"
+        },
+        {
+          "code": "R02AA",
+          "name": "Antiseptics"
+        },
+        {
+          "code": "D08AH",
+          "name": "Quinoline derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "7824",
+      "name": "oxytocin",
+      "normalizedName": "oxytocin",
+      "families": [
+        {
+          "code": "H01BB",
+          "name": "Oxytocin and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "1427222",
+      "name": "parathyroid hormone",
+      "normalizedName": "parathyroid hormone",
+      "families": [
+        {
+          "code": "H05AA",
+          "name": "Parathyroid hormones and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "7930",
+      "name": "pargyline",
+      "normalizedName": "pargyline",
+      "families": [
+        {
+          "code": "C02KC",
+          "name": "MAO inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1364105",
+      "name": "pasireotide",
+      "normalizedName": "pasireotide",
+      "families": [
+        {
+          "code": "H01CB",
+          "name": "Somatostatin and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "1248798",
+      "name": "peginesatide",
+      "normalizedName": "peginesatide",
+      "families": [
+        {
+          "code": "B03XA",
+          "name": "Other antianemic preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "278739",
+      "name": "pegvisomant",
+      "normalizedName": "pegvisomant",
+      "families": [
+        {
+          "code": "H01AX",
+          "name": "Other anterior pituitary lobe hormones and analogues"
+        }
+      ]
+    },
+    {
+      "rxcui": "134413",
+      "name": "pentosan polysulphate sodium",
+      "normalizedName": "pentosan polysulphate sodium",
+      "families": [
+        {
+          "code": "G04BX",
+          "name": "Other urologicals"
+        },
+        {
+          "code": "C05BA",
+          "name": "Heparins or heparinoids for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "155122",
+      "name": "phenolphthalein",
+      "normalizedName": "phenolphthalein",
+      "families": [
+        {
+          "code": "A06AB",
+          "name": "Contact laxatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "8163",
+      "name": "phenylephrine",
+      "normalizedName": "phenylephrine",
+      "families": [
+        {
+          "code": "R01BA",
+          "name": "Sympathomimetics"
+        }
+      ]
+    },
+    {
+      "rxcui": "33717",
+      "name": "pinacidil",
+      "normalizedName": "pinacidil",
+      "families": [
+        {
+          "code": "C02DG",
+          "name": "Guanidine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "33738",
+      "name": "pioglitazone",
+      "normalizedName": "pioglitazone",
+      "families": [
+        {
+          "code": "A10BG",
+          "name": "Thiazolidinediones"
+        }
+      ]
+    },
+    {
+      "rxcui": "1373041",
+      "name": "polihexanide",
+      "normalizedName": "polihexanide",
+      "families": [
+        {
+          "code": "D08AC",
+          "name": "Biguanides and amidines"
+        }
+      ]
+    },
+    {
+      "rxcui": "34296",
+      "name": "potassium bicarbonate",
+      "normalizedName": "potassium bicarbonate",
+      "families": [
+        {
+          "code": "A12BA",
+          "name": "Potassium"
+        }
+      ]
+    },
+    {
+      "rxcui": "34318",
+      "name": "potassium perchlorate",
+      "normalizedName": "potassium perchlorate",
+      "families": [
+        {
+          "code": "H03BC",
+          "name": "Perchlorates"
+        }
+      ]
+    },
+    {
+      "rxcui": "139953",
+      "name": "pramlintide",
+      "normalizedName": "pramlintide",
+      "families": [
+        {
+          "code": "A10BX",
+          "name": "Other blood glucose lowering drugs, excl. insulins"
+        }
+      ]
+    },
+    {
+      "rxcui": "3143",
+      "name": "prasterone",
+      "normalizedName": "prasterone",
+      "families": [
+        {
+          "code": "G03XX",
+          "name": "Other sex hormones and modulators of the genital system"
+        }
+      ]
+    },
+    {
+      "rxcui": "66958",
+      "name": "pristinamycin",
+      "normalizedName": "pristinamycin",
+      "families": [
+        {
+          "code": "J01FG",
+          "name": "Streptogramins"
+        }
+      ]
+    },
+    {
+      "rxcui": "8795",
+      "name": "proscillaridin",
+      "normalizedName": "proscillaridin",
+      "families": [
+        {
+          "code": "C01AB",
+          "name": "Scilla glycosides"
+        }
+      ]
+    },
+    {
+      "rxcui": "114979",
+      "name": "rabeprazole",
+      "normalizedName": "rabeprazole",
+      "families": [
+        {
+          "code": "A02BC",
+          "name": "Proton pump inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1102270",
+      "name": "rilpivirine",
+      "normalizedName": "rilpivirine",
+      "families": [
+        {
+          "code": "J05AG",
+          "name": "Non-nucleoside reverse transcriptase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1439816",
+      "name": "riociguat",
+      "normalizedName": "riociguat",
+      "families": [
+        {
+          "code": "C02KX",
+          "name": "Antihypertensives for pulmonary arterial hypertension"
+        }
+      ]
+    },
+    {
+      "rxcui": "1114195",
+      "name": "rivaroxaban",
+      "normalizedName": "rivaroxaban",
+      "families": [
+        {
+          "code": "B01AF",
+          "name": "Direct factor Xa inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "1091836",
+      "name": "roflumilast",
+      "normalizedName": "roflumilast",
+      "families": [
+        {
+          "code": "R03DX",
+          "name": "Other systemic drugs for obstructive airway diseases"
+        },
+        {
+          "code": "D05AX",
+          "name": "Other antipsoriatics for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "301542",
+      "name": "rosuvastatin",
+      "normalizedName": "rosuvastatin",
+      "families": [
+        {
+          "code": "C10AA",
+          "name": "HMG CoA reductase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "114817",
+      "name": "roxatidine",
+      "normalizedName": "roxatidine",
+      "families": [
+        {
+          "code": "A02BA",
+          "name": "H2-receptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "1193326",
+      "name": "ruxolitinib",
+      "normalizedName": "ruxolitinib",
+      "families": [
+        {
+          "code": "D11AH",
+          "name": "Agents for dermatitis, excluding corticosteroids"
+        }
+      ]
+    },
+    {
+      "rxcui": "236782",
+      "name": "Saccharomyces boulardii",
+      "normalizedName": "saccharomyces boulardii",
+      "families": [
+        {
+          "code": "A07FA",
+          "name": "Antidiarrheal microorganisms"
+        }
+      ]
+    },
+    {
+      "rxcui": "36118",
+      "name": "salmon calcitonin",
+      "normalizedName": "salmon calcitonin",
+      "families": [
+        {
+          "code": "H05BA",
+          "name": "Calcitonin preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "2606543",
+      "name": "silver",
+      "normalizedName": "silver",
+      "families": [
+        {
+          "code": "D08AL",
+          "name": "Silver compounds"
+        }
+      ]
+    },
+    {
+      "rxcui": "36676",
+      "name": "sodium bicarbonate",
+      "normalizedName": "sodium bicarbonate",
+      "families": [
+        {
+          "code": "B05CB",
+          "name": "Salt solutions"
+        }
+      ]
+    },
+    {
+      "rxcui": "1595589",
+      "name": "sodium glycerophosphate",
+      "normalizedName": "sodium glycerophosphate",
+      "families": [
+        {
+          "code": "B05XA",
+          "name": "Electrolyte solutions"
+        }
+      ]
+    },
+    {
+      "rxcui": "105673",
+      "name": "sodium ironedetate",
+      "normalizedName": "sodium ironedetate",
+      "families": [
+        {
+          "code": "B03AB",
+          "name": "Iron trivalent, oral preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "56501",
+      "name": "sodium monofluorophosphate",
+      "normalizedName": "sodium monofluorophosphate",
+      "families": [
+        {
+          "code": "A12CD",
+          "name": "Fluoride"
+        }
+      ]
+    },
+    {
+      "rxcui": "36717",
+      "name": "sodium selenate",
+      "normalizedName": "sodium selenate",
+      "families": [
+        {
+          "code": "A12CE",
+          "name": "Selenium"
+        }
+      ]
+    },
+    {
+      "rxcui": "36721",
+      "name": "sodium sulfate",
+      "normalizedName": "sodium sulfate",
+      "families": [
+        {
+          "code": "A12CA",
+          "name": "Sodium"
+        }
+      ]
+    },
+    {
+      "rxcui": "2630535",
+      "name": "sparsentan",
+      "normalizedName": "sparsentan",
+      "families": [
+        {
+          "code": "C09XX",
+          "name": "Other agents acting on the renin-angiotensin system"
+        }
+      ]
+    },
+    {
+      "rxcui": "10030",
+      "name": "stannous fluoride",
+      "normalizedName": "stannous fluoride",
+      "families": [
+        {
+          "code": "A01AA",
+          "name": "Caries prophylactic agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "10032",
+      "name": "stanozolol",
+      "normalizedName": "stanozolol",
+      "families": [
+        {
+          "code": "A14AA",
+          "name": "Androstan derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10106",
+      "name": "streptokinase",
+      "normalizedName": "streptokinase",
+      "families": [
+        {
+          "code": "B01AD",
+          "name": "Enzymes"
+        }
+      ]
+    },
+    {
+      "rxcui": "10109",
+      "name": "streptomycin",
+      "normalizedName": "streptomycin",
+      "families": [
+        {
+          "code": "J01GA",
+          "name": "Streptomycins"
+        },
+        {
+          "code": "A07AA",
+          "name": "Antibiotics"
+        }
+      ]
+    },
+    {
+      "rxcui": "10156",
+      "name": "sucralfate",
+      "normalizedName": "sucralfate",
+      "families": [
+        {
+          "code": "A02BX",
+          "name": "Other drugs for peptic ulcer and gastro-oesophageal reflux disease (GORD)"
+        }
+      ]
+    },
+    {
+      "rxcui": "10167",
+      "name": "sulbactam",
+      "normalizedName": "sulbactam",
+      "families": [
+        {
+          "code": "J01CG",
+          "name": "Beta-lactamase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "10168",
+      "name": "sulbenicillin",
+      "normalizedName": "sulbenicillin",
+      "families": [
+        {
+          "code": "J01CA",
+          "name": "Penicillins with extended spectrum"
+        }
+      ]
+    },
+    {
+      "rxcui": "10169",
+      "name": "sulfacetamide",
+      "normalizedName": "sulfacetamide",
+      "families": [
+        {
+          "code": "D10AF",
+          "name": "Antiinfectives for treatment of acne"
+        }
+      ]
+    },
+    {
+      "rxcui": "10171",
+      "name": "sulfadiazine",
+      "normalizedName": "sulfadiazine",
+      "families": [
+        {
+          "code": "J01EC",
+          "name": "Intermediate-acting sulfonamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10172",
+      "name": "sulfadimethoxine",
+      "normalizedName": "sulfadimethoxine",
+      "families": [
+        {
+          "code": "J01ED",
+          "name": "Long-acting sulfonamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10174",
+      "name": "sulfaguanidine",
+      "normalizedName": "sulfaguanidine",
+      "families": [
+        {
+          "code": "A07AB",
+          "name": "Sulfonamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10176",
+      "name": "sulfamerazine",
+      "normalizedName": "sulfamerazine",
+      "families": [
+        {
+          "code": "D06BA",
+          "name": "Sulfonamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10178",
+      "name": "sulfamethazine",
+      "normalizedName": "sulfamethazine",
+      "families": [
+        {
+          "code": "J01EB",
+          "name": "Short-acting sulfonamides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10179",
+      "name": "sulfamethizole",
+      "normalizedName": "sulfamethizole",
+      "families": [
+        {
+          "code": "B05CA",
+          "name": "Antiinfectives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10223",
+      "name": "sulfur",
+      "normalizedName": "sulfur",
+      "families": [
+        {
+          "code": "D10AB",
+          "name": "Preparations containing sulfur"
+        }
+      ]
+    },
+    {
+      "rxcui": "10288",
+      "name": "synephrine",
+      "normalizedName": "synephrine",
+      "families": [
+        {
+          "code": "C01CA",
+          "name": "Adrenergic and dopaminergic agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "1291609",
+      "name": "taliglucerase alfa",
+      "normalizedName": "taliglucerase alfa",
+      "families": [
+        {
+          "code": "A16AB",
+          "name": "Enzymes"
+        }
+      ]
+    },
+    {
+      "rxcui": "2621880",
+      "name": "teplizumab",
+      "normalizedName": "teplizumab",
+      "families": [
+        {
+          "code": "A10XX",
+          "name": "Other drugs used in diabetes"
+        }
+      ]
+    },
+    {
+      "rxcui": "37801",
+      "name": "terbinafine",
+      "normalizedName": "terbinafine",
+      "families": [
+        {
+          "code": "D01BA",
+          "name": "Antifungals for systemic use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10368",
+      "name": "terbutaline",
+      "normalizedName": "terbutaline",
+      "families": [
+        {
+          "code": "R03AC",
+          "name": "Selective beta-2-adrenoreceptor agonists"
+        },
+        {
+          "code": "R03CC",
+          "name": "Selective beta-2-adrenoreceptor agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "37806",
+      "name": "terconazole",
+      "normalizedName": "terconazole",
+      "families": [
+        {
+          "code": "G01AG",
+          "name": "Triazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "1044584",
+      "name": "tesamorelin",
+      "normalizedName": "tesamorelin",
+      "families": [
+        {
+          "code": "H01AC",
+          "name": "Somatropin and somatropin agonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "10379",
+      "name": "testosterone",
+      "normalizedName": "testosterone",
+      "families": [
+        {
+          "code": "G03BA",
+          "name": "3-oxoandrosten (4) derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10391",
+      "name": "tetracaine",
+      "normalizedName": "tetracaine",
+      "families": [
+        {
+          "code": "C05AD",
+          "name": "Local anesthetics"
+        },
+        {
+          "code": "D04AB",
+          "name": "Anesthetics for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10395",
+      "name": "tetracycline",
+      "normalizedName": "tetracycline",
+      "families": [
+        {
+          "code": "J01AA",
+          "name": "Tetracyclines"
+        },
+        {
+          "code": "A01AB",
+          "name": "Antiinfectives and antiseptics for local oral treatment"
+        },
+        {
+          "code": "D06AA",
+          "name": "Tetracycline and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10437",
+      "name": "theobromine",
+      "normalizedName": "theobromine",
+      "families": [
+        {
+          "code": "R03DA",
+          "name": "Xanthines"
+        },
+        {
+          "code": "C03BD",
+          "name": "Xanthine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10450",
+      "name": "thiabendazole",
+      "normalizedName": "thiabendazole",
+      "families": [
+        {
+          "code": "D01AC",
+          "name": "Imidazole and triazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10454",
+      "name": "thiamine",
+      "normalizedName": "thiamine",
+      "families": [
+        {
+          "code": "A11DA",
+          "name": "Vitamin B1, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "10463",
+      "name": "thiamphenicol",
+      "normalizedName": "thiamphenicol",
+      "families": [
+        {
+          "code": "J01BA",
+          "name": "Amphenicols"
+        }
+      ]
+    },
+    {
+      "rxcui": "10471",
+      "name": "thiethylperazine",
+      "normalizedName": "thiethylperazine",
+      "families": [
+        {
+          "code": "R06AD",
+          "name": "Phenothiazine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10472",
+      "name": "thimerosal",
+      "normalizedName": "thimerosal",
+      "families": [
+        {
+          "code": "D08AK",
+          "name": "Mercurial products"
+        }
+      ]
+    },
+    {
+      "rxcui": "10528",
+      "name": "thrombin",
+      "normalizedName": "thrombin",
+      "families": [
+        {
+          "code": "B02BC",
+          "name": "Local hemostatics"
+        },
+        {
+          "code": "B02BD",
+          "name": "Blood coagulation factors"
+        }
+      ]
+    },
+    {
+      "rxcui": "4952",
+      "name": "thyrotropin alfa",
+      "normalizedName": "thyrotropin alfa",
+      "families": [
+        {
+          "code": "H01AB",
+          "name": "Thyrotropin"
+        }
+      ]
+    },
+    {
+      "rxcui": "38260",
+      "name": "tibolone",
+      "normalizedName": "tibolone",
+      "families": [
+        {
+          "code": "G03CX",
+          "name": "Other estrogens"
+        }
+      ]
+    },
+    {
+      "rxcui": "10594",
+      "name": "ticlopidine",
+      "normalizedName": "ticlopidine",
+      "families": [
+        {
+          "code": "B01AC",
+          "name": "Platelet aggregation inhibitors excl. heparin"
+        }
+      ]
+    },
+    {
+      "rxcui": "10600",
+      "name": "timolol",
+      "normalizedName": "timolol",
+      "families": [
+        {
+          "code": "C07AA",
+          "name": "Beta blocking agents, non-selective"
+        }
+      ]
+    },
+    {
+      "rxcui": "10612",
+      "name": "tinidazole",
+      "normalizedName": "tinidazole",
+      "families": [
+        {
+          "code": "G01AF",
+          "name": "Imidazole derivatives"
+        },
+        {
+          "code": "J01XD",
+          "name": "Imidazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "13982",
+      "name": "tiratricol",
+      "normalizedName": "tiratricol",
+      "families": [
+        {
+          "code": "H03AA",
+          "name": "Thyroid hormones"
+        }
+      ]
+    },
+    {
+      "rxcui": "38315",
+      "name": "tiropramide",
+      "normalizedName": "tiropramide",
+      "families": [
+        {
+          "code": "A03AC",
+          "name": "Synthetic antispasmodics, amides with tertiary amines"
+        }
+      ]
+    },
+    {
+      "rxcui": "10627",
+      "name": "tobramycin",
+      "normalizedName": "tobramycin",
+      "families": [
+        {
+          "code": "J01GB",
+          "name": "Other aminoglycosides"
+        }
+      ]
+    },
+    {
+      "rxcui": "10634",
+      "name": "tolazoline",
+      "normalizedName": "tolazoline",
+      "families": [
+        {
+          "code": "C04AB",
+          "name": "Imidazoline derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10637",
+      "name": "tolnaftate",
+      "normalizedName": "tolnaftate",
+      "families": [
+        {
+          "code": "D01AE",
+          "name": "Other antifungals for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "38386",
+      "name": "tolrestat",
+      "normalizedName": "tolrestat",
+      "families": [
+        {
+          "code": "A10XA",
+          "name": "Aldose reductase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "119565",
+      "name": "tolterodine",
+      "normalizedName": "tolterodine",
+      "families": [
+        {
+          "code": "G04BD",
+          "name": "Drugs for urinary frequency and incontinence"
+        }
+      ]
+    },
+    {
+      "rxcui": "10691",
+      "name": "tranexamic acid",
+      "normalizedName": "tranexamic acid",
+      "families": [
+        {
+          "code": "B02AA",
+          "name": "Amino acids"
+        }
+      ]
+    },
+    {
+      "rxcui": "10735",
+      "name": "trapidil",
+      "normalizedName": "trapidil",
+      "families": [
+        {
+          "code": "C01DX",
+          "name": "Other vasodilators used in cardiac diseases"
+        }
+      ]
+    },
+    {
+      "rxcui": "10753",
+      "name": "tretinoin",
+      "normalizedName": "tretinoin",
+      "families": [
+        {
+          "code": "D10AD",
+          "name": "Retinoids for topical use in acne"
+        }
+      ]
+    },
+    {
+      "rxcui": "10759",
+      "name": "triamcinolone",
+      "normalizedName": "triamcinolone",
+      "families": [
+        {
+          "code": "R01AD",
+          "name": "Corticosteroids"
+        },
+        {
+          "code": "R03BA",
+          "name": "Glucocorticoids"
+        },
+        {
+          "code": "C05AA",
+          "name": "Corticosteroids"
+        },
+        {
+          "code": "A01AC",
+          "name": "Corticosteroids for local oral treatment"
+        },
+        {
+          "code": "H02AB",
+          "name": "Glucocorticoids"
+        }
+      ]
+    },
+    {
+      "rxcui": "10763",
+      "name": "triamterene",
+      "normalizedName": "triamterene",
+      "families": [
+        {
+          "code": "C03DB",
+          "name": "Other potassium-sparing agents"
+        }
+      ]
+    },
+    {
+      "rxcui": "38557",
+      "name": "tribenoside",
+      "normalizedName": "tribenoside",
+      "families": [
+        {
+          "code": "C05AX",
+          "name": "Other agents for treatment of hemorrhoids and anal fissures for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10772",
+      "name": "trichlormethiazide",
+      "normalizedName": "trichlormethiazide",
+      "families": [
+        {
+          "code": "C03AA",
+          "name": "Thiazides, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "10795",
+      "name": "triclosan",
+      "normalizedName": "triclosan",
+      "families": [
+        {
+          "code": "D08AE",
+          "name": "Phenol and derivatives"
+        },
+        {
+          "code": "D09AA",
+          "name": "Medicated dressings with antiinfectives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10798",
+      "name": "trientine",
+      "normalizedName": "trientine",
+      "families": [
+        {
+          "code": "A16AX",
+          "name": "Various alimentary tract and metabolism products"
+        }
+      ]
+    },
+    {
+      "rxcui": "10819",
+      "name": "trimebutine",
+      "normalizedName": "trimebutine",
+      "families": [
+        {
+          "code": "A03AA",
+          "name": "Synthetic anticholinergics, esters with tertiary amino group"
+        }
+      ]
+    },
+    {
+      "rxcui": "10826",
+      "name": "trimetazidine",
+      "normalizedName": "trimetazidine",
+      "families": [
+        {
+          "code": "C01EB",
+          "name": "Other cardiac preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "10828",
+      "name": "trimethaphan",
+      "normalizedName": "trimethaphan",
+      "families": [
+        {
+          "code": "C02BA",
+          "name": "Sulfonium derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10829",
+      "name": "trimethoprim",
+      "normalizedName": "trimethoprim",
+      "families": [
+        {
+          "code": "J01EA",
+          "name": "Trimethoprim and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "10844",
+      "name": "trioxsalen",
+      "normalizedName": "trioxsalen",
+      "families": [
+        {
+          "code": "D05AD",
+          "name": "Psoralens for topical use"
+        },
+        {
+          "code": "D05BA",
+          "name": "Psoralens for systemic use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10847",
+      "name": "tripelennamine",
+      "normalizedName": "tripelennamine",
+      "families": [
+        {
+          "code": "R06AC",
+          "name": "Substituted ethylene diamines"
+        },
+        {
+          "code": "D04AA",
+          "name": "Antihistamines for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10849",
+      "name": "triprolidine",
+      "normalizedName": "triprolidine",
+      "families": [
+        {
+          "code": "R06AX",
+          "name": "Other antihistamines for systemic use"
+        }
+      ]
+    },
+    {
+      "rxcui": "10864",
+      "name": "troleandomycin",
+      "normalizedName": "troleandomycin",
+      "families": [
+        {
+          "code": "J01FA",
+          "name": "Macrolides"
+        }
+      ]
+    },
+    {
+      "rxcui": "38868",
+      "name": "tromantadine",
+      "normalizedName": "tromantadine",
+      "families": [
+        {
+          "code": "J05AC",
+          "name": "Cyclic amines"
+        }
+      ]
+    },
+    {
+      "rxcui": "10865",
+      "name": "tromethamine",
+      "normalizedName": "tromethamine",
+      "families": [
+        {
+          "code": "B05BB",
+          "name": "Solutions affecting the electrolyte balance"
+        },
+        {
+          "code": "B05XX",
+          "name": "Other i.v. solution additives"
+        }
+      ]
+    },
+    {
+      "rxcui": "115552",
+      "name": "trovafloxacin",
+      "normalizedName": "trovafloxacin",
+      "families": [
+        {
+          "code": "J01MA",
+          "name": "Fluoroquinolones"
+        }
+      ]
+    },
+    {
+      "rxcui": "10890",
+      "name": "trypsin",
+      "normalizedName": "trypsin",
+      "families": [
+        {
+          "code": "B06AA",
+          "name": "Enzymes"
+        },
+        {
+          "code": "D03BA",
+          "name": "Proteolytic enzymes"
+        }
+      ]
+    },
+    {
+      "rxcui": "10968",
+      "name": "tyrothricin",
+      "normalizedName": "tyrothricin",
+      "families": [
+        {
+          "code": "R02AB",
+          "name": "Antibiotics"
+        },
+        {
+          "code": "D06AX",
+          "name": "Other antibiotics for topical use"
+        }
+      ]
+    },
+    {
+      "rxcui": "1005921",
+      "name": "ulipristal",
+      "normalizedName": "ulipristal",
+      "families": [
+        {
+          "code": "G03AD",
+          "name": "Emergency contraceptives"
+        },
+        {
+          "code": "G03XB",
+          "name": "Progesterone receptor modulators"
+        }
+      ]
+    },
+    {
+      "rxcui": "39230",
+      "name": "urapidil",
+      "normalizedName": "urapidil",
+      "families": [
+        {
+          "code": "C02CA",
+          "name": "Alpha-adrenoreceptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "11002",
+      "name": "urea",
+      "normalizedName": "urea",
+      "families": [
+        {
+          "code": "B05BC",
+          "name": "Solutions producing osmotic diuresis"
+        },
+        {
+          "code": "D02AE",
+          "name": "Carbamide products"
+        }
+      ]
+    },
+    {
+      "rxcui": "134404",
+      "name": "urofollitropin",
+      "normalizedName": "urofollitropin",
+      "families": [
+        {
+          "code": "G03GA",
+          "name": "Gonadotropins"
+        }
+      ]
+    },
+    {
+      "rxcui": "11065",
+      "name": "ursodiol",
+      "normalizedName": "ursodiol",
+      "families": [
+        {
+          "code": "A05AA",
+          "name": "Bile acids and derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "11124",
+      "name": "vancomycin",
+      "normalizedName": "vancomycin",
+      "families": [
+        {
+          "code": "J01XA",
+          "name": "Glycopeptide antibacterials"
+        }
+      ]
+    },
+    {
+      "rxcui": "11170",
+      "name": "verapamil",
+      "normalizedName": "verapamil",
+      "families": [
+        {
+          "code": "C08DA",
+          "name": "Phenylalkylamine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "11194",
+      "name": "vidarabine",
+      "normalizedName": "vidarabine",
+      "families": [
+        {
+          "code": "J05AB",
+          "name": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "11246",
+      "name": "vitamin A",
+      "normalizedName": "vitamin a",
+      "families": [
+        {
+          "code": "R01AX",
+          "name": "Other nasal preparations"
+        },
+        {
+          "code": "A11CA",
+          "name": "Vitamin A, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "11248",
+      "name": "vitamin B12",
+      "normalizedName": "vitamin b12",
+      "families": [
+        {
+          "code": "B03BA",
+          "name": "Vitamin B12 (cyanocobalamin and analogues)"
+        }
+      ]
+    },
+    {
+      "rxcui": "11256",
+      "name": "vitamin E",
+      "normalizedName": "vitamin e",
+      "families": [
+        {
+          "code": "A11HA",
+          "name": "Other plain vitamin preparations"
+        }
+      ]
+    },
+    {
+      "rxcui": "6728",
+      "name": "vitamin K3",
+      "normalizedName": "vitamin k3",
+      "families": [
+        {
+          "code": "B02BA",
+          "name": "Vitamin K"
+        }
+      ]
+    },
+    {
+      "rxcui": "121243",
+      "name": "voriconazole",
+      "normalizedName": "voriconazole",
+      "families": [
+        {
+          "code": "J02AC",
+          "name": "Triazole and tetrazole derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "11289",
+      "name": "warfarin",
+      "normalizedName": "warfarin",
+      "families": [
+        {
+          "code": "B01AA",
+          "name": "Vitamin K antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "11358",
+      "name": "xanthinol niacinate",
+      "normalizedName": "xanthinol niacinate",
+      "families": [
+        {
+          "code": "C04AD",
+          "name": "Purine derivatives"
+        }
+      ]
+    },
+    {
+      "rxcui": "11371",
+      "name": "xipamide",
+      "normalizedName": "xipamide",
+      "families": [
+        {
+          "code": "C03BA",
+          "name": "Sulfonamides, plain"
+        }
+      ]
+    },
+    {
+      "rxcui": "114970",
+      "name": "zafirlukast",
+      "normalizedName": "zafirlukast",
+      "families": [
+        {
+          "code": "R03DC",
+          "name": "Leukotriene receptor antagonists"
+        }
+      ]
+    },
+    {
+      "rxcui": "11413",
+      "name": "zidovudine",
+      "normalizedName": "zidovudine",
+      "families": [
+        {
+          "code": "J05AF",
+          "name": "Nucleoside and nucleotide reverse transcriptase inhibitors"
+        }
+      ]
+    },
+    {
+      "rxcui": "11422",
+      "name": "zinc orotate",
+      "normalizedName": "zinc orotate",
+      "families": [
+        {
+          "code": "A12CB",
+          "name": "Zinc"
+        }
+      ]
+    }
+  ]
+}

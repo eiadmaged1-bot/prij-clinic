@@ -1,5 +1,13 @@
 # Medication Content Governance
 
+## v1.5.1 source-backed identity expansion
+
+The v1.5.1 seed expands the navigable identity/classification catalog from a bounded, reproducible public source query. `scripts/v151-build-rxnav-atc-identity-catalog.mjs` queries the U.S. National Library of Medicine RxClass API and records the returned RxNorm ingredient identities mapped to ATC level-4 classes. The committed artifact records source release `2026_01_28`, 340 ingredient identities, and 371 distinct families. Combination classes are excluded. Seed guards refuse artifacts below 300 identities or 100 families.
+
+This import is classification-only. It does not claim that an identity is clinically complete or commonly used at this clinic, and it does not populate indications, dosing, contraindications, interactions, pregnancy/lactation, renal/hepatic, monitoring, or other clinical monograph sections. Those fields remain visibly incomplete until independently sourced and clinically approved. NLM distribution does not imply NLM endorsement of this product.
+
+The WHO ATC/DDD Index remains the authoritative classification reference. WHO's complete downloadable 2026 Excel/XML files require registered access, so the sprint does not bypass that access control. The public RxClass representation supplies the reproducible identity-to-ATC linkage used here.
+
 ## v1.5.0 inventory and blocker
 
 Current database inventory: 63 active generic identities, 53 families, 56 memberships, and 7 unlinked identities (11.1%). The only approved source registered is **ATC/DDD Index 2026**, WHO Collaborating Centre for Drug Statistics Methodology. It supports identity/classification only.

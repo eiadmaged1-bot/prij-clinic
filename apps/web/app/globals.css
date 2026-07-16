@@ -6644,3 +6644,13 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .ultrasound-gallery span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1050px) { .ultrasound-editor-grid { grid-template-columns: minmax(12rem, 1fr) minmax(0, 3fr); } .ultrasound-image-rail { position: static; grid-column: 1 / -1; max-height: none; } }
 @media (max-width: 720px) { .ultrasound-editor-header, .ultrasound-sticky-actions { align-items: stretch; flex-direction: column; } .ultrasound-editor-grid { grid-template-columns: 1fr; } .ultrasound-template-rail, .ultrasound-image-rail { position: static; max-height: none; } .template-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ultrasound-sticky-actions .form-actions { width: 100%; } }
+
+.dermatology-priority-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .75rem; }
+.dermatology-priority-grid button { display: grid; gap: .25rem; min-height: 7rem; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius); background: linear-gradient(145deg, var(--surface), var(--soft)); color: var(--text); text-align: start; cursor: pointer; }
+.dermatology-priority-grid button:hover, .dermatology-priority-grid button:focus-visible { border-color: var(--accent); box-shadow: var(--shadow-sm); }
+.dermatology-topic-detail { display: grid; gap: 1rem; }
+.dermatology-topic-nav { position: sticky; top: 0; z-index: 4; padding: .5rem; background: color-mix(in srgb, var(--background) 92%, transparent); backdrop-filter: blur(8px); }
+.dermatology-topic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; align-items: start; }
+.dermatology-topic-card.danger { border-inline-start: .3rem solid var(--danger); }
+.dermatology-topic-card ul { margin-block-end: 0; padding-inline-start: 1.2rem; }
+@media (max-width: 720px) { .dermatology-topic-grid { grid-template-columns: 1fr; } .dermatology-topic-nav { overflow-x: auto; flex-wrap: nowrap; } }

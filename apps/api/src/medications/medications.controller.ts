@@ -131,6 +131,10 @@ export class MedicationsController {
   @Permissions("medications.search")
   dermatologySearch(@Query("q") q: string | undefined) { return this.medications.searchDermatology(q ?? ""); }
 
+  @Get("dermatology/atlas")
+  @Permissions("medications.read")
+  dermatologyAtlas() { return this.medications.dermatologyAtlas(); }
+
   @Get("dermatology/conditions/:id")
   @Permissions("medications.read")
   dermatologyCondition(@Param("id") id: string) { return this.medications.dermatologyCondition(id); }
