@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../mvp-page";
 import { useSession } from "../session";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
@@ -37,6 +38,8 @@ type Document = {
   lastFileAccess?: { action: string; at: string } | null;
   _count?: { chunks: number };
   updatedAt?: string;
+  hasAsset?: boolean;
+  isCanonical?: boolean;
 };
 
 type SearchResult = {
@@ -59,6 +62,8 @@ type SearchResult = {
   citedBullets: string[];
   clinicalSubtopic: string;
   matchReason: string;
+  isCanonical?: boolean;
+  hasAsset?: boolean;
 };
 
 export function GuidelineCenter({ view }: GuidelineCenterProps) {
@@ -75,7 +80,6 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [inventoryPageInfo, setInventoryPageInfo] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
   const [inventoryCounts, setInventoryCounts] = useState<Record<string, number>>({});
   const [departmentCounts, setDepartmentCounts] = useState<Record<string, number>>({});
-  const [activeProtocolCount, setActiveProtocolCount] = useState(0);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -84,26 +88,39 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   const [synthesis, setSynthesis] = useState<{ status: string; agreement: Array<{ bullet: string; documentId: string; page: number }>; differences: string; evidenceGaps: string } | null>(null);
   const [message, setMessage] = useState("Ready");
 
+  const searchParams = useSearchParams();
+
   useEffect(() => {
     if (!canRead) return;
     void loadBasics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead, inventoryPage]);
 
+  useEffect(() => {
+    if (view === "search" && searchParams.has("q") && results.length === 0) {
+      void (async () => {
+        setMessage("Searching local library");
+        const body = await apiGet(`/guidelines/search?${searchParams.toString()}`);
+        setResults(body.results ?? []);
+        setSynthesis(body.synthesis ?? null);
+        setMessage((body.results ?? []).length ? "Results ready" : "No source found in your local library");
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, searchParams]);
+
   useEffect(() => { try { setFavoriteIds(JSON.parse(localStorage.getItem("prij:guideline:favorites") ?? "[]") as string[]); } catch { setFavoriteIds([]); } }, []);
 
   async function loadBasics() {
-    const [sourceBody, documentBody, protocolBody] = await Promise.all([
+    const [sourceBody, documentBody] = await Promise.all([
       apiGet("/guidelines/sources"),
-      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`),
-      apiGet("/protocol-atlas")
+      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`)
     ]);
     setSources(sourceBody.sources ?? []);
     setDocuments(documentBody.documents ?? []);
     setInventoryPageInfo(documentBody.pageInfo ?? { page: inventoryPage, limit: 20, total: documentBody.documents?.length ?? 0, hasMore: false });
     setInventoryCounts(documentBody.counts ?? {});
     setDepartmentCounts(documentBody.departmentCounts ?? {});
-    setActiveProtocolCount(Array.isArray(protocolBody) ? protocolBody.length : 0);
   }
 
   function toggleFavorite(id: string) { setFavoriteIds((current) => { const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id]; localStorage.setItem("prij:guideline:favorites", JSON.stringify(next)); return next; }); }
@@ -114,6 +131,8 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     return response.json();
   }
 
+  const router = useRouter();
+
   async function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("Searching local library");
@@ -121,6 +140,11 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
     const params = new URLSearchParams({ q: query });
     for (const name of ["organization", "specialty", "year", "region", "status", "sourceKind", "clinicalArea"]) { const value = String(form.get(name) ?? "").trim(); if (value) params.set(name, value); }
     if (form.get("synthesis") === "on") params.set("synthesis", "true");
+    
+    if (view !== "search") {
+      router.push(`/guidelines/search?${params.toString()}`);
+    }
+    
     const body = await apiGet(`/guidelines/search?${params.toString()}`);
     setResults(body.results ?? []);
     setSynthesis(body.synthesis ?? null);
@@ -194,7 +218,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
 
   return (
     <AppShell>
-      <GuidelineShell title={titleFor(view)} message={message}>
+      <GuidelineShell title={titleFor(view)} message={message} view={view}>
         {view === "home" ? (
           <>
             <section className="panel">
@@ -212,7 +236,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
             </section>
             {documents.length ? (
               <>
-                <section className="knowledge-metric-grid" aria-label="Knowledge Center metrics"><article><strong>{inventoryPageInfo.total}</strong><span>Total documents</span></article><article><strong>{activeProtocolCount}</strong><span>Active protocol records</span></article><article><strong>{inventoryCounts.NEEDS_REVIEW ?? 0}</strong><span>Needs review</span></article><article><strong>{favoriteIds.length}</strong><span>Device favorites</span></article><article><strong>{documents.filter((item) => item.updatedAt && Date.now() - new Date(item.updatedAt).getTime() < 30 * 86400000).length}</strong><span>Updates on this page</span></article><article><strong>{inventoryCounts.ARCHIVED ?? 0}</strong><span>Archived</span></article></section>
+                <section className="knowledge-metric-grid" aria-label="Knowledge Center metrics"><article><strong>{inventoryCounts.ACTIVE ?? 0}</strong><span>Canonical protocols</span></article><article><strong>{inventoryPageInfo.total}</strong><span>Total stored</span></article><article><strong>{inventoryCounts.NEEDS_REVIEW ?? 0}</strong><span>Needs review</span></article><article><strong>{favoriteIds.length}</strong><span>Device favorites</span></article><article><strong>{documents.filter((item) => item.updatedAt && Date.now() - new Date(item.updatedAt).getTime() < 30 * 86400000).length}</strong><span>Updates on this page</span></article><article><strong>{inventoryCounts.ARCHIVED ?? 0}</strong><span>Archived</span></article></section>
                 <section className="panel"><div className="section-heading"><div><p className="eyebrow">Featured collections</p><h2>Department folders</h2></div></div><div className="knowledge-collection-grid">{Object.entries(departmentCounts).map(([department, count]) => <Link href={`/guidelines/search?specialty=${encodeURIComponent(department)}`} key={department}><strong>{department}</strong><span>{count} documents</span></Link>)}</div></section>
                 <section className="panel"><div className="section-heading"><h2>Pinned clinic protocols</h2><Link className="button secondary compact" href="/protocol-atlas">Open Protocol Atlas</Link></div><p className="empty-state compact">No clinic protocol is pinned. Pin governance is not configured; no protocol is presented as pinned.</p></section>
                 <DocumentList documents={filterTrainingDocuments(documents).slice(0, 6)} title="Recent revisions" favoriteIds={favoriteIds} onFavorite={toggleFavorite} />
@@ -244,7 +268,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   );
 }
 
-function GuidelineShell({ title, message, children }: { title: string; message?: string; children: React.ReactNode }) {
+function GuidelineShell({ title, message, view, children }: { title: string; message?: string; view?: string; children: React.ReactNode }) {
   return (
     <>
       <section className="page-header">
@@ -257,7 +281,12 @@ function GuidelineShell({ title, message, children }: { title: string; message?:
         </div>
         <p className="muted">{message ?? "Doctor review required. No diagnosis, prescription, or record update is created here."}</p>
       </section>
-      <nav className="patient-tabs simple" aria-label="Guideline library navigation"><Link href="/guidelines">Library</Link><Link href="/guidelines/search">Search</Link><Link href="/guidelines/review">Review Queue</Link><Link href="/guidelines/upload">Upload</Link></nav>
+      <nav className="patient-tabs simple" aria-label="Guideline library navigation">
+        <Link className={view === "home" ? "active" : ""} href="/guidelines">Library</Link>
+        <Link className={view === "search" ? "active" : ""} href="/guidelines/search">Search</Link>
+        <Link className={view === "review" ? "active" : ""} href="/guidelines/review">Review Queue</Link>
+        <Link className={view === "upload" ? "active" : ""} href="/guidelines/upload">Upload</Link>
+      </nav>
       {children}
     </>
   );
@@ -288,7 +317,7 @@ function SearchPanel(props: {
             {result.citedBullets.length ? <ul>{result.citedBullets.map((bullet) => <li key={bullet}>{bullet}</li>)}</ul> : null}
             <p className="muted">{result.organization} · {result.versionLabel ?? result.publicationDate?.slice(0, 4) ?? "Version not recorded"} · {result.sectionHeading}{result.pageStart ? ` · Page ${result.pageStart}` : " · Metadata only"}</p>
             <p className="muted">Why matched: {result.matchReason}</p>
-            <div className="form-actions"><Link className="button secondary compact" href={`/guidelines/${result.documentId}?tab=summary`}>Open record</Link>{result.pageStart ? <Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open exact PDF page</Link> : result.originalUrl ? <a className="button secondary compact" href={result.originalUrl} target="_blank" rel="noreferrer">Open official source</a> : null}</div>
+            <div className="form-actions"><Link className="button secondary compact" href={`/guidelines/${result.documentId}?tab=summary`}>Open record</Link>{result.pageStart && result.hasAsset ? <Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open exact PDF page</Link> : result.pageStart ? <Link className="button secondary compact" href={`/guidelines/${result.documentId}?page=${result.pageStart}`}>Open text extraction</Link> : result.originalUrl ? <a className="button secondary compact" href={result.originalUrl} target="_blank" rel="noreferrer">Open official source</a> : null}</div>
           </article>
         ))}</section>)}
         {!props.results.length ? <Empty text="No matching source found in your local guideline library." /> : null}
@@ -382,7 +411,7 @@ function DocumentList({ documents, title, canReview = false, favoriteIds = [], o
             <div className="data-row-header"><Link href={`/guidelines/${document.id}`}><strong>{document.title}</strong></Link><span className="badge">{document.guidelineStatus}</span></div>
             <p>{document.organization} - {document.specialty} - {document.topic}</p>
             <p className="muted">{document.versionLabel ?? "No version label"} - {document._count?.chunks ?? 0} indexed chunks</p>
-            <Link className="button secondary compact" href={`/guidelines/${document.id}`}>Open viewer</Link>
+            <Link className="button secondary compact" href={`/guidelines/${document.id}`}>{document.hasAsset ? "Open viewer" : document._count?.chunks ? "Read extracted text" : "Metadata only"}</Link>
             {onFavorite ? <button className="button secondary compact" type="button" aria-pressed={favoriteIds.includes(document.id)} onClick={() => onFavorite(document.id)}>{favoriteIds.includes(document.id) ? "Remove favorite" : "Add favorite"}</button> : null}
             {canReview ? <GuidelineReviewActions documentId={document.id} /> : null}
           </article>

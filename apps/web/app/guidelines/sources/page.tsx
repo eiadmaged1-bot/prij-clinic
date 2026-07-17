@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { GuidelineCenter } from "../GuidelineCenter";
 
 export default function GuidelinesSourcesPage() {
-  return <GuidelineCenter view="sources" />;
+  return <Suspense fallback={<div className="panel empty-state">Loading library...</div>}><GuidelineCenter view="sources" /></Suspense>;
 }

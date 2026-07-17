@@ -115,3 +115,15 @@ export type StructuredProtocolContent = {
   referralConsiderations: string[];
   limitations: string[];
 };
+
+export function isProtocolVerified(protocol: ProtocolSummary | ClinicalProtocol): boolean {
+  return protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" || protocol.implementationStatus === "verified" || protocol.implementationStatus === "ACTIVE";
+}
+
+export function isProtocolCatalogOnly(protocol: ProtocolSummary | ClinicalProtocol): boolean {
+  return protocol.implementationStatus === "catalog_only";
+}
+
+export function getCanonicalSourceId(protocol: ProtocolSummary | ClinicalProtocol): string | null {
+  return protocol.sourceCitationsJson?.[0]?.sourceIdentifier ?? null;
+}

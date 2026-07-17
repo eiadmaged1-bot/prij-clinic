@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { searchProtocols, ProtocolSummary } from "../../lib/protocol-atlas";
+import { searchProtocols, ProtocolSummary, isProtocolVerified, isProtocolCatalogOnly, getCanonicalSourceId } from "../../lib/protocol-atlas";
 import { ProtocolGroupGrid } from "./ProtocolGroupGrid";
 import { ProtocolSearchBox } from "./ProtocolSearchBox";
 import { ProtocolStatusBadge } from "./ProtocolStatusBadge";
@@ -102,15 +102,29 @@ export function ProtocolAtlasBrowser() {
               <ProtocolStatusBadge status={protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? "verified" : protocol.implementationStatus} />
             </div>
             <p className="muted protocol-row-meta">{protocol.specialtyGroup} | {protocol.riskLevel}</p>
-            {protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? <span className="badge accent">SOURCE VERIFIED REFERENCE</span> : null}
+            <div className="protocol-badges">
+              {isProtocolVerified(protocol) ? <span className="badge accent">VERIFIED</span> : null}
+              {isProtocolCatalogOnly(protocol) ? <span className="badge warning">CATALOG ONLY</span> : null}
+            </div>
             <dl className="profile-grid">
-              <div><dt>Source</dt><dd>{shortSource(protocol.sourceName)}</dd></div>
+              <div>
+                <dt>Source</dt>
+                <dd>
+                  {getCanonicalSourceId(protocol) ? (
+                    <Link href={`/guidelines/${encodeURIComponent(getCanonicalSourceId(protocol)!)}`} title="Open canonical source in Guideline Center">
+                      {shortSource(protocol.sourceName)}
+                    </Link>
+                  ) : (
+                    shortSource(protocol.sourceName)
+                  )}
+                </dd>
+              </div>
               <div><dt>Risk</dt><dd>{protocol.riskLevel}</dd></div>
             </dl>
             <details className="collapsible-help-panel protocol-details">
               <summary>Open details</summary>
               <p className="muted">Aliases: {aliases(protocol.aliases)}</p>
-              <p className="muted">{protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? "Official-source reference available for Doctor review. It cannot execute a clinical action." : protocol.implementationStatus === "verified" ? "Verified snapshot available for doctor review." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
+              <p className="muted">{isProtocolVerified(protocol) ? (protocol.publicationState === "SOURCE_VERIFIED_REFERENCE" ? "Official-source reference available for Doctor review. It cannot execute a clinical action." : "Verified snapshot available for doctor review.") : isProtocolCatalogOnly(protocol) ? "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management." : "Listed in the atlas, but management snapshot is not verified yet. Catalog-only and draft protocols do not generate management."}</p>
             </details>
             <Link className="button secondary compact" href={`/protocol-atlas/${protocol.id}`}>Open protocol</Link>
           </article>

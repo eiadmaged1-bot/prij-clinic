@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import { GuidelineCenter } from "../GuidelineCenter";
 
 export default function GuidelinesPrivateVaultPage() {
-  return <GuidelineCenter view="private" />;
+  return <Suspense fallback={<div className="panel empty-state">Loading library...</div>}><GuidelineCenter view="private" /></Suspense>;
 }

@@ -561,14 +561,24 @@ export class GuidelinesService {
           ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
           ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
           ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
-          ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : {}),
+          ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : { guidelineStatus: { notIn: ["SUPERSEDED", "ARCHIVED"] as GuidelineStatus[] } }),
           ...(query.reviewStatus ? { reviewStatus: query.reviewStatus } : {}),
           ...(Number.isInteger(requestedYear) ? { publicationDate: { gte: new Date(`${requestedYear}-01-01T00:00:00.000Z`), lt: new Date(`${requestedYear + 1}-01-01T00:00:00.000Z`) } } : {}),
           ...(query.region || query.sourceKind ? { source: {
             ...(query.region ? { countryOrRegion: { contains: query.region, mode: "insensitive" as const } } : {}),
             ...(query.sourceKind === "official" ? { sourceType: "OPEN_PUBLIC" as const } : query.sourceKind === "custom" ? { sourceType: "LICENSED_UPLOAD" as const } : {})
           } } : {})
-        }
+        },
+        ...(terms.length ? {
+          OR: terms.flatMap((term) => [
+            { text: { contains: term, mode: "insensitive" as const } },
+            { document: { title: { contains: term, mode: "insensitive" as const } } },
+            { document: { topic: { contains: term, mode: "insensitive" as const } } },
+            { document: { specialty: { contains: term, mode: "insensitive" as const } } },
+            { document: { organization: { contains: term, mode: "insensitive" as const } } },
+            { section: { heading: { contains: term, mode: "insensitive" as const } } }
+          ])
+        } : {})
       },
       include: { section: true, document: { include: { source: true, summaries: { where: { status: { in: ["CLINIC_APPROVED", "NEEDS_REVIEW"] } }, orderBy: { createdAt: "desc" }, take: 2, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: true } } } } } } },
       take: 500,
@@ -589,7 +599,7 @@ export class GuidelinesService {
         ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
         ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
         ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
-        ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : {}),
+        ...(query.status ? { guidelineStatus: query.status as GuidelineStatus } : { guidelineStatus: { notIn: ["SUPERSEDED", "ARCHIVED"] as GuidelineStatus[] } }),
         ...(query.reviewStatus ? { reviewStatus: query.reviewStatus } : {}),
         ...(Number.isInteger(requestedYear) ? { publicationDate: { gte: new Date(`${requestedYear}-01-01T00:00:00.000Z`), lt: new Date(`${requestedYear + 1}-01-01T00:00:00.000Z`) } } : {}),
         ...(terms.length ? { OR: terms.flatMap((term) => [
@@ -615,7 +625,8 @@ export class GuidelinesService {
       matchReason: "Matched official title, agency, specialty, or topic metadata",
       citationLabel: document.citationLabel, accessLevel: document.accessLevel,
       score: document.guidelineStatus === "ACTIVE" ? 6 : 1,
-      originalUrl: document.originalUrl, assetAvailable: false
+      originalUrl: document.originalUrl, assetAvailable: false,
+      isCanonical: document.guidelineStatus === "ACTIVE", hasAsset: false
     }));
     const ranked = [...rankedChunks, ...metadataOnly]
       .sort((a, b) => b.score - a.score)
@@ -1077,9 +1088,13 @@ function sourceData(dto: CreateGuidelineSourceDto | UpdateGuidelineSourceDto, pa
   return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 }
 
-function safeDocument<T extends { localFilePath?: string | null }>(document: T) {
+function safeDocument<T extends { localFilePath?: string | null; fileSha256?: string | null; guidelineStatus?: string }>(document: T) {
   const { localFilePath: _localFilePath, ...safe } = document;
-  return { ...safe, fileAvailable: Boolean(_localFilePath) };
+  return { 
+    ...safe, 
+    hasAsset: Boolean(_localFilePath && document.fileSha256),
+    isCanonical: document.guidelineStatus === "ACTIVE"
+  };
 }
 
 function isOwner(user: AuthUser) {
@@ -1185,6 +1200,9 @@ function rankChunk(
   const metadataText = normalizeText(`${chunk.document.title} ${chunk.document.organization} ${chunk.document.specialty} ${chunk.document.topic} ${chunk.document.subtopic ?? ""} ${chunk.section?.heading ?? ""}`);
   const combined = `${chunk.normalizedText} ${metadataText} ${normalizeText(summaryText)}`;
   const exactQuery = normalizeText(query.q ?? "");
+  const titleText = normalizeText(chunk.document.title);
+  if (exactQuery && titleText.includes(exactQuery)) score += 100;
+  if (exactQuery && chunk.document.topic && normalizeText(chunk.document.topic).includes(exactQuery)) score += 80;
   for (const term of terms) {
     if (combined.includes(term)) {
       matches += 1;
@@ -1232,6 +1250,8 @@ function formatSearchResult(
     matchReason: citedBullets.length ? "Matched reviewed summary and indexed source text" : "Matched original indexed PDF text or metadata",
     citationLabel: chunk.citationLabel,
     accessLevel: chunk.document.accessLevel,
+    isCanonical: chunk.document.guidelineStatus === "ACTIVE",
+    hasAsset: Boolean((chunk.document as any).localFilePath && (chunk.document as any).fileSha256),
     score
   };
 }
