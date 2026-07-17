@@ -7,6 +7,7 @@ import { ActiveVisitLauncher } from "../components/clinic/ActiveVisitWorkspace";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { publishClinicDataChange } from "@/lib/clinic-data-events";
 import { visitTypeLabel } from "@/lib/visit-types";
+import { startDoctorVisit } from "@/lib/doctor-visit";
 import { AppShell, SafetyAlert } from "./mvp-page";
 import { useSession } from "./session";
 import { useI18n } from "@/i18n/useI18n";
@@ -219,17 +220,24 @@ function FlowPanel({ appointments, queue }: { appointments: Appointment[]; queue
 }
 
 function DailyList({ title, rows, actionLabel = "Open patient", doctorSelect = false, currentPatientCompact = false, previewMode = false }: { title: string; actionLabel?: string; doctorSelect?: boolean; currentPatientCompact?: boolean; previewMode?: boolean; rows: Array<{ id: string; patientId: string; title: string; status: string; detail: string; invoice?: Invoice }> }) {
+  const [startError, setStartError] = useState("");
   async function selectPatient(ticketId: string, patientId: string) {
+    setStartError("");
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/queue/${ticketId}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
-    if (response?.ok) publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], patientId);
-    window.location.href = `/patients/${patientId}`;
+    if (!response?.ok) { setStartError("The queue handoff could not be started. Refresh and retry."); return; }
+    const visit = await startDoctorVisit(patientId).catch(() => null);
+    const encounterId = String(visit?.encounter?.id ?? "");
+    if (!encounterId) { setStartError("The visit could not be opened. The patient remains selected in the queue."); return; }
+    publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], patientId);
+    window.location.href = `/patients/${patientId}/visits/${encounterId}/encounter`;
   }
 
   return (
     <article className={`panel compact-panel ${currentPatientCompact ? "current-in-room-patient-compact" : ""}`}>
       <div className="section-heading"><h2>{title}</h2><span className="badge">{rows.length}</span></div>
       {previewMode ? <p className="badge accent">Preview mode - visit not started</p> : null}
+      {startError ? <p className="form-error" role="alert">{startError}</p> : null}
       {rows.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="queue" size="sm" tone="slate" /><span>No records to show.</span></p> : null}
       <div className="dense-card-list">
         {rows.map((item) => (

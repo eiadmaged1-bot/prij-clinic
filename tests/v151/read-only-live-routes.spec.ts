@@ -31,8 +31,14 @@ test("a stored guideline opens an actual PDF canvas or a truthful explicit fallb
   page.on("response", (response) => { if (response.status() >= 400) browserErrors.push(`${response.status()} ${new URL(response.url()).pathname}`); });
   await page.goto("/guidelines");
   const inventory = await page.evaluate(async () => {
-    const response = await fetch("/api/backend/guidelines/documents?page=1&limit=50");
-    return response.json() as Promise<{ documents?: Array<{ id: string; fileAvailable?: boolean; fileName?: string | null }> }>;
+    const documents: Array<{ id: string; fileAvailable?: boolean; fileName?: string | null }> = [];
+    for (let pageNumber = 1; pageNumber <= 5; pageNumber += 1) {
+      const response = await fetch(`/api/backend/guidelines/documents?page=${pageNumber}&limit=50`);
+      const page = await response.json() as { documents?: Array<{ id: string; fileAvailable?: boolean; fileName?: string | null }>; pageInfo?: { hasMore?: boolean } };
+      documents.push(...(page.documents ?? []));
+      if (!page.pageInfo?.hasMore) break;
+    }
+    return { documents };
   });
   const storedPdf = inventory.documents?.find((document) => document.fileAvailable && document.fileName?.toLowerCase().endsWith(".pdf"));
   expect(storedPdf, "the preserved library must expose at least one stored PDF asset").toBeTruthy();

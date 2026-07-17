@@ -8,7 +8,7 @@ async function main() {
   await waitForApi();
 
   const themeSource = await readFile("apps/web/app/theme.tsx", "utf8");
-  for (const theme of ["prij-heritage", "clinic-premium", "medicolize-portal", "incision-portal", "minimal-clean", "compact-operations"]) {
+  for (const theme of ["prij-heritage", "clinic-premium", "lavender", "rose", "minimal-clean", "compact-operations", "high-contrast"]) {
     if (!themeSource.includes(`"${theme}"`)) throw new Error(`Theme ${theme} is missing from registry.`);
   }
   record.pass("theme registry includes required appearances");
@@ -36,7 +36,7 @@ async function main() {
 
   const shellSource = await readFile("apps/web/app/mvp-page.tsx", "utf8");
   if (shellSource.includes('theme === "medicolize-portal"')) throw new Error("Theme-specific shell navigation branch is still present.");
-  for (const label of ["navigationRegistry", "data-density", "prijDensityMode"]) {
+  for (const label of ["navigationRegistry", "data-density", "useInterfaceMode"]) {
     if (!shellSource.includes(label)) throw new Error(`Shell density/navigation implementation missing ${label}`);
   }
   record.pass("themes share one shell and density persists per browser");
@@ -62,10 +62,10 @@ async function main() {
   const appearance = await apiJson("GET", "/admin/settings/appearance", admin);
   if (!appearance.defaultTheme) throw new Error("Appearance settings did not return a default theme.");
   const changed = await apiJson("PATCH", "/admin/settings/appearance", admin, {
-    defaultTheme: "medicolize-portal",
+    defaultTheme: "clinic-premium",
     allowUserThemeOverride: true
   });
-  if (changed.defaultTheme !== "medicolize-portal") throw new Error("Theme change did not persist.");
+  if (changed.defaultTheme !== "clinic-premium") throw new Error("Theme change did not persist.");
   await apiJson("PATCH", "/admin/settings/appearance", admin, {
     defaultTheme: appearance.defaultTheme,
     allowUserThemeOverride: appearance.allowUserThemeOverride !== false

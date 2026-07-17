@@ -1,6 +1,7 @@
 const investigationCatalogItems = [
   ["CBC", "Complete Blood Count", "Laboratory - general", "Laboratory", null, "Blood"],
   ["CBC_SHORT", "CBC", "Laboratory - general", "Laboratory", null, "Blood"],
+  ["PLATELET_COUNT", "Platelet Count", "Laboratory - general", "Laboratory", null, "Blood"],
   ["BLOOD_GROUP_RH", "Blood Group and Rh", "Laboratory - general", "Laboratory", null, "Blood"],
   ["ANTIBODY_SCREEN", "Antibody Screen", "Laboratory - general", "Laboratory", null, "Blood"],
   ["FASTING_BLOOD_GLUCOSE", "Fasting Blood Glucose", "Laboratory - general", "Laboratory", null, "Blood"],
@@ -24,6 +25,7 @@ const investigationCatalogItems = [
   ["HBSAG", "HBsAg", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
   ["HCV_ANTIBODY", "HCV Antibody", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
   ["HIV_1_2_AG_AB", "HIV 1/2 Ag/Ab", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
+  ["HIV_AG_AB", "HIV Ag/Ab", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
   ["VDRL_RPR", "VDRL/RPR", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
   ["RUBELLA_IGG", "Rubella IgG", "Infectious / antenatal screening", "Laboratory", null, "Blood"],
   ["TOXOPLASMA_IGG_IGM", "Toxoplasma IgG/IgM", "Infectious / antenatal screening", "Laboratory", null, "Blood"],

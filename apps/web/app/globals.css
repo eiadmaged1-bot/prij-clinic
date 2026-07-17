@@ -6689,6 +6689,9 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .ultrasound-editor-grid { display: grid; grid-template-columns: minmax(13rem, 2fr) minmax(0, 7fr) minmax(15rem, 3fr); gap: 1rem; align-items: start; }
 .content-grid.ultrasound-center-grid { grid-template-columns: minmax(0, 1fr); }
 .ultrasound-editor-grid .obgyn-form-grid.grouped { grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr)); }
+.patient-directory-desktop-table .table-row-actions { display: flex; flex-wrap: wrap; gap: .35rem; min-width: max-content; }
+.patient-directory-mobile-list { display: none; }
+@media (max-width: 760px) { .patient-directory-desktop-table, .patient-directory-desktop-pagination { display: none; } .patient-directory-mobile-list { display: grid; } }
 .ultrasound-template-rail, .ultrasound-image-rail { position: sticky; top: 1rem; display: grid; gap: .75rem; max-height: calc(100vh - 2rem); overflow: auto; }
 .template-list { display: grid; gap: .35rem; }
 .template-list button { padding: .6rem .7rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: start; cursor: pointer; }
