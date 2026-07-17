@@ -46,7 +46,6 @@ type ModuleComponent = ComponentType<WorkspaceModuleProps>;
 const lazy = <Props extends object>(loader: () => Promise<ComponentType<Props>>) => dynamic<Props>(loader, { loading: () => <div className="skeleton" aria-label="Loading patient module" /> });
 
 const Timeline = lazy(() => import("./timeline-components").then((module) => module.Timeline));
-const DoctorVisitFlow = lazy(() => import("./visit-flow-components").then((module) => module.DoctorVisitFlow));
 const HistorySheetWorkspace = lazy(() => import("./panel-components").then((module) => module.HistorySheetWorkspace));
 const GynecologyWorkspace = lazy(() => import("./panel-components").then((module) => module.GynecologyWorkspace));
 const InfertilityWorkspacePanel = lazy(() => import("./panel-components").then((module) => module.InfertilityWorkspacePanel));

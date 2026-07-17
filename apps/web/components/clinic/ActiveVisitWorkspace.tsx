@@ -97,6 +97,10 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const [catalog, setCatalog] = useState<Array<{ id: string; name: string; category: string; subcategory?: string | null }>>([]);
   const [basket, setBasket] = useState<Array<{ id: string; name: string; category: string; note?: string }>>([]);
   const [followUp, setFollowUp] = useState({ dueAt: "", title: "", note: "" });
+  const [voidModalOpen, setVoidModalOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState("");
+  const [isVoiding, setIsVoiding] = useState(false);
+  const [voidError, setVoidError] = useState("");
 
   const roles = user?.roles ?? [];
   const canUseDoctorVisit = hasAnyRolePermission(roles, Action.VISIT_START) || roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
@@ -256,12 +260,10 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
             <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
             <div className="dense-card-list" style={{ position: "absolute", zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "0.5rem", borderRadius: "0.5rem", right: "0", minWidth: "180px", marginTop: "0.25rem" }}>
-              <AppActionButton actionId="encounter.void" userPermissions={user?.permissions ?? []} userRoles={roles} className="button secondary compact danger" type="button" onClick={async () => {
-                const reason = window.prompt("Reason for voiding this locked visit:")?.trim();
-                if (!reason) return;
-                const response = await fetch(`${getApiBaseUrl()}/encounters/${visitId}/void`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason }) });
-                if (!response.ok) { setStatus("Could not void this visit."); return; }
-                window.location.assign(`/patients/${patientId}`);
+              <AppActionButton actionId="encounter.void" userPermissions={user?.permissions ?? []} userRoles={roles} className="button secondary compact danger" type="button" onClick={() => {
+                setVoidModalOpen(true);
+                setVoidReason("");
+                setVoidError("");
               }} style={{ width: "100%", justifyContent: "flex-start" }}>
                 <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Void encounter
               </AppActionButton>
@@ -278,6 +280,64 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
             ))}
           </nav>
           <p className="notice">Documentation shortcuts only. No automatic diagnosis, treatment, or clinical action.</p>
+
+          {voidModalOpen && (
+            <dialog open className="patient-modal" aria-label="Void Encounter Confirmation">
+              <div className="modal-backdrop" onClick={() => !isVoiding && setVoidModalOpen(false)} />
+              <div className="modal-content" style={{ maxWidth: "480px" }}>
+                <div className="modal-header">
+                  <h2>Void Encounter</h2>
+                  <button className="button-icon" onClick={() => setVoidModalOpen(false)} disabled={isVoiding} aria-label="Close">×</button>
+                </div>
+                <div className="modal-body">
+                  <p><strong>Patient:</strong> {patient?.name ?? patientId}</p>
+                  <p><strong>Impact:</strong> Voiding this encounter will lock it from further edits and mark it as voided in the patient history. This action is auditable.</p>
+                  <div className="warning-callout" style={{ color: "var(--rose)", background: "var(--rose-light)", padding: "0.75rem", borderRadius: "0.5rem", marginBottom: "1rem" }}>
+                    <strong>Warning:</strong> Are you sure you want to void this encounter?
+                  </div>
+                  {voidError && <p className="form-error">{voidError}</p>}
+                  <label>
+                    Mandatory reason for voiding:
+                    <input
+                      type="text"
+                      value={voidReason}
+                      onChange={(e) => setVoidReason(e.target.value)}
+                      placeholder="e.g. Created by mistake"
+                      disabled={isVoiding}
+                      autoFocus
+                    />
+                  </label>
+                </div>
+                <div className="modal-actions form-actions">
+                  <button className="button secondary" onClick={() => setVoidModalOpen(false)} disabled={isVoiding}>Cancel</button>
+                  <button
+                    className="button danger"
+                    disabled={isVoiding || voidReason.trim().length === 0}
+                    onClick={async () => {
+                      const reason = voidReason.trim();
+                      if (!reason) return;
+                      setIsVoiding(true);
+                      setVoidError("");
+                      try {
+                        const response = await fetch(`${getApiBaseUrl()}/encounters/${visitId}/void`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason }) });
+                        if (!response.ok) {
+                          setVoidError("Could not void this visit. Check permissions or network.");
+                          setIsVoiding(false);
+                          return;
+                        }
+                        window.location.assign(`/patients/${patientId}`);
+                      } catch {
+                        setVoidError("A network error occurred while voiding.");
+                        setIsVoiding(false);
+                      }
+                    }}
+                  >
+                    {isVoiding ? "Submitting..." : "Confirm Void"}
+                  </button>
+                </div>
+              </div>
+            </dialog>
+          )}
           <section className="panel">
             <div className="section-heading"><h2>{modules.find(([key]) => key === activeModule)?.[1] ?? "Active Visit"}</h2><span className="badge">{status}</span></div>
             {activeModule === "encounter" || activeModule === "complaint" || activeModule === "history" || activeModule === "examination" || activeModule === "impression" ? (
