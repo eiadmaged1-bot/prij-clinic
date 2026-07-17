@@ -23,6 +23,8 @@ import {
 } from "./patient-components";
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PatientInvestigationPanel, PatientPrescriptionPanel } from "../../../components/patients/PatientClinicalWorkflowPanels";
+import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorkspace";
+import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 
 type WorkspaceModuleProps = {
   active: TabConfig;
@@ -65,7 +67,15 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   ultrasound: ({ patient, related }) => <UltrasoundWorkspace patient={patient} pregnancies={related.pregnancy ?? []} reports={related.files ?? []} orders={related.orders ?? []} />,
   "case-boards": ({ patient, related }) => <CaseBoardsPanel patient={patient} related={related} />,
   history: ({ patient, related, submitPatientAction, actionStatus }) => <><SmartHistoryOptionChips patient={patient} /><details className="legacy-history-form filter-drawer"><summary>Structured history form</summary><HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} /></details></>,
-  "doctor-visit": ({ patient, related, requestPatientWorkspaceRefresh, permissions, roles }) => <DoctorVisitFlow patient={patient} related={related} onReload={requestPatientWorkspaceRefresh} permissions={permissions} roles={roles} />,
+  "doctor-visit": ({ patient }) => (
+    <section className="panel">
+      <div className="section-heading">
+        <h2>Doctor Visit Workspace</h2>
+        <ActiveVisitLauncher patientId={patient.id} className="button"><ThreeDMedicalIcon name="encounter" size="sm" /> Start / Resume Visit</ActiveVisitLauncher>
+      </div>
+      <p className="muted">The doctor visit workflow has been unified into a dedicated workspace to ensure context safety and provide more screen space for clinical modules.</p>
+    </section>
+  ),
   "secretary-intake": ({ related }) => <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} />,
   "doctor-note": ({ related }) => <DoctorClinicalNotePanel rows={related["doctor-note"] ?? []} />,
   prescriptions: ({ patient, related, permissions, roles }) => <PatientPrescriptionPanel patient={patient} related={related} permissions={permissions} roles={roles} records={related.prescriptions ?? []} />,

@@ -7,8 +7,9 @@ import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
+import { completeDoctorVisit, createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { useSession } from "@/app/session";
+import { AppActionButton } from "@/components/actions/AppActionButton";
 
 type MedicationResult = {
   type: string;
@@ -251,6 +252,22 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         error={error}
         patient={patient ? { id: String(patient.id), name: String(patient.name ?? ""), medicalRecordNumber: String(patient.medicalRecordNumber ?? ""), dateOfBirth: patient.dateOfBirth, patientType: patient.patientType } : null}
         visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt } : null}
+        actions={
+          <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
+            <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
+            <div className="dense-card-list" style={{ position: "absolute", zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "0.5rem", borderRadius: "0.5rem", right: "0", minWidth: "180px", marginTop: "0.25rem" }}>
+              <AppActionButton actionId="encounter.void" userPermissions={user?.permissions ?? []} userRoles={roles} className="button secondary compact danger" type="button" onClick={async () => {
+                const reason = window.prompt("Reason for voiding this locked visit:")?.trim();
+                if (!reason) return;
+                const response = await fetch(`${getApiBaseUrl()}/encounters/${visitId}/void`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason }) });
+                if (!response.ok) { setStatus("Could not void this visit."); return; }
+                window.location.assign(`/patients/${patientId}`);
+              }} style={{ width: "100%", justifyContent: "flex-start" }}>
+                <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Void encounter
+              </AppActionButton>
+            </div>
+          </details>
+        }
       />
       {error ? <BlockedContext patientId={patientId} /> : null}
       {!error ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode } from "react";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 
 export type PatientVisitIdentity = {
@@ -23,11 +24,13 @@ export type VisitIdentity = {
 export function PatientVisitIdentityBar({
   patient,
   visit,
-  error
+  error,
+  actions
 }: {
   patient?: PatientVisitIdentity | null;
   visit?: VisitIdentity | null;
   error?: string;
+  actions?: ReactNode;
 }) {
   if (error || !patient || !visit) {
     return (
@@ -63,6 +66,7 @@ export function PatientVisitIdentityBar({
         {patient.pregnancyStatus ? <span className="badge">{patient.pregnancyStatus}</span> : null}
         <span className="badge lock-badge"><ThreeDMedicalIcon name="files" size="sm" />Locked patient</span>
       </div>
+      {actions ? <div className="identity-actions" style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center" }}>{actions}</div> : null}
     </section>
   );
 }

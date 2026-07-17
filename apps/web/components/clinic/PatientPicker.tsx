@@ -104,7 +104,13 @@ export function PatientPicker({
         {searchState === "loading" ? <p className="muted" role="status">Searching permitted clinic patient files…</p> : null}
         {searchError ? <p className={searchState === "permission" ? "form-error" : "notice"} role="alert">{searchError}</p> : null}
         <div className="dense-card-list patient-picker-results" ref={resultsRef} onScroll={(event) => sessionStorage.setItem(`prij:${storageKey}:scroll`, String(event.currentTarget.scrollTop))} aria-label="Patient results">
-          {allowStandalone ? <button className={`picker-row ${!selectedPatientId ? "active" : ""}`} type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}><strong>{standaloneLabel}</strong><span>No patient file attached</span></button> : null}
+          {allowStandalone ? <article className={`patient-search-card ${!selectedPatientId ? "active" : ""}`}>
+            <div className="patient-search-card-info">
+              <strong>{standaloneLabel}</strong>
+              <span>No patient file attached</span>
+            </div>
+            <div className="patient-search-card-actions"><button className="button secondary compact" type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}>Select</button></div>
+          </article> : null}
           {query.trim().length < minSearchLength ? <p className="empty-state compact smart-empty-state"><span>Enter at least {minSearchLength} characters.</span></p> : null}
           {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
           {query.trim().length >= minSearchLength && searchState === "empty" && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
@@ -120,11 +126,13 @@ export function SelectedPatientSummary({ patient }: { patient: PatientPickerPati
 }
 
 export function PatientSearchResult({ patient, selected = false, onSelect }: { patient: PatientPickerPatient; selected?: boolean; onSelect?: () => void }) {
-  return <article className={`picker-row ${selected ? "active" : ""}`}>
-    <strong>{patientLabel(patient)}</strong>
-    <span>{patient.medicalRecordNumber ?? "No MRN"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patientAgeLabel(patient)} | {patient.patientType ? patientTypeLabel(patient.patientType) : phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
-    <span>{patient.status ?? "active"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.queueState?.status ? `queue ${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not queued"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"}</span>
-    {onSelect ? <button className="button secondary compact" type="button" onClick={onSelect}>Select</button> : null}
+  return <article className={`patient-search-card ${selected ? "active" : ""}`}>
+    <div className="patient-search-card-info">
+      <strong>{patientLabel(patient)}</strong>
+      <span>{patient.medicalRecordNumber ?? "No MRN"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patientAgeLabel(patient)} | {patient.patientType ? patientTypeLabel(patient.patientType) : phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
+      <span>{patient.status ?? "active"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.queueState?.status ? `queue ${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not queued"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"}</span>
+    </div>
+    {onSelect ? <div className="patient-search-card-actions"><button className="button secondary compact" type="button" onClick={onSelect}>Select</button></div> : null}
   </article>;
 }
 

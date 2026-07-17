@@ -163,8 +163,23 @@ function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: Op
         <div className="dense-card-list">
           {rows.map((ticket, index) => (
             <article className="data-row dense" key={ticket.id}>
-              <div className="data-row-header">
-                <strong>{index + 1}. {patient(ticket.patient)} | {visitTypeLabelLocal(ticket.visitType)} | {friendly(ticket.status)} | {ticket.receptionistDisplayNameSnapshot ?? "Receptionist"} | {ticket.checkedInAt ? time(ticket.checkedInAt) : copy.today} | {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : copy.waitingDurationNotRecorded}</strong>
+              <div className="data-row-header queue-ticket-header">
+                <div className="queue-position-indicator">
+                  <span className="queue-wait-position">{index + 1}</span>
+                  <span className="queue-daily-ticket">#{ticket.queueNumber || "--"}</span>
+                </div>
+                <div className="queue-ticket-details">
+                  <strong>{patient(ticket.patient)}</strong>
+                  <div className="queue-ticket-metadata">
+                    <span>{visitTypeLabelLocal(ticket.visitType)}</span>
+                    <span>{friendly(ticket.status)}</span>
+                    <span className="muted hide-on-mobile">{ticket.receptionistDisplayNameSnapshot ?? "Receptionist"}</span>
+                  </div>
+                  <div className="queue-ticket-time">
+                    <span>{ticket.checkedInAt ? time(ticket.checkedInAt) : copy.today}</span>
+                    <span className="badge">{ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : copy.waitingDurationNotRecorded}</span>
+                  </div>
+                </div>
               </div>
               <div className="form-actions">
                 <Link className="button secondary compact" href={`/patients/${ticket.patientId}`}>{copy.openReceptionProfile}</Link>
