@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { loginAsOwner, loginAsDoctor } from '../v094/helpers';
+
 
 test.describe('Dermatology Checkpoint 3 - Owner Smoke Test', () => {
   test.use({ storageState: '.auth/owner.json' });

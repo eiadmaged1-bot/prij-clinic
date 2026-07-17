@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsOwner } from "../v094/helpers";
+
 
 test.describe("v1.5.3 Checkpoint 1 Acceptance", () => {
+  test.use({ storageState: '.auth/owner.json' });
   test("Guideline center exact NG192 and NG201 searches", async ({ page }) => {
-    await loginAsOwner(page);
+    
     // Navigate to Guideline Center
     await page.goto("/guidelines");
     
@@ -34,7 +35,7 @@ test.describe("v1.5.3 Checkpoint 1 Acceptance", () => {
   });
 
   test("Missing file fallbacks and metadata only labeling", async ({ page }) => {
-    await loginAsOwner(page);
+    // Navigate to Guideline Centers");
     await page.goto("/guidelines");
     
     await page.fill('input[placeholder*="Search guidelines"]', "PCOS");
@@ -47,7 +48,7 @@ test.describe("v1.5.3 Checkpoint 1 Acceptance", () => {
   });
 
   test("Protocol Atlas invariants", async ({ page }) => {
-    await loginAsOwner(page);
+    // Go to Protocol Atlas");
     await page.goto("/protocol-atlas");
     
     // Wait for the protocol atlas to load

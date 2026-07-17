@@ -1,7 +1,8 @@
 import { test, expect } from "@playwright/test";
-import { loginAsOwner } from "../v094/helpers";
+
 
 test.describe("Checkpoint 0: Reception search runtime acceptance", () => {
+  test.use({ storageState: '.auth/owner.json' });
   test("mocked search returns safe QA results and has correct layout", async ({ page }) => {
     // Intercept API search to return mock data
     await page.route("**/patients*", async route => {
@@ -34,7 +35,7 @@ test.describe("Checkpoint 0: Reception search runtime acceptance", () => {
 
     for (const vp of viewports) {
       await page.setViewportSize(vp);
-      await loginAsOwner(page);
+      
       await page.goto("http://localhost:3000/reception/check-in", { waitUntil: "networkidle" });
       
       const searchInput = page.getByLabel('Search patient').or(page.getByPlaceholder(/Name, phone|search|ابحث/i));
@@ -68,6 +69,7 @@ test.describe("Checkpoint 0: Reception search runtime acceptance", () => {
 });
 
 test.describe("Checkpoint 0: Queue-number runtime acceptance", () => {
+  test.use({ storageState: '.auth/owner.json' });
   test("mocked queue shows correct positions", async ({ page }) => {
     await page.route("**/clinic/dashboard*", async route => {
       await route.fulfill({ status: 200, json: {} });
@@ -96,7 +98,7 @@ test.describe("Checkpoint 0: Queue-number runtime acceptance", () => {
     });
 
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginAsOwner(page);
+    
     await page.goto("http://localhost:3000/queue", { waitUntil: "networkidle" });
     
     // Check ticket 12 (Position 1)
@@ -119,6 +121,7 @@ test.describe("Checkpoint 0: Queue-number runtime acceptance", () => {
 });
 
 test.describe("Checkpoint 0: Deleted legacy workflow verification", () => {
+  test.use({ storageState: '.auth/owner.json' });
   test("ActiveVisitWorkspace provides all unified routing", async ({ page }) => {
     await page.route("**/api/backend/patients/*/doctor-visit/current*", async route => {
       await route.fulfill({
@@ -128,7 +131,6 @@ test.describe("Checkpoint 0: Deleted legacy workflow verification", () => {
       });
     });
     // Verify all module tabs exist
-    await loginAsOwner(page);
     await page.goto("http://localhost:3000/patients/p1/visits/enc1", { waitUntil: "networkidle" });
     
     const tabs = ["Encounter", "Complaint", "History", "Examination", "Impression", "Prescription", "Investigations", "Ultrasound", "Follow-up", "Finish / Print"];

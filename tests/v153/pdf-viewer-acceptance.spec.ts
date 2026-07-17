@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { loginAsOwner } from "../v094/helpers";
+
 
 test.describe("v1.5.3 Checkpoint 1: PDF Viewer and File Modes", () => {
+  test.use({ storageState: '.auth/owner.json' });
   const NG192_ID = "951cf7e4-97c4-4e25-a9f0-fdcfe2ed1fee"; // Caesarean birth
   const NG201_ID = "d62dcde4-5fd6-4e65-90ed-999898f9df4b"; // Antenatal care
 
   test("Real stored PDF browser verification", async ({ page }) => {
-    await loginAsOwner(page);
     await page.goto(`/guidelines/${NG192_ID}`);
 
     // Wait for the UI to load
@@ -42,7 +42,6 @@ test.describe("v1.5.3 Checkpoint 1: PDF Viewer and File Modes", () => {
   });
 
   test("Sections & Recommendations with real page mapping", async ({ page }) => {
-    await loginAsOwner(page);
     await page.goto(`/guidelines/${NG201_ID}`);
 
     await expect(page.locator("text=NICE NG201").first()).toBeVisible();
@@ -61,7 +60,6 @@ test.describe("v1.5.3 Checkpoint 1: PDF Viewer and File Modes", () => {
   });
 
   test("Extracted-text-only and Metadata-only modes", async ({ page }) => {
-    await loginAsOwner(page);
     // Go to search and look for a term that returns a metadata-only result
     await page.goto("/guidelines/search?q=PCOS");
     
@@ -86,7 +84,6 @@ test.describe("v1.5.3 Checkpoint 1: PDF Viewer and File Modes", () => {
   });
 
   test("Clinical Summary Provenance", async ({ page }) => {
-    await loginAsOwner(page);
     await page.goto(`/guidelines/${NG201_ID}`);
 
     const summaryTab = page.locator('button:has-text("Clinical Summary")');

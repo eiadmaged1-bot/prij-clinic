@@ -10,10 +10,12 @@ Authentication for test suites was overhauled to eliminate HTTP 429 errors using
 - Safely applied the canonicalization script resulting in 0 destructive deletions. 
 - Target exactly 8 'Demo guideline sample archive access' records: 1 Canonical remained active, 7 were updated to ARCHIVED.
 
-### 2. Test Authorization Fortification 
-- Replaced 11 redundant loginAsOwner and loginAsDoctor calls that would individually submit logins via UI automation.
-- Created 	ests/global.setup.ts to provision isolated reusable Playwright contexts per role (.auth/owner.json and .auth/doctor.json).
-- Removed all hardcoded credentials from codebase and strictly enforced runtime environment variables (DEMO_OWNER_LOGIN, DEMO_DOCTOR_LOGIN, etc.).
+### 2. Test Authorization Fortification (Reproducible Clean State)
+- Configured Playwright with `globalSetup` to automatically orchestrate authentication logic before running tests.
+- Safely validates environment credentials without leaving passwords in `.auth` or source files.
+- Fails securely if placeholders or missing environments exist, successfully creating `.auth/owner.json` and `.auth/doctor.json` on-demand from a clean state.
+- Removed redundant `loginAsOwner` and `loginAsDoctor` calls from the v1.5.3 suites to prevent test flakiness and API saturation.
+- Re-ran the complete suite from an initially purged `.auth` folder, proving reproducible results (33 of 33 tests passed).
 
 ### 3. Checkpoint 4 - Investigations
 - Implemented 	ests/v153/checkpoint4-investigations.spec.ts.
