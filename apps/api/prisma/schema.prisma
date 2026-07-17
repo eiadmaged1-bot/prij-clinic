@@ -3663,6 +3663,7 @@ model ObUltrasound {
   cycleDay              Int?
   structuredFindingsJson Json?
   comparisonText        String?
+  comparisonSourceScanId String?            @db.Uuid
   signedAt              DateTime?          @db.Timestamptz(3)
   signedByUserId        String?            @db.Uuid
   amendmentReason       String?
@@ -3675,6 +3676,8 @@ model ObUltrasound {
   encounter      Encounter?      @relation(fields: [encounterId], references: [id], onDelete: SetNull)
   createdByUser  User?           @relation("ObUltrasoundsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
   reviewedByUser User?           @relation("ObUltrasoundsReviewedBy", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  comparisonSourceScan ObUltrasound? @relation("ObUltrasoundComparisons", fields: [comparisonSourceScanId], references: [id], onDelete: SetNull)
+  comparisonDependents ObUltrasound[] @relation("ObUltrasoundComparisons")
 
   @@index([branchId])
   @@index([patientId, performedAt])
@@ -3684,6 +3687,7 @@ model ObUltrasound {
   @@index([status])
   @@index([dataClassification, status])
   @@index([clinicalContext, performedAt])
+  @@index([comparisonSourceScanId])
 }
 
 model Invoice {

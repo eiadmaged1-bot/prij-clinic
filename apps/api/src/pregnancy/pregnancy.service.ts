@@ -358,6 +358,7 @@ export class PregnancyService {
       patientId: dto.patientId,
       requireDoctorScope: true
     });
+    await this.assertComparisonSource(dto.comparisonSourceScanId, dto.patientId, user);
 
     try {
       const performedAt = toDateTime(dto.performedAt);
@@ -377,6 +378,7 @@ export class PregnancyService {
           cycleDay: dto.cycleDay,
           structuredFindingsJson: dto.structuredFindingsJson as Prisma.InputJsonValue | undefined,
           comparisonText: clean(dto.comparisonText),
+          comparisonSourceScanId: dto.comparisonSourceScanId ?? null,
           scanType: clean(dto.scanType),
           indication: clean(dto.indication),
           gestationalAgeDisplay: clean(dto.gestationalAgeDisplay),
@@ -418,7 +420,8 @@ export class PregnancyService {
     const page = Math.max(1, Number.parseInt(query.page ?? "1", 10) || 1);
     const limit = Math.max(5, Math.min(50, Number.parseInt(query.limit ?? "20", 10) || 20));
     const status = query.status;
-    const statusFilter = status === "incomplete" ? { in: ["draft"] } : status === "needs_review" ? { in: ["complete_for_review", "reviewed"] } : status === "signed" ? { in: ["signed", "final", "amended"] } : status && ["draft", "complete_for_review", "reviewed", "signed", "amended", "final", "voided"].includes(status) ? status : undefined;
+    const statusFilter = status === "incomplete" ? { in: ["draft"] } : status === "needs_review" ? "complete_for_review" : status === "signed" ? { in: ["signed", "final"] } : status && ["draft", "complete_for_review", "reviewed", "signed", "amended", "final", "voided"].includes(status) ? status : undefined;
+    const patientType = query.patientType && ["OBSTETRIC", "HIGH_RISK_OBSTETRIC", "GYNECOLOGY", "INFERTILITY", "POSTPARTUM", "PREVENTIVE_WELL_WOMAN", "OTHER"].includes(query.patientType) ? query.patientType : undefined;
     const day = query.date ? new Date(`${query.date}T00:00:00.000Z`) : null;
     const nextDay = day && !Number.isNaN(day.getTime()) ? new Date(day.getTime() + 86_400_000) : null;
     const where = {
@@ -426,14 +429,26 @@ export class PregnancyService {
       dataClassification: { notIn: ["TEST", "QUARANTINED"] },
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(query.context ? { clinicalContext: query.context } : {}),
+      ...(query.patientId ? { patientId: query.patientId } : {}),
+      patient: { dataClassification: { notIn: ["TEST", "QUARANTINED"] }, ...(patientType ? { patientType } : {}) },
+      ...(query.branch ? { branch: { name: { contains: query.branch, mode: "insensitive" } } } : {}),
       ...(day && nextDay && !Number.isNaN(day.getTime()) ? { performedAt: { gte: day, lt: nextDay } } : {}),
       ...(query.doctor ? { createdByUser: { displayName: { contains: query.doctor, mode: "insensitive" } } } : {}),
       ...(query.q ? { OR: [{ patient: { firstName: { contains: query.q, mode: "insensitive" } } }, { patient: { lastName: { contains: query.q, mode: "insensitive" } } }, { patient: { medicalRecordNumber: { contains: query.q, mode: "insensitive" } } }, { scanType: { contains: query.q, mode: "insensitive" } }] } : {})
     } as unknown as Prisma.ObUltrasoundWhereInput;
-    const [obUltrasounds, total] = await Promise.all([
-      this.prisma.obUltrasound.findMany({ where, orderBy: { performedAt: "desc" }, skip: (page - 1) * limit, take: limit, include: obUltrasoundIncludes }),
-      this.prisma.obUltrasound.count({ where })
-    ]);
+    let obUltrasounds: Prisma.ObUltrasoundGetPayload<{ include: typeof obUltrasoundIncludes }>[];
+    let total: number;
+    if (status === "incomplete") {
+      const candidates = await this.prisma.obUltrasound.findMany({ where, orderBy: { performedAt: "desc" }, include: obUltrasoundIncludes });
+      const incomplete = candidates.filter((scan) => !hasMeaningfulUltrasoundContent(scan));
+      total = incomplete.length;
+      obUltrasounds = incomplete.slice((page - 1) * limit, page * limit);
+    } else {
+      [obUltrasounds, total] = await Promise.all([
+        this.prisma.obUltrasound.findMany({ where, orderBy: { performedAt: "desc" }, skip: (page - 1) * limit, take: limit, include: obUltrasoundIncludes }),
+        this.prisma.obUltrasound.count({ where })
+      ]);
+    }
 
     await this.audit.record({
       actorUserId: user.id,
@@ -449,7 +464,7 @@ export class PregnancyService {
 
   async getObUltrasound(id: string, user: AuthUser) {
     const ultrasound = await this.prisma.obUltrasound.findFirst({
-      where: { id, ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] } } as unknown as Prisma.ObUltrasoundWhereInput,
+      where: { id, ...branchScope(user), dataClassification: { notIn: ["TEST", "QUARANTINED"] }, patient: { dataClassification: { notIn: ["TEST", "QUARANTINED"] } } } as unknown as Prisma.ObUltrasoundWhereInput,
       include: obUltrasoundIncludes
     });
 
@@ -487,6 +502,7 @@ export class PregnancyService {
       patientId: existing.patientId,
       requireDoctorScope: true
     });
+    await this.assertComparisonSource(dto.comparisonSourceScanId, existing.patientId, user, existing.id);
 
     const data: Prisma.ObUltrasoundUpdateInput = {};
     if (dto.status !== undefined) data.status = dto.status;
@@ -504,6 +520,7 @@ export class PregnancyService {
     if (dto.cycleDay !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { cycleDay?: number }).cycleDay = dto.cycleDay;
     if (dto.structuredFindingsJson !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { structuredFindingsJson?: Prisma.InputJsonValue }).structuredFindingsJson = dto.structuredFindingsJson as Prisma.InputJsonValue;
     if (dto.comparisonText !== undefined) (data as Prisma.ObUltrasoundUpdateInput & { comparisonText?: string | null }).comparisonText = clean(dto.comparisonText);
+    if (dto.comparisonSourceScanId !== undefined) data.comparisonSourceScan = dto.comparisonSourceScanId ? { connect: { id: dto.comparisonSourceScanId } } : { disconnect: true };
     if (dto.amendmentReason !== undefined) {
       if (!dto.amendmentReason.trim()) throw new BadRequestException("An amendment reason is required.");
       (data as Prisma.ObUltrasoundUpdateInput & { amendmentReason?: string; amendmentVersion?: { increment: number } }).amendmentReason = dto.amendmentReason.trim();
@@ -539,7 +556,13 @@ export class PregnancyService {
       resourceType: "ob_ultrasound",
       resourceId: ultrasound.id,
       severity: "high",
-      metadataJson: { changedFields: Object.keys(dto), fromStatus: existing.status, toStatus: ultrasound.status, safety: "recording_only_clinician_interpretation_required" }
+      metadataJson: {
+        changedFields: Object.keys(dto),
+        fromStatus: existing.status,
+        toStatus: ultrasound.status,
+        ...(dto.amendmentReason || existing.status === "amended" ? { before: ultrasoundAuditSnapshot(existing), after: ultrasoundAuditSnapshot(ultrasound), amendmentReasonRecorded: Boolean(dto.amendmentReason || existing.amendmentReason) } : {}),
+        safety: "recording_only_clinician_interpretation_required"
+      }
     });
 
     return ultrasound;
@@ -620,6 +643,23 @@ export class PregnancyService {
     if (!imageCount) throw new BadRequestException("At least one secured ultrasound image is required before review or signing.");
   }
 
+  private async assertComparisonSource(sourceId: string | undefined, patientId: string, user: AuthUser, currentScanId?: string) {
+    if (!sourceId) return null;
+    if (sourceId === currentScanId) throw new BadRequestException("A scan cannot compare against itself.");
+    const source = await this.prisma.obUltrasound.findFirst({
+      where: {
+        id: sourceId,
+        patientId,
+        ...branchScope(user),
+        status: { in: ["signed", "final", "amended"] },
+        dataClassification: { notIn: ["TEST", "QUARANTINED"] },
+        patient: { dataClassification: { notIn: ["TEST", "QUARANTINED"] } }
+      }
+    });
+    if (!source) throw new BadRequestException("The comparison source must be a signed operational scan for this patient.");
+    return source;
+  }
+
   private handlePrismaReferenceError(error: unknown): never {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       throw new BadRequestException("Referenced patient, pregnancy, encounter, or user was not found.");
@@ -665,12 +705,14 @@ const previousPregnancyIncludes = {
 } satisfies Prisma.PreviousPregnancyInclude;
 
 const obUltrasoundIncludes = {
+  branch: true,
   patient: true,
   pregnancy: true,
   fetus: true,
   encounter: true,
   createdByUser: true,
-  reviewedByUser: true
+  reviewedByUser: true,
+  comparisonSourceScan: true
 } satisfies Prisma.ObUltrasoundInclude;
 
 function clean(value?: string) {
@@ -713,6 +755,19 @@ function assertUltrasoundComplete(scan: { patientId: string; encounterId: string
   if (!scan.patientId || !scan.encounterId || !scan.clinicalContext || !scan.performedAt || !scan.createdByUserId) throw new BadRequestException("Patient, context, encounter, scan date, and operator are required before review or signing.");
   if (!hasMeaningfulUltrasoundContent(scan)) throw new BadRequestException("A scan type and meaningful structured measurement, finding, or impression are required before review.");
   if (impressionRequired && !scan.impressionText?.trim()) throw new BadRequestException("A doctor-authored impression is required before signing.");
+}
+
+function ultrasoundAuditSnapshot(scan: { status: string; scanType: string | null; performedAt: Date; clinicalContext: string; structuredFindingsJson?: unknown; comparisonSourceScanId?: string | null; comparisonText?: string | null; impressionText: string | null }) {
+  return {
+    status: scan.status,
+    scanType: scan.scanType,
+    performedAt: scan.performedAt.toISOString(),
+    clinicalContext: scan.clinicalContext,
+    structuredFindingsJson: scan.structuredFindingsJson ?? null,
+    comparisonSourceScanId: scan.comparisonSourceScanId ?? null,
+    comparisonText: scan.comparisonText ?? null,
+    impressionText: scan.impressionText
+  };
 }
 
 function previousPregnancyTagCodes(history: { outcome: string; outcomeType?: string | null; modeOfDelivery?: string | null }) {

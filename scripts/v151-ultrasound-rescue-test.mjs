@@ -22,10 +22,15 @@ for (const queue of ["Today", "Drafts", "Needs review", "Signed", "Incomplete", 
 assert.match(center, /resultRange/);
 assert.match(center, /\/ultrasounds\/\$\{encodeURIComponent\(scan\.id\)\}/);
 assert.doesNotMatch(center, /advance\(scan/);
-for (const feature of ["Clinical context", "Gynecology", "Fertility", "Obstetric", "Stable lesion ID", "FIGO classification", "Individual follicle measurements", "Previous-source comparison", "Create amendment", "Print report"]) assert.match(editor, new RegExp(feature));
+for (const feature of ["Clinical context", "Gynecology", "Fertility", "Obstetric", "Stable lesion ID", "FIGO classification", "Individual follicle measurements", "Previous signed source scan", "Measured comparison", "High-risk links and surveillance", "Create amendment", "Print report"]) assert.match(editor, new RegExp(feature));
+assert.match(schema, /comparisonSourceScanId/);
+assert.match(service, /The comparison source must be a signed operational scan for this patient/);
+assert.match(service, /before: ultrasoundAuditSnapshot/);
+assert.match(service, /status === "needs_review" \? "complete_for_review"/);
 assert.match(editor, /documents\/upload/);
 assert.match(editor, /image\/jpeg,image\/png,image\/webp/);
 assert.match(editor, /SecureGallery/);
+assert.match(editor, /ultrasound-lightbox/);
 assert.match(documents, /imageSanitizer\.sanitizeImageUpload/);
 assert.match(documents, /encryptedStorage\.writeQuarantine/);
 assert.match(panel, /ultrasounds\/new\?encounterId=/);

@@ -81,6 +81,7 @@ const [
   prisma.patient.findMany({
     where: {
       status: "active",
+      dataClassification: { notIn: ["TEST", "QUARANTINED"] },
       OR: [
         { medicalRecordNumber: { startsWith: "DEMO-", mode: "insensitive" } },
         { medicalRecordNumber: { startsWith: "TEST-", mode: "insensitive" } },

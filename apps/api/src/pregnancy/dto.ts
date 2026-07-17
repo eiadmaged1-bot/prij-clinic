@@ -227,6 +227,7 @@ export class CreateObUltrasoundDto {
   @IsOptional() @IsInt() @Min(1) @Max(60) cycleDay?: number;
   @IsOptional() @IsObject() structuredFindingsJson?: Record<string, unknown>;
   @IsOptional() @IsString() @MaxLength(2000) comparisonText?: string;
+  @IsOptional() @IsUUID() comparisonSourceScanId?: string;
 
   @IsOptional()
   @IsString()
@@ -347,6 +348,7 @@ export class UpdateObUltrasoundDto {
   @IsOptional() @IsInt() @Min(1) @Max(60) cycleDay?: number;
   @IsOptional() @IsObject() structuredFindingsJson?: Record<string, unknown>;
   @IsOptional() @IsString() @MaxLength(2000) comparisonText?: string;
+  @IsOptional() @IsUUID() comparisonSourceScanId?: string;
   @IsOptional() @IsString() @MaxLength(500) amendmentReason?: string;
 
   @IsOptional()
