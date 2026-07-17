@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import { loginAsOwner, loginAsDoctor } from '../v094/helpers';
 
 test.describe('Dermatology Checkpoint 3 - Owner Smoke Test', () => {
+  test.use({ storageState: '.auth/owner.json' });
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginAsOwner(page);
     await page.goto('/dermatology', { waitUntil: 'networkidle' });
   });
 
@@ -15,10 +15,10 @@ test.describe('Dermatology Checkpoint 3 - Owner Smoke Test', () => {
 });
 
 test.describe('Dermatology Checkpoint 3 - Doctor Acceptance Test', () => {
+  test.use({ storageState: '.auth/doctor.json' });
   test.beforeEach(async ({ page }) => {
     // Desktop: 1440x900
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginAsDoctor(page);
     await page.goto('/dermatology', { waitUntil: 'networkidle' });
   });
 

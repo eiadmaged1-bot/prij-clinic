@@ -7,20 +7,25 @@ type DemoAccount = {
   required: boolean;
 };
 
-const demoPassword = process.env.DEMO_TEST_PASSWORD || "LocalDev123!";
-const ownerIdentifier = process.env.DEMO_ADMIN_LOGIN || process.env.DEMO_OWNER_LOGIN || "eyad";
+if (!process.env.DEMO_OWNER_LOGIN || !process.env.DEMO_OWNER_PASSWORD) {
+  throw new Error("Missing required environment variables: DEMO_OWNER_LOGIN and DEMO_OWNER_PASSWORD must be provided for tests.");
+}
+if (!process.env.DEMO_DOCTOR_LOGIN || !process.env.DEMO_DOCTOR_PASSWORD) {
+  throw new Error("Missing required environment variables: DEMO_DOCTOR_LOGIN and DEMO_DOCTOR_PASSWORD must be provided for tests.");
+}
+
 const ownerAccount: DemoAccount = {
   label: "owner",
-  identifier: ownerIdentifier,
-  password: process.env.DEMO_ADMIN_PASSWORD || process.env.DEMO_OWNER_PASSWORD || (ownerIdentifier === "eyad" ? "eyad" : demoPassword),
+  identifier: process.env.DEMO_OWNER_LOGIN,
+  password: process.env.DEMO_OWNER_PASSWORD,
   required: true
 };
 
 const roleAccounts = {
-  doctor: { label: "doctor", identifier: process.env.DEMO_DOCTOR_LOGIN || "d", password: process.env.DEMO_DOCTOR_PASSWORD || (process.env.DEMO_DOCTOR_LOGIN === "d" ? "d" : demoPassword), required: false },
-  receptionist: { label: "receptionist", identifier: process.env.DEMO_RECEPTIONIST_LOGIN || "demo.reception@prij.local", password: demoPassword, required: false },
-  accountant: { label: "accountant", identifier: process.env.DEMO_ACCOUNTANT_LOGIN || "demo.accountant@prij.local", password: demoPassword, required: false },
-  nurse: { label: "nurse", identifier: process.env.DEMO_NURSE_LOGIN || "demo.nurse@prij.local", password: demoPassword, required: false }
+  doctor: { label: "doctor", identifier: process.env.DEMO_DOCTOR_LOGIN, password: process.env.DEMO_DOCTOR_PASSWORD, required: false },
+  receptionist: { label: "receptionist", identifier: process.env.DEMO_RECEPTIONIST_LOGIN || "missing", password: process.env.DEMO_RECEPTIONIST_PASSWORD || "missing", required: false },
+  accountant: { label: "accountant", identifier: process.env.DEMO_ACCOUNTANT_LOGIN || "missing", password: process.env.DEMO_ACCOUNTANT_PASSWORD || "missing", required: false },
+  nurse: { label: "nurse", identifier: process.env.DEMO_NURSE_LOGIN || "missing", password: process.env.DEMO_NURSE_PASSWORD || "missing", required: false }
 } satisfies Record<string, DemoAccount>;
 
 export function getBaseUrl() {

@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import { loginAsOwner, loginAsDoctor } from '../v094/helpers';
 
 test.describe('Pharmacology Checkpoint 2 - Owner Smoke Test', () => {
+  test.use({ storageState: '.auth/owner.json' });
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginAsOwner(page);
     await page.goto('/medications', { waitUntil: 'networkidle' });
   });
 
@@ -16,9 +16,9 @@ test.describe('Pharmacology Checkpoint 2 - Owner Smoke Test', () => {
 });
 
 test.describe('Pharmacology Checkpoint 2 - Doctor Acceptance Test', () => {
+  test.use({ storageState: '.auth/doctor.json' });
   test.beforeEach(async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await loginAsDoctor(page);
     await page.goto('/medications', { waitUntil: 'networkidle' });
   });
 
