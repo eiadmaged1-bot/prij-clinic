@@ -1,40 +1,59 @@
 import { test, expect } from '@playwright/test';
-import { loginAsOwner } from '../v094/helpers';
+import { loginAsOwner, loginAsDoctor } from '../v094/helpers';
 
-test.describe('Pharmacology Checkpoint 2 Acceptance', () => {
+test.describe('Pharmacology Checkpoint 2 - Owner Smoke Test', () => {
   test.beforeEach(async ({ page }) => {
-    // 21. Desktop 1440x900
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAsOwner(page);
     await page.goto('/medications', { waitUntil: 'networkidle' });
   });
 
+  test('Owner can access Pharmacology directory', async ({ page }) => {
+    await page.waitForSelector('.pharmacology-search-sticky');
+    await expect(page.locator('h1:has-text("Pharmacology Atlas")')).toBeVisible();
+    await expect(page.locator('h2:has-text("Browse the preserved generic catalog")')).toBeVisible();
+  });
+});
+
+test.describe('Pharmacology Checkpoint 2 - Doctor Acceptance Test', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await loginAsDoctor(page);
+    await page.goto('/medications', { waitUntil: 'networkidle' });
+  });
+
   test('Search exact matches and facets', async ({ page }) => {
-    // Wait for the UI to hydrate
     await page.waitForSelector('.pharmacology-search-sticky');
 
     // 1. Exact Metformin search ranks Metformin first
     await page.fill('#pharmacology-search', 'Metformin');
-    await expect(page.locator('.pharmacology-quick-card:has-text("Metformin")').first()).toBeVisible();
+    await expect(page.locator('.pharmacology-quick-card').first()).toContainText(/metformin/i);
 
     // 2. Exact Amlodipine search ranks Amlodipine first
     await page.fill('#pharmacology-search', 'Amlodipine');
-    await expect(page.locator('.pharmacology-quick-card:has-text("Amlodipine")').first()).toBeVisible();
+    await expect(page.locator('.pharmacology-quick-card').first()).toContainText(/amlodipine/i);
 
     // 3. Body-system filter is a structured facet
+    // Click the first browse view chip instead of a hardcoded name
+    await page.fill('#pharmacology-search', '');
+    const firstLens = page.locator('.pharmacology-browse-lenses button').first();
+    if (await firstLens.isVisible()) {
+       await firstLens.click();
+       await expect(page.locator('.pharmacology-family-group').first()).toBeVisible();
+    }
+
     // 4. Family filter works
     await page.click('button:has-text("Families")');
-    await expect(page.locator('.pharmacology-family-group').first()).toBeVisible();
+    await expect(page.locator('.atlas-family-grid').first()).toBeVisible();
 
     // 5. Every result shows a real match reason
-    // In our UI, match reasons are shown as badges or text. 
-    // We expect to find something inside the result.
+    await page.fill('#pharmacology-search', 'Metformin');
+    await expect(page.locator('.pharmacology-quick-card').first().locator('p:has-text("Why matched")')).toBeVisible();
   });
 
   test('Profile states and prescription gating', async ({ page }) => {
-    // Open a profile
     await page.click('button:has-text("All generics")');
-    const firstResult = page.locator('.data-row button').first();
+    const firstResult = page.locator('.data-row button:has-text("Open profile")').first();
     await firstResult.click();
     
     // 6-9. Profile states (complete, partial, conflict, classification-only)
@@ -63,9 +82,8 @@ test.describe('Pharmacology Checkpoint 2 Acceptance', () => {
     await expect(page.locator('text=Interaction Engine')).toBeVisible();
 
     // 20. Pregnancy Safety
-    // Pregnancy safety content is embedded inside the profile section
     await page.click('button:has-text("All generics")');
-    await page.locator('.data-row button').first().click();
+    await page.locator('.data-row button:has-text("Open profile")').first().click();
     await page.click('button:has-text("Pregnancy/lactation")');
     await expect(page.locator('.pharmacology-accordion')).toBeVisible();
   });
@@ -82,7 +100,5 @@ test.describe('Pharmacology Checkpoint 2 Acceptance', () => {
       return document.documentElement.scrollWidth > document.documentElement.clientWidth;
     });
     expect(overflow).toBeFalsy();
-
-    // 25. No hydration or React console errors (checked by Playwright implicitly if no page errors)
   });
 });

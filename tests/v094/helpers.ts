@@ -17,7 +17,7 @@ const ownerAccount: DemoAccount = {
 };
 
 const roleAccounts = {
-  doctor: { label: "doctor", identifier: process.env.DEMO_DOCTOR_LOGIN || "demo.doctor@prij.local", password: demoPassword, required: false },
+  doctor: { label: "doctor", identifier: process.env.DEMO_DOCTOR_LOGIN || "d", password: process.env.DEMO_DOCTOR_PASSWORD || (process.env.DEMO_DOCTOR_LOGIN === "d" ? "d" : demoPassword), required: false },
   receptionist: { label: "receptionist", identifier: process.env.DEMO_RECEPTIONIST_LOGIN || "demo.reception@prij.local", password: demoPassword, required: false },
   accountant: { label: "accountant", identifier: process.env.DEMO_ACCOUNTANT_LOGIN || "demo.accountant@prij.local", password: demoPassword, required: false },
   nurse: { label: "nurse", identifier: process.env.DEMO_NURSE_LOGIN || "demo.nurse@prij.local", password: demoPassword, required: false }
