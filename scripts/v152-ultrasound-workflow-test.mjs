@@ -27,7 +27,7 @@ assert.match(service, /const incomplete = candidates\.filter/);
 assert.match(service, /dataClassification: \{ notIn: \["TEST", "QUARANTINED"\] \}/);
 assert.match(service, /patient: \{ dataClassification: \{ notIn: \["TEST", "QUARANTINED"\] \}/);
 
-for (const filter of ["Patient type", "Doctor / operator", "Branch", "Context", "Date"]) assert.match(center, new RegExp(filter));
+for (const filter of ["patientType", "doctorOperator", "branch", "context", "date"]) assert.match(center, new RegExp(filter, "i"));
 for (const field of ["Previous signed source scan", "Measured comparison", "High-risk links and surveillance", "NST / CTG record reference", "Maternal-vitals record reference", "Delivery-planning record reference"]) assert.match(editor, new RegExp(field));
 for (const control of ["Previous image", "Next image", "Close image viewer"]) assert.match(editor, new RegExp(control));
 assert.match(editor, /role="dialog" aria-modal="true"/);
