@@ -52,7 +52,7 @@ export function listDrugFamilies() {
   return request<Array<{ id: string; code: string; displayName: string; aliases?: string[]; verificationStatus: string }>>("/medications/families");
 }
 
-export type PharmacologySearchResult = { id: string; genericName: string; family?: string | null; pharmacologicClass?: string | null; reviewStatus: string; mainUse: string; keyCaution: string; clearance: string; matchReason: string; spectrumMatches?: Array<{ label: string; coverage: string }>; profileCompleteness: number };
+export type PharmacologySearchResult = { id: string; genericName: string; family?: string | null; pharmacologicClass?: string | null; reviewStatus: string; mainUse: string; keyCaution: string; clearance: string; matchReason: string; spectrumMatches?: Array<{ label: string; coverage: string }>; profileCompleteness: number; prescriptionEligible: boolean; prescriptionBlockReason?: string };
 export type FormulaInputField = { name: string; label?: string; type: "number" | "select"; unit?: string; required?: boolean; min?: number; max?: number; options?: string[]; observedAtField?: string };
 export type ApprovedDoseFormula = { stableId: string; name: string; calculatorType: string; versions: Array<{ version: number; expression: string; outputUnit: string; inputSchemaJson: { fields?: FormulaInputField[] }; validRangeJson: unknown; populationText: string; exclusionsJson: unknown; approvalStatus: "approved"; roundingMethod: string; limitationsText: string; source: { title: string; organization: string; versionLabel?: string | null; sourceUrl?: string | null } }> };
 export type MedicationFormulaResult = { stableId: string; name: string; version: number; expression: string; formula: string; input: Record<string, unknown>; outputUnit: string; preRoundingValue: number; roundingMethod: string; finalValue: number; population: string; exclusions: unknown; limitations: string; warnings: string[]; source: { title: string; organization: string; versionLabel?: string | null; sourceUrl?: string | null }; reviewer: { displayName: string }; approvalStatus: string; doctorConfirmationRequired: true; prescriptionInsertionPerformed: false };
@@ -78,6 +78,13 @@ export function getPharmacologyCoverage() {
 
 export function getPharmacologyProfile(id: string) {
   return request<PharmacologyProfile>(`/pharmacology/generics/${encodeURIComponent(id)}`);
+}
+
+export type InteractionPairResult = { id: string; primaryGenericId: string; secondaryGenericId: string; severity: string; mechanismText?: string | null; recommendedResponse: string; primaryGeneric?: { genericName: string }; secondaryGeneric?: { genericName: string }; interactingSubstance: string; source?: Record<string, unknown> };
+
+export function getPharmacologyInteractions(ids: string[]) {
+  if (!ids.length) return Promise.resolve({ queryIds: [], interactions: [], uniquePairs: 0 });
+  return request<{ queryIds: string[]; interactions: InteractionPairResult[]; uniquePairs: number }>(`/pharmacology/interactions?ids=${encodeURIComponent(ids.join(","))}`);
 }
 
 export function calculateMedicationFormula(stableId: string, input: Record<string, unknown>) {

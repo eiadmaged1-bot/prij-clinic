@@ -81,7 +81,9 @@ export class MedicationsService {
       ] as const;
       const matches = matchFields.filter(([, value]) => concepts.some((concept) => normalizeMedicationSearch(value).includes(concept)));
       if (!matches.length) return [];
-      return [{ id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, mainUse: "No reviewed indication summary available.", keyCaution: evidence.adverseEffects.slice(0, 3).map((item) => item.name).join(" · ") || "No reviewed caution summary available.", clearance: evidence.renal[0]?.primaryElimination || evidence.hepatic[0]?.primaryMetabolism || "No reviewed clearance summary available.", matchReason: `Matched ${matches.map(([field]) => field).join(", ")} via ${concepts.join(" / ")}`, spectrumMatches: spectrumMatches(evidence.spectrum, concepts), profileCompleteness: evidence.profileCompleteness }];
+      const eligible = medication.reviewStatus === "SOURCE_VERIFIED" && evidence.officialProfile?.publicationState !== "SOURCE_CONFLICT";
+      const blockReason = !eligible ? "Record is incomplete or has a source conflict. Doctor confirmation required." : undefined;
+      return [{ id: medication.id, genericName: medication.genericName, family: medication.familyMemberships.map((item) => item.family.displayName).join(", ") || medication.familyName, pharmacologicClass: medication.pharmacologicClass, reviewStatus: medication.reviewStatus, mainUse: "No reviewed indication summary available.", keyCaution: evidence.adverseEffects.slice(0, 3).map((item) => item.name).join(" · ") || "No reviewed caution summary available.", clearance: evidence.renal[0]?.primaryElimination || evidence.hepatic[0]?.primaryMetabolism || "No reviewed clearance summary available.", matchReason: `Matched ${matches.map(([field]) => field).join(", ")} via ${concepts.join(" / ")}`, spectrumMatches: spectrumMatches(evidence.spectrum, concepts), profileCompleteness: evidence.profileCompleteness, prescriptionEligible: eligible, prescriptionBlockReason: blockReason }];
     });
     const groupedResults = Object.entries(results.reduce<Record<string, typeof results>>((groups, result) => { (groups[result.family || "Other generics"] ??= []).push(result); return groups; }, {})).map(([family, generics]) => ({ family, generics }));
     return { query, expandedConcepts: concepts, results: results.slice(0, 50), groupedResults, genericFirst: true, tradeNamesAreAliasesOnly: true, susceptibilityReviewRequired: true };
@@ -109,16 +111,52 @@ export class MedicationsService {
     });
     const unlinked = generics.filter((generic) => generic.familyMemberships.length === 0);
     const other = rooms.find((room) => room.name === "Other");
-    if (other && unlinked.length) other.families.push({ id: "unlinked", code: "UNLINKED", name: "Unlinked / other generics", coverageState: "unlinked", generics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")) });
+
     return {
       rooms,
-      familyDirectory: families.map((family) => ({ id: family.id, code: family.code, name: family.displayName, genericCount: family.genericMemberships.length, coverage: family.genericMemberships.length ? "Linked generics available" : "Content being completed" })),
-      allGenerics: generics.map((generic) => atlasGeneric(generic, generic.familyMemberships.map((item) => item.family.displayName).join(", ") || generic.familyName || "Family not linked")),
-      unlinkedGenerics: unlinked.map((generic) => atlasGeneric(generic, generic.familyName || "Family not linked")),
-      recentlyReviewed: generics.filter((generic) => generic.reviewStatus === "reviewed").sort((left, right) => right.updatedAt.getTime() - left.updatedAt.getTime()).slice(0, 10).map((generic) => atlasGeneric(generic, generic.familyMemberships.map((item) => item.family.displayName).join(", ") || generic.familyName || "Family not linked")),
-      totals: { families: families.length, generics: generics.length, linkedGenerics: generics.length - unlinked.length, unlinkedGenerics: unlinked.length, unlinkedRate: generics.length ? Number(((unlinked.length / generics.length) * 100).toFixed(1)) : 0, officialProfiles: generics.filter((generic) => generic.officialProfile).length, sourceVerifiedProfiles: generics.filter((generic) => generic.officialProfile?.publicationState === "SOURCE_VERIFIED").length, sourceConflictProfiles: generics.filter((generic) => generic.officialProfile?.publicationState === "SOURCE_CONFLICT").length, populatedRooms: rooms.filter((room) => room.genericCount > 0).length, familiesBeingCompleted: families.filter((family) => !family.genericMemberships.length).length },
-      browseViews: pharmacologyBrowseViews,
-      completeDatasetClaimed: false
+      familyDirectory: families.map((f) => ({ id: f.id, code: f.code, name: f.displayName, genericCount: f.genericMemberships.length, coverage: "identity-linked" })),
+      allGenerics: generics.map(mapAtlasGeneric),
+      unlinkedGenerics: unlinked.map(mapAtlasGeneric),
+      recentlyReviewed: generics.filter((g) => g.officialProfile).slice(0, 20).map(mapAtlasGeneric),
+      totals: {
+        families: families.length,
+        generics: generics.length,
+        linkedGenerics: generics.length - unlinked.length,
+        unlinkedGenerics: unlinked.length,
+        unlinkedRate: Math.round((unlinked.length / Math.max(1, generics.length)) * 100),
+        officialProfiles: generics.filter((g) => g.officialProfile).length,
+        sourceVerifiedProfiles: generics.filter((g) => g.reviewStatus === "SOURCE_VERIFIED").length,
+        sourceConflictProfiles: generics.filter((g) => g.officialProfile?.publicationState === "SOURCE_CONFLICT").length,
+        populatedRooms: rooms.filter((r) => r.familyCount > 0).length,
+        familiesBeingCompleted: families.filter((f) => f.genericMemberships.length === 0).length
+      },
+      browseViews: ["Antibiotics", "Antivirals", "Antihypertensives", "Analgesics", "Antidiabetics", "Vitamins"],
+      completeDatasetClaimed: false as const
+    };
+  }
+
+  async pharmacologyInteractions(ids: string[]) {
+    if (!ids || ids.length < 2) return { queryIds: ids, interactions: [], uniquePairs: 0 };
+    const interactions = await this.prisma.interaction.findMany({
+      where: {
+        OR: [
+          { primaryGenericId: { in: ids }, secondaryGenericId: { in: ids } },
+          { primaryGenericId: { in: ids }, interactingSubstance: { in: ids } }
+        ]
+      },
+      include: { source: true, primaryGeneric: true, secondaryGeneric: true }
+    });
+    
+    const uniquePairs = new Map<string, typeof interactions[0]>();
+    for (const interaction of interactions) {
+       const pairKey = [interaction.primaryGenericId, interaction.secondaryGenericId].sort().join("|");
+       if (!uniquePairs.has(pairKey)) uniquePairs.set(pairKey, interaction);
+    }
+    
+    return {
+      queryIds: ids,
+      interactions: Array.from(uniquePairs.values()),
+      uniquePairs: uniquePairs.size
     };
   }
 
@@ -492,9 +530,16 @@ function roomForFamily(code: string, name: string) {
   return "Other";
 }
 
+function mapAtlasGeneric(medication: any) {
+  const coverage = medication.officialProfile?.sectionCoverageJson as Record<string, string> | undefined;
+  const eligible = medication.officialProfile?.publicationState === "SOURCE_VERIFIED" || (!medication.officialProfile && medication.reviewStatus === "SOURCE_VERIFIED");
+  return { id: medication.id, genericName: medication.genericName, family: medication.familyMemberships?.map((item: any) => item.family.displayName).join(", ") || medication.familyName || "Family not linked", pharmacologicClass: medication.pharmacologicClass || medication.className, reviewStatus: medication.officialProfile?.publicationState ?? medication.reviewStatus, mainUse: coverage?.indications === "SOURCE_VERIFIED" ? "Official indication reference available" : "Source incomplete", keyCaution: coverage?.warnings === "SOURCE_VERIFIED" ? "Official warning reference available" : "Source incomplete", clearance: coverage?.renal === "SOURCE_VERIFIED" || coverage?.hepatic === "SOURCE_VERIFIED" ? "Official organ-function reference available" : "Source incomplete", matchReason: "Browse hierarchy", profileCompleteness: coverage ? Object.values(coverage).filter((state) => state === "SOURCE_VERIFIED").length : 0, prescriptionEligible: eligible, prescriptionBlockReason: eligible ? undefined : "Incomplete or conflicting record" };
+}
+
 function atlasGeneric(medication: { id: string; genericName: string; familyName: string | null; className: string | null; pharmacologicClass: string | null; reviewStatus: string; officialProfile?: { sectionCoverageJson: Prisma.JsonValue; publicationState: string } | null }, family: string) {
   const coverage = medication.officialProfile?.sectionCoverageJson as Record<string, string> | undefined;
-  return { id: medication.id, genericName: medication.genericName, family, pharmacologicClass: medication.pharmacologicClass || medication.className, reviewStatus: medication.officialProfile?.publicationState ?? medication.reviewStatus, mainUse: coverage?.indications === "SOURCE_VERIFIED" ? "Official indication reference available" : "Source incomplete", keyCaution: coverage?.warnings === "SOURCE_VERIFIED" ? "Official warning reference available" : "Source incomplete", clearance: coverage?.renal === "SOURCE_VERIFIED" || coverage?.hepatic === "SOURCE_VERIFIED" ? "Official organ-function reference available" : "Source incomplete", matchReason: "Browse hierarchy", profileCompleteness: coverage ? Object.values(coverage).filter((state) => state === "SOURCE_VERIFIED").length : 0 };
+  const eligible = medication.officialProfile?.publicationState === "SOURCE_VERIFIED" || (!medication.officialProfile && medication.reviewStatus === "SOURCE_VERIFIED");
+  return { id: medication.id, genericName: medication.genericName, family, pharmacologicClass: medication.pharmacologicClass || medication.className, reviewStatus: medication.officialProfile?.publicationState ?? medication.reviewStatus, mainUse: coverage?.indications === "SOURCE_VERIFIED" ? "Official indication reference available" : "Source incomplete", keyCaution: coverage?.warnings === "SOURCE_VERIFIED" ? "Official warning reference available" : "Source incomplete", clearance: coverage?.renal === "SOURCE_VERIFIED" || coverage?.hepatic === "SOURCE_VERIFIED" ? "Official organ-function reference available" : "Source incomplete", matchReason: "Browse hierarchy", profileCompleteness: coverage ? Object.values(coverage).filter((state) => state === "SOURCE_VERIFIED").length : 0, prescriptionEligible: eligible, prescriptionBlockReason: eligible ? undefined : "Incomplete or conflicting record" };
 }
 
 const pharmacologyInclude = {
@@ -508,6 +553,7 @@ const pharmacologyInclude = {
   contraindications: { include: { source: true }, orderBy: { name: "asc" } },
   cautions: { include: { source: true }, orderBy: { riskGroup: "asc" } },
   interactionsPrimary: { include: { source: true, secondaryGeneric: true }, orderBy: { severity: "asc" } },
+  interactionsSecondary: { include: { source: true, primaryGeneric: true }, orderBy: { severity: "asc" } },
   monitoringRequirements: { include: { source: true }, orderBy: { parameter: "asc" } },
   pregnancyLactationProfiles: { include: { source: true }, orderBy: { createdAt: "desc" } },
   renalGuidance: { include: { source: true }, orderBy: { createdAt: "desc" } },
@@ -523,11 +569,20 @@ function pharmacologyEvidence(medication: PharmacologyMedication) {
   const pharmacodynamics = medication.pharmacodynamicSummaries.flatMap((row) => jsonStrings(row.bulletsJson));
   const pharmacokinetics = medication.pharmacokineticSummaries.map((row) => ({ absorption: jsonStrings(row.absorptionJson), metabolism: jsonStrings(row.metabolismJson), halfLife: jsonStrings(row.halfLifeJson), elimination: jsonStrings(row.eliminationJson), clinicalNotes: jsonStrings(row.clinicalNotesJson), reviewStatus: row.reviewStatus, source: row.source }));
   const officialProfile = medication.officialProfile ? { publicationState: medication.officialProfile.publicationState, sectionCoverage: medication.officialProfile.sectionCoverageJson, indications: jsonStrings(medication.officialProfile.indicationsJson), mechanism: jsonStrings(medication.officialProfile.mechanismJson), contraindications: jsonStrings(medication.officialProfile.contraindicationsJson), warnings: jsonStrings(medication.officialProfile.warningsJson), adverseEffects: jsonStrings(medication.officialProfile.adverseEffectsJson), interactions: jsonStrings(medication.officialProfile.interactionsJson), pregnancy: jsonStrings(medication.officialProfile.pregnancyJson), lactation: jsonStrings(medication.officialProfile.lactationJson), renal: jsonStrings(medication.officialProfile.renalJson), hepatic: jsonStrings(medication.officialProfile.hepaticJson), monitoring: jsonStrings(medication.officialProfile.monitoringJson), routes: jsonStrings(medication.officialProfile.routesJson), dosageForms: jsonStrings(medication.officialProfile.dosageFormsJson), boxedWarning: medication.officialProfile.boxedWarning, conflicts: medication.officialProfile.conflictJson, source: medication.officialProfile.source } : null;
-  const evidenceGroups = [mechanism, pharmacodynamics, pharmacokinetics, medication.adverseEffects, medication.contraindications, medication.cautions, medication.interactionsPrimary, medication.monitoringRequirements, medication.pregnancyLactationProfiles, medication.renalGuidance, medication.hepaticGuidance, medication.antimicrobialSpectra, medication.doseFormulas.flatMap((formula) => formula.versions)];
+  const evidenceGroups = [mechanism, pharmacodynamics, pharmacokinetics, medication.adverseEffects, medication.contraindications, medication.cautions, medication.interactionsPrimary, medication.interactionsSecondary, medication.monitoringRequirements, medication.pregnancyLactationProfiles, medication.renalGuidance, medication.hepaticGuidance, medication.antimicrobialSpectra, medication.doseFormulas.flatMap((formula) => formula.versions)];
   const identitySources = medication.familyMemberships.flatMap((membership) => membership.source ? [membership.source] : []);
   const clinicalSources = evidenceGroups.flatMap((group) => group.flatMap((row) => typeof row === "object" && row && "source" in row ? [(row as { source: { id: string } }).source] : []));
   const sources = [...identitySources, ...clinicalSources, ...(officialProfile ? [officialProfile.source] : [])];
-  return { mechanism: officialProfile?.mechanism.length ? officialProfile.mechanism : mechanism, pharmacodynamics, pharmacokinetics, adverseEffects: medication.adverseEffects, contraindications: medication.contraindications, cautions: medication.cautions, interactions: medication.interactionsPrimary, monitoring: medication.monitoringRequirements, pregnancyLactation: medication.pregnancyLactationProfiles, renal: medication.renalGuidance, hepatic: medication.hepaticGuidance, spectrum: medication.antimicrobialSpectra, calculators: medication.doseFormulas.filter((formula) => formula.versions.length), officialProfile, sources: [...new Map(sources.map((source) => [source.id, source])).values()], profileCompleteness: officialProfile ? Object.values(officialProfile.sectionCoverage as Record<string, string>).filter((state) => state === "SOURCE_VERIFIED").length : evidenceGroups.filter((group) => group.length > 0).length };
+  
+  const allInteractions = [
+    ...medication.interactionsPrimary,
+    ...medication.interactionsSecondary.map((interaction) => ({
+      ...interaction,
+      interactingSubstance: interaction.primaryGeneric?.genericName ?? interaction.interactingSubstance
+    }))
+  ];
+
+  return { mechanism: officialProfile?.mechanism.length ? officialProfile.mechanism : mechanism, pharmacodynamics, pharmacokinetics, adverseEffects: medication.adverseEffects, contraindications: medication.contraindications, cautions: medication.cautions, interactions: allInteractions, monitoring: medication.monitoringRequirements, pregnancyLactation: medication.pregnancyLactationProfiles, renal: medication.renalGuidance, hepatic: medication.hepaticGuidance, spectrum: medication.antimicrobialSpectra, calculators: medication.doseFormulas.filter((formula) => formula.versions.length), officialProfile, sources: [...new Map(sources.map((source) => [source.id, source])).values()], profileCompleteness: officialProfile ? Object.values(officialProfile.sectionCoverage as Record<string, string>).filter((state) => state === "SOURCE_VERIFIED").length : evidenceGroups.filter((group) => group.length > 0).length };
 }
 
 function pharmacologySectionStatuses(medication: PharmacologyMedication, evidence: ReturnType<typeof pharmacologyEvidence>) {

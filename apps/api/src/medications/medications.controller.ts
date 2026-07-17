@@ -109,6 +109,13 @@ export class MedicationsController {
     return this.medications.pharmacologyAtlas();
   }
 
+  @Get("pharmacology/interactions")
+  @Permissions("medications.read")
+  pharmacologyInteractions(@Query("ids") ids: string | undefined) {
+    const parsedIds = ids ? ids.split(",").filter(Boolean) : [];
+    return this.medications.pharmacologyInteractions(parsedIds);
+  }
+
   @Get("pharmacology/generics/:id")
   @Permissions("medications.read")
   pharmacologyProfile(@Param("id") id: string) {

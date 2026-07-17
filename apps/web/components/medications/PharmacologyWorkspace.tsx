@@ -4,9 +4,11 @@ import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { calculateMedicationFormula, getPharmacologyAtlas, getPharmacologyCoverage, getPharmacologyProfile, searchPharmacology, type ApprovedDoseFormula, type MedicationFormulaResult, type PharmacologyAtlas, type PharmacologyProfile, type PharmacologySearchResult } from "@/lib/medications";
+import { PharmacologyCompare } from "./PharmacologyCompare";
+import { PharmacologyInteractions } from "./PharmacologyInteractions";
 
 type SummaryLevel = "Quick" | "Clinical" | "Full source";
-type BrowseMode = "rooms" | "generics" | "families" | "unlinked" | "recent" | "favorites";
+type BrowseMode = "rooms" | "generics" | "families" | "unlinked" | "recent" | "favorites" | "compare" | "interactions";
 const profileSections = ["Quick overview", "Uses", "Mechanism", "Pharmacodynamics", "Pharmacokinetics", "Renal/hepatic", "Common adverse effects", "Serious warnings", "Interactions", "Pregnancy/lactation", "Monitoring", "Calculators", "Sources"] as const;
 
 export function PharmacologyWorkspace() {
@@ -60,10 +62,21 @@ export function PharmacologyWorkspace() {
       <p className="muted">{status}</p>
     </form>
     {atlas ? <section className="panel pharmacology-coverage" aria-label="Pharmacology content coverage"><div className="section-heading"><div><h2>Content coverage</h2><p className="muted">Official reference content; patient-specific use and dose always require Doctor confirmation.</p></div><span className="badge">{atlas.totals.generics} generics · {atlas.totals.families} families</span></div><p className="muted">Official profiles: {atlas.totals.officialProfiles} · Source verified: {atlas.totals.sourceVerifiedProfiles} · Source conflicts: {atlas.totals.sourceConflictProfiles} · Unlinked: {atlas.totals.unlinkedGenerics} ({atlas.totals.unlinkedRate}%){coverage ? ` · Indications: ${coverage.indications ?? 0} · Pregnancy: ${coverage.pregnancy ?? 0} · Renal: ${coverage.renal ?? 0}` : ""}</p></section> : null}
-    {atlas ? <nav className="pharmacology-directory-tabs" aria-label="Pharmacology directory views">{([['rooms', 'Clinical rooms'], ['generics', 'Browse all generics'], ['families', 'Browse all families'], ['unlinked', 'Unlinked generics'], ['recent', 'Recently reviewed'], ['favorites', 'Favorites']] as Array<[BrowseMode, string]>).map(([mode, label]) => <button className={browseMode === mode ? "active" : ""} type="button" key={mode} onClick={() => { setBrowseMode(mode); setRoomName(""); setFamilyId(""); }}>{label}</button>)}</nav> : null}
+    {atlas ? <nav className="pharmacology-directory-tabs" aria-label="Pharmacology directory views">
+      <button type="button" aria-current={browseMode === "rooms"} onClick={() => { setBrowseMode("rooms"); setQuery(""); }}>Browse rooms</button>
+      <button type="button" aria-current={browseMode === "generics"} onClick={() => { setBrowseMode("generics"); setQuery(""); }}>All generics ({atlas?.totals?.generics ?? "…"})</button>
+      <button type="button" aria-current={browseMode === "families"} onClick={() => { setBrowseMode("families"); setQuery(""); }}>Families ({atlas?.totals?.families ?? "…"})</button>
+      <button type="button" aria-current={browseMode === "compare"} onClick={() => { setBrowseMode("compare"); setQuery(""); }}>Compare</button>
+      <button type="button" aria-current={browseMode === "interactions"} onClick={() => { setBrowseMode("interactions"); setQuery(""); }}>Interactions</button>
+      <div className="flex-spacer" />
+      <button type="button" aria-current={browseMode === "favorites"} onClick={() => { setBrowseMode("favorites"); setQuery(""); }}>Bookmarks</button>
+      <button type="button" aria-current={browseMode === "recent"} onClick={() => { setBrowseMode("recent"); setQuery(""); }}>Updates</button>
+    </nav> : null}
     {atlas ? <section className="pharmacology-browse-lenses" aria-label="Alternative browse views"><strong>Browse by:</strong>{atlas.browseViews.map((view) => <button className="badge clickable-chip" key={view} type="button" onClick={() => { setQuery(view); setRoomName(""); setFamilyId(""); }}>{view}</button>)}</section> : null}
     {!query.trim() && atlas && browseMode === "rooms" ? <AtlasBrowser atlas={atlas} roomName={roomName} familyId={familyId} onRoom={(name) => { setRoomName(name); setFamilyId(""); }} onFamily={setFamilyId} onGeneric={(generic) => void openProfile(generic)} /> : null}
-    {!query.trim() && atlas && browseMode !== "rooms" ? <AtlasDirectory atlas={atlas} mode={browseMode} favoriteIds={favoriteIds} onGeneric={(generic) => void openProfile(generic)} /> : null}
+    {!query.trim() && atlas && browseMode !== "rooms" && browseMode !== "compare" && browseMode !== "interactions" ? <AtlasDirectory atlas={atlas} mode={browseMode} favoriteIds={favoriteIds} onGeneric={(generic) => void openProfile(generic)} /> : null}
+    {browseMode === "compare" && atlas ? <PharmacologyCompare atlas={atlas} /> : null}
+    {browseMode === "interactions" && atlas ? <PharmacologyInteractions atlas={atlas} /> : null}
     {results.length ? <p className="warning-text">Local susceptibility/culture review remains required. Spectrum terms never imply guaranteed susceptibility.</p> : null}
     {query.trim() ? <div className="pharmacology-result-list">{Object.entries(groupedResults).map(([family, generics]) => <section className="pharmacology-family-group" key={family}><h2>{family}</h2>{generics.map((result) => <article className="panel pharmacology-quick-card" key={result.id}>
       <div><h2>{result.genericName}</h2><p className="muted">{result.family || "Family not linked"} · {result.pharmacologicClass || "Class being completed"}</p></div>
@@ -99,11 +112,45 @@ function AtlasBrowser({ atlas, roomName, familyId, onRoom, onFamily, onGeneric }
 }
 
 function ProfileSectionContent({ profile, section, level }: { profile: PharmacologyProfile; section: typeof profileSections[number]; level: SummaryLevel }) {
+  if (section === "Pregnancy/lactation") return <PregnancySectionContent profile={profile} />;
   if (section === "Calculators") return <MedicationCalculators formulas={profile.calculators ?? []} />;
   const limit = level === "Quick" ? 6 : level === "Clinical" ? 12 : 50;
   const items = sectionItems(profile, section).slice(0, limit);
   if (!items.length) return <p className="muted">No source-reviewed content is available for this section. Profile sections are being completed.</p>;
   return <div className="profile-section-content"><ul>{items.map((item, index) => <li key={`${section}-${index}`}>{item}</li>)}</ul>{profile.spectrum?.length && section === "Quick overview" ? <p className="warning-text">Local susceptibility/culture review remains required.</p> : null}</div>;
+}
+
+function PregnancySectionContent({ profile }: { profile: PharmacologyProfile }) {
+  if (profile.officialProfile && (profile.officialProfile.pregnancy.length || profile.officialProfile.lactation.length)) {
+    return <div className="profile-section-content">
+      {profile.officialProfile.pregnancy.length ? <><h3>Pregnancy</h3><ul>{profile.officialProfile.pregnancy.map((item, i) => <li key={`p-${i}`}>{item}</li>)}</ul></> : null}
+      {profile.officialProfile.lactation.length ? <><h3>Lactation</h3><ul>{profile.officialProfile.lactation.map((item, i) => <li key={`l-${i}`}>{item}</li>)}</ul></> : null}
+    </div>;
+  }
+  
+  if (profile.pregnancyLactation?.length) {
+    return <div className="profile-section-content">
+      {profile.pregnancyLactation.map((record: any, idx: number) => (
+        <div key={idx} className="pregnancy-record panel">
+          {record.pregnancyNarrative && <><h3>Pregnancy</h3><p>{record.pregnancyNarrative}</p></>}
+          {record.trimesterJson && typeof record.trimesterJson === "object" && (
+            <dl className="trimester-data">
+              {Object.entries(record.trimesterJson).map(([tri, data]) => <div key={tri}><dt>{tri}</dt><dd>{String(data)}</dd></div>)}
+            </dl>
+          )}
+          {record.lactationNarrative && <><h3>Lactation</h3><p>{record.lactationNarrative}</p></>}
+          {record.reproductiveJson && typeof record.reproductiveJson === "object" && (
+            <dl className="fertility-data">
+              {Object.entries(record.reproductiveJson).map(([key, data]) => <div key={key}><dt>{key}</dt><dd>{String(data)}</dd></div>)}
+            </dl>
+          )}
+          {record.reviewStatus && <p className="muted">Status: {record.reviewStatus}</p>}
+        </div>
+      ))}
+    </div>;
+  }
+  
+  return <p className="muted">No source-reviewed content is available for this section.</p>;
 }
 
 function MedicationCalculators({ formulas }: { formulas: ApprovedDoseFormula[] }) {
@@ -166,9 +213,7 @@ function sectionItems(profile: PharmacologyProfile, section: typeof profileSecti
   if (section === "Common adverse effects") return profile.officialProfile?.adverseEffects?.length ? profile.officialProfile.adverseEffects : (profile.adverseEffects ?? []).filter((item) => String(item.severity ?? "").toLowerCase() !== "serious").map(namedRecord);
   if (section === "Serious warnings") return profile.officialProfile ? [...profile.officialProfile.warnings, ...profile.officialProfile.contraindications] : [...(profile.adverseEffects ?? []).filter((item) => String(item.severity ?? "").toLowerCase() === "serious").map(namedRecord), ...(profile.contraindications ?? []).map(namedRecord), ...(profile.cautions ?? []).map(namedRecord)];
   if (section === "Interactions") return profile.officialProfile?.interactions?.length ? profile.officialProfile.interactions : flattenRecords(profile.interactions);
-  if (section === "Pregnancy/lactation") return profile.officialProfile ? [...profile.officialProfile.pregnancy, ...profile.officialProfile.lactation] : flattenRecords(profile.pregnancyLactation);
   if (section === "Monitoring") return profile.officialProfile?.monitoring?.length ? profile.officialProfile.monitoring : flattenRecords(profile.monitoring);
-  if (section === "Calculators") return [];
   if (section === "Sources") return flattenRecords(profile.sources);
   return [];
 }
