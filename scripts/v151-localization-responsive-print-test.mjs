@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const read = (path) => readFile(path, "utf8");
-const [en, ar, i18n, shell, css, dermatology, intake, services, investigations, audit, ultrasoundEditor, prescriptionPrint, investigationPrint, patientPrint] = await Promise.all([
-  read("apps/web/i18n/en.ts"), read("apps/web/i18n/ar.ts"), read("apps/web/i18n/useI18n.tsx"), read("apps/web/app/mvp-page.tsx"), read("apps/web/app/globals.css"), read("apps/web/components/medications/DermatologyWorkspace.tsx"), read("apps/web/app/external-intake/page.tsx"), read("apps/web/app/admin/services/page.tsx"), read("apps/web/app/admin/investigations/page.tsx"), read("apps/web/app/admin/audit/page.tsx"), read("apps/web/app/patients/[id]/ultrasounds/[scanId]/page.tsx"), read("apps/web/app/prescriptions/[id]/print/page.tsx"), read("apps/web/app/clinical-requests/[id]/print/page.tsx"), read("apps/web/app/patients/[id]/print/packet/page.tsx")
+const [en, ar, i18n, shell, css, dermatology, intake, services, investigations, audit, ultrasoundEditor, prescriptionPrint, investigationPrint, patientPrint, patientDirectory, ultrasoundCenter] = await Promise.all([
+  read("apps/web/i18n/en.ts"), read("apps/web/i18n/ar.ts"), read("apps/web/i18n/useI18n.tsx"), read("apps/web/app/mvp-page.tsx"), read("apps/web/app/globals.css"), read("apps/web/components/medications/DermatologyWorkspace.tsx"), read("apps/web/app/external-intake/page.tsx"), read("apps/web/app/admin/services/page.tsx"), read("apps/web/app/admin/investigations/page.tsx"), read("apps/web/app/admin/audit/page.tsx"), read("apps/web/app/patients/[id]/ultrasounds/[scanId]/page.tsx"), read("apps/web/app/prescriptions/[id]/print/page.tsx"), read("apps/web/app/clinical-requests/[id]/print/page.tsx"), read("apps/web/app/patients/[id]/print/packet/page.tsx"), read("apps/web/app/patients/page.tsx"), read("apps/web/app/ob-ultrasounds/page.tsx")
 ]);
 
 const keys = (source) => [...source.matchAll(/^\s*,?([A-Za-z][A-Za-z0-9]*):/gm)].map((match) => match[1]).sort();
@@ -15,6 +15,7 @@ assert.doesNotMatch(`${en}\n${ar}\n${dermatology}\n${intake}`, /\?\?\?\?/);
 assert.match(dermatology, /useI18n/); assert.match(dermatology, /dir=\{direction\}/); assert.match(dermatology, /language === "ar"/);
 assert.match(intake, /t\("importHistory"\)/); assert.match(intake, /t\("dataHygiene"\)/);
 for (const route of [services, investigations, audit]) assert.match(route, /useI18n/);
+for (const route of [patientDirectory, ultrasoundCenter]) { assert.match(route, /useI18n/); assert.doesNotMatch(route, />All Patients<|>Patient directory<|>Ultrasound work queues</); }
 for (const drawer of [services, investigations]) { assert.match(drawer, /event\.key === "Escape"/); assert.match(drawer, /document\.body\.style\.overflow = "hidden"/); assert.match(drawer, /aria-modal="true"/); }
 for (const viewport of ["max-width: 720px", "safe-area-inset-bottom", "100dvh", "overflow-x: clip"]) assert.match(css, new RegExp(viewport.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
 assert.match(shell, /closeOnEscape/); assert.match(shell, /document\.body\.style\.overflow = "hidden"/); assert.match(shell, /isReceptionistOnly/);
