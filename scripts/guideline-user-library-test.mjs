@@ -49,21 +49,21 @@ try {
       specialty: "women_health",
       topic: "integration_test",
       organization: "Synthetic CI",
-      guidelineStatus: "ACTIVE",
+      guidelineStatus: "NEEDS_REVIEW",
       documentType: "test_text",
       licenseStatus: "CHECK_REQUIRED",
       accessLevel: "OWNER_DOCTOR",
-      reviewStatus: "reviewed_for_ci_only",
+      reviewStatus: "pending_governance_review",
       citationLabel: `Synthetic CI Guideline ${suffix}`,
       chunks: {
         create: {
           chunkIndex: 0,
-          text: "Synthetic guideline content used only to verify favorites, recent access, archive preservation, restore, and audit behavior.",
-          normalizedText: "synthetic guideline content used only to verify favorites recent access archive preservation restore and audit behavior",
+          text: "Synthetic guideline content used only to verify review, favorites, recent access, archive preservation, restore, and audit behavior.",
+          normalizedText: "synthetic guideline content used only to verify review favorites recent access archive preservation restore and audit behavior",
           citationLabel: `Synthetic CI Guideline ${suffix} · p1`,
           pageStart: 1,
           pageEnd: 1,
-          reviewStatus: "reviewed_for_ci_only"
+          reviewStatus: "pending_governance_review"
         }
       },
       sections: {
@@ -74,11 +74,46 @@ try {
           pageEnd: 1,
           orderIndex: 0,
           text: "Synthetic verification section.",
-          reviewStatus: "reviewed_for_ci_only"
+          reviewStatus: "pending_governance_review"
         }
       }
     }
   });
+
+  const incompleteShell = await prisma.guidelineDocument.create({
+    data: {
+      sourceId: source.id,
+      title: `Synthetic CI Incomplete Shell ${suffix}`,
+      specialty: "women_health",
+      topic: "integration_test",
+      organization: "Synthetic CI",
+      guidelineStatus: "NEEDS_REVIEW",
+      documentType: "official_metadata_link",
+      licenseStatus: "CHECK_REQUIRED",
+      accessLevel: "OWNER_DOCTOR",
+      reviewStatus: "pending_governance_review",
+      citationLabel: `Synthetic CI Incomplete Shell ${suffix}`
+    }
+  });
+
+  const incompleteApproval = await api(`/guidelines/documents/${incompleteShell.id}/review`, "POST", headers, {
+    decision: "APPROVED",
+    reason: "Synthetic attempt to approve an incomplete shell."
+  });
+  if (incompleteApproval.status !== 400) {
+    throw new Error(`Incomplete shell approval should return 400 but returned ${incompleteApproval.status}.`);
+  }
+
+  const reviewResponse = await api(`/guidelines/documents/${document.id}/review`, "POST", headers, {
+    decision: "APPROVED",
+    reason: "Synthetic CI clinical governance approval."
+  });
+  assertOk(reviewResponse, "Clinical guideline review");
+
+  const reviewed = await prisma.guidelineDocument.findUnique({ where: { id: document.id } });
+  if (reviewed?.guidelineStatus !== "ACTIVE" || reviewed.reviewStatus !== "clinically_reviewed") {
+    throw new Error("Reviewed guideline did not become an active clinically reviewed document.");
+  }
 
   const favoriteResponse = await api(`/guidelines/user-library/documents/${document.id}/favorite`, "POST", headers);
   assertOk(favoriteResponse, "Favorite creation");
@@ -92,6 +127,14 @@ try {
   if (!state.favoriteIds?.includes(document.id)) throw new Error("Guideline favorite did not persist.");
   if (!state.favorites?.some((item) => item.id === document.id)) throw new Error("Favorite document was missing from the user library.");
   if (!state.recent?.some((item) => item.id === document.id)) throw new Error("Recently opened document was missing from the user library.");
+
+  const legacyArchiveResponse = await api(`/guidelines/documents/${document.id}/archive`, "POST", headers, {
+    decision: "ARCHIVED",
+    reason: "Legacy route bypass attempt."
+  });
+  if (legacyArchiveResponse.status !== 400) {
+    throw new Error(`Legacy one-click archive route should return 400 but returned ${legacyArchiveResponse.status}.`);
+  }
 
   const archiveResponse = await api(`/guidelines/user-library/documents/${document.id}/archive`, "POST", headers, {
     reason: "Synthetic CI archive preservation verification.",
@@ -132,6 +175,7 @@ try {
   });
   const actions = new Set(auditEvents.map((entry) => entry.action));
   for (const required of [
+    "guideline.governance_reviewed",
     "guideline.favorite_added",
     "guideline.document_opened",
     "guideline.document_archived_safe",
@@ -140,11 +184,14 @@ try {
     if (!actions.has(required)) throw new Error(`Missing audit event: ${required}`);
   }
 
+  console.log("PASS incomplete guideline shells cannot be activated");
+  console.log("PASS clinical governance review activated a usable guideline");
   console.log("PASS guideline Favorite persisted in the database");
   console.log("PASS Recently Opened was derived from audited access");
-  console.log("PASS archive preserved file-index relationships and removed Favorites");
+  console.log("PASS legacy one-click archive route was blocked");
+  console.log("PASS protected archive preserved indexed source relationships and removed Favorites");
   console.log("PASS restore returned the guideline to Needs Review");
-  console.log("PASS guideline library actions were audited");
+  console.log("PASS guideline governance and library actions were audited");
 } finally {
   await prisma.$disconnect();
 }
