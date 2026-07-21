@@ -1,8 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
+import { GuidelineStatus, Prisma } from "@prisma/client";
 import type { AuthUser } from "../auth/auth.types";
 import { AuditService } from "../audit/audit.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { ReviewGuidelineDto } from "./dto/review-guideline.dto";
+
+const governanceDocumentInclude = {
+  source: true,
+  _count: { select: { chunks: true, sections: true } }
+} satisfies Prisma.GuidelineDocumentInclude;
+
+type GovernanceDocument = Prisma.GuidelineDocumentGetPayload<{
+  include: typeof governanceDocumentInclude;
+}>;
 
 @Injectable()
 export class GuidelineGovernanceService {
@@ -16,13 +26,10 @@ export class GuidelineGovernanceService {
 
     const existing = await this.prisma.guidelineDocument.findUnique({
       where: { id: documentId },
-      include: {
-        source: true,
-        _count: { select: { chunks: true, sections: true } }
-      }
+      include: governanceDocumentInclude
     });
     if (!existing) throw new NotFoundException("Guideline document not found.");
-    if (existing.guidelineStatus === "ARCHIVED" || existing.archivedAt) {
+    if (existing.guidelineStatus === GuidelineStatus.ARCHIVED || existing.archivedAt) {
       throw new BadRequestException("Restore the archived guideline to Needs Review before making a review decision.");
     }
 
@@ -46,8 +53,11 @@ export class GuidelineGovernanceService {
       throw new BadRequestException("Use the protected archive workflow with reason and exact-title confirmation.");
     }
 
-    const nextStatus = dto.decision === "APPROVED" ? "ACTIVE" : "REJECTED";
-    const document = await this.prisma.$transaction(async (tx) => {
+    const nextStatus = dto.decision === "APPROVED"
+      ? GuidelineStatus.ACTIVE
+      : GuidelineStatus.NEEDS_REVIEW;
+
+    const document: GovernanceDocument = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.guidelineDocument.update({
         where: { id: documentId },
         data: {
@@ -56,10 +66,7 @@ export class GuidelineGovernanceService {
           reviewedAt: new Date(),
           reviewStatus: dto.decision === "APPROVED" ? "clinically_reviewed" : "rejected"
         },
-        include: {
-          source: true,
-          _count: { select: { chunks: true, sections: true } }
-        }
+        include: governanceDocumentInclude
       });
 
       await tx.guidelineReviewDecision.create({
