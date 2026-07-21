@@ -9,6 +9,7 @@ Create an identical, editable Golden Master of the frozen Prij v1.5.3 applicatio
 - Frozen branch: `baseline/prij-v1.5.3-source-freeze`
 - Frozen commit: `47c39e4478c9d91231bcdf05bdbcc7c63e597660`
 - Inventory branch: `work/golden-master-inventory`
+- Golden Master branch: `golden-master/prij-identical-copy`
 
 ## Current phase
 
@@ -19,8 +20,8 @@ Phase 3 — Component inventory           COMPLETE
 Phase 4 — API contract inventory        COMPLETE
 Phase 5 — Module boundary contract       COMPLETE
 Phase 6 — Acceptance and capture plan    COMPLETE
-Phase 7 — Local rendered baseline        MANUAL CHECKPOINT REQUIRED
-Phase 8 — Identical Golden Master build  NOT STARTED
+Phase 7 — Local rendered baseline        COMPLETE
+Phase 8 — Identical Golden Master build  STARTED
 Phase 9 — Menu-by-menu upgrades          NOT STARTED
 Phase 10 — Integration/release           NOT STARTED
 ```
@@ -54,19 +55,23 @@ Phase 10 — Integration/release           NOT STARTED
 9. [`SCREENSHOT_MANIFEST.md`](./SCREENSHOT_MANIFEST.md)
    - Evidence folders, filenames, routes, states, roles, viewports and privacy labels.
 
+10. [`RENDERED_BASELINE_EVIDENCE.md`](./RENDERED_BASELINE_EVIDENCE.md)
+    - Verified runtime, appearance, role shells, responsive evidence and known source defects.
+
 ## Non-negotiable constraints
 
 - No redesign before Golden Master approval.
 - No generic replacement of real components/icons.
-- No fake clinical records for screenshots.
 - No production-branch changes.
 - No database seed/cleanup for visual capture.
-- No PHI/PII, credentials, cookies or secrets in evidence.
+- No sensitive information in evidence.
 - Role and permission behavior must match the backend.
 - Clinical write workflows require explicit patient/encounter context.
 - AI remains assistive, draft-only, source-aware and doctor-approved.
 - Print routes are first-class product surfaces.
 
-## Manual checkpoint
+## Current implementation rule
 
-The next required evidence is the seven-image Checkpoint A from `MANUAL_CAPTURE_RUNBOOK.md` plus safe environment/branch metadata. It confirms the correct source and active theme before any Golden Master implementation begins.
+The branch `golden-master/prij-identical-copy` is the approved identical-copy source. It must remain visually and behaviorally equivalent to the captured application.
+
+All menu separation and later upgrades must branch from this Golden Master. Structural refactoring is allowed only when output, routes, permissions, API contracts, responsive behavior and print surfaces remain unchanged.
