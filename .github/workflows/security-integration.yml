@@ -37,6 +37,7 @@ jobs:
       API_PORT: "3001"
       API_URL: http://localhost:3001
       NODE_ENV: test
+      DEMO_ADMIN_LOGIN: eyad
       DEMO_TEST_PASSWORD: LocalDev123!
 
     steps:
@@ -58,7 +59,7 @@ jobs:
       - name: Apply database migrations
         run: npm run prisma:migrate:deploy
 
-      - name: Seed demo data
+      - name: Seed reference and synthetic CI data
         run: npm run prisma:seed
 
       - name: Typecheck
@@ -83,8 +84,14 @@ jobs:
           cat api.log
           exit 1
 
-      - name: Run security integration tests
+      - name: Run core security integration tests
         run: npm run test:security:ci
 
-      - name: Run expanded route security tests
-        run: npm run test:security:expanded
+      - name: Run route authorization tests
+        run: npm run test:routes:auth
+
+      - name: Run referenced-record scope tests
+        run: npm run test:scope:records
+
+      - name: Run audit assertion tests
+        run: npm run test:audit:assertions
