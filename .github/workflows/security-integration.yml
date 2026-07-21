@@ -89,4 +89,8 @@ jobs:
         run: npm run test:security:ci
 
       - name: Run expanded route security tests
-        run: npm run test:security:expanded
+        run: |
+          npm run test:routes:auth
+          npm run test:scope:records
+          npm run test:audit:assertions
+          npm run test:ai:regression
