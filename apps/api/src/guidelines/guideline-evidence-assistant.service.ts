@@ -147,7 +147,7 @@ function meaningfulQuestionTerms(question: string) {
   ]);
   const terms = normalize(question)
     .split(" ")
-    .filter((term) => term.length >= 3 && !stopWords.has(term));
+    .filter((term) => term.length >= 3 && !stopWords.has(term) && !/^\d+$/.test(term));
   return [...new Set(terms)].slice(0, 12);
 }
 
