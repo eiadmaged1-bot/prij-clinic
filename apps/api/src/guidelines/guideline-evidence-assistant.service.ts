@@ -17,9 +17,13 @@ export class GuidelineEvidenceAssistantService {
     }
 
     const search = await this.knowledgeSearch.search({ q: question, limit: "6" }, user);
+    const questionTerms = meaningfulQuestionTerms(question);
     const citedEvidence = search.guidelineResults
-      .filter((result) => result.pageStart !== null || result.citedBullets.length > 0)
-      .slice(0, 5);
+      .map((result) => ({ result, relevance: evidenceRelevance(result, questionTerms) }))
+      .filter(({ result, relevance }) => relevance > 0 && (result.pageStart !== null || result.citedBullets.length > 0))
+      .sort((a, b) => b.relevance - a.relevance)
+      .slice(0, 5)
+      .map(({ result }) => result);
 
     const citations = citedEvidence.map((result) => ({
       documentId: result.documentId,
@@ -48,6 +52,9 @@ export class GuidelineEvidenceAssistantService {
     }).filter((entry) => entry.statement).slice(0, 6);
 
     const noSupportingSource = statements.length === 0;
+    const relatedProtocols = noSupportingSource
+      ? []
+      : search.protocolResults.slice(0, 5);
     const response = {
       question,
       answer: noSupportingSource
@@ -55,7 +62,7 @@ export class GuidelineEvidenceAssistantService {
         : "The approved local library contains the cited evidence statements below. Review each source in context before applying it to a patient.",
       statements,
       citations,
-      relatedProtocols: search.protocolResults.slice(0, 5),
+      relatedProtocols,
       noSupportingSource,
       doctorReviewRequired: true,
       externalAiAccess: false,
@@ -71,6 +78,7 @@ export class GuidelineEvidenceAssistantService {
         citationCount: citations.length,
         statementCount: statements.length,
         relatedProtocolCount: response.relatedProtocols.length,
+        meaningfulQuestionTermCount: questionTerms.length,
         noSupportingSource,
         externalAiAccess: false,
         generatedClinicalPlan: false
@@ -79,6 +87,77 @@ export class GuidelineEvidenceAssistantService {
 
     return response;
   }
+}
+
+function evidenceRelevance(
+  result: {
+    title: string;
+    sectionHeading: string;
+    snippet: string;
+    citedBullets: string[];
+    clinicalSubtopic: string;
+  },
+  terms: string[]
+) {
+  const title = normalize(result.title);
+  const section = normalize(`${result.sectionHeading} ${result.clinicalSubtopic}`);
+  const evidence = normalize(`${result.snippet} ${result.citedBullets.join(" ")}`);
+  const matchedTerms = new Set<string>();
+  let score = 0;
+
+  for (const term of terms) {
+    if (title.includes(term)) {
+      score += 5;
+      matchedTerms.add(term);
+    }
+    if (section.includes(term)) {
+      score += 3;
+      matchedTerms.add(term);
+    }
+    if (evidence.includes(term)) {
+      score += 2;
+      matchedTerms.add(term);
+    }
+  }
+
+  if (terms.length >= 2 && matchedTerms.size < 2 && score < 5) return 0;
+  return score;
+}
+
+function meaningfulQuestionTerms(question: string) {
+  const stopWords = new Set([
+    "about",
+    "approved",
+    "does",
+    "evidence",
+    "from",
+    "guideline",
+    "guidelines",
+    "library",
+    "protocol",
+    "query",
+    "show",
+    "source",
+    "sources",
+    "supporting",
+    "that",
+    "this",
+    "what",
+    "with"
+  ]);
+  const terms = normalize(question)
+    .split(" ")
+    .filter((term) => term.length >= 3 && !stopWords.has(term));
+  return [...new Set(terms)].slice(0, 12);
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+    .trim();
 }
 
 function cleanStatement(value: string) {
