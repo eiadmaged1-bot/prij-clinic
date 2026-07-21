@@ -1,0 +1,72 @@
+name: Investigation Final Verified Patch
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.head_ref == 'work/doctor-investigation-station-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/doctor-investigation-station-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply exact fixes and encounter wiring
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const pagePath = 'apps/web/app/investigations/page.tsx';
+          let page = fs.readFileSync(pagePath, 'utf8');
+          page = page.replace('const [status, setStatus] = useState(t.ready);', 'const [status, setStatus] = useState<string>(t.ready);');
+          page = page.replace('function authHeaders() {', 'function authHeaders(): Record<string, string> {');
+          page = page.replace('function csrfHeaders() {', 'function csrfHeaders(): Record<string, string> {');
+          if (!page.includes('useState<string>(t.ready)')) throw new Error('Status state fix missing');
+          if (!page.includes('function authHeaders(): Record<string, string>')) throw new Error('Auth header fix missing');
+          fs.writeFileSync(pagePath, page);
+
+          const visitPath = 'apps/web/components/clinic/ActiveVisitWorkspace.tsx';
+          let visit = fs.readFileSync(visitPath, 'utf8');
+          const importNeedle = 'import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";';
+          if (!visit.includes('EncounterInvestigationOrderBuilder')) {
+            if (!visit.includes(importNeedle)) throw new Error('Visit import anchor missing');
+            visit = visit.replace(importNeedle, `${importNeedle}\nimport { EncounterInvestigationOrderBuilder } from "@/components/investigations/EncounterInvestigationOrderBuilder";`);
+          }
+          visit = visit.replace(
+            '{activeModule === "investigations" ? <InvestigationsModule patientId={patientId} visitId={visitId} /> : null}',
+            '{activeModule === "investigations" ? <EncounterInvestigationOrderBuilder patientId={patientId} encounterId={visitId} patientName={String(patient?.name ?? "Patient")} onSaved={() => void loadVisit()} /> : null}'
+          );
+          visit = visit.replace(/function InvestigationsModule\([\s\S]*?\n}\n\nfunction UltrasoundModule/, 'function UltrasoundModule');
+          if (!visit.includes('<EncounterInvestigationOrderBuilder')) throw new Error('Embedded builder render missing');
+          if (visit.includes('Open connected investigation ordering')) throw new Error('Legacy handoff still present');
+          fs.writeFileSync(visitPath, visit);
+          NODE
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit verified patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/investigation-final-patch.yml .github/workflows/investigation-wire-encounter.yml
+          git add apps/web/app/investigations/page.tsx apps/web/components/clinic/ActiveVisitWorkspace.tsx
+          git commit -m "feat(investigations): finalize direct and embedded ordering workflow"
+          git push origin HEAD:work/doctor-investigation-station-v1
