@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PatientPicker, patientLabel, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
+import { patientLabel, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
@@ -213,7 +213,7 @@ export default function InvestigationsPage() {
 
   useEffect(() => setWarningsConfirmed(false), [selected]);
 
-  const catalogue = workspace.investigationCatalog ?? [];
+  const catalogue = useMemo(() => workspace.investigationCatalog ?? [], [workspace.investigationCatalog]);
   const categoryTree = useMemo(() => buildCategoryTree(catalogue), [catalogue]);
   const myLists = useMemo(() => (workspace.favoriteSets ?? []).filter((set) => set.editable), [workspace.favoriteSets]);
   const sharedTemplates = useMemo(() => (workspace.favoriteSets ?? []).filter((set) => !set.editable), [workspace.favoriteSets]);
