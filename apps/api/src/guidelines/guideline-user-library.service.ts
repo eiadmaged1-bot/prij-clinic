@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { GuidelineAccessLevel, Prisma } from "@prisma/client";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -234,12 +234,16 @@ export class GuidelineUserLibraryService {
     return document;
   }
 
-  private accessWhere(user: AuthUser) {
+  private accessWhere(user: AuthUser): Prisma.GuidelineDocumentWhereInput {
     if (user.isSystemOwner || user.roles.includes("Owner")) return {};
     if (user.roles.includes("Doctor")) {
-      return { accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] as const } };
+      return {
+        accessLevel: {
+          in: [GuidelineAccessLevel.OWNER_DOCTOR, GuidelineAccessLevel.CLINICAL_TEAM]
+        }
+      };
     }
-    return { accessLevel: "CLINICAL_TEAM" as const };
+    return { accessLevel: GuidelineAccessLevel.CLINICAL_TEAM };
   }
 
   private assertDoctorOrOwner(user: AuthUser) {
