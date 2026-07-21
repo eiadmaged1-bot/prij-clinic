@@ -19,6 +19,7 @@ export class GuidelineKnowledgeSearchService {
       throw new BadRequestException("Enter at least two characters to search guidelines and protocols.");
     }
     const limit = Math.min(Math.max(Number(input.limit) || 10, 1), 20);
+    const protocolTerms = meaningfulTerms(query);
 
     const [guidelineSearch, protocols] = await Promise.all([
       this.guidelines.search({ q: query, limit: String(limit) }, user, "SEARCH_ONLY"),
@@ -33,19 +34,19 @@ export class GuidelineKnowledgeSearchService {
             },
             { implementationStatus: { not: "retired" } },
             {
-              OR: [
-                { title: { contains: query, mode: "insensitive" } },
-                { condition: { contains: query, mode: "insensitive" } },
-                { specialtyGroup: { contains: query, mode: "insensitive" } },
-                { clinicalArea: { contains: query, mode: "insensitive" } },
-                { sourceName: { contains: query, mode: "insensitive" } },
-                { sourceIdentifier: { contains: query, mode: "insensitive" } }
-              ]
+              OR: protocolTerms.flatMap((term) => [
+                { title: { contains: term, mode: "insensitive" as const } },
+                { condition: { contains: term, mode: "insensitive" as const } },
+                { specialtyGroup: { contains: term, mode: "insensitive" as const } },
+                { clinicalArea: { contains: term, mode: "insensitive" as const } },
+                { sourceName: { contains: term, mode: "insensitive" as const } },
+                { sourceIdentifier: { contains: term, mode: "insensitive" as const } }
+              ])
             }
           ]
         },
         orderBy: [{ riskLevel: "desc" }, { title: "asc" }],
-        take: limit,
+        take: Math.min(limit * 3, 50),
         select: {
           id: true,
           code: true,
@@ -67,7 +68,17 @@ export class GuidelineKnowledgeSearchService {
       })
     ]);
 
-    const sourceTerms = unique(protocols.flatMap((protocol) => [
+    const rankedProtocols = protocols
+      .map((protocol) => ({
+        protocol,
+        score: rankProtocol(protocol, protocolTerms)
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score || a.protocol.title.localeCompare(b.protocol.title))
+      .slice(0, limit)
+      .map((entry) => entry.protocol);
+
+    const sourceTerms = unique(rankedProtocols.flatMap((protocol) => [
       protocol.sourceIdentifier,
       protocol.sourceName,
       protocol.sourceVersion
@@ -100,7 +111,7 @@ export class GuidelineKnowledgeSearchService {
         })
       : [];
 
-    const protocolResults = protocols.map((protocol) => {
+    const protocolResults = rankedProtocols.map((protocol) => {
       const linkedDocument = bestLinkedDocument(protocol, linkedDocuments);
       return {
         ...protocol,
@@ -156,6 +167,45 @@ function documentAccessWhere(user: AuthUser): Prisma.GuidelineDocumentWhereInput
     };
   }
   return { accessLevel: GuidelineAccessLevel.CLINICAL_TEAM };
+}
+
+function rankProtocol(
+  protocol: {
+    title: string;
+    condition: string;
+    specialtyGroup: string;
+    clinicalArea: string | null;
+    sourceName: string;
+    sourceIdentifier: string | null;
+    aliases: unknown;
+  },
+  terms: string[]
+) {
+  const title = normalize(protocol.title);
+  const condition = normalize(protocol.condition);
+  const aliases = normalize(normalizeStringArray(protocol.aliases).join(" "));
+  const other = normalize([
+    protocol.specialtyGroup,
+    protocol.clinicalArea,
+    protocol.sourceName,
+    protocol.sourceIdentifier
+  ].filter(Boolean).join(" "));
+
+  return terms.reduce((score, term) => {
+    if (title.includes(term)) score += 8;
+    if (condition.includes(term)) score += 6;
+    if (aliases.includes(term)) score += 4;
+    if (other.includes(term)) score += 2;
+    return score;
+  }, 0);
+}
+
+function meaningfulTerms(query: string) {
+  const stopWords = new Set(["what", "does", "from", "with", "about", "that", "this", "have", "support", "show", "guideline", "protocol", "library", "approved", "evidence"]);
+  const terms = normalize(query)
+    .split(" ")
+    .filter((term) => term.length >= 3 && !stopWords.has(term));
+  return unique(terms.length ? terms : [normalize(query)]).slice(0, 8);
 }
 
 function bestLinkedDocument(
