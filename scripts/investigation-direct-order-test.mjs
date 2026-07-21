@@ -4,10 +4,34 @@ const API_URL = (process.env.API_URL || "http://localhost:3001").replace(/\/$/, 
 const LOGIN = process.env.DEMO_ADMIN_LOGIN || process.env.DEMO_TEST_EMAIL || "eyad";
 const PASSWORD = process.env.DEMO_ADMIN_PASSWORD || process.env.DEMO_TEST_PASSWORD;
 const prisma = new PrismaClient();
+const CANONICAL_CATEGORIES = new Set([
+  "Laboratory",
+  "Imaging",
+  "Pathology",
+  "Cardiac and Functional Tests",
+  "Procedures and Referrals",
+  "Other"
+]);
 
 if (!PASSWORD) throw new Error("Synthetic CI password is required.");
 
 try {
+  const activeCatalog = await prisma.investigationCatalogItem.findMany({
+    where: { active: true },
+    select: { id: true, name: true, category: true, subcategory: true }
+  });
+  if (activeCatalog.length < 120) {
+    throw new Error(`Expanded investigation catalogue expected at least 120 active items but found ${activeCatalog.length}.`);
+  }
+  const invalidCategories = [...new Set(activeCatalog.map((item) => item.category).filter((category) => !CANONICAL_CATEGORIES.has(category)))];
+  if (invalidCategories.length) {
+    throw new Error(`Noncanonical active investigation categories remain: ${invalidCategories.join(", ")}`);
+  }
+  const missingSubcategory = activeCatalog.filter((item) => !item.subcategory?.trim());
+  if (missingSubcategory.length) {
+    throw new Error(`${missingSubcategory.length} active investigation records are missing a subcategory.`);
+  }
+
   const loginResponse = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
@@ -98,6 +122,8 @@ try {
   if (audit.metadataJson?.encounterId !== null) throw new Error("Standalone audit did not confirm a null encounter.");
   if (audit.metadataJson?.source !== "investigation_station") throw new Error("Standalone audit did not record the Investigation Station source.");
 
+  console.log(`PASS expanded catalogue contains ${activeCatalog.length} active investigations`);
+  console.log("PASS active investigation records use canonical categories and populated subcategories");
   console.log("PASS standalone Doctor/Owner investigation order created without a fabricated encounter");
   console.log("PASS standalone investigation order persisted with the selected patient and item");
   console.log("PASS standalone investigation order created its audit event");
