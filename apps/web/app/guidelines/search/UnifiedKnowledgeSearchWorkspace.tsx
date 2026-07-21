@@ -45,6 +45,14 @@ type ProtocolResult = {
   citations: Array<{ label: string; page: number | null }>;
   aliases: string[];
   link: string;
+  linkedDocument?: {
+    id: string;
+    title: string;
+    organization: string;
+    versionLabel?: string | null;
+    status: string;
+    link: string;
+  } | null;
 };
 
 type SearchResponse = {
@@ -195,9 +203,10 @@ export function UnifiedKnowledgeSearchWorkspace() {
                 {protocol.citations.length ? (
                   <ul>{protocol.citations.map((citation) => <li key={`${protocol.id}-${citation.label}-${citation.page ?? "none"}`}>{citation.label}{citation.page ? ` · p. ${citation.page}` : ""}</li>)}</ul>
                 ) : <p className="warning-text">No structured page citation is attached to this protocol result. Verify the linked source before use.</p>}
+                {protocol.linkedDocument ? <p className="muted">Linked source: {protocol.linkedDocument.title} · {protocol.linkedDocument.organization}{protocol.linkedDocument.versionLabel ? ` · ${protocol.linkedDocument.versionLabel}` : ""}</p> : null}
                 <div className="form-actions">
                   <Link className="button secondary compact" href={protocol.link}>Open protocol</Link>
-                  {protocol.sourceIdentifier ? <Link className="button secondary compact" href={`/guidelines/${encodeURIComponent(protocol.sourceIdentifier)}`}>Open linked source</Link> : null}
+                  {protocol.linkedDocument ? <Link className="button secondary compact" href={protocol.linkedDocument.link}>Open linked guideline</Link> : null}
                 </div>
               </article>
             ))}
