@@ -54,6 +54,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate investigation catalogue source
+        run: node scripts/investigation-catalog-quality-test.mjs
+
       - name: Generate Prisma client
         run: npm run prisma:generate
 
