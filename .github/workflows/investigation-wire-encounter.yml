@@ -1,0 +1,65 @@
+name: Wire Embedded Investigation Builder
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    if: github.head_ref == 'work/doctor-investigation-station-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/doctor-investigation-station-v1
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wire embedded builder
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/web/components/clinic/ActiveVisitWorkspace.tsx';
+          let source = fs.readFileSync(path, 'utf8');
+
+          const importNeedle = 'import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";';
+          if (!source.includes('EncounterInvestigationOrderBuilder')) {
+            if (!source.includes(importNeedle)) throw new Error('PatientVisitIdentityBar import not found');
+            source = source.replace(importNeedle, `${importNeedle}\nimport { EncounterInvestigationOrderBuilder } from "@/components/investigations/EncounterInvestigationOrderBuilder";`);
+          }
+
+          const renderNeedle = '{activeModule === "investigations" ? <InvestigationsModule patientId={patientId} visitId={visitId} /> : null}';
+          const renderReplacement = '{activeModule === "investigations" ? <EncounterInvestigationOrderBuilder patientId={patientId} encounterId={visitId} patientName={String(patient?.name ?? "Patient")} onSaved={() => void loadVisit()} /> : null}';
+          if (source.includes(renderNeedle)) source = source.replace(renderNeedle, renderReplacement);
+          if (!source.includes(renderReplacement)) throw new Error('Investigation render replacement did not apply');
+
+          source = source.replace(/function InvestigationsModule\([\s\S]*?\n}\n\nfunction UltrasoundModule/, 'function UltrasoundModule');
+          if (source.includes('Open connected investigation ordering')) throw new Error('Legacy encounter handoff still present');
+
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Commit verified wiring
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/investigation-wire-encounter.yml
+          git add apps/web/components/clinic/ActiveVisitWorkspace.tsx
+          git commit -m "feat(investigations): embed ordering directly in active visit"
+          git push origin HEAD:work/doctor-investigation-station-v1
