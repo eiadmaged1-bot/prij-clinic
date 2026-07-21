@@ -325,7 +325,7 @@ async function seedInvestigationCatalog(prisma) {
 
   let sortOrder = 10;
   for (const entry of investigationCatalogItems) {
-    const data = {
+    const sharedData = {
       name: entry.name,
       normalizedName: normalizeName(entry.name),
       category: entry.category,
@@ -338,13 +338,12 @@ async function seedInvestigationCatalog(prisma) {
       modality: entry.modality,
       sampleType: entry.sampleType,
       specialty: "Obstetrics and Gynecology",
-      active: true,
       sortOrder
     };
     await prisma.investigationCatalogItem.upsert({
       where: { code: entry.code },
-      update: data,
-      create: { code: entry.code, ...data }
+      update: sharedData,
+      create: { code: entry.code, ...sharedData, active: true }
     });
     sortOrder += 10;
   }
