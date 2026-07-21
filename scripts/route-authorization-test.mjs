@@ -1,4 +1,5 @@
 import {
+  apiJson,
   apiStatus,
   assertStatus,
   bodyFor,
@@ -6,13 +7,67 @@ import {
   demoUsers,
   login,
   makeRecorder,
-  routeManifest,
+  routeManifest as baseRouteManifest,
   substitutePath,
   waitForApi
 } from "./security-route-manifest.mjs";
 
 const record = makeRecorder("ROUTES");
 const rows = [];
+
+const routeManifest = [
+  ...baseRouteManifest.filter((route) => !(
+    route.method === "POST" &&
+    route.path === "/guidelines/documents/:guidelineDocumentId/archive"
+  )),
+  protectedRoute({
+    method: "GET",
+    path: "/guidelines/user-library/state",
+    category: "guidelines",
+    requiredPermission: "guidelines.read",
+    allowedAs: "doctor",
+    denyAs: "reception",
+    notes: "Persistent Favorites and Recently Opened are clinical-user scoped."
+  }),
+  protectedRoute({
+    method: "GET",
+    path: "/guidelines/knowledge-search?q=doctor%20review",
+    category: "guidelines",
+    requiredPermission: "guidelines.search",
+    allowedAs: "doctor",
+    denyAs: "reception",
+    notes: "Unified local guideline and reviewed-protocol search."
+  }),
+  protectedRoute({
+    method: "POST",
+    path: "/guidelines/evidence-assistant/ask",
+    category: "guidelines",
+    requiredPermission: "guidelines.search",
+    allowedAs: "doctor",
+    denyAs: "reception",
+    fixtureBody: "guidelineAsk",
+    notes: "Deterministic approved-library retrieval only; no autonomous clinical plan."
+  }),
+  protectedRoute({
+    method: "POST",
+    path: "/guidelines/user-library/documents/:guidelineDocumentId/archive",
+    category: "guidelines-review",
+    requiredPermission: "guidelines.delete_or_archive",
+    allowedAs: "owner",
+    denyAs: "reception",
+    fixtureBody: "guidelineProtectedArchive",
+    notes: "Protected archive requires a reason and exact-title confirmation."
+  }),
+  protectedRoute({
+    method: "POST",
+    path: "/guidelines/user-library/documents/:guidelineDocumentId/restore",
+    category: "guidelines-review",
+    requiredPermission: "guidelines.delete_or_archive",
+    allowedAs: "owner",
+    denyAs: "reception",
+    notes: "Restore returns the document to Needs Review."
+  })
+];
 
 async function main() {
   await waitForApi();
@@ -24,11 +79,17 @@ async function main() {
     nurse: await login(demoUsers.nurse)
   };
   const ids = await createRouteFixtures(ownerToken);
+  const guidelineDocument = await apiJson(
+    "GET",
+    `/guidelines/documents/${ids.guidelineDocumentId}`,
+    ownerToken
+  );
+  ids.guidelineDocumentTitle = guidelineDocument.title;
 
   for (const route of routeManifest) {
     const path = substitutePath(route.path, ids);
     const label = `${route.method} ${path}`;
-    const body = route.fixtureBody ? bodyFor(route.fixtureBody, ids) : undefined;
+    const body = route.fixtureBody ? routeBody(route.fixtureBody, ids) : undefined;
     const row = {
       route: route.name,
       permission: route.requiredPermission,
@@ -87,3 +148,35 @@ console.table(rows.map((row) => ({
   Denied: row.denied
 })));
 record.summary();
+
+function routeBody(kind, ids) {
+  if (kind === "guidelineProtectedArchive") {
+    return {
+      reason: "Protected guideline archive route authorization test.",
+      confirmation: ids.guidelineDocumentTitle
+    };
+  }
+  return bodyFor(kind, ids);
+}
+
+function protectedRoute(route) {
+  return {
+    name: `${route.method} ${route.path}`,
+    requiresAuth: true,
+    allowedLoginRole: route.allowedAs,
+    allowedDemoUser: demoUsers[route.allowedAs],
+    deniedLoginRole: route.denyAs,
+    deniedDemoUser: route.denyAs ? demoUsers[route.denyAs] : null,
+    expectedStatusWithOwner: [200, 201],
+    expectedStatusWithoutToken: route.method === "GET" ? [401] : [401, 403],
+    expectedStatusWithDeniedUser: route.denyAs ? [403, 404] : null,
+    scopeExpectation: route.category === "guidelines-review"
+      ? "Doctor/owner clinical governance route; non-clinical roles denied."
+      : "Owner/admin/doctor local evidence route; receptionist/accountant denied.",
+    auditExpectation: route.method === "GET"
+      ? "Sensitive clinical-knowledge read audit expected where implemented."
+      : "Mutation or evidence-assistant action audit expected.",
+    currentLimitation: null,
+    ...route
+  };
+}

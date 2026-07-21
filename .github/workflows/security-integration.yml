@@ -37,6 +37,8 @@ jobs:
       API_PORT: "3001"
       API_URL: http://localhost:3001
       NODE_ENV: test
+      DEMO_ADMIN_LOGIN: eyad
+      DEMO_ADMIN_PASSWORD: LocalDev123!
       DEMO_TEST_PASSWORD: LocalDev123!
 
     steps:
@@ -83,8 +85,33 @@ jobs:
           cat api.log
           exit 1
 
+      - name: Test guideline user library lifecycle
+        run: |
+          set -o pipefail
+          node scripts/guideline-user-library-test.mjs 2>&1 | tee guideline-user-library.log
+
+      - name: Upload guideline workflow diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guideline-user-library-diagnostics
+          path: guideline-user-library.log
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Run security integration tests
         run: npm run test:security:ci
 
       - name: Run expanded route security tests
-        run: npm run test:security:expanded
+        run: |
+          set -o pipefail
+          npm run test:security:expanded 2>&1 | tee expanded-security.log
+
+      - name: Upload expanded security diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: expanded-security-diagnostics
+          path: expanded-security.log
+          if-no-files-found: error
+          retention-days: 7

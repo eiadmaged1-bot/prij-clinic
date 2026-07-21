@@ -1,6 +1,10 @@
-import { Suspense } from "react";
-import { GuidelineCenter } from "./GuidelineCenter";
+import { GuidelinesLibraryWorkspace } from "./GuidelinesLibraryWorkspace";
+import styles from "./GuidelinesLibraryWorkspace.module.css";
 
 export default function GuidelinesPage() {
-  return <Suspense fallback={<div className="panel empty-state">Loading library...</div>}><GuidelineCenter view="home" /></Suspense>;
+  return (
+    <div className={styles.workspace}>
+      <GuidelinesLibraryWorkspace />
+    </div>
+  );
 }

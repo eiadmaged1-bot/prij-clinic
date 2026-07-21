@@ -1,0 +1,100 @@
+.workspace {
+  min-width: 0;
+}
+
+.workspace :global(.tab-row) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.workspace :global(.tab-row .button) {
+  min-height: 42px;
+}
+
+.workspace :global(.knowledge-document-grid) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1rem;
+}
+
+.workspace :global(.knowledge-document-card) {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--pc-border);
+  border-radius: 18px;
+  background: var(--pc-surface);
+  box-shadow: 0 12px 28px rgba(22, 48, 44, 0.07);
+}
+
+.workspace :global(.knowledge-document-card .data-row-header) {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 0.8rem;
+}
+
+.workspace :global(.knowledge-document-card .data-row-header strong) {
+  display: block;
+  line-height: 1.35;
+}
+
+.workspace :global(.knowledge-document-card .data-row-header .muted) {
+  margin: 0.25rem 0 0;
+}
+
+.workspace :global(.knowledge-document-card .profile-grid) {
+  margin: 0;
+}
+
+.workspace :global(.knowledge-document-card .form-actions) {
+  margin-top: auto;
+}
+
+.workspace :global(.knowledge-document-card .button) {
+  flex: 0 1 auto;
+}
+
+@media (max-width: 900px) {
+  .workspace :global(.knowledge-document-grid) {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace :global(.tab-row) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace :global(.tab-row .button) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .workspace :global(.tab-row) {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace :global(.knowledge-document-card .data-row-header) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .workspace :global(.knowledge-document-card .data-row-header > .badge) {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .workspace :global(.knowledge-document-card .form-actions) {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workspace :global(.knowledge-document-card .form-actions .button) {
+    width: 100%;
+  }
+}

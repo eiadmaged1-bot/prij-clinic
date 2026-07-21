@@ -1,0 +1,35 @@
+.workspace :global(.guideline-unified-results) {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.workspace :global(.guideline-unified-results > .panel) {
+  min-width: 0;
+}
+
+.workspace :global(.guideline-unified-results .data-row) {
+  overflow-wrap: anywhere;
+}
+
+.workspace :global(.guideline-unified-results .form-actions) {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 1050px) {
+  .workspace :global(.guideline-unified-results) {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .workspace :global(.guideline-search-sticky) {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workspace :global(.guideline-search-sticky .button) {
+    width: 100%;
+  }
+}
