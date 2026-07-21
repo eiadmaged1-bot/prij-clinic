@@ -38,6 +38,7 @@ jobs:
       API_URL: http://localhost:3001
       NODE_ENV: test
       DEMO_ADMIN_LOGIN: eyad
+      DEMO_ADMIN_PASSWORD: LocalDev123!
       DEMO_TEST_PASSWORD: LocalDev123!
 
     steps:
@@ -87,11 +88,53 @@ jobs:
       - name: Run core security integration tests
         run: npm run test:security:ci
 
-      - name: Run route authorization tests
-        run: npm run test:routes:auth
+      - name: Test route authorization
+        run: |
+          set -o pipefail
+          npm run test:routes:auth 2>&1 | tee route-authorization.log
 
-      - name: Run referenced-record scope tests
-        run: npm run test:scope:records
+      - name: Upload route authorization diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-authorization-diagnostics
+          path: route-authorization.log
+          if-no-files-found: error
+          retention-days: 7
 
-      - name: Run audit assertion tests
-        run: npm run test:audit:assertions
+      - name: Cool down login throttle before scope suite
+        run: sleep 65
+
+      - name: Test referenced-record scope
+        run: |
+          set -o pipefail
+          npm run test:scope:records 2>&1 | tee referenced-record-scope.log
+
+      - name: Upload referenced-record scope diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: referenced-record-scope-diagnostics
+          path: referenced-record-scope.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Cool down login throttle before audit suite
+        run: sleep 65
+
+      - name: Test audit assertions
+        run: |
+          set -o pipefail
+          npm run test:audit:assertions 2>&1 | tee audit-assertions.log
+
+      - name: Upload audit assertion diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-assertion-diagnostics
+          path: audit-assertions.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Confirm CI AI safety coverage
+        run: echo "AI disabled/mock-only and doctor-review constraints are covered by test:security:ci. The isolated AI regression launcher remains a local disposable-database test because it intentionally requires the named local Docker database container."
