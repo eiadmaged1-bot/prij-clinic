@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   BadRequestException,
   Body,
@@ -9,7 +10,7 @@ import {
   Post,
   UseGuards
 } from "@nestjs/common";
-import { IsString, MaxLength, MinLength } from "class-validator";
+import { ArrayMaxSize, IsArray, IsIn, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
 import { AuditService } from "../audit/audit.service";
 import { CurrentUser } from "../auth/current-user.decorator";
 import type { AuthUser } from "../auth/auth.types";
@@ -17,6 +18,15 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PrismaService } from "../prisma/prisma.service";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
+
+const CANONICAL_CATEGORIES = [
+  "Laboratory",
+  "Imaging",
+  "Pathology",
+  "Cardiac and Functional Tests",
+  "Procedures and Referrals",
+  "Other"
+] as const;
 
 class ArchiveInvestigationCatalogItemDto {
   @IsString()
@@ -28,6 +38,33 @@ class ArchiveInvestigationCatalogItemDto {
   @MinLength(4)
   @MaxLength(500)
   reason!: string;
+}
+
+class CreateCustomInvestigationDto {
+  @IsString()
+  @MinLength(2)
+  @MaxLength(180)
+  name!: string;
+
+  @IsString()
+  @IsIn(CANONICAL_CATEGORIES)
+  category!: (typeof CANONICAL_CATEGORIES)[number];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  subcategory?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  modality?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  aliases?: string[];
 }
 
 @Controller("investigations/catalog-management")
@@ -46,6 +83,70 @@ export class InvestigationCatalogArchiveController {
       orderBy: [{ active: "desc" }, { category: "asc" }, { subcategory: "asc" }, { name: "asc" }],
       take: 500
     });
+  }
+
+  @Post("custom")
+  @Permissions("investigation.read")
+  async createCustom(@Body() dto: CreateCustomInvestigationDto, @CurrentUser() user: AuthUser) {
+    this.assertDoctorOrOwner(user);
+
+    const name = dto.name.trim();
+    const normalizedName = normalize(name);
+    const existing = await this.prisma.investigationCatalogItem.findFirst({
+      where: { normalizedName },
+      orderBy: { active: "desc" }
+    });
+
+    if (existing?.active) {
+      return { item: existing, created: false, duplicatePrevented: true };
+    }
+
+    if (existing && !existing.active) {
+      throw new BadRequestException("A matching archived investigation already exists. Restore it instead of creating a duplicate.");
+    }
+
+    const subcategory = dto.subcategory?.trim() || "Custom";
+    const modality = dto.modality?.trim() || null;
+    const aliases = Array.from(new Set((dto.aliases ?? []).map((value) => value.trim()).filter(Boolean)));
+    const code = `CUSTOM-${randomUUID().slice(0, 8).toUpperCase()}`;
+
+    const item = await this.prisma.investigationCatalogItem.create({
+      data: {
+        code,
+        name,
+        normalizedName,
+        category: dto.category,
+        subcategory,
+        clinicalGroup: subcategory,
+        aliasesJson: aliases,
+        keywordsJson: Array.from(new Set([name, code, dto.category, subcategory, ...aliases])),
+        tagsJson: Array.from(new Set([dto.category, subcategory, modality].filter(Boolean))),
+        discipline: dto.category,
+        modality,
+        sampleType: null,
+        specialty: "Obstetrics and Gynecology",
+        active: true,
+        sortOrder: 999999
+      }
+    });
+
+    await this.audit.record({
+      actorUserId: user.id,
+      action: "investigation_catalog.custom_created",
+      resourceType: "investigation_catalog_item",
+      resourceId: item.id,
+      branchId: user.branchId,
+      severity: "high",
+      metadataJson: {
+        code: item.code,
+        name: item.name,
+        category: item.category,
+        subcategory: item.subcategory,
+        source: "doctor_owner_custom_entry"
+      }
+    });
+
+    return { item, created: true, duplicatePrevented: false };
   }
 
   @Post(":id/archive")
@@ -132,7 +233,16 @@ export class InvestigationCatalogArchiveController {
 
   private assertDoctorOrOwner(user: AuthUser) {
     if (!user.roles.some((role) => role === "Doctor" || role === "Owner")) {
-      throw new ForbiddenException("Only a Doctor or Owner can archive or restore investigations.");
+      throw new ForbiddenException("Only a Doctor or Owner can manage custom or archived investigations.");
     }
   }
+}
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+    .trim();
 }
