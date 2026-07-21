@@ -14,6 +14,13 @@ import {
 const record = makeRecorder("ROUTES");
 const rows = [];
 
+// This fixture intentionally creates no uploaded ultrasound image. An authorized
+// clinician must therefore reach the handler but receive its 400 safety gate,
+// while anonymous and denied-role requests must still be rejected by auth/RBAC.
+const ownerSafeValidationStatuses = new Map([
+  ["PATCH /ob-ultrasounds/:obUltrasoundId/review", [400]]
+]);
+
 async function main() {
   await waitForApi();
   const ownerToken = await login(demoUsers.owner);
@@ -53,9 +60,12 @@ async function main() {
         ? await login(demoUsers.owner)
         : ownerToken;
       const owner = await apiStatus(route.method, path, ownerSession, body);
-      assertStatus(owner, route.expectedStatusWithOwner, `${label} owner`);
+      const expectedOwnerStatus = ownerSafeValidationStatuses.get(route.name) ?? route.expectedStatusWithOwner;
+      assertStatus(owner, expectedOwnerStatus, `${label} owner`);
       row.owner = String(owner);
-      record.pass(`${label} owner allowed`);
+      record.pass(ownerSafeValidationStatuses.has(route.name)
+        ? `${label} owner reached protected safety validation`
+        : `${label} owner allowed`);
     } catch (error) {
       row.owner = "FAIL";
       record.fail(`${label} owner`, error);
