@@ -1,45 +1,157 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { AppShell, SafetyAlert } from "../mvp-page";
+import Link from "next/link";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PatientPicker, patientLabel, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
+import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { expandSearchShortcut } from "@/lib/search-shortcuts";
+import { AppShell, SafetyAlert } from "../mvp-page";
+import styles from "./investigation-station.module.css";
 
-type CatalogItem = { id: string; name: string; category: string; subcategory?: string | null; modality?: string | null; favorite?: boolean };
-type FavoriteSet = { id: string; name: string; nameAr?: string | null; scope?: string; publicationState?: string; sourceIdentifier?: string | null; sourceVersion?: string | null; sourceSection?: string | null; sourceUrl?: string | null; guidanceText?: string | null; actionable?: boolean; editable?: boolean; items: Array<{ required?: boolean; rationale?: string | null; investigationCatalogItem: CatalogItem }> };
-type ClinicalRequest = { id: string; title: string; status: string; patientId: string; createdAt?: string; followUpHintActive?: boolean; items?: Array<{ testName?: string }>; patient?: { firstName?: string; lastName?: string; medicalRecordNumber?: string } };
-type Workspace = { investigationCatalog?: CatalogItem[]; categories?: string[]; favorites?: CatalogItem[]; highPriority?: CatalogItem[]; favoriteSets?: FavoriteSet[] };
+type CatalogItem = {
+  id: string;
+  code?: string | null;
+  name: string;
+  category: string;
+  subcategory?: string | null;
+  modality?: string | null;
+  sampleType?: string | null;
+  aliasesJson?: unknown;
+  favorite?: boolean;
+};
 
-const categoryTabs = ["Favorites", "Routine labs", "Antenatal", "High-risk pregnancy", "Infertility", "Gynecology", "Hormonal", "Infection", "Oncology", "Tumor markers", "Ultrasound", "Radiology", "Pathology", "Cervical screening", "Preoperative", "Postoperative", "Other"];
-const followUpStatuses: Array<[string, string]> = [["needs_review", "Needs review"], ["overdue", "Overdue"], ["result_received", "Received"], ["reviewed", "Reviewed"], ["patient_informed", "Patient informed"], ["closed", "Closed"]];
+type FavoriteSet = {
+  id: string;
+  name: string;
+  nameAr?: string | null;
+  scope?: string;
+  publicationState?: string;
+  actionable?: boolean;
+  editable?: boolean;
+  guidanceText?: string | null;
+  items: Array<{
+    required?: boolean;
+    rationale?: string | null;
+    investigationCatalogItem: CatalogItem;
+  }>;
+};
+
+type ClinicalRequest = {
+  id: string;
+  title: string;
+  status: string;
+  patientId: string;
+  createdAt?: string;
+  followUpHintActive?: boolean;
+  items?: Array<{ testName?: string }>;
+  patient?: PatientPickerPatient | null;
+};
+
+type InvestigationOrder = {
+  id: string;
+  requestedAt?: string;
+  createdAt?: string;
+  items?: Array<{ testName?: string }>;
+};
+
+type Workspace = {
+  investigationCatalog?: CatalogItem[];
+  favorites?: CatalogItem[];
+  highPriority?: CatalogItem[];
+  favoriteSets?: FavoriteSet[];
+};
+
+type StationTab = "library" | "lists" | "favorites" | "recent" | "followup";
+
+type CategoryNode = {
+  name: string;
+  count: number;
+  subcategories: Array<{ name: string; count: number }>;
+};
+
+const followUpStatuses: Array<[string, string]> = [
+  ["needs_review", "Needs review"],
+  ["overdue", "Overdue"],
+  ["result_received", "Received"],
+  ["reviewed", "Reviewed"],
+  ["patient_informed", "Patient informed"],
+  ["closed", "Closed"]
+];
 
 export default function InvestigationsPage() {
+  const { language } = useI18n();
+  const copy = stationCopy[language];
+  const basketRef = useRef<HTMLElement | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace>({});
+  const [recentItems, setRecentItems] = useState<CatalogItem[]>([]);
+  const [patientRequests, setPatientRequests] = useState<ClinicalRequest[]>([]);
+  const [followUpRequests, setFollowUpRequests] = useState<ClinicalRequest[]>([]);
+  const [followUpCounts, setFollowUpCounts] = useState<Record<string, number>>({});
+  const [patient, setPatient] = useState<PatientPickerPatient | null>(null);
   const [patientId, setPatientId] = useState("");
   const [encounterId, setEncounterId] = useState("");
+  const [activeTab, setActiveTab] = useState<StationTab>("library");
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("");
-  const [workspace, setWorkspace] = useState<Workspace>({});
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("");
+  const [openCategories, setOpenCategories] = useState<Set<string>>(() => new Set(["Laboratory"]));
   const [selected, setSelected] = useState<CatalogItem[]>([]);
-  const [removed, setRemoved] = useState<{ item: CatalogItem; index: number } | null>(null);
   const [indications, setIndications] = useState<Record<string, string>>({});
+  const [listName, setListName] = useState("");
+  const [listNameAr, setListNameAr] = useState("");
   const [priority, setPriority] = useState("routine");
   const [requestNote, setRequestNote] = useState("");
   const [followUpDate, setFollowUpDate] = useState("");
   const [internalExternal, setInternalExternal] = useState<"internal" | "external">("internal");
   const [followUpOwner, setFollowUpOwner] = useState("");
   const [warningsConfirmed, setWarningsConfirmed] = useState(false);
-  const [setName, setSetName] = useState("");
-  const [setNameAr, setSetNameAr] = useState("");
-  const [requests, setRequests] = useState<ClinicalRequest[]>([]);
-  const [requestCounts, setRequestCounts] = useState<Record<string, number>>({});
-  const [requestPage, setRequestPage] = useState(1);
-  const [requestPageInfo, setRequestPageInfo] = useState({ page: 1, limit: 20, total: 0, hasMore: false });
-  const [requestStatus, setRequestStatus] = useState("");
-  const [status, setStatus] = useState("Ready");
-  const [savedRequestId, setSavedRequestId] = useState("");
-  const [activeSection, setActiveSection] = useState<"catalog" | "sets" | "followup" | "manage">("followup");
+  const [status, setStatus] = useState(copy.loading);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [basketReady, setBasketReady] = useState(false);
+  const [savedRequestId, setSavedRequestId] = useState("");
+  const [requestStatus, setRequestStatus] = useState("");
   const hasPatientContext = Boolean(patientId && encounterId);
+
+  const loadWorkspace = useCallback(async () => {
+    setLoading(true);
+    setStatus(copy.loading);
+    try {
+      const nextWorkspace = await apiGet("/investigations/catalog") as Workspace;
+      const ordersBody = await apiGet("/investigations/orders") as { investigationOrders?: InvestigationOrder[] };
+      const catalogue = nextWorkspace.investigationCatalog ?? [];
+      setWorkspace(nextWorkspace);
+      setRecentItems(deriveRecentItems(ordersBody.investigationOrders ?? [], catalogue));
+      setStatus(copy.ready);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : copy.loadFailed);
+    } finally {
+      setLoading(false);
+    }
+  }, [copy.loadFailed, copy.loading, copy.ready]);
+
+  const loadPatientRequests = useCallback(async (nextPatientId: string) => {
+    if (!nextPatientId) return setPatientRequests([]);
+    try {
+      const body = await apiGet(`/clinical-requests?patientId=${encodeURIComponent(nextPatientId)}&page=1&limit=50`) as { clinicalRequests?: ClinicalRequest[] };
+      setPatientRequests(body.clinicalRequests ?? []);
+    } catch {
+      setPatientRequests([]);
+    }
+  }, []);
+
+  const loadFollowUp = useCallback(async (statusFilter = requestStatus) => {
+    const params = new URLSearchParams({ page: "1", limit: "50" });
+    if (statusFilter) params.set("status", statusFilter);
+    try {
+      const body = await apiGet(`/clinical-requests?${params.toString()}`) as { clinicalRequests?: ClinicalRequest[]; counts?: Record<string, number> };
+      setFollowUpRequests(body.clinicalRequests ?? []);
+      setFollowUpCounts(body.counts ?? {});
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : copy.loadFailed);
+    }
+  }, [copy.loadFailed, requestStatus]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -47,180 +159,804 @@ export default function InvestigationsPage() {
     const nextEncounterId = params.get("encounterId") ?? params.get("visitId") ?? "";
     setPatientId(nextPatientId);
     setEncounterId(nextEncounterId);
-    if (nextPatientId && nextEncounterId) setActiveSection("catalog");
+
+    if (nextPatientId) {
+      void apiGet(`/patients/${encodeURIComponent(nextPatientId)}`)
+        .then((value) => setPatient(value as PatientPickerPatient))
+        .catch(() => setPatient(null));
+      void loadPatientRequests(nextPatientId);
+    }
+
     if (nextPatientId && nextEncounterId) {
       try {
-        const saved = JSON.parse(sessionStorage.getItem(basketStorageKey(nextPatientId, nextEncounterId)) ?? "null") as { selected?: CatalogItem[]; indications?: Record<string, string> } | null;
+        const saved = JSON.parse(sessionStorage.getItem(basketStorageKey(nextPatientId, nextEncounterId)) ?? "null") as SavedBasket | null;
         if (Array.isArray(saved?.selected)) setSelected(uniqueCatalogItems(saved.selected));
         if (saved?.indications && typeof saved.indications === "object") setIndications(saved.indications);
+        if (typeof saved?.priority === "string") setPriority(saved.priority);
+        if (typeof saved?.requestNote === "string") setRequestNote(saved.requestNote);
+        if (saved?.internalExternal === "internal" || saved?.internalExternal === "external") setInternalExternal(saved.internalExternal);
+        if (typeof saved?.followUpOwner === "string") setFollowUpOwner(saved.followUpOwner);
+        if (typeof saved?.followUpDate === "string") setFollowUpDate(saved.followUpDate);
       } catch {
         sessionStorage.removeItem(basketStorageKey(nextPatientId, nextEncounterId));
       }
-      void apiGet(`/investigations/order-draft?patientId=${encodeURIComponent(nextPatientId)}&encounterId=${encodeURIComponent(nextEncounterId)}`).then((data) => {
-        const draft = (data as { draft?: Record<string, unknown> | null }).draft;
-        if (!draft) return;
-        if (Array.isArray(draft.selected)) setSelected(uniqueCatalogItems(draft.selected as CatalogItem[]));
-        if (draft.indications && typeof draft.indications === "object") setIndications(draft.indications as Record<string, string>);
-        if (typeof draft.priority === "string") setPriority(draft.priority);
-        if (typeof draft.requestNote === "string") setRequestNote(draft.requestNote);
-        if (draft.internalExternal === "internal" || draft.internalExternal === "external") setInternalExternal(draft.internalExternal);
-        if (typeof draft.followUpOwner === "string") setFollowUpOwner(draft.followUpOwner);
-      }).catch(() => undefined);
+
+      void apiGet(`/investigations/order-draft?patientId=${encodeURIComponent(nextPatientId)}&encounterId=${encodeURIComponent(nextEncounterId)}`)
+        .then((value) => {
+          const draft = (value as { draft?: SavedBasket | null }).draft;
+          if (!draft) return;
+          if (Array.isArray(draft.selected)) setSelected(uniqueCatalogItems(draft.selected));
+          if (draft.indications && typeof draft.indications === "object") setIndications(draft.indications);
+          if (typeof draft.priority === "string") setPriority(draft.priority);
+          if (typeof draft.requestNote === "string") setRequestNote(draft.requestNote);
+          if (draft.internalExternal === "internal" || draft.internalExternal === "external") setInternalExternal(draft.internalExternal);
+          if (typeof draft.followUpOwner === "string") setFollowUpOwner(draft.followUpOwner);
+          if (typeof draft.followUpDate === "string") setFollowUpDate(draft.followUpDate);
+        })
+        .catch(() => undefined);
     }
+
     setBasketReady(true);
-    void loadRequests(1, "");
-  }, []);
+    void loadWorkspace();
+    void loadFollowUp("");
+  }, [loadFollowUp, loadPatientRequests, loadWorkspace]);
 
   useEffect(() => {
-    if (!basketReady || !patientId || !encounterId) return;
-    const basket = { selected, indications, priority, requestNote, followUpDate, internalExternal, followUpOwner };
+    if (!basketReady || !hasPatientContext) return;
+    const basket: SavedBasket = { selected, indications, priority, requestNote, followUpDate, internalExternal, followUpOwner };
     sessionStorage.setItem(basketStorageKey(patientId, encounterId), JSON.stringify(basket));
-    const timer = window.setTimeout(() => { void apiPut("/investigations/order-draft", { patientId, encounterId, basket }); }, 500);
+    const timer = window.setTimeout(() => {
+      void apiRequest("/investigations/order-draft", "PUT", { patientId, encounterId, basket });
+    }, 500);
     return () => window.clearTimeout(timer);
-  }, [basketReady, encounterId, followUpDate, followUpOwner, indications, internalExternal, patientId, priority, requestNote, selected]);
+  }, [basketReady, encounterId, followUpDate, followUpOwner, hasPatientContext, indications, internalExternal, patientId, priority, requestNote, selected]);
 
-  useEffect(() => { setWarningsConfirmed(false); }, [selected]);
+  useEffect(() => setWarningsConfirmed(false), [selected]);
 
-  const loadWorkspace = useCallback(async () => {
-    const params = new URLSearchParams();
-    const expanded = expandSearchShortcut(query);
-    if (expanded.trim()) params.set("q", expanded);
-    if (category && category !== "Favorites") params.set("category", category);
-    setStatus("Loading investigation catalog…");
-    try { setWorkspace(await apiGet(`/investigations/catalog?${params.toString()}`) as Workspace); setStatus("Ready"); }
-    catch (error) { setStatus(error instanceof Error ? error.message : "Investigation catalog API failed."); }
-  }, [query, category]);
+  const catalogue = workspace.investigationCatalog ?? [];
+  const categoryTree = useMemo(() => buildCategoryTree(catalogue), [catalogue]);
+  const myLists = useMemo(() => (workspace.favoriteSets ?? []).filter((set) => set.editable), [workspace.favoriteSets]);
+  const sharedTemplates = useMemo(() => (workspace.favoriteSets ?? []).filter((set) => !set.editable), [workspace.favoriteSets]);
 
-  useEffect(() => {
-    const timeout = window.setTimeout(() => void loadWorkspace(), 180);
-    return () => window.clearTimeout(timeout);
-  }, [loadWorkspace]);
+  const visibleItems = useMemo(() => {
+    const source = activeTab === "favorites" ? workspace.favorites ?? [] : activeTab === "recent" ? recentItems : catalogue;
+    const expandedQuery = normalize(expandSearchShortcut(query));
+    return source.filter((item) => {
+      if (selectedCategory && item.category !== selectedCategory) return false;
+      if (selectedSubcategory && item.subcategory !== selectedSubcategory) return false;
+      if (!expandedQuery) return true;
+      return searchableText(item).includes(expandedQuery);
+    });
+  }, [activeTab, catalogue, query, recentItems, selectedCategory, selectedSubcategory, workspace.favorites]);
 
-  async function loadRequests(nextPage = requestPage, nextStatus = requestStatus) {
-    const params = new URLSearchParams({ page: String(nextPage), limit: "20" }); if (nextStatus) params.set("status", nextStatus);
-    try { const data = await apiGet(`/clinical-requests?${params}`) as { clinicalRequests?: ClinicalRequest[]; counts?: Record<string, number>; pageInfo?: typeof requestPageInfo }; setRequests(data.clinicalRequests ?? []); setRequestCounts(data.counts ?? {}); setRequestPageInfo(data.pageInfo ?? { page: nextPage, limit: 20, total: data.clinicalRequests?.length ?? 0, hasMore: false }); }
-    catch (error) { setStatus(error instanceof Error ? error.message : "Result follow-up API failed."); }
+  function toggleCategory(name: string) {
+    setOpenCategories((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+    setSelectedCategory(name);
+    setSelectedSubcategory("");
   }
 
-  const patient = useMemo(() => requests.find((request) => request.patientId === patientId)?.patient, [requests, patientId]);
-  const visibleCatalog = category === "Favorites" ? workspace.favorites ?? [] : workspace.investigationCatalog ?? [];
+  function selectSubcategory(category: string, subcategory: string) {
+    setSelectedCategory(category);
+    setSelectedSubcategory(subcategory);
+  }
 
   function add(item: CatalogItem) {
     setSelected((current) => current.some((entry) => entry.id === item.id) ? current : [...current, item]);
+    setStatus(`${item.name} ${copy.added}`);
   }
 
-  function applySet(set: FavoriteSet) {
-    if (set.actionable === false || !set.items.length) { setStatus(set.guidanceText || "This reference does not define a universal investigation bundle. Select items individually after assessment."); return; }
-    setSelected((current) => [...current, ...set.items.map((entry) => entry.investigationCatalogItem).filter((item) => !current.some((existing) => existing.id === item.id))]);
-    setStatus("Applying this set fills the basket only. Review every optional item and submit separately with Doctor confirmation.");
+  function remove(index: number) {
+    setSelected((current) => current.filter((_, itemIndex) => itemIndex !== index));
   }
 
   function move(index: number, offset: -1 | 1) {
     setSelected((current) => {
-      const destination = index + offset;
-      if (destination < 0 || destination >= current.length) return current;
+      const target = index + offset;
+      if (target < 0 || target >= current.length) return current;
       const next = [...current];
-      [next[index], next[destination]] = [next[destination]!, next[index]!];
+      [next[index], next[target]] = [next[target]!, next[index]!];
       return next;
     });
   }
 
-  function remove(index: number) {
-    const item = selected[index];
-    if (!item) return;
-    setRemoved({ item, index });
-    setSelected((current) => current.filter((_, itemIndex) => itemIndex !== index));
-  }
-
-  function undoRemove() {
-    if (!removed) return;
-    setSelected((current) => { const next = [...current]; next.splice(Math.min(removed.index, next.length), 0, removed.item); return next; });
-    setRemoved(null);
-  }
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!hasPatientContext || !selected.length) return setStatus("Open an active patient visit and select at least one investigation.");
-    const selectedNames = new Set(selected.map((item) => item.name.toLocaleLowerCase()));
-    const duplicateActive = requests.filter((request) => request.patientId === patientId && !["reviewed", "closed", "cancelled", "voided", "not_completed"].includes(request.status)).flatMap((request) => request.items ?? []).some((item) => selectedNames.has((item.testName ?? "").toLocaleLowerCase()));
-    const recentResult = requests.filter((request) => request.patientId === patientId && ["reviewed", "closed"].includes(request.status)).flatMap((request) => request.items ?? []).some((item) => selectedNames.has((item.testName ?? "").toLocaleLowerCase()));
-    if ((duplicateActive || recentResult) && !warningsConfirmed) { setWarningsConfirmed(true); return setStatus(`${duplicateActive ? "Duplicate active order warning. " : ""}${recentResult ? "A prior reviewed result exists. " : ""}Review the basket and submit again to confirm.`); }
-    const response = await apiPost("/clinical-requests", {
-      patientId, encounterId, priority, requestedFollowUpDate: followUpDate || undefined, expectedResultDate: followUpDate || undefined, requestNote, internalExternal, responsibilityJson: { followUpOwner: followUpOwner || "unassigned" },
-      items: selected.map((item) => ({ title: item.name, catalogItemId: cleanCatalogId(item.id), requestType: item.category, requestNote: indications[item.id] || requestNote }))
-    });
-    if (!response.ok) return setStatus("The request could not be saved. Check the active visit and try again.");
-    const saved = await response.json() as ClinicalRequest;
-    setSavedRequestId(saved.id);
-    setStatus("Request saved to this visit. It is ready for the dedicated print view.");
+  function clearBasket() {
     setSelected([]);
     setIndications({});
-    await apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE");
-    await loadRequests();
+    setWarningsConfirmed(false);
+    if (hasPatientContext) {
+      sessionStorage.removeItem(basketStorageKey(patientId, encounterId));
+      void apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE");
+    }
   }
 
-  async function saveSet() {
-    const ids = selected.map((item) => cleanCatalogId(item.id)).filter(Boolean) as string[];
-    if (!setName.trim() || ids.length !== selected.length) return setStatus("Name the set and use approved catalog investigations only.");
-    const response = await apiPost("/investigations/favorite-sets", { name: setName.trim(), nameAr: setNameAr.trim() || undefined, scope: "personal", investigationCatalogItemIds: ids });
-    if (!response.ok) return setStatus("The reusable set could not be saved.");
-    setSetName(""); setSetNameAr(""); setStatus("Reusable investigation set saved."); await loadWorkspace();
+  async function toggleFavorite(item: CatalogItem) {
+    const endpoint = item.favorite ? `/investigations/catalog/${item.id}/unfavorite` : `/investigations/catalog/${item.id}/favorite`;
+    const response = await apiRequest(endpoint, "POST", {});
+    if (!response.ok) return setStatus(copy.favoriteFailed);
+    await loadWorkspace();
+    setStatus(item.favorite ? copy.favoriteRemoved : copy.favoriteAdded);
   }
 
-  async function setAction(id: string, action: "duplicate" | "archive") {
-    const response = action === "archive" ? await apiRequest(`/investigations/favorite-sets/${id}`, "DELETE") : await apiPost(`/investigations/favorite-sets/${id}/duplicate`, {});
-    setStatus(response.ok ? `Set ${action === "archive" ? "archived" : "duplicated"}.` : "The set could not be updated.");
-    if (response.ok) await loadWorkspace();
+  function applySet(set: FavoriteSet) {
+    if (set.actionable === false || !set.items.length) {
+      setStatus(set.guidanceText || copy.nonActionable);
+      return;
+    }
+    setSelected((current) => uniqueCatalogItems([...current, ...set.items.map((entry) => entry.investigationCatalogItem)]));
+    setListName(set.name);
+    setListNameAr(set.nameAr ?? "");
+    setStatus(copy.templateLoaded);
+    basketRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function saveList() {
+    const ids = selected.map((item) => item.id);
+    if (!listName.trim() || !ids.length) return setStatus(copy.listNameRequired);
+    setSaving(true);
+    const response = await apiRequest("/investigations/favorite-sets", "POST", {
+      name: listName.trim(),
+      nameAr: listNameAr.trim() || undefined,
+      scope: "personal",
+      investigationCatalogItemIds: ids
+    });
+    setSaving(false);
+    if (!response.ok) return setStatus(copy.listSaveFailed);
+    setListName("");
+    setListNameAr("");
+    await loadWorkspace();
+    setActiveTab("lists");
+    setStatus(copy.listSaved);
+  }
+
+  async function archiveList(id: string) {
+    const response = await apiRequest(`/investigations/favorite-sets/${id}`, "DELETE");
+    if (!response.ok) return setStatus(copy.listSaveFailed);
+    await loadWorkspace();
+    setStatus(copy.listArchived);
+  }
+
+  async function duplicateList(id: string) {
+    const response = await apiRequest(`/investigations/favorite-sets/${id}/duplicate`, "POST", {});
+    if (!response.ok) return setStatus(copy.listSaveFailed);
+    await loadWorkspace();
+    setStatus(copy.listDuplicated);
+  }
+
+  async function submitOrder(event: FormEvent) {
+    event.preventDefault();
+    if (!hasPatientContext || !selected.length) return setStatus(copy.patientRequired);
+    const selectedNames = new Set(selected.map((item) => normalize(item.name)));
+    const duplicateActive = patientRequests
+      .filter((request) => !["reviewed", "closed", "cancelled", "voided", "not_completed"].includes(request.status))
+      .flatMap((request) => request.items ?? [])
+      .some((item) => selectedNames.has(normalize(item.testName ?? "")));
+    const priorResult = patientRequests
+      .filter((request) => ["reviewed", "closed"].includes(request.status))
+      .flatMap((request) => request.items ?? [])
+      .some((item) => selectedNames.has(normalize(item.testName ?? "")));
+
+    if ((duplicateActive || priorResult) && !warningsConfirmed) {
+      setWarningsConfirmed(true);
+      setStatus(`${duplicateActive ? copy.duplicateWarning : ""}${priorResult ? copy.priorResultWarning : ""}${copy.confirmAgain}`);
+      return;
+    }
+
+    setSaving(true);
+    const response = await apiRequest("/clinical-requests", "POST", {
+      patientId,
+      encounterId,
+      priority,
+      requestedFollowUpDate: followUpDate || undefined,
+      expectedResultDate: followUpDate || undefined,
+      requestNote,
+      internalExternal,
+      responsibilityJson: { followUpOwner: followUpOwner || "unassigned" },
+      items: selected.map((item) => ({
+        title: item.name,
+        catalogItemId: item.id,
+        requestType: item.category,
+        requestNote: indications[item.id] || requestNote
+      }))
+    });
+    setSaving(false);
+    if (!response.ok) return setStatus(copy.orderFailed);
+    const saved = await response.json() as ClinicalRequest;
+    setSavedRequestId(saved.id);
+    clearBasket();
+    await Promise.all([loadPatientRequests(patientId), loadFollowUp("")]);
+    setStatus(copy.orderSaved);
   }
 
   async function followUp(id: string, action: "mark-result-received" | "review") {
-    const response = await apiPost(`/clinical-requests/${id}/${action}`, {});
-    setStatus(response.ok ? "Result follow-up updated." : "Result follow-up could not be updated.");
-    if (response.ok) await loadRequests();
+    const response = await apiRequest(`/clinical-requests/${id}/${action}`, "POST", {});
+    if (!response.ok) return setStatus(copy.followUpFailed);
+    await loadFollowUp(requestStatus);
+    setStatus(copy.followUpUpdated);
   }
 
-  async function transition(id: string, target: string) { const response = await apiRequest(`/investigations/orders/${id}/status`, "PATCH", { status: target }); setStatus(response.ok ? `Investigation moved to ${target.replaceAll("_", " ")}.` : "Transition was refused. Check lifecycle order and role permission."); if (response.ok) await loadRequests(); }
-
-  function printRequest(id: string) {
-    window.open(`/clinical-requests/${encodeURIComponent(id)}/print`, "_blank", "noopener,noreferrer");
+  async function transition(id: string, target: string) {
+    const response = await apiRequest(`/investigations/orders/${id}/status`, "PATCH", { status: target });
+    if (!response.ok) return setStatus(copy.followUpFailed);
+    await loadFollowUp(requestStatus);
+    setStatus(copy.followUpUpdated);
   }
 
-  return <AppShell>
-    <section className="page-header"><div className="header-row"><div><p className="eyebrow">{hasPatientContext ? "Patient clinical workflow" : "Investigation center"}</p><h1>{hasPatientContext ? "New investigation request" : "Investigation Library, Templates & Result Follow-up"}</h1></div>{savedRequestId ? <button className="button secondary compact" type="button" onClick={() => printRequest(savedRequestId)}>Print saved request</button> : null}</div></section>
-    <SafetyAlert />
-    <nav className="investigation-mobile-tabs" aria-label="Investigation Center sections">
-      {(hasPatientContext ? (["catalog", "sets"] as const) : (["followup", "manage"] as const)).map((section) => <button className={activeSection === section ? "active" : ""} key={section} type="button" onClick={() => setActiveSection(section)}>{section === "followup" ? "Results follow-up" : section === "manage" ? "Catalog administration" : `${section[0]?.toUpperCase()}${section.slice(1)}`}</button>)}
-    </nav>
-    {!hasPatientContext ? <section className="knowledge-metric-grid investigation-status-summary" aria-label="Investigation follow-up counts">{followUpStatuses.map(([key, label]) => <button type="button" className={requestStatus === key ? "active" : ""} key={key} onClick={() => { setRequestStatus(key); setRequestPage(1); void loadRequests(1, key); }}><strong>{requestCounts[key] ?? 0}</strong><span>{label}</span></button>)}</section> : null}
-    <section className={`content-grid investigation-catalog-layout ${hasPatientContext ? "patient-context" : "library-context"}`} data-mobile-active={activeSection}>
-      <article className="panel investigation-workspace-panel">
-        <div className="section-heading"><div><h2>{hasPatientContext ? "Catalog and request basket" : "Catalog and reusable sets"}</h2><p className="muted">Click an investigation to add it. Applying a set never orders automatically.</p></div><span className="badge">{status}</span></div>
-        <form className="form-grid" onSubmit={submit} noValidate>
-          {hasPatientContext ? <div className="patient-context-bar wide mobile-section mobile-catalog"><strong>{[patient?.firstName, patient?.lastName].filter(Boolean).join(" ") || "Selected patient"}</strong><span>MRN: {patient?.medicalRecordNumber || "Patient file"}</span><span>Active visit locked</span></div> : <div className="notice wide mobile-section mobile-catalog"><strong>Management-only center</strong><span>Open Patient File → Current Visit → Investigations to save a real request.</span></div>}
-          <label className="wide mobile-section mobile-catalog">Search catalog<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="CBC, AMH, ferritin, CA-125, Pap, HPV, ultrasound" /></label>
-          <div className="investigation-category-sidebar wide mobile-section mobile-catalog" aria-label="Investigation categories">{categoryTabs.map((tab) => <button className={category === tab ? "active" : ""} key={tab} type="button" onClick={() => setCategory((current) => current === tab ? "" : tab)}>{tab}</button>)}</div>
-          <div className="wide investigation-quick-sections mobile-section mobile-catalog"><CatalogList title="Favorites" items={workspace.favorites ?? []} onAdd={add} /><CatalogList title="Common and high priority" items={workspace.highPriority ?? []} onAdd={add} /></div>
-          <div className="wide data-list mobile-section mobile-catalog">{visibleCatalog.slice(0, 30).map((item) => <button className="picker-row" key={item.id} type="button" onClick={() => add(item)}><strong>{item.name}</strong><span>{[item.category, item.subcategory, item.modality].filter(Boolean).join(" · ")}</span></button>)}{!visibleCatalog.length ? <p className="empty-state compact smart-empty-state">No catalog items match this view.</p> : null}</div>
-          <section className="wide compact-panel mobile-section mobile-sets"><div className="section-heading compact-section-heading"><h3>Reusable investigation sets</h3><span className="badge">{workspace.favoriteSets?.length ?? 0}</span></div><div className="dense-card-list">{(workspace.favoriteSets ?? []).map((set) => <div className="data-row" key={set.id}><button className="picker-row" type="button" onClick={() => applySet(set)}><strong>{set.name}{set.nameAr ? ` / ${set.nameAr}` : ""}</strong><span>{set.items.length} investigations · {set.scope ?? "personal"} · {set.actionable === false ? "Guidance only" : "Basket preview"}</span></button>{set.publicationState === "SOURCE_VERIFIED_REFERENCE" ? <div className="compact-source-note"><span className="badge accent">Source-verified reference</span><p>{set.sourceIdentifier} · {set.sourceVersion} · {set.sourceSection}</p><p className="muted">{set.guidanceText}</p>{set.sourceUrl ? <a href={set.sourceUrl} target="_blank" rel="noreferrer">Open source</a> : null}<ul>{set.items.map((entry) => <li key={entry.investigationCatalogItem.id}><strong>{entry.required ? "Required" : "Optional"}:</strong> {entry.investigationCatalogItem.name}</li>)}</ul></div> : null}{set.editable ? <div className="form-actions"><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "duplicate")}>Duplicate</button><button className="button secondary compact" type="button" onClick={() => void setAction(set.id, "archive")}>Archive</button></div> : null}</div>)}</div></section>
-          <section className="wide selected-item-basket mobile-section mobile-catalog"><div className="section-heading compact-section-heading"><h3>Selected basket</h3><span className="badge">{selected.length}</span></div>{selected.map((item, index) => <article className="request-chip investigation-basket-row" key={item.id}><div><strong>{item.name}</strong><em>{item.category}</em></div><input aria-label={`Clinical indication for ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder="Clinical indication" /><div className="form-actions"><button type="button" onClick={() => move(index, -1)} aria-label={`Move ${item.name} up`}>↑</button><button type="button" onClick={() => move(index, 1)} aria-label={`Move ${item.name} down`}>↓</button><button type="button" onClick={() => remove(index)}>Remove</button></div></article>)}{removed ? <button className="button secondary compact" type="button" onClick={undoRemove}>Undo remove</button> : null}{!selected.length ? <p className="empty-state compact smart-empty-state">No investigations selected.</p> : null}</section>
-          <div className="form-actions wide mobile-section mobile-sets"><input aria-label="Set English name" value={setName} onChange={(event) => setSetName(event.target.value)} placeholder="Custom set name" /><input aria-label="Set Arabic name" dir="rtl" value={setNameAr} onChange={(event) => setSetNameAr(event.target.value)} placeholder="اسم المجموعة بالعربية" /><button className="button secondary" type="button" disabled={!selected.length} onClick={() => void saveSet()}>Save as custom set</button></div>
-          {hasPatientContext ? <div className="mobile-section mobile-catalog investigation-request-fields"><label>Overall indication<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label><label>Priority<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">Routine</option><option value="urgent">Urgent</option><option value="stat">STAT</option></select></label><label>Internal / external<select value={internalExternal} onChange={(event) => setInternalExternal(event.target.value as "internal" | "external")}><option value="internal">Internal</option><option value="external">External</option></select></label><label>Follow-up owner<input value={followUpOwner} onChange={(event) => setFollowUpOwner(event.target.value)} placeholder="Role, staff member, branch, provider, or unassigned" /></label><label>Follow-up deadline / expected result date<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label><div className="form-actions wide"><button className="button" type="submit" disabled={!selected.length}>{warningsConfirmed ? "Confirm and submit order · Save to visit" : "Review and submit order · Save to visit"}</button><button className="button secondary" type="button" onClick={() => { setSelected([]); setIndications({}); void apiRequest(`/investigations/order-draft?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(encounterId)}`, "DELETE"); }}>Clear basket</button></div></div> : null}
-        </form>
-      </article>
-      <article className="panel"><div className="section-heading"><div><h2>Cross-patient result follow-up</h2><p className="muted">Showing {requestPageInfo.total ? (requestPageInfo.page - 1) * requestPageInfo.limit + 1 : 0}–{Math.min(requestPageInfo.page * requestPageInfo.limit, requestPageInfo.total)} of {requestPageInfo.total}</p></div><span className="badge">{requests.length}</span></div><div className="data-list">{requests.map((request) => <article className="data-row" key={request.id}><div className="data-row-header"><strong>{request.title}</strong><span className="badge">{request.status.replaceAll("_", " ")}</span></div><p className="muted">{request.followUpHintActive ? "Follow-up remains active until doctor review." : "Follow-up resolved."}</p><div className="form-actions"><button className="button secondary compact" type="button" onClick={() => printRequest(request.id)}>Print request</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "mark-result-received")}>Result received</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "booked")}>Booked</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "sample_collected")}>Sample collected</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "performed")}>Performed</button><button className="button secondary compact" type="button" onClick={() => void followUp(request.id, "review")}>Doctor reviewed</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "patient_informed")}>Patient informed</button><button className="button secondary compact" type="button" onClick={() => void transition(request.id, "closed")}>Close</button></div></article>)}{!requests.length ? <p className="empty-state compact smart-empty-state">No requests are visible in your permitted scope.</p> : null}</div><nav className="form-actions" aria-label="Investigation follow-up pagination"><button type="button" disabled={requestPage <= 1} onClick={() => { const next = Math.max(1, requestPage - 1); setRequestPage(next); void loadRequests(next); }}>Previous</button><button type="button" disabled={!requestPageInfo.hasMore} onClick={() => { const next = requestPage + 1; setRequestPage(next); void loadRequests(next); }}>Next</button></nav></article>
-      <article className="panel mobile-manage-panel"><div className="section-heading"><h2>Catalog and template administration</h2><span className="badge">Owner/Admin</span></div><p className="muted">Catalog editing is intentionally separate from Doctor ordering and result follow-up.</p><a className="button secondary" href="/admin/investigations">Open Investigation Catalog management</a></article>
+  function showAll() {
+    setSelectedCategory("");
+    setSelectedSubcategory("");
+  }
+
+  const tabCounts: Record<Exclude<StationTab, "followup">, number> = {
+    library: catalogue.length,
+    lists: myLists.length,
+    favorites: workspace.favorites?.length ?? 0,
+    recent: recentItems.length
+  };
+
+  return (
+    <AppShell>
+      <section className={styles.pageHeader}>
+        <div>
+          <p className="eyebrow">{copy.eyebrow}</p>
+          <h1>{copy.title}</h1>
+          <p className="muted">{copy.subtitle}</p>
+        </div>
+        <div className={styles.headerActions}>
+          {savedRequestId ? <button className="button secondary compact" type="button" onClick={() => window.open(`/clinical-requests/${encodeURIComponent(savedRequestId)}/print`, "_blank", "noopener,noreferrer")}>{copy.printSaved}</button> : null}
+          <Link className="button secondary compact" href="/admin/investigations">{copy.importManage}</Link>
+          <button className="button compact" type="button" onClick={() => { clearBasket(); setActiveTab("library"); basketRef.current?.scrollIntoView({ behavior: "smooth" }); }}>{copy.newList}</button>
+        </div>
+      </section>
+
+      <SafetyAlert />
+
+      <section className={styles.metrics} aria-label={copy.metricsLabel}>
+        <MetricButton active={activeTab === "library"} label={copy.catalogueItems} value={tabCounts.library} onClick={() => setActiveTab("library")} />
+        <MetricButton active={activeTab === "lists"} label={copy.myLists} value={tabCounts.lists} onClick={() => setActiveTab("lists")} />
+        <MetricButton active={activeTab === "favorites"} label={copy.favorites} value={tabCounts.favorites} onClick={() => setActiveTab("favorites")} />
+        <MetricButton active={activeTab === "recent"} label={copy.recentlyUsed} value={tabCounts.recent} onClick={() => setActiveTab("recent")} />
+      </section>
+
+      <nav className={styles.tabs} aria-label={copy.tabsLabel}>
+        <TabButton active={activeTab === "library"} label={copy.library} onClick={() => setActiveTab("library")} />
+        <TabButton active={activeTab === "lists"} label={copy.myLists} onClick={() => setActiveTab("lists")} />
+        <TabButton active={activeTab === "favorites"} label={copy.favorites} onClick={() => setActiveTab("favorites")} />
+        <TabButton active={activeTab === "recent"} label={copy.recent} onClick={() => setActiveTab("recent")} />
+        <TabButton active={activeTab === "followup"} label={copy.resultFollowUp} onClick={() => { setActiveTab("followup"); void loadFollowUp(requestStatus); }} />
+      </nav>
+
+      <p className={styles.status} role="status">{status}</p>
+
+      {activeTab === "followup" ? (
+        <FollowUpPanel
+          copy={copy}
+          counts={followUpCounts}
+          requests={followUpRequests}
+          requestStatus={requestStatus}
+          onFilter={(value) => { setRequestStatus(value); void loadFollowUp(value); }}
+          onReceive={(id) => void followUp(id, "mark-result-received")}
+          onReview={(id) => void followUp(id, "review")}
+          onTransition={(id, target) => void transition(id, target)}
+        />
+      ) : (
+        <section className={styles.stationGrid}>
+          <aside className={`panel ${styles.categoryPanel}`}>
+            <div className="section-heading">
+              <div>
+                <h2>{copy.categories}</h2>
+                <p className="muted">{copy.accordionHelp}</p>
+              </div>
+              <button className="button secondary compact" type="button" onClick={showAll}>{copy.all}</button>
+            </div>
+            <input className={styles.categorySearch} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy.searchPlaceholder} />
+            <div className={styles.accordionList}>
+              {categoryTree.map((node) => {
+                const open = openCategories.has(node.name);
+                return (
+                  <section className={styles.accordionSection} key={node.name}>
+                    <button
+                      aria-expanded={open}
+                      className={`${styles.accordionHeader} ${selectedCategory === node.name && !selectedSubcategory ? styles.selected : ""}`}
+                      type="button"
+                      onClick={() => toggleCategory(node.name)}
+                    >
+                      <span className={styles.expandSymbol} aria-hidden="true">{open ? "−" : "+"}</span>
+                      <strong>{node.name}</strong>
+                      <span>{node.count}</span>
+                    </button>
+                    {open ? (
+                      <div className={styles.subcategoryList}>
+                        <button className={!selectedSubcategory && selectedCategory === node.name ? styles.activeSubcategory : ""} type="button" onClick={() => { setSelectedCategory(node.name); setSelectedSubcategory(""); }}>{copy.allInCategory}</button>
+                        {node.subcategories.map((subcategory) => (
+                          <button className={selectedSubcategory === subcategory.name ? styles.activeSubcategory : ""} key={subcategory.name} type="button" onClick={() => selectSubcategory(node.name, subcategory.name)}>
+                            <span>{subcategory.name}</span><em>{subcategory.count}</em>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              })}
+            </div>
+          </aside>
+
+          <main className={styles.mainColumn}>
+            {activeTab === "lists" ? (
+              <ListLibrary copy={copy} myLists={myLists} sharedTemplates={sharedTemplates} onApply={applySet} onArchive={archiveList} onDuplicate={duplicateList} />
+            ) : (
+              <>
+                <section className={`panel ${styles.catalogPanel}`}>
+                  <div className="section-heading">
+                    <div>
+                      <h2>{activeTab === "favorites" ? copy.favorites : activeTab === "recent" ? copy.recentlyUsed : copy.library}</h2>
+                      <p className="muted">{selectedSubcategory || selectedCategory || copy.allInvestigations}</p>
+                    </div>
+                    <span className="badge">{visibleItems.length}</span>
+                  </div>
+                  {loading ? <div className={`skeleton ${styles.loading}`} /> : null}
+                  {!loading && !visibleItems.length ? <p className="empty-state compact smart-empty-state">{copy.noItems}</p> : null}
+                  <div className={styles.catalogTable}>
+                    {visibleItems.map((item) => (
+                      <article className={styles.catalogRow} key={item.id}>
+                        <button className={styles.favoriteButton} aria-label={`${item.favorite ? copy.unfavorite : copy.favorite} ${item.name}`} type="button" onClick={() => void toggleFavorite(item)}>{item.favorite ? "★" : "☆"}</button>
+                        <div className={styles.catalogIdentity}>
+                          <strong>{item.name}</strong>
+                          <span>{[item.subcategory, item.sampleType || item.modality].filter(Boolean).join(" · ")}</span>
+                        </div>
+                        <span className={styles.categoryBadge}>{item.category}</span>
+                        <button className="button secondary compact" type="button" disabled={selected.some((entry) => entry.id === item.id)} onClick={() => add(item)}>{selected.some((entry) => entry.id === item.id) ? copy.addedLabel : copy.add}</button>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+
+                {activeTab === "library" && sharedTemplates.length ? (
+                  <section className={styles.quickTemplates}>
+                    <div className={styles.sectionTitle}><h2>{copy.quickTemplates}</h2><span>{copy.templateHelp}</span></div>
+                    <div className={styles.templateGrid}>
+                      {sharedTemplates.slice(0, 8).map((set) => <TemplateCard key={set.id} set={set} onApply={applySet} />)}
+                    </div>
+                  </section>
+                ) : null}
+              </>
+            )}
+          </main>
+
+          <aside className={`panel ${styles.basketPanel}`} ref={basketRef}>
+            <div className="section-heading">
+              <div>
+                <h2>{copy.buildList}</h2>
+                <p className="muted">{copy.basketHelp}</p>
+              </div>
+              <button className="button secondary compact" type="button" disabled={!selected.length} onClick={clearBasket}>{copy.clear}</button>
+            </div>
+
+            {hasPatientContext ? (
+              <div className={styles.patientContext}>
+                <strong>{patient ? patientLabel(patient) : copy.selectedPatient}</strong>
+                <span>{patient?.medicalRecordNumber ? `MRN ${patient.medicalRecordNumber}` : copy.activeVisit}</span>
+              </div>
+            ) : (
+              <div className={styles.managementNotice}>
+                <strong>{copy.libraryMode}</strong>
+                <span>{copy.openVisitMessage}</span>
+              </div>
+            )}
+
+            <label className={styles.field}>{copy.listName}<input value={listName} onChange={(event) => setListName(event.target.value)} placeholder={copy.listNamePlaceholder} /></label>
+            <label className={styles.field}>{copy.listNameAr}<input dir="rtl" value={listNameAr} onChange={(event) => setListNameAr(event.target.value)} placeholder="اسم القائمة" /></label>
+
+            <div className={styles.basketCount}><span>{copy.selectedItems}</span><strong>{selected.length}</strong></div>
+            <div className={styles.basketList}>
+              {selected.map((item, index) => (
+                <article className={styles.basketRow} key={item.id}>
+                  <div><strong>{item.name}</strong><span>{item.subcategory || item.category}</span></div>
+                  <div className={styles.basketActions}>
+                    <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`${copy.moveUp} ${item.name}`}>↑</button>
+                    <button type="button" onClick={() => move(index, 1)} disabled={index === selected.length - 1} aria-label={`${copy.moveDown} ${item.name}`}>↓</button>
+                    <button type="button" onClick={() => remove(index)} aria-label={`${copy.remove} ${item.name}`}>×</button>
+                  </div>
+                  {hasPatientContext ? <input aria-label={`${copy.indication} ${item.name}`} value={indications[item.id] ?? ""} onChange={(event) => setIndications((current) => ({ ...current, [item.id]: event.target.value }))} placeholder={copy.indication} /> : null}
+                </article>
+              ))}
+              {!selected.length ? <p className="empty-state compact smart-empty-state">{copy.emptyBasket}</p> : null}
+            </div>
+
+            <button className="button secondary" type="button" disabled={!selected.length || saving} onClick={() => void saveList()}>{saving ? copy.saving : copy.saveList}</button>
+
+            {hasPatientContext ? (
+              <form className={styles.orderForm} onSubmit={submitOrder}>
+                <label className={styles.field}>{copy.overallIndication}<input value={requestNote} onChange={(event) => setRequestNote(event.target.value)} /></label>
+                <div className={styles.twoFields}>
+                  <label className={styles.field}>{copy.priority}<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">{copy.routine}</option><option value="urgent">{copy.urgent}</option><option value="stat">STAT</option></select></label>
+                  <label className={styles.field}>{copy.destination}<select value={internalExternal} onChange={(event) => setInternalExternal(event.target.value as "internal" | "external")}><option value="internal">{copy.internal}</option><option value="external">{copy.external}</option></select></label>
+                </div>
+                <label className={styles.field}>{copy.followUpOwner}<input value={followUpOwner} onChange={(event) => setFollowUpOwner(event.target.value)} placeholder={copy.followUpOwnerPlaceholder} /></label>
+                <label className={styles.field}>{copy.expectedDate}<input type="date" value={followUpDate} onChange={(event) => setFollowUpDate(event.target.value)} /></label>
+                <button className="button" type="submit" disabled={!selected.length || saving}>{saving ? copy.saving : warningsConfirmed ? copy.confirmOrder : copy.reviewOrder}</button>
+              </form>
+            ) : (
+              <Link className="button" href="/patients">{copy.openPatientVisit}</Link>
+            )}
+          </aside>
+        </section>
+      )}
+    </AppShell>
+  );
+}
+
+function MetricButton({ active, label, value, onClick }: { active: boolean; label: string; value: number; onClick(): void }) {
+  return <button className={`${styles.metric} ${active ? styles.metricActive : ""}`} type="button" onClick={onClick}><strong>{value}</strong><span>{label}</span></button>;
+}
+
+function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick(): void }) {
+  return <button className={active ? styles.activeTab : ""} type="button" onClick={onClick}>{label}</button>;
+}
+
+function TemplateCard({ set, onApply }: { set: FavoriteSet; onApply(set: FavoriteSet): void }) {
+  return (
+    <button className={styles.templateCard} type="button" onClick={() => onApply(set)}>
+      <strong>{set.name}</strong>
+      {set.nameAr ? <span dir="rtl">{set.nameAr}</span> : null}
+      <small>{set.items.length} items · {set.items.slice(0, 3).map((entry) => entry.investigationCatalogItem.name).join(", ")}</small>
+    </button>
+  );
+}
+
+function ListLibrary({ copy, myLists, sharedTemplates, onApply, onArchive, onDuplicate }: {
+  copy: StationCopy;
+  myLists: FavoriteSet[];
+  sharedTemplates: FavoriteSet[];
+  onApply(set: FavoriteSet): void;
+  onArchive(id: string): Promise<void>;
+  onDuplicate(id: string): Promise<void>;
+}) {
+  return (
+    <section className={styles.listLibrary}>
+      <div className={styles.sectionTitle}><h2>{copy.myLists}</h2><span>{copy.personalListsHelp}</span></div>
+      <div className={styles.listGrid}>
+        {myLists.map((set) => (
+          <article className={`panel ${styles.listCard}`} key={set.id}>
+            <button className={styles.listOpen} type="button" onClick={() => onApply(set)}><strong>{set.name}</strong><span>{set.items.length} {copy.items}</span></button>
+            <div className={styles.listCardActions}><button className="button secondary compact" type="button" onClick={() => void onDuplicate(set.id)}>{copy.duplicate}</button><button className="button secondary compact" type="button" onClick={() => void onArchive(set.id)}>{copy.archive}</button></div>
+          </article>
+        ))}
+        {!myLists.length ? <p className="empty-state compact smart-empty-state">{copy.noLists}</p> : null}
+      </div>
+      <div className={styles.sectionTitle}><h2>{copy.sharedTemplates}</h2><span>{copy.templateHelp}</span></div>
+      <div className={styles.templateGrid}>{sharedTemplates.map((set) => <TemplateCard key={set.id} set={set} onApply={onApply} />)}</div>
     </section>
-  </AppShell>;
+  );
 }
 
-function CatalogList({ title, items, onAdd }: { title: string; items: CatalogItem[]; onAdd: (item: CatalogItem) => void }) {
-  return <section className="compact-panel"><div className="section-heading compact-section-heading"><h3>{title}</h3><span className="badge">{items.length}</span></div>{items.slice(0, 8).map((item) => <button className="picker-row" key={`${title}-${item.id}`} type="button" onClick={() => onAdd(item)}><strong>{item.name}</strong><span>{item.category}</span></button>)}{!items.length ? <p className="muted">No items yet.</p> : null}</section>;
+function FollowUpPanel({ copy, counts, requests, requestStatus, onFilter, onReceive, onReview, onTransition }: {
+  copy: StationCopy;
+  counts: Record<string, number>;
+  requests: ClinicalRequest[];
+  requestStatus: string;
+  onFilter(value: string): void;
+  onReceive(id: string): void;
+  onReview(id: string): void;
+  onTransition(id: string, target: string): void;
+}) {
+  return (
+    <section className={styles.followUpWorkspace}>
+      <div className={styles.followUpMetrics}>{followUpStatuses.map(([key, label]) => <button className={requestStatus === key ? styles.followUpActive : ""} key={key} type="button" onClick={() => onFilter(requestStatus === key ? "" : key)}><strong>{counts[key] ?? 0}</strong><span>{label}</span></button>)}</div>
+      <section className={`panel ${styles.followUpPanel}`}>
+        <div className="section-heading"><div><h2>{copy.resultFollowUp}</h2><p className="muted">{copy.followUpHelp}</p></div><span className="badge">{requests.length}</span></div>
+        <div className={styles.followUpList}>
+          {requests.map((request) => (
+            <article className={styles.followUpRow} key={request.id}>
+              <div><strong>{request.title}</strong><span>{request.patient ? patientLabel(request.patient) : copy.patientRecord} · {request.status.replaceAll("_", " ")}</span></div>
+              <div className={styles.followUpActions}>
+                <button type="button" onClick={() => window.open(`/clinical-requests/${encodeURIComponent(request.id)}/print`, "_blank", "noopener,noreferrer")}>{copy.print}</button>
+                <button type="button" onClick={() => onTransition(request.id, "booked")}>{copy.booked}</button>
+                <button type="button" onClick={() => onReceive(request.id)}>{copy.resultReceived}</button>
+                <button type="button" onClick={() => onReview(request.id)}>{copy.doctorReviewed}</button>
+                <button type="button" onClick={() => onTransition(request.id, "patient_informed")}>{copy.patientInformed}</button>
+                <button type="button" onClick={() => onTransition(request.id, "closed")}>{copy.close}</button>
+              </div>
+            </article>
+          ))}
+          {!requests.length ? <p className="empty-state compact smart-empty-state">{copy.noRequests}</p> : null}
+        </div>
+      </section>
+    </section>
+  );
 }
 
-function cleanCatalogId(id: string) { return id; }
-function basketStorageKey(patientId: string, encounterId: string) { return `prij-investigation-basket:${patientId}:${encounterId}`; }
-function uniqueCatalogItems(items: CatalogItem[]) { return items.filter((item, index) => Boolean(item?.id) && items.findIndex((candidate) => candidate.id === item.id) === index); }
-async function apiGet(endpoint: string) { const response = await apiRequest(endpoint, "GET"); if (!response.ok) { const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null; throw new Error(`${body?.error?.message ?? "Investigation request failed."}${body?.error?.requestId ? ` Request ${body.error.requestId}.` : ""}`); } return response.json(); }
-async function apiPost(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "POST", payload); }
-async function apiPut(endpoint: string, payload: Record<string, unknown>) { return apiRequest(endpoint, "PUT", payload); }
-async function apiRequest(endpoint: string, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", payload?: Record<string, unknown>) { const token = sessionStorage.getItem("prijClinicToken"); return fetch(`${getApiBaseUrl()}${endpoint}`, { method, credentials: "include", headers: { ...(payload ? { "content-type": "application/json" } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: payload ? JSON.stringify(payload) : undefined }).catch(() => new Response(null, { status: 500 })); }
+function buildCategoryTree(items: CatalogItem[]): CategoryNode[] {
+  const categories = new Map<string, Map<string, number>>();
+  for (const item of items) {
+    const category = item.category || "Other";
+    const subcategory = item.subcategory || "General";
+    const children = categories.get(category) ?? new Map<string, number>();
+    children.set(subcategory, (children.get(subcategory) ?? 0) + 1);
+    categories.set(category, children);
+  }
+  return [...categories.entries()]
+    .map(([name, children]) => ({
+      name,
+      count: [...children.values()].reduce((sum, value) => sum + value, 0),
+      subcategories: [...children.entries()].map(([childName, count]) => ({ name: childName, count })).sort((left, right) => left.name.localeCompare(right.name))
+    }))
+    .sort((left, right) => categoryRank(left.name) - categoryRank(right.name) || left.name.localeCompare(right.name));
+}
+
+function categoryRank(name: string) {
+  return ["Laboratory", "Radiology", "Ultrasound", "Pathology", "Cardiology", "Other"].indexOf(name) === -1 ? 99 : ["Laboratory", "Radiology", "Ultrasound", "Pathology", "Cardiology", "Other"].indexOf(name);
+}
+
+function deriveRecentItems(orders: InvestigationOrder[], catalogue: CatalogItem[]) {
+  const byName = new Map(catalogue.map((item) => [normalize(item.name), item]));
+  const seen = new Set<string>();
+  const recent: CatalogItem[] = [];
+  for (const order of [...orders].sort((left, right) => new Date(right.requestedAt ?? right.createdAt ?? 0).getTime() - new Date(left.requestedAt ?? left.createdAt ?? 0).getTime())) {
+    for (const orderItem of order.items ?? []) {
+      const item = byName.get(normalize(orderItem.testName ?? ""));
+      if (item && !seen.has(item.id)) {
+        seen.add(item.id);
+        recent.push(item);
+      }
+    }
+  }
+  return recent.slice(0, 30);
+}
+
+function searchableText(item: CatalogItem) {
+  const aliases = Array.isArray(item.aliasesJson) ? item.aliasesJson : [];
+  return normalize([item.code, item.name, item.category, item.subcategory, item.modality, item.sampleType, ...aliases.map(String)].filter(Boolean).join(" "));
+}
+
+function normalize(value: string) {
+  return value.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim();
+}
+
+function basketStorageKey(patientId: string, encounterId: string) {
+  return `prij-investigation-basket:${patientId}:${encounterId}`;
+}
+
+function uniqueCatalogItems(items: CatalogItem[]) {
+  return items.filter((item, index) => Boolean(item?.id) && items.findIndex((candidate) => candidate.id === item.id) === index);
+}
+
+type SavedBasket = {
+  selected?: CatalogItem[];
+  indications?: Record<string, string>;
+  priority?: string;
+  requestNote?: string;
+  followUpDate?: string;
+  internalExternal?: "internal" | "external";
+  followUpOwner?: string;
+};
+
+async function apiGet(endpoint: string) {
+  const response = await apiRequest(endpoint, "GET");
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: { message?: string; requestId?: string } } | null;
+    throw new Error(`${body?.error?.message ?? "Investigation request failed."}${body?.error?.requestId ? ` Request ${body.error.requestId}.` : ""}`);
+  }
+  return response.json();
+}
+
+async function apiRequest(endpoint: string, method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE", payload?: Record<string, unknown>) {
+  const token = sessionStorage.getItem("prijClinicToken");
+  return fetch(`${getApiBaseUrl()}${endpoint}`, {
+    method,
+    credentials: "include",
+    headers: {
+      ...(payload ? { "content-type": "application/json" } : {}),
+      ...(token ? { authorization: `Bearer ${token}` } : {})
+    },
+    body: payload ? JSON.stringify(payload) : undefined
+  }).catch(() => new Response(null, { status: 500 }));
+}
+
+const english = {
+  eyebrow: "Doctor clinical workspace",
+  title: "Investigation Station",
+  subtitle: "Browse the real catalogue, build reusable lists, attach requests to an active visit, and follow results through review.",
+  loading: "Loading investigation database…",
+  ready: "Investigation database ready.",
+  loadFailed: "The investigation database could not be loaded.",
+  printSaved: "Print saved request",
+  importManage: "Import / manage catalogue",
+  newList: "+ New list",
+  metricsLabel: "Investigation Station metrics",
+  catalogueItems: "Catalogue items",
+  myLists: "My lists",
+  favorites: "Favorites",
+  recentlyUsed: "Recently used",
+  tabsLabel: "Investigation Station sections",
+  library: "Investigation library",
+  recent: "Recent",
+  resultFollowUp: "Results follow-up",
+  categories: "Categories",
+  accordionHelp: "Press + to expand a category and show its subcategories.",
+  all: "All",
+  allInCategory: "All in this category",
+  searchPlaceholder: "Search investigation, abbreviation, or alias…",
+  allInvestigations: "All active investigations",
+  noItems: "No active catalogue items match this view.",
+  favorite: "Favorite",
+  unfavorite: "Remove favorite",
+  add: "+ Add",
+  addedLabel: "Added",
+  added: "added to the basket.",
+  favoriteFailed: "Favorite status could not be updated.",
+  favoriteAdded: "Investigation added to favorites.",
+  favoriteRemoved: "Investigation removed from favorites.",
+  quickTemplates: "Quick templates",
+  templateHelp: "Templates fill the basket only; every item remains editable before ordering.",
+  templateLoaded: "Template loaded into the editable basket.",
+  nonActionable: "This reference does not define a universal bundle. Select investigations individually.",
+  buildList: "Build your list",
+  basketHelp: "Add, remove, and reorder before saving or using it for a patient.",
+  clear: "Clear all",
+  selectedPatient: "Selected patient",
+  activeVisit: "Active visit",
+  libraryMode: "Library mode",
+  openVisitMessage: "Open an active patient visit to create a real investigation request.",
+  listName: "List name",
+  listNameAr: "Arabic name (optional)",
+  listNamePlaceholder: "Example: Early pregnancy routine",
+  selectedItems: "Selected items",
+  emptyBasket: "No investigations selected.",
+  moveUp: "Move up",
+  moveDown: "Move down",
+  remove: "Remove",
+  indication: "Clinical indication",
+  saving: "Saving…",
+  saveList: "Save as my list",
+  listNameRequired: "Add at least one investigation and enter a list name.",
+  listSaveFailed: "The reusable list could not be saved.",
+  listSaved: "Reusable investigation list saved to the database.",
+  listArchived: "Investigation list archived.",
+  listDuplicated: "Investigation list duplicated.",
+  personalListsHelp: "Personal lists are stored in the database and remain editable by their owner.",
+  sharedTemplates: "Shared clinic templates",
+  items: "items",
+  duplicate: "Duplicate",
+  archive: "Archive",
+  noLists: "No personal lists yet. Build a basket and save it.",
+  overallIndication: "Overall indication / request note",
+  priority: "Priority",
+  routine: "Routine",
+  urgent: "Urgent",
+  destination: "Destination",
+  internal: "Internal",
+  external: "External",
+  followUpOwner: "Follow-up owner",
+  followUpOwnerPlaceholder: "Doctor, staff member, branch, or provider",
+  expectedDate: "Expected result / follow-up date",
+  reviewOrder: "Review and submit order",
+  confirmOrder: "Confirm warning and submit",
+  openPatientVisit: "Open patient file to use this list",
+  patientRequired: "Open an active patient visit and select at least one investigation.",
+  duplicateWarning: "An active order already contains one or more selected investigations. ",
+  priorResultWarning: "A prior reviewed result exists for one or more selected investigations. ",
+  confirmAgain: "Review the basket and submit again to confirm.",
+  orderFailed: "The investigation request could not be saved.",
+  orderSaved: "Investigation request saved to the active visit and follow-up workflow.",
+  followUpHelp: "Database-backed request lifecycle across the doctor’s permitted patient scope.",
+  followUpFailed: "The result follow-up could not be updated.",
+  followUpUpdated: "Investigation follow-up updated.",
+  patientRecord: "Patient record",
+  print: "Print",
+  booked: "Booked",
+  resultReceived: "Result received",
+  doctorReviewed: "Doctor reviewed",
+  patientInformed: "Patient informed",
+  close: "Close",
+  noRequests: "No requests are visible in your permitted scope."
+} as const;
+
+type StationCopy = { [K in keyof typeof english]: string };
+
+const stationCopy: Record<"en" | "ar", StationCopy> = {
+  en: english,
+  ar: {
+    ...english,
+    eyebrow: "مساحة العمل السريرية للطبيب",
+    title: "محطة الفحوصات",
+    subtitle: "تصفح كتالوج الفحوصات الحقيقي، وأنشئ قوائم قابلة لإعادة الاستخدام، واربط الطلب بالزيارة النشطة، وتابع النتائج حتى المراجعة.",
+    loading: "جارٍ تحميل قاعدة بيانات الفحوصات…",
+    ready: "قاعدة بيانات الفحوصات جاهزة.",
+    loadFailed: "تعذر تحميل قاعدة بيانات الفحوصات.",
+    printSaved: "طباعة الطلب المحفوظ",
+    importManage: "استيراد / إدارة الكتالوج",
+    newList: "+ قائمة جديدة",
+    metricsLabel: "مؤشرات محطة الفحوصات",
+    catalogueItems: "عناصر الكتالوج",
+    myLists: "قوائمي",
+    favorites: "المفضلة",
+    recentlyUsed: "المستخدمة مؤخراً",
+    tabsLabel: "أقسام محطة الفحوصات",
+    library: "مكتبة الفحوصات",
+    recent: "الأخيرة",
+    resultFollowUp: "متابعة النتائج",
+    categories: "التصنيفات",
+    accordionHelp: "اضغط + لفتح التصنيف وعرض التصنيفات الفرعية.",
+    all: "الكل",
+    allInCategory: "كل عناصر هذا التصنيف",
+    searchPlaceholder: "ابحث باسم الفحص أو الاختصار أو الاسم البديل…",
+    allInvestigations: "كل الفحوصات النشطة",
+    noItems: "لا توجد فحوصات نشطة مطابقة.",
+    favorite: "إضافة للمفضلة",
+    unfavorite: "إزالة من المفضلة",
+    add: "+ إضافة",
+    addedLabel: "تمت الإضافة",
+    added: "تمت إضافته إلى السلة.",
+    favoriteFailed: "تعذر تحديث المفضلة.",
+    favoriteAdded: "تمت إضافة الفحص للمفضلة.",
+    favoriteRemoved: "تمت إزالة الفحص من المفضلة.",
+    quickTemplates: "القوالب السريعة",
+    templateHelp: "القالب يملأ السلة فقط، ويمكن تعديل كل عنصر قبل الطلب.",
+    templateLoaded: "تم تحميل القالب إلى السلة القابلة للتعديل.",
+    nonActionable: "لا يحدد هذا المرجع حزمة فحوصات ثابتة. اختر الفحوصات بشكل فردي.",
+    buildList: "إنشاء القائمة",
+    basketHelp: "أضف واحذف ورتب قبل الحفظ أو الاستخدام للمريضة.",
+    clear: "مسح الكل",
+    selectedPatient: "المريضة المحددة",
+    activeVisit: "زيارة نشطة",
+    libraryMode: "وضع المكتبة",
+    openVisitMessage: "افتح زيارة نشطة لإنشاء طلب فحوصات حقيقي.",
+    listName: "اسم القائمة",
+    listNameAr: "الاسم العربي (اختياري)",
+    listNamePlaceholder: "مثال: فحوصات الحمل المبكر",
+    selectedItems: "العناصر المحددة",
+    emptyBasket: "لم يتم اختيار فحوصات.",
+    moveUp: "تحريك لأعلى",
+    moveDown: "تحريك لأسفل",
+    remove: "حذف",
+    indication: "السبب السريري",
+    saving: "جارٍ الحفظ…",
+    saveList: "حفظ ضمن قوائمي",
+    listNameRequired: "اختر فحصاً واحداً على الأقل وأدخل اسم القائمة.",
+    listSaveFailed: "تعذر حفظ القائمة.",
+    listSaved: "تم حفظ قائمة الفحوصات في قاعدة البيانات.",
+    listArchived: "تمت أرشفة القائمة.",
+    listDuplicated: "تم إنشاء نسخة من القائمة.",
+    personalListsHelp: "القوائم الشخصية محفوظة في قاعدة البيانات ويمكن لمالكها تعديلها.",
+    sharedTemplates: "قوالب العيادة المشتركة",
+    items: "عناصر",
+    duplicate: "نسخ",
+    archive: "أرشفة",
+    noLists: "لا توجد قوائم شخصية بعد.",
+    overallIndication: "السبب العام / ملاحظة الطلب",
+    priority: "الأولوية",
+    routine: "عادي",
+    urgent: "مستعجل",
+    destination: "الجهة",
+    internal: "داخلي",
+    external: "خارجي",
+    followUpOwner: "مسؤول المتابعة",
+    followUpOwnerPlaceholder: "طبيب أو موظف أو فرع أو مقدم خدمة",
+    expectedDate: "تاريخ النتيجة المتوقع / المتابعة",
+    reviewOrder: "مراجعة وحفظ الطلب",
+    confirmOrder: "تأكيد التحذير والحفظ",
+    openPatientVisit: "فتح ملف المريضة لاستخدام القائمة",
+    patientRequired: "افتح زيارة نشطة واختر فحصاً واحداً على الأقل.",
+    duplicateWarning: "يوجد طلب نشط يحتوي على فحص أو أكثر من المحدد. ",
+    priorResultWarning: "توجد نتيجة سابقة تمت مراجعتها لفحص أو أكثر من المحدد. ",
+    confirmAgain: "راجع السلة واضغط الحفظ مرة أخرى للتأكيد.",
+    orderFailed: "تعذر حفظ طلب الفحوصات.",
+    orderSaved: "تم حفظ طلب الفحوصات وربطه بالزيارة ومسار المتابعة.",
+    followUpHelp: "دورة طلب حقيقية من قاعدة البيانات ضمن نطاق المرضى المسموح للطبيب.",
+    followUpFailed: "تعذر تحديث متابعة النتيجة.",
+    followUpUpdated: "تم تحديث متابعة الفحص.",
+    patientRecord: "ملف المريضة",
+    print: "طباعة",
+    booked: "تم الحجز",
+    resultReceived: "تم استلام النتيجة",
+    doctorReviewed: "تمت مراجعة الطبيب",
+    patientInformed: "تم إبلاغ المريضة",
+    close: "إغلاق",
+    noRequests: "لا توجد طلبات ظاهرة ضمن نطاق الصلاحيات."
+  }
+};
