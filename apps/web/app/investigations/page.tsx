@@ -262,7 +262,7 @@ export default function InvestigationsPage() {
   const [internalExternal, setInternalExternal] = useState<"internal" | "external">("internal");
   const [followUpOwner, setFollowUpOwner] = useState("");
   const [warningsConfirmed, setWarningsConfirmed] = useState(false);
-  const [status, setStatus] = useState(t.ready);
+  const [status, setStatus] = useState<string>(t.ready);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedRequestId, setSavedRequestId] = useState("");
@@ -975,12 +975,12 @@ async function apiRequest(endpoint: string, method: string, payload?: Record<str
   }).catch(() => new Response(null, { status: 500 }));
 }
 
-function authHeaders() {
+function authHeaders(): Record<string, string> {
   const token = sessionStorage.getItem("prijClinicToken");
   return token ? { authorization: `Bearer ${token}` } : {};
 }
 
-function csrfHeaders() {
+function csrfHeaders(): Record<string, string> {
   const token = /(?:^|;\s*)csrf-token=([^;]+)/.exec(document.cookie)?.[1];
   return token ? { "x-csrf-token": decodeURIComponent(token) } : {};
 }

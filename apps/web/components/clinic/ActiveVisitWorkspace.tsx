@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
+import { EncounterInvestigationOrderBuilder } from "@/components/investigations/EncounterInvestigationOrderBuilder";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { completeDoctorVisit, createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { useSession } from "@/app/session";
@@ -344,7 +345,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
               <EncounterModule activeModule={activeModule} form={encounterForm} onChange={setEncounterForm} onSubmit={saveEncounter} />
             ) : null}
             {activeModule === "prescription" ? <PrescriptionModule query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
-            {activeModule === "investigations" ? <InvestigationsModule patientId={patientId} visitId={visitId} /> : null}
+            {activeModule === "investigations" ? <EncounterInvestigationOrderBuilder patientId={patientId} encounterId={visitId} patientName={String(patient?.name ?? "Patient")} onSaved={() => void loadVisit()} /> : null}
             {activeModule === "ultrasound" ? <UltrasoundModule patientType={String(patient?.patientType ?? "")} /> : null}
             {activeModule === "follow-up" ? <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
             {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} /> : null}
@@ -460,10 +461,6 @@ function SafetyPanel({ safety }: { safety: Record<string, unknown> | null }) {
       {!safety ? <p className="muted">Run safety check after adding medication lines.</p> : null}
     </section>
   );
-}
-
-function InvestigationsModule({ patientId, visitId }: { patientId: string; visitId: string }) {
-  return <section className="panel compact-panel"><h2>Order investigations</h2><p>Open the encounter-locked ordering workspace for favorites, smart sets, duplicate warnings, responsibilities, and the persistent basket.</p><p className="notice">Applying a set never submits an order. Review and submission remain separate Doctor actions.</p><Link className="button" href={`/investigations?patientId=${encodeURIComponent(patientId)}&encounterId=${encodeURIComponent(visitId)}`}>Open connected investigation ordering</Link></section>;
 }
 
 function UltrasoundModule({ patientType }: { patientType: string }) {
