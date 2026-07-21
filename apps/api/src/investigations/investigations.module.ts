@@ -6,10 +6,11 @@ import { RbacModule } from "../rbac/rbac.module";
 import { UsersModule } from "../users/users.module";
 import { ClinicalRequestsController, InvestigationsController } from "./investigations.controller";
 import { InvestigationsService } from "./investigations.service";
+import { StandaloneInvestigationsController } from "./standalone-investigations.controller";
 
 @Module({
   imports: [AuditModule, AuthModule, PrismaModule, RbacModule, UsersModule],
-  controllers: [InvestigationsController, ClinicalRequestsController],
+  controllers: [InvestigationsController, ClinicalRequestsController, StandaloneInvestigationsController],
   providers: [InvestigationsService]
 })
 export class InvestigationsModule {}
