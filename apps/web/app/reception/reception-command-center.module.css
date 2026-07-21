@@ -3,6 +3,15 @@
   gap: 1rem;
 }
 
+.desktopOnly {
+  display: grid;
+  gap: 1rem;
+}
+
+.mobileOnly {
+  display: none;
+}
+
 .header {
   align-items: end;
 }
@@ -18,15 +27,17 @@
 
 .metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
 .metric {
   display: grid;
-  gap: 0.3rem;
-  min-height: 7rem;
-  padding: 1rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 5.25rem;
+  padding: 0.9rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -35,22 +46,23 @@
 
 .metric span {
   color: var(--muted);
-  font-weight: 700;
+  font-weight: 750;
 }
 
 .metric strong {
   color: var(--foreground);
-  font-size: 1.85rem;
+  font-size: 1.8rem;
   line-height: 1;
 }
 
 .metric small {
+  grid-column: 2 / -1;
   color: var(--muted);
 }
 
 .quickActions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.7rem;
 }
 
@@ -59,7 +71,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.7rem;
-  min-height: 4.75rem;
+  min-height: 4.6rem;
   padding: 0.9rem 1rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -76,10 +88,10 @@
 .quickActionActive {
   border-color: var(--accent);
   background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
-.workspaceGrid,
-.flowGrid {
+.workspaceGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(22rem, 0.92fr);
   gap: 1rem;
@@ -94,13 +106,13 @@
 }
 
 .patientPanel :global(.patient-picker-results) {
-  max-height: 21rem;
+  max-height: 26rem;
   overflow: auto;
 }
 
 .selectedSignals {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.55rem;
 }
 
@@ -125,25 +137,20 @@
 
 .patientActions,
 .formActions,
-.rowActions,
-.quickDateRow,
-.durationRow {
+.rowActions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
   align-items: center;
 }
 
-.actionEmpty {
-  display: grid;
-  place-items: center;
-  min-height: 11rem;
-  padding: 1rem;
+.selectionHint {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
   border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--surface-muted);
   color: var(--muted);
-  text-align: center;
 }
 
 .inlineForm {
@@ -151,34 +158,8 @@
   gap: 0.85rem;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.75rem;
-}
-
-.formWide {
-  grid-column: 1 / -1;
-}
-
-.choiceButton {
-  min-height: 2.55rem;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--foreground);
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.choiceButtonActive {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-}
-
 .statusMessage {
+  margin: 0;
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -247,7 +228,7 @@
 .empty {
   display: grid;
   place-items: center;
-  min-height: 7rem;
+  min-height: 6rem;
   padding: 1rem;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-sm);
@@ -256,87 +237,66 @@
 }
 
 .loading {
-  min-height: 5rem;
+  min-height: 4rem;
+}
+
+.mobileReception {
+  gap: 0.85rem;
+}
+
+.mobileActions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mobileActionCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 4.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+.mobileQueuePreview {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mobileQueuePreview p {
+  margin: 0;
 }
 
 @media (max-width: 1100px) {
-  .quickActions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .workspaceGrid,
-  .flowGrid {
+  .workspaceGrid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 720px) {
-  .metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@media (max-width: 768px) {
+  .desktopOnly {
+    display: none;
   }
 
-  .metric {
-    min-height: 6rem;
-  }
-
-  .quickActions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .quickAction {
-    min-height: 4.25rem;
-  }
-
-  .formGrid,
-  .selectedSignals {
-    grid-template-columns: 1fr;
-  }
-
-  .listRow {
-    grid-template-columns: 1fr;
-  }
-
-  .rowActions > * {
-    flex: 1 1 auto;
-  }
-}
-
-@media (max-width: 430px) {
-  .commandCenter {
-    gap: 0.8rem;
-  }
-
-  .metrics,
-  .quickActions {
-    gap: 0.55rem;
-  }
-
-  .metric,
-  .quickAction {
-    padding: 0.75rem;
-  }
-
-  .quickAction {
-    grid-template-columns: 1fr;
-    justify-items: start;
-  }
-
-  .patientActions,
-  .formActions {
+  .mobileOnly {
     display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .patientActions > *,
-  .formActions > * {
-    width: 100%;
   }
 }
 
 :global([dir="rtl"]) .quickAction,
+:global([dir="rtl"]) .mobileActionCard,
 :global([dir="rtl"]) .listRow,
 :global([dir="rtl"]) .rowMain,
 :global([dir="rtl"]) .nextPatient,
-:global([dir="rtl"]) .signal {
+:global([dir="rtl"]) .signal,
+:global([dir="rtl"]) .selectionHint {
   text-align: right;
 }
