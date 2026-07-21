@@ -1,0 +1,18 @@
+.receptionist-shell .sidebar .nav-group:not(:first-of-type) {
+  display: none;
+}
+
+.receptionist-shell .sidebar .brand {
+  pointer-events: none;
+  cursor: default;
+}
+
+.receptionist-shell .sidebar .nav-group:first-of-type {
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 1199px) {
+  .receptionist-shell .sidebar .nav-group:first-of-type {
+    margin-top: 0.75rem;
+  }
+}
