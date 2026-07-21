@@ -1,0 +1,39 @@
+name: Investigation Sync Proven Security Tests
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-tests:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'work/doctor-investigation-station-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout investigation branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/doctor-investigation-station-v1
+          fetch-depth: 0
+
+      - name: Fetch proven Reception security assertions
+        run: git fetch origin work/reception-module-v1:refs/remotes/origin/work/reception-module-v1
+
+      - name: Copy only shared security assertion scripts
+        shell: bash
+        run: |
+          git show origin/work/reception-module-v1:scripts/route-authorization-test.mjs > scripts/route-authorization-test.mjs
+          git show origin/work/reception-module-v1:scripts/audit-assertion-test.mjs > scripts/audit-assertion-test.mjs
+          rm .github/workflows/investigation-sync-security-tests.yml
+          node --check scripts/route-authorization-test.mjs
+          node --check scripts/audit-assertion-test.mjs
+
+      - name: Commit shared test corrections
+        shell: bash
+        run: |
+          git config user.name "prij-clinic-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/route-authorization-test.mjs scripts/audit-assertion-test.mjs .github/workflows/investigation-sync-security-tests.yml
+          git commit -m "test(security): align route and audit safety assertions"
+          git push origin HEAD:work/doctor-investigation-station-v1
