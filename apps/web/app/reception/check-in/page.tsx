@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
+import { InlinePatientQrScanner } from "../../../components/clinic/InlinePatientQrScanner";
 import { PatientPicker, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { getApiBaseUrl } from "@/lib/api-base-url";
@@ -63,15 +64,27 @@ export default function ReceptionCheckInPage() {
   }
 
   return <AppShell>
-    <section className="page-header"><div className="header-row"><div><p className="eyebrow">Reception</p><h1>Check in patient</h1></div><Link className="button secondary compact" href="/reception">Back to Reception</Link></div><p className="muted">Permanent QR and manual lookup are available in patient selection.</p></section>
+    <section className="page-header"><div className="header-row"><div><p className="eyebrow">Reception</p><h1>Check in patient</h1></div><Link className="button secondary compact" href="/reception">Back to Reception</Link></div><p className="muted">Select the patient by live search or QR.</p></section>
     <SafetyAlert />
     <section className="panel compact-panel reception-check-in-compact">
-      <article className="compact-panel"><PatientPicker patients={selectedPatient ? [selectedPatient] : []} selectedPatientId={selectedPatient?.id ?? ""} onSelect={(id) => { if (!id) selectPatient(null); }} onPatientSelect={selectPatient} required label="Select patient" storageKey="check-in" /><div className="topbar-actions"><Link className="button secondary compact" href="/reception/qr-scan">Permanent QR</Link><Link className="button secondary compact" href="/patients/new">Create patient</Link></div></article>
-      {selectedPatient ? <>
-        <article className="compact-panel"><VisitTypeSelector value={visitType} onChange={setVisitType} compact /><button className="button" type="button" onClick={() => void submit()} disabled={!visitType || submitting}><ThreeDMedicalIcon name="queue" size="sm" />{submitting ? "Adding…" : "Add to waiting line"}</button></article>
-      </> : null}
+      <article className="compact-panel">
+        <div className="reception-check-in-patient-tools">
+          <InlinePatientQrScanner onPatientResolved={selectPatient} />
+          {selectedPatient ? <button className="button secondary compact" type="button" onClick={() => selectPatient(null)}>Clear selection</button> : null}
+        </div>
+        <PatientPicker
+          patients={selectedPatient ? [selectedPatient] : []}
+          selectedPatientId={selectedPatient?.id ?? ""}
+          onSelect={(id) => { if (!id) selectPatient(null); }}
+          onPatientSelect={selectPatient}
+          required
+          label="Select patient"
+          storageKey="check-in"
+        />
+      </article>
+      {selectedPatient ? <article className="compact-panel"><VisitTypeSelector value={visitType} onChange={setVisitType} compact /><button className="button" type="button" onClick={() => void submit()} disabled={!visitType || submitting}><ThreeDMedicalIcon name="queue" size="sm" />{submitting ? "Adding…" : "Add to waiting line"}</button></article> : null}
       {status ? <p className={ticket ? "success-message" : "notice"} role="status">{status}</p> : null}
-      {ticket ? <article className="queue-position-card"><strong>Queue number {ticket.queueNumber ?? "—"}</strong><span>Visit type: {ticket.visitType ?? visitType}</span><span>Status: {ticket.queueState === "WAITING" ? "Waiting" : ticket.queueState ?? "Waiting"}</span><Link className="button secondary compact" href="/queue">Open queue</Link></article> : null}
+      {ticket ? <article className="queue-position-card"><strong>Queue number {ticket.queueNumber ?? "—"}</strong><span>Visit type: {ticket.visitType ?? visitType}</span><span>Status: {ticket.queueState === "WAITING" ? "Waiting" : ticket.queueState ?? "Waiting"}</span></article> : null}
     </section>
   </AppShell>;
 }

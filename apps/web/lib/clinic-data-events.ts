@@ -1,4 +1,4 @@
-export type ClinicRefreshDependency = "queue" | "patient" | "timeline" | "owner-operations";
+export type ClinicRefreshDependency = "queue" | "appointments" | "patient" | "timeline" | "owner-operations";
 
 const EVENT_NAME = "clinic-data:changed";
 const CHANNEL_NAME = "prij-clinic-data";

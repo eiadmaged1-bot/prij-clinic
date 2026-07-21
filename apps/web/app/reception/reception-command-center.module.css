@@ -1,0 +1,385 @@
+.commandCenter {
+  display: grid;
+  gap: 1rem;
+}
+
+.desktopOnly {
+  display: grid;
+  gap: 1rem;
+}
+
+.mobileOnly {
+  display: none;
+}
+
+.header {
+  align-items: end;
+}
+
+.headerCopy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.headerCopy p:last-child {
+  max-width: 52rem;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 5.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.metric span {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.metric strong {
+  color: var(--foreground);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.metric small {
+  grid-column: 2 / -1;
+  color: var(--muted);
+}
+
+.quickActions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.quickAction {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 4.6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--foreground);
+  font-weight: 800;
+  text-align: start;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+
+.quickAction:hover,
+.quickAction:focus-visible,
+.quickActionActive {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.workspaceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(22rem, 0.92fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.patientPanel,
+.actionPanel,
+.listPanel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.patientPanel :global(.patient-picker-results) {
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.selectedSignals {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+
+.signal {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.signal span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.signal strong {
+  font-size: 0.95rem;
+}
+
+.patientActions,
+.formActions,
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.selectionHint {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  color: var(--muted);
+}
+
+.inlineForm {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.statusMessage {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.statusSuccess {
+  border-color: color-mix(in srgb, var(--success) 32%, var(--border));
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+}
+
+.nextPatient {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-strong);
+}
+
+.nextPatient span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nextPatient strong {
+  font-size: 1.05rem;
+}
+
+.list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.listRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.rowMain {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.rowMain strong {
+  color: var(--foreground);
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  min-height: 6rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+.loading {
+  min-height: 4rem;
+}
+
+.mobileReception {
+  gap: 0.85rem;
+}
+
+.mobileScoreboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.mobileScoreCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 5.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.mobileScoreCard span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.mobileScoreCard strong {
+  grid-column: 1 / -1;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mobileUrgentScore {
+  border-color: color-mix(in srgb, var(--danger) 28%, var(--border));
+}
+
+.mobileActions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.mobileActionCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  min-height: 4.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+}
+
+.mobileQueuePreview {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mobileQueuePreview p {
+  margin: 0;
+}
+
+.mobileQueueList {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.mobileQueueRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.mobileQueueRow strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobileQueueRow p {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mobileQueueNumber {
+  display: grid;
+  place-items: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 900;
+}
+
+.mobileUrgentBadge {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 28%, var(--border));
+  border-radius: 999px;
+  color: var(--danger);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+@media (max-width: 1100px) {
+  .workspaceGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .desktopOnly {
+    display: none;
+  }
+
+  .mobileOnly {
+    display: grid;
+  }
+}
+
+:global([dir="rtl"]) .quickAction,
+:global([dir="rtl"]) .mobileActionCard,
+:global([dir="rtl"]) .listRow,
+:global([dir="rtl"]) .rowMain,
+:global([dir="rtl"]) .nextPatient,
+:global([dir="rtl"]) .signal,
+:global([dir="rtl"]) .selectionHint,
+:global([dir="rtl"]) .mobileQueueRow {
+  text-align: right;
+}
