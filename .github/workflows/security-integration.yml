@@ -37,6 +37,8 @@ jobs:
       API_PORT: "3001"
       API_URL: http://localhost:3001
       NODE_ENV: test
+      DEMO_ADMIN_LOGIN: eyad
+      DEMO_ADMIN_PASSWORD: LocalDev123!
       DEMO_TEST_PASSWORD: LocalDev123!
 
     steps:
