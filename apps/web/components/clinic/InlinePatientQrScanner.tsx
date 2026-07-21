@@ -15,6 +15,7 @@ export function InlinePatientQrScanner({ onPatientResolved }: { onPatientResolve
   const stopScanRef = useRef(false);
   const [cameraCapability, setCameraCapability] = useState<CameraCapability>("checking");
   const [cameraActive, setCameraActive] = useState(false);
+  const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("");
   const { language } = useI18n();
   const copy = inlineQrCopy[language];
@@ -28,6 +29,11 @@ export function InlinePatientQrScanner({ onPatientResolved }: { onPatientResolve
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraActive(false);
   }, []);
+
+  const closeScanner = useCallback(() => {
+    stopCamera();
+    setOpen(false);
+  }, [stopCamera]);
 
   useEffect(() => {
     if (!window.isSecureContext) {
@@ -75,7 +81,8 @@ export function InlinePatientQrScanner({ onPatientResolved }: { onPatientResolve
       status: resolved.status
     });
     setStatus(copy.found);
-  }, [copy, headers, onPatientResolved]);
+    closeScanner();
+  }, [closeScanner, copy, headers, onPatientResolved]);
 
   async function startCameraScan() {
     if (cameraCapability !== "ready") return;
@@ -109,22 +116,40 @@ export function InlinePatientQrScanner({ onPatientResolved }: { onPatientResolve
     }
   }
 
+  async function toggleScanner() {
+    if (open) {
+      closeScanner();
+      return;
+    }
+    setOpen(true);
+    if (cameraCapability === "ready") await startCameraScan();
+  }
+
   return (
-    <section className="inline-patient-qr-scanner" aria-label={copy.title}>
-      <div className="section-heading compact-section-heading">
-        <div>
-          <h2>{copy.title}</h2>
-          <p className="muted">{copy.help}</p>
-        </div>
-        <span className="badge">{status}</span>
-      </div>
-      <button className="button" type="button" onClick={() => void startCameraScan()} disabled={cameraCapability !== "ready"}>
-        {cameraActive ? copy.scanning : copy.start}
+    <div className="inline-patient-qr-control">
+      <button
+        aria-expanded={open}
+        className="button secondary compact reception-qr-button"
+        type="button"
+        onClick={() => void toggleScanner()}
+      >
+        QR
       </button>
-      <video className={`qr-video ${cameraActive ? "active" : ""}`} ref={videoRef} muted playsInline hidden={!cameraActive} />
-      <canvas ref={canvasRef} hidden aria-hidden="true" />
-      {cameraCapability === "insecure" || cameraCapability === "unavailable" ? <p className="notice">{status}</p> : null}
-    </section>
+      {open ? (
+        <div className="inline-patient-qr-panel" role="region" aria-label={copy.title}>
+          <div className="inline-patient-qr-toolbar">
+            <strong>{copy.title}</strong>
+            <button className="button secondary compact" type="button" onClick={closeScanner}>{copy.close}</button>
+          </div>
+          {cameraCapability === "ready" && !cameraActive ? (
+            <button className="button compact" type="button" onClick={() => void startCameraScan()}>{copy.retry}</button>
+          ) : null}
+          <video className={`qr-video ${cameraActive ? "active" : ""}`} ref={videoRef} muted playsInline hidden={!cameraActive} />
+          <canvas ref={canvasRef} hidden aria-hidden="true" />
+          <p className={cameraCapability === "insecure" || cameraCapability === "unavailable" ? "notice" : "muted"}>{status}</p>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -179,14 +204,14 @@ function cameraErrorMessage(error: unknown, copy: InlineQrCopy) {
 
 const english = {
   title: "Scan permanent QR",
-  help: "Scan here without leaving Check-in.",
-  start: "Start camera scan",
+  close: "Close",
+  retry: "Start camera",
   scanning: "Scanning",
   requesting: "Requesting camera permission",
   loading: "Loading QR reader",
   ready: "Ready",
-  insecure: "Camera scanning requires HTTPS. Manual patient search remains available below.",
-  unavailable: "Camera unavailable. Use manual patient search below.",
+  insecure: "Camera scanning requires HTTPS. Manual patient search remains available.",
+  unavailable: "Camera unavailable. Use manual patient search.",
   denied: "Camera permission denied. Retry or use manual patient search.",
   noCamera: "No camera was found. Use manual patient search.",
   failed: "Scanner failed. Retry or use manual patient search.",
@@ -200,14 +225,14 @@ const inlineQrCopy = {
   ar: {
     ...english,
     title: "مسح رمز المريضة الدائم",
-    help: "امسح الرمز هنا دون مغادرة صفحة تسجيل الحضور.",
-    start: "بدء المسح بالكاميرا",
+    close: "إغلاق",
+    retry: "تشغيل الكاميرا",
     scanning: "جارٍ المسح",
     requesting: "جارٍ طلب إذن الكاميرا",
     loading: "جارٍ تحميل قارئ QR",
     ready: "جاهز",
-    insecure: "المسح بالكاميرا يتطلب HTTPS. البحث اليدوي عن المريضة متاح بالأسفل.",
-    unavailable: "الكاميرا غير متاحة. استخدمي البحث اليدوي بالأسفل.",
+    insecure: "المسح بالكاميرا يتطلب HTTPS. البحث اليدوي عن المريضة متاح.",
+    unavailable: "الكاميرا غير متاحة. استخدمي البحث اليدوي.",
     denied: "تم رفض إذن الكاميرا. أعيدي المحاولة أو استخدمي البحث اليدوي.",
     noCamera: "لم يتم العثور على كاميرا. استخدمي البحث اليدوي.",
     failed: "تعذر المسح. أعيدي المحاولة أو استخدمي البحث اليدوي.",
