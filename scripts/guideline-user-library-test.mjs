@@ -58,8 +58,8 @@ try {
       chunks: {
         create: {
           chunkIndex: 0,
-          text: "Synthetic guideline content used only to verify review, favorites, recent access, archive preservation, restore, and audit behavior.",
-          normalizedText: "synthetic guideline content used only to verify review favorites recent access archive preservation restore and audit behavior",
+          text: "Synthetic guideline content supports source-grounded verification of review, favorites, recent access, unified search, archive preservation, restore, and audit behavior.",
+          normalizedText: "synthetic guideline content supports source grounded verification of review favorites recent access unified search archive preservation restore and audit behavior",
           citationLabel: `Synthetic CI Guideline ${suffix} · p1`,
           pageStart: 1,
           pageEnd: 1,
@@ -77,6 +77,29 @@ try {
           reviewStatus: "pending_governance_review"
         }
       }
+    }
+  });
+
+  const protocol = await prisma.clinicalProtocol.create({
+    data: {
+      code: `CI_GUIDELINE_PROTOCOL_${suffix}`,
+      title: `Synthetic CI Guideline Protocol ${suffix}`,
+      specialtyGroup: "obstetrics and gynecology",
+      condition: "Synthetic CI guideline verification",
+      aliases: ["synthetic evidence pathway"],
+      clinicalArea: "integration_test",
+      implementationStatus: "verified",
+      riskLevel: "medium",
+      sourceName: "Synthetic CI",
+      sourceYear: 2026,
+      sourceVersion: "CI-1",
+      sourceIdentifier: document.citationLabel,
+      sourceCitationsJson: [{ label: document.citationLabel, pageStart: 1 }],
+      contentJson: {
+        overview: "Synthetic reviewed protocol for source-link integration testing only."
+      },
+      publicationState: "SOURCE_VERIFIED_REFERENCE",
+      completionPercentage: 100
     }
   });
 
@@ -113,6 +136,43 @@ try {
   const reviewed = await prisma.guidelineDocument.findUnique({ where: { id: document.id } });
   if (reviewed?.guidelineStatus !== "ACTIVE" || reviewed.reviewStatus !== "clinically_reviewed") {
     throw new Error("Reviewed guideline did not become an active clinically reviewed document.");
+  }
+
+  const unifiedSearchResponse = await api(`/guidelines/knowledge-search?q=${encodeURIComponent("Synthetic CI Guideline")}&limit=10`, "GET", headers);
+  assertOk(unifiedSearchResponse, "Unified guideline and protocol search");
+  const unifiedSearch = await unifiedSearchResponse.json();
+  if (!unifiedSearch.guidelineResults?.some((item) => item.documentId === document.id)) {
+    throw new Error("Unified search did not return the approved guideline evidence.");
+  }
+  const protocolResult = unifiedSearch.protocolResults?.find((item) => item.id === protocol.id);
+  if (!protocolResult) throw new Error("Unified search did not return the reviewed protocol.");
+  if (protocolResult.linkedDocument?.id !== document.id) {
+    throw new Error("Reviewed protocol did not resolve to the actual accessible guideline document.");
+  }
+
+  const assistantResponse = await api("/guidelines/evidence-assistant/ask", "POST", headers, {
+    question: "What does the Synthetic CI Guideline support?"
+  });
+  assertOk(assistantResponse, "Source-grounded guideline assistant");
+  const assistant = await assistantResponse.json();
+  if (assistant.noSupportingSource) throw new Error("Source-grounded assistant failed to use the approved synthetic source.");
+  if (!assistant.citations?.some((citation) => citation.documentId === document.id && citation.pageStart === 1)) {
+    throw new Error("Source-grounded assistant did not return the expected page-linked citation.");
+  }
+  if (!assistant.relatedProtocols?.some((item) => item.id === protocol.id)) {
+    throw new Error("Source-grounded assistant did not return the related reviewed protocol.");
+  }
+  if (assistant.externalAiAccess !== false || assistant.generatedClinicalPlan !== false || assistant.doctorReviewRequired !== true) {
+    throw new Error("Source-grounded assistant safety flags are incorrect.");
+  }
+
+  const noSourceResponse = await api("/guidelines/evidence-assistant/ask", "POST", headers, {
+    question: `No-source-query-${suffix}-unmatched-evidence`
+  });
+  assertOk(noSourceResponse, "No-source assistant response");
+  const noSource = await noSourceResponse.json();
+  if (!noSource.noSupportingSource || noSource.answer !== "No supporting source was found in the approved guideline library.") {
+    throw new Error("Assistant did not return the required no-source response.");
   }
 
   const favoriteResponse = await api(`/guidelines/user-library/documents/${document.id}/favorite`, "POST", headers);
@@ -184,8 +244,18 @@ try {
     if (!actions.has(required)) throw new Error(`Missing audit event: ${required}`);
   }
 
+  const assistantAudit = await prisma.auditLog.findFirst({
+    where: { action: "guideline.source_grounded_assistant_used" },
+    orderBy: { createdAt: "desc" }
+  });
+  if (!assistantAudit) throw new Error("Source-grounded assistant audit event was not found.");
+
   console.log("PASS incomplete guideline shells cannot be activated");
   console.log("PASS clinical governance review activated a usable guideline");
+  console.log("PASS unified search returned guideline evidence and reviewed protocols together");
+  console.log("PASS protocol source resolved to an actual accessible guideline document");
+  console.log("PASS source-grounded assistant returned page-linked evidence and safety flags");
+  console.log("PASS no-source assistant response did not invent an answer");
   console.log("PASS guideline Favorite persisted in the database");
   console.log("PASS Recently Opened was derived from audited access");
   console.log("PASS legacy one-click archive route was blocked");
