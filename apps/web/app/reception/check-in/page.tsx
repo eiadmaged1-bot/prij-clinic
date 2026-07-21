@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
+import { ReceptionMobileHomeLink } from "../../../components/layout/ReceptionMobileHomeLink";
 import { InlinePatientQrScanner } from "../../../components/clinic/InlinePatientQrScanner";
 import { PatientPicker, type PatientPickerPatient } from "../../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
@@ -64,6 +65,7 @@ export default function ReceptionCheckInPage() {
   }
 
   return <AppShell>
+    <ReceptionMobileHomeLink />
     <section className="page-header"><div className="header-row"><div><p className="eyebrow">Reception</p><h1>Check in patient</h1></div><Link className="button secondary compact" href="/reception">Back to Reception</Link></div><p className="muted">Scan the permanent QR or use live patient search on this page.</p></section>
     <SafetyAlert />
     <section className="panel compact-panel reception-check-in-compact">
