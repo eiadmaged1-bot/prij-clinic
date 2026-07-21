@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
+import { ReceptionMobileHomeLink } from "../../components/layout/ReceptionMobileHomeLink";
 import { PatientPicker, patientLabel, type PatientPickerPatient } from "../../components/clinic/PatientPicker";
 import { VisitTypeSelector } from "../../components/clinic/VisitTypeSelector";
 import { useI18n } from "@/i18n/useI18n";
@@ -146,6 +147,7 @@ export default function ReceptionHomePage() {
 
   return (
     <AppShell>
+      <ReceptionMobileHomeLink />
       <div className={styles.commandCenter}>
         <section className={`${styles.mobileReception} ${styles.mobileOnly}`}>
           <section className="page-header">
