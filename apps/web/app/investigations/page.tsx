@@ -266,6 +266,7 @@ export default function InvestigationsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedRequestId, setSavedRequestId] = useState("");
+  const [savedPrintPath, setSavedPrintPath] = useState("");
   const [requestStatus, setRequestStatus] = useState("");
 
   const hasPatient = Boolean(patientId);
@@ -389,6 +390,7 @@ export default function InvestigationsPage() {
     setPatientId(nextPatient.id);
     setEncounterId("");
     setSavedRequestId("");
+    setSavedPrintPath("");
     setWarningsConfirmed(false);
     void loadPatientRequests(nextPatient.id);
     const params = new URLSearchParams();
@@ -568,6 +570,7 @@ export default function InvestigationsPage() {
     }
     const saved = await response.json() as { id: string };
     setSavedRequestId(saved.id);
+    setSavedPrintPath(hasEncounter ? `/clinical-requests/${encodeURIComponent(saved.id)}/print` : `/investigations/orders/${encodeURIComponent(saved.id)}/print`);
     clearBasket();
     await Promise.all([loadPatientRequests(patientId), loadFollowUp("")]);
     setStatus(t.orderSaved);
@@ -632,9 +635,9 @@ export default function InvestigationsPage() {
         <section className={styles.successPanel}>
           <div><strong>{t.orderSaved}</strong><span>{patient ? patientLabel(patient) : patientId}</span></div>
           <div className={styles.successActions}>
-            <button className="button secondary compact" type="button" onClick={() => window.open(`/clinical-requests/${encodeURIComponent(savedRequestId)}/print`, "_blank", "noopener,noreferrer")}>{t.print}</button>
+            <button className="button secondary compact" type="button" onClick={() => savedPrintPath && window.open(savedPrintPath, "_blank", "noopener,noreferrer")}>{t.print}</button>
             {patientId ? <Link className="button secondary compact" href={`/patients/${encodeURIComponent(patientId)}?tab=timeline`}>{t.openTimeline}</Link> : null}
-            <button className="button compact" type="button" onClick={() => setSavedRequestId("")}>{t.newOrder}</button>
+            <button className="button compact" type="button" onClick={() => { setSavedRequestId(""); setSavedPrintPath(""); }}>{t.newOrder}</button>
           </div>
         </section>
       ) : null}
