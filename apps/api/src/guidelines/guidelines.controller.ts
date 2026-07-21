@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request, Response } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -16,6 +16,7 @@ import { UpdateCheckDto } from "./dto/update-check.dto";
 import { UpdateGuidelineSourceDto } from "./dto/update-guideline-source.dto";
 import { UploadGuidelineDto } from "./dto/upload-guideline.dto";
 import { CreateGuidelineSummaryDto, ReviewGuidelineSummaryDto } from "./dto/guideline-summary.dto";
+import { GuidelineGovernanceService } from "./guideline-governance.service";
 import { GuidelinesService } from "./guidelines.service";
 
 type UploadedGuidelineFile = {
@@ -27,7 +28,10 @@ type UploadedGuidelineFile = {
 @Controller("guidelines")
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class GuidelinesController {
-  constructor(private readonly guidelines: GuidelinesService) {}
+  constructor(
+    private readonly guidelines: GuidelinesService,
+    private readonly governance: GuidelineGovernanceService
+  ) {}
 
   @Get("sources")
   @Permissions("guidelines.read")
@@ -113,7 +117,7 @@ export class GuidelinesController {
   @Post("documents/:id/review")
   @Permissions("guidelines.review")
   reviewDocument(@Param("id") id: string, @Body() dto: ReviewGuidelineDto, @CurrentUser() user: AuthUser) {
-    return this.guidelines.reviewDocument(id, dto, user);
+    return this.governance.reviewDocument(id, dto, user);
   }
 
   @Post("documents/:id/summaries")
@@ -130,8 +134,8 @@ export class GuidelinesController {
 
   @Post("documents/:id/archive")
   @Permissions("guidelines.delete_or_archive")
-  archiveDocument(@Param("id") id: string, @Body() dto: Partial<ReviewGuidelineDto>, @CurrentUser() user: AuthUser) {
-    return this.guidelines.archiveDocument(id, dto, user);
+  archiveDocument() {
+    throw new BadRequestException("Use the protected guideline archive endpoint with a reason and exact-title confirmation.");
   }
 
   @Post("upload")
