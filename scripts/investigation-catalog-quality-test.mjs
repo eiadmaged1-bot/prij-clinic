@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { investigationCatalogItems } = require("../apps/api/prisma/seeds/investigation-catalog.js");
+const { investigationCatalogItems, seedInvestigationCatalog } = require("../apps/api/prisma/seeds/investigation-catalog.js");
 
 const allowedCategories = new Set([
   "Laboratory",
@@ -64,12 +64,35 @@ assert.equal(byCode.get("OGTT_75G")?.subcategory, "Clinical Chemistry", "OGTT mu
 assert.ok(byCode.get("LOWER_LIMB_VENOUS_DUPLEX_BILATERAL")?.aliases.some((value) => /doppler/i.test(value)), "Lower-limb duplex needs a Doppler search alias.");
 assert.ok(byCode.get("URINALYSIS")?.aliases.some((value) => value.includes("تحليل بول")), "Urinalysis needs an Arabic search alias.");
 
+const upserts = [];
+await seedInvestigationCatalog({
+  investigationCatalogItem: {
+    async upsert(input) {
+      upserts.push(input);
+      return { id: input.where.code, ...input.create };
+    },
+    async findMany() {
+      return [];
+    },
+    async update() {
+      throw new Error("Taxonomy update should not run when the mock returns no active records.");
+    }
+  }
+});
+
+assert.equal(upserts.length, investigationCatalogItems.length, "Every reference investigation must be upserted exactly once.");
+for (const operation of upserts) {
+  assert.equal(operation.create.active, true, `${operation.where.code} must be active when first created.`);
+  assert.ok(!Object.prototype.hasOwnProperty.call(operation.update, "active"), `${operation.where.code} reseeding must preserve an archived active=false state.`);
+}
+
 const categoryCounts = investigationCatalogItems.reduce((counts, item) => {
   counts[item.category] = (counts[item.category] ?? 0) + 1;
   return counts;
 }, {});
 
 console.log("Investigation catalogue quality checks passed.");
+console.log("Investigation catalogue reseeding preserves Doctor/Owner archive choices.");
 console.log(JSON.stringify({ total: investigationCatalogItems.length, categoryCounts }, null, 2));
 
 function normalize(value) {
