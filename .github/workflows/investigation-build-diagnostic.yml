@@ -1,0 +1,38 @@
+name: Investigation Build Diagnostic
+
+on:
+  pull_request:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/prij_clinic_ci
+      JWT_SECRET: ci-placeholder-secret
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:generate
+      - name: Capture build
+        id: build
+        shell: bash
+        run: |
+          set +e
+          npm run build > investigation-build.log 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: investigation-build-log
+          path: investigation-build.log
+          if-no-files-found: error
+      - name: Preserve build result
+        shell: bash
+        run: exit ${{ steps.build.outputs.exit_code }}
