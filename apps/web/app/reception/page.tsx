@@ -87,6 +87,7 @@ export default function ReceptionHomePage() {
   const called = visibleQueue.filter((ticket) => normalizeStatus(ticket.status) === "called");
   const urgent = visibleQueue.filter((ticket) => ["checked_in", "waiting", "called"].includes(normalizeStatus(ticket.status)) && (ticket.priority === "priority" || ticket.visitType === "urgent_kashf"));
   const activeQueue = visibleQueue.filter((ticket) => !["cancelled", "completed"].includes(normalizeStatus(ticket.status)));
+  const sortedActiveQueue = sortQueue(activeQueue);
   const nextPatient = called[0] ?? urgent.find((ticket) => normalizeStatus(ticket.status) === "waiting") ?? waiting[0] ?? checkedIn[0] ?? null;
   const selectedQueueTicket = selectedPatient ? activeQueue.find((ticket) => ticket.patientId === selectedPatient.id) ?? null : null;
 
@@ -140,14 +141,31 @@ export default function ReceptionHomePage() {
     document.getElementById("reception-check-in")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const mobileTitle = language === "ar" ? "الرئيسية — الاستقبال" : "Reception Home";
+  const liveQueueTitle = language === "ar" ? "قائمة الانتظار المباشرة" : "Live queue";
+
   return (
     <AppShell>
       <div className={styles.commandCenter}>
         <section className={`${styles.mobileReception} ${styles.mobileOnly}`}>
           <section className="page-header">
             <p className="eyebrow">{copy.eyebrow}</p>
-            <h1>{copy.title}</h1>
+            <h1>{mobileTitle}</h1>
           </section>
+
+          <section className={styles.mobileScoreboard} aria-label={copy.todayFlow}>
+            <article className={styles.mobileScoreCard}>
+              <ThreeDMedicalIcon name="queue" size="sm" />
+              <span>{copy.waiting}</span>
+              <strong>{waiting.length + called.length}</strong>
+            </article>
+            <article className={`${styles.mobileScoreCard} ${styles.mobileUrgentScore}`}>
+              <ThreeDMedicalIcon name="doctor" size="sm" />
+              <span>{copy.urgent}</span>
+              <strong>{urgent.length}</strong>
+            </article>
+          </section>
+
           <section className={styles.mobileActions} aria-label={copy.patientActions}>
             <Link className={styles.mobileActionCard} href="/reception/check-in">
               <ThreeDMedicalIcon name="reception" size="sm" />
@@ -158,14 +176,30 @@ export default function ReceptionHomePage() {
               <span>{copy.newPatient}</span>
             </Link>
           </section>
+
           <section className={`panel compact-panel ${styles.mobileQueuePreview}`} aria-label={copy.queuePreview}>
             <div className="section-heading">
-              <h2>{copy.queuePreview}</h2>
+              <div>
+                <h2>{liveQueueTitle}</h2>
+                <p className="muted">{copy.nextPatient}: {nextPatient ? patientLabel(nextPatient.patient) : copy.noPatientWaiting}</p>
+              </div>
               <button className="button secondary compact" type="button" onClick={() => void loadQueue()}>{copy.refresh}</button>
             </div>
             {loadError ? <p className="notice" role="status">{copy.partialData}</p> : null}
-            <p>{copy.waiting}: {waiting.length + called.length} · {copy.urgent}: {urgent.length}</p>
-            <p><strong>{copy.nextPatient}:</strong> {nextPatient ? `${patientLabel(nextPatient.patient)} · ${visitTypeLabel(nextPatient.visitType)}` : copy.noPatientWaiting}</p>
+            {loading ? <div className={`skeleton ${styles.loading}`} /> : null}
+            {!loading && sortedActiveQueue.length === 0 ? <div className={styles.empty}>{copy.noQueue}</div> : null}
+            <div className={styles.mobileQueueList}>
+              {sortedActiveQueue.slice(0, 6).map((ticket) => (
+                <article className={styles.mobileQueueRow} key={ticket.id}>
+                  <span className={styles.mobileQueueNumber}>{ticket.queueNumber ?? "—"}</span>
+                  <div>
+                    <strong>{patientLabel(ticket.patient)}</strong>
+                    <p>{visitTypeLabel(ticket.visitType)} · {queueStatusLabel(ticket.status, copy)}</p>
+                  </div>
+                  {urgentRank(ticket) ? <span className={styles.mobileUrgentBadge}>{copy.urgent}</span> : null}
+                </article>
+              ))}
+            </div>
           </section>
         </section>
 
@@ -240,7 +274,6 @@ export default function ReceptionHomePage() {
                   </div>
                   <div className={styles.patientActions}>
                     <Link className="button secondary compact" href={`/patients/${encodeURIComponent(selectedPatient.id)}`}>{copy.openProfile}</Link>
-                    <Link className="button secondary compact" href="/reception/qr-scan">{copy.permanentQr}</Link>
                     <button className="button secondary compact" type="button" onClick={() => selectPatient(null)}>{copy.clearSelection}</button>
                   </div>
                 </>
@@ -269,7 +302,7 @@ export default function ReceptionHomePage() {
             {loading ? <div className={`skeleton ${styles.loading}`} /> : null}
             {!loading && activeQueue.length === 0 ? <div className={styles.empty}>{copy.noQueue}</div> : null}
             <div className={styles.list}>
-              {sortQueue(activeQueue).slice(0, 8).map((ticket) => (
+              {sortedActiveQueue.slice(0, 8).map((ticket) => (
                 <article className={styles.listRow} key={ticket.id}>
                   <div className={styles.rowMain}>
                     <strong>{patientLabel(ticket.patient)}</strong>
