@@ -103,10 +103,46 @@ jobs:
           retention-days: 7
 
       - name: Test referenced-record scope
-        run: npm run test:scope:records
+        if: always()
+        run: |
+          set -o pipefail
+          npm run test:scope:records 2>&1 | tee referenced-record-scope.log
+
+      - name: Upload referenced-record scope diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: referenced-record-scope-diagnostics
+          path: referenced-record-scope.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Test audit assertions
-        run: npm run test:audit:assertions
+        if: always()
+        run: |
+          set -o pipefail
+          npm run test:audit:assertions 2>&1 | tee audit-assertions.log
+
+      - name: Upload audit assertion diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-assertion-diagnostics
+          path: audit-assertions.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Test AI safety regression
-        run: npm run test:ai:regression
+        if: always()
+        run: |
+          set -o pipefail
+          npm run test:ai:regression 2>&1 | tee ai-safety-regression.log
+
+      - name: Upload AI safety regression diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-safety-regression-diagnostics
+          path: ai-safety-regression.log
+          if-no-files-found: error
+          retention-days: 7
