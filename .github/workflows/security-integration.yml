@@ -88,9 +88,14 @@ jobs:
       - name: Run security integration tests
         run: npm run test:security:ci
 
-      - name: Run expanded route security tests
-        run: |
-          npm run test:routes:auth
-          npm run test:scope:records
-          npm run test:audit:assertions
-          npm run test:ai:regression
+      - name: Test route authorization
+        run: npm run test:routes:auth
+
+      - name: Test referenced-record scope
+        run: npm run test:scope:records
+
+      - name: Test audit assertions
+        run: npm run test:audit:assertions
+
+      - name: Test AI safety regression
+        run: npm run test:ai:regression
