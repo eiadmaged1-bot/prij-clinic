@@ -158,3 +158,20 @@ jobs:
           path: investigation-direct-order.log
           if-no-files-found: error
           retention-days: 7
+
+      - name: Cool down login throttle before station QA contract
+        run: sleep 65
+
+      - name: Test Investigation Station QA contract
+        run: |
+          set -o pipefail
+          node scripts/investigation-station-qa-contract-test.mjs 2>&1 | tee investigation-station-qa-contract.log
+
+      - name: Upload Investigation Station QA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: investigation-station-qa-contract-diagnostics
+          path: investigation-station-qa-contract.log
+          if-no-files-found: error
+          retention-days: 7
