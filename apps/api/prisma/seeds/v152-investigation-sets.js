@@ -15,6 +15,7 @@ const sets = [
 ];
 
 async function seedV152InvestigationSets(prisma) {
+  await seedOtherInvestigationFallback(prisma);
   const owner = await prisma.user.findFirst({ where: { status: "active", userRoles: { some: { role: { name: "Owner" } } } }, orderBy: { createdAt: "asc" }, select: { id: true } });
   if (!owner) throw new Error("An active Owner is required to attribute governed clinic investigation sets.");
   const catalog = await prisma.investigationCatalogItem.findMany({ where: { code: { in: [...new Set(sets.flatMap((item) => item.codes))] }, active: true }, select: { id: true, code: true } });
@@ -31,6 +32,29 @@ async function seedV152InvestigationSets(prisma) {
     if (item.codes.length) await prisma.investigationFavoriteSetItem.createMany({ data: item.codes.map((code, position) => ({ favoriteSetId: target.id, investigationCatalogItemId: byCode.get(code), position, required: false, rationale: `${item.sourceIdentifier} · ${item.sourceSection} · optional candidate; Doctor confirmation required.`, responsibilityJson: { ordering: "doctor_confirmation_required", followUp: "assign_at_order_review" } })) });
   }
   return { target: sets.length, created, updated, ownerAttribution: "existing_active_owner", missingCatalogCodes: missing.length };
+}
+
+async function seedOtherInvestigationFallback(prisma) {
+  const sharedData = {
+    name: "Other Investigation — Specify",
+    normalizedName: "other investigation specify",
+    category: "Other",
+    subcategory: "Doctor-Specified Request",
+    clinicalGroup: "Doctor-Specified Request",
+    aliasesJson: ["other test", "custom investigation", "فحص آخر", "تحليل آخر"],
+    keywordsJson: ["other investigation", "custom test", "doctor specified", "فحص آخر", "تحليل آخر"],
+    tagsJson: ["Other", "Doctor-Specified Request"],
+    discipline: "Other",
+    modality: "Doctor-specified",
+    sampleType: null,
+    specialty: "Obstetrics and Gynecology",
+    sortOrder: 99990
+  };
+  await prisma.investigationCatalogItem.upsert({
+    where: { code: "OTHER_INVESTIGATION_SPECIFY" },
+    update: sharedData,
+    create: { code: "OTHER_INVESTIGATION_SPECIFY", ...sharedData, active: true }
+  });
 }
 
 function set(stableCode, name, nameAr, sourceIdentifier, sourceVersion, sourceUrl, sourceSection, patientTypes, codes, actionable = true) { return { stableCode, name, nameAr, sourceIdentifier, sourceVersion, sourceUrl, sourceSection, patientTypes, codes, actionable }; }
