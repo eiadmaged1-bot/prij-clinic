@@ -95,7 +95,7 @@ try {
   const migration = await readFile("apps/api/prisma/migrations/20260722143000_guideline_governance_corrections/migration.sql", "utf8");
   assert(protocolService.includes('implementationStatus: "verified", publicationState: "PUBLISHED"'), "normal protocol results must be publication-gated");
   assert(protocolService.includes("reviewQueue(user: AuthUser)"), "legacy protocol review queue must exist");
-  assert(guidelineService.includes('guidelineStatus: "ACTIVE"') && guidelineService.includes('documentType: "official_pdf"'), "Doctor guideline visibility must require canonical PDFs");
+  assert(guidelineService.includes('documentType: "official_pdf"') && guidelineService.includes('fileSha256: { not: null }') && guidelineService.includes('localFilePath: { not: null }'), "Doctor guideline visibility must require canonical PDFs");
   assert(migration.includes("enforce_protocol_publication_governance") && migration.includes("sourcePublicationDate") && migration.includes("exactPageCitationsJson"), "database publication governance must require structured evidence");
   const backupNames = await readdir("backups");
   assert(backupNames.some((name) => /^prij-clinic-local-20260722-\d{6}\.backup\.sql$/.test(name)), "post-correction backup must exist");

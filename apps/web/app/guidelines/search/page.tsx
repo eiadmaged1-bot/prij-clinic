@@ -1,6 +1,5 @@
-import { Suspense } from "react";
-import { GuidelineCenter } from "../GuidelineCenter";
+import { RealGuidelinesLibrary } from "../RealGuidelinesLibrary";
 
 export default function GuidelinesSearchPage() {
-  return <Suspense fallback={<div className="panel empty-state">Loading library...</div>}><GuidelineCenter view="search" /></Suspense>;
+  return <RealGuidelinesLibrary />;
 }

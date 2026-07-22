@@ -3,14 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
-type Props = { url: string; page: number; zoom: number; rotation: number; fit: "width" | "page" | "custom"; search: string; token?: string | null; onLoaded: (pages: number) => void; onError: (reason: string) => void; onPageSelect: (page: number) => void };
+type Props = { url: string; page: number; zoom: number; rotation: number; fit: "width" | "page" | "custom"; search: string; token?: string | null; onLoaded: (pages: number) => void; onError: (reason: string) => void; onPageSelect: (page: number) => void; onSearchMatches?: (pages: number[]) => void };
 
-export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token, onLoaded, onError, onPageSelect }: Props) {
+export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token, onLoaded, onError, onPageSelect, onSearchMatches }: Props) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [thumbnailOpen, setThumbnailOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const onLoadedRef = useRef(onLoaded);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onLoadedRef.current = onLoaded; }, [onLoaded]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,8 +23,8 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
       const documentProxy = await pdfjs.getDocument({ url, withCredentials: true, httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined }).promise;
       loaded = documentProxy;
       if (cancelled) return void documentProxy.destroy();
-      setPdf(documentProxy); onLoaded(documentProxy.numPages);
-    }).catch((error) => onError(error instanceof Error ? error.message : "pdf_load_failed"));
+      setPdf(documentProxy); onLoadedRef.current(documentProxy.numPages);
+    }).catch((error) => onErrorRef.current(error instanceof Error ? error.message : "pdf_load_failed"));
     return () => { cancelled = true; if (loaded) void loaded.destroy(); setPdf(null); };
   }, [token, url]);
 
@@ -41,9 +45,25 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
       renderTask = pdfPage.render({ canvasContext: context, viewport, transform: window.devicePixelRatio === 1 ? undefined : [window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0] });
       await renderTask.promise;
       if (!cancelled) await renderSelectableText(pdfPage, viewport, layerRef.current!, search);
-    }).catch((error) => { if (!(error instanceof Error && error.name === "RenderingCancelledException")) onError(error instanceof Error ? error.message : "pdf_render_failed"); });
+    }).catch((error) => { if (!(error instanceof Error && error.name === "RenderingCancelledException")) onErrorRef.current(error instanceof Error ? error.message : "pdf_render_failed"); });
     return () => { cancelled = true; renderTask?.cancel(); };
   }, [fit, page, pdf, rotation, search, zoom]);
+
+  useEffect(() => {
+    const needle = search.trim().toLocaleLowerCase();
+    if (!pdf || needle.length < 2 || !onSearchMatches) { onSearchMatches?.([]); return; }
+    let cancelled = false;
+    void (async () => {
+      const pages: number[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages && !cancelled; pageNumber += 1) {
+        const text = await (await pdf.getPage(pageNumber)).getTextContent();
+        const joined = text.items.map((item) => "str" in item ? item.str : "").join(" ").toLocaleLowerCase();
+        if (joined.includes(needle)) pages.push(pageNumber);
+      }
+      if (!cancelled) onSearchMatches(pages);
+    })().catch(() => { if (!cancelled) onSearchMatches([]); });
+    return () => { cancelled = true; };
+  }, [onSearchMatches, pdf, search]);
 
   return <div className="pdfjs-viewer" ref={stageRef}><div className="pdfjs-page"><canvas ref={canvasRef} aria-label={`Rendered PDF page ${page}`} /><div className="pdfjs-text-layer" ref={layerRef} /></div><details open={thumbnailOpen} onToggle={(event) => setThumbnailOpen(event.currentTarget.open)}><summary>Thumbnails</summary>{thumbnailOpen && pdf ? <div className="pdfjs-thumbnails">{Array.from({ length: pdf.numPages }, (_, index) => <PdfThumbnail key={index + 1} pdf={pdf} page={index + 1} active={page === index + 1} onSelect={onPageSelect} />)}</div> : null}</details></div>;
 }

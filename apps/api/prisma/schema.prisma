@@ -116,6 +116,8 @@ model User {
   requestedGuidelineImportJobs       GuidelineImportJob[]           @relation("GuidelineImportJobsRequestedBy")
   guidelineReviewDecisions           GuidelineReviewDecision[]      @relation("GuidelineReviewDecisionsDecidedBy")
   guidelineQueryLogs                 GuidelineQueryLog[]            @relation("GuidelineQueryLogsUser")
+  guidelineFavorites                 GuidelineFavorite[]
+  guidelineRecentOpens               GuidelineRecentOpen[]
   createdManagementSnapshots         AIManagementSnapshot[]         @relation("AIManagementSnapshotsCreatedBy")
   reviewedManagementSnapshots        AIManagementSnapshot[]         @relation("AIManagementSnapshotsReviewedBy")
   approvedClinicalMemories           PatientClinicalMemory[]        @relation("PatientClinicalMemoriesApprovedBy")
@@ -3906,6 +3908,9 @@ model GuidelineDocument {
   publicationDate     DateTime?              @db.Date
   lastReviewedDate    DateTime?              @db.Date
   versionLabel        String?
+  guidelineCode       String?
+  language            String                 @default("en")
+  tags                 Json?
   guidelineStatus     GuidelineStatus        @default(NEEDS_REVIEW)
   documentType        String                 @default("demo_text")
   licenseStatus       GuidelineLicenseStatus @default(CHECK_REQUIRED)
@@ -3945,6 +3950,8 @@ model GuidelineDocument {
   summaries                GuidelineSummary[]
   GuidelineSummaryCitation GuidelineSummaryCitation[]
   clinicalProtocols         ClinicalProtocol[]
+  favorites                 GuidelineFavorite[]
+  recentOpens               GuidelineRecentOpen[]
 
   @@index([sourceId])
   @@index([specialty])
@@ -3958,7 +3965,38 @@ model GuidelineDocument {
   @@index([archivedAt])
   @@index([ingestStatus])
   @@index([importBatch])
+  @@index([guidelineCode])
+  @@index([language])
   @@unique([fileSha256])
+}
+
+model GuidelineFavorite {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  documentId String   @db.Uuid
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId, createdAt])
+}
+
+model GuidelineRecentOpen {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  documentId   String   @db.Uuid
+  lastPage     Int      @default(1)
+  openCount    Int      @default(1)
+  lastOpenedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   GuidelineDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, documentId])
+  @@index([userId, lastOpenedAt])
 }
 
 model GuidelineVersion {

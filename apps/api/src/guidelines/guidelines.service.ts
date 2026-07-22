@@ -11,7 +11,7 @@ import {
 } from "@prisma/client";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -97,10 +97,12 @@ export class GuidelinesService {
     return source;
   }
 
-  async listDocuments(user: AuthUser, options: { page?: string; limit?: string; status?: string } = {}) {
+  async listDocuments(user: AuthUser, options: { page?: string; limit?: string; status?: string; view?: string } = {}) {
     const page = Math.max(1, Number.parseInt(options.page ?? "1", 10) || 1);
     const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
-    const accessWhere = this.documentAccessWhere(user);
+    const reviewView = options.view === "review";
+    if (reviewView && !user.roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role))) throw new ForbiddenException("Guideline review inventory is restricted.");
+    const accessWhere: Prisma.GuidelineDocumentWhereInput = reviewView ? this.documentReviewAccessWhere(user) : { ...this.documentAccessWhere(user), documentType: "official_pdf", fileSha256: { not: null }, localFilePath: { not: null }, guidelineStatus: { notIn: ["ARCHIVED", "SUPERSEDED"] } };
     const where = { ...accessWhere, ...(isGuidelineStatus(options.status) ? { guidelineStatus: options.status } : {}) };
     const total = await this.prisma.guidelineDocument.count({ where });
     const documents = await this.prisma.guidelineDocument.findMany({
@@ -108,13 +110,39 @@ export class GuidelinesService {
       orderBy: { updatedAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
-      include: { source: true, _count: { select: { chunks: true, sections: true } } }
+      include: { source: true, favorites: { where: { userId: user.id }, select: { id: true } }, recentOpens: { where: { userId: user.id }, select: { lastOpenedAt: true, lastPage: true } }, _count: { select: { chunks: true, sections: true } } }
     });
     const [grouped, departments] = await Promise.all([
       this.prisma.guidelineDocument.groupBy({ by: ["guidelineStatus"], where: accessWhere, _count: { _all: true } }),
       this.prisma.guidelineDocument.groupBy({ by: ["specialty"], where: accessWhere, _count: { _all: true }, orderBy: { specialty: "asc" } })
     ]);
-    return { documents: await this.withLastFileAccess(documents.map(safeDocument)), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [item.guidelineStatus, item._count._all])), departmentCounts: Object.fromEntries(departments.map((item) => [item.specialty, item._count._all])) };
+    return { documents: await this.withLastFileAccess(documents.map((document) => ({ ...safeDocument(document), isFavorite: document.favorites.length > 0, recentOpen: document.recentOpens[0] ?? null }))), pageInfo: { page, limit, total, hasMore: page * limit < total }, counts: Object.fromEntries(grouped.map((item) => [item.guidelineStatus, item._count._all])), departmentCounts: Object.fromEntries(departments.map((item) => [item.specialty, item._count._all])) };
+  }
+
+  async listFavorites(user: AuthUser) {
+    const favorites = await this.prisma.guidelineFavorite.findMany({ where: { userId: user.id, document: this.documentAccessWhere(user) }, orderBy: { createdAt: "desc" }, include: { document: { include: { source: true, _count: { select: { chunks: true, sections: true } } } } } });
+    return { documents: favorites.map((item) => ({ ...safeDocument(item.document), isFavorite: true, favoritedAt: item.createdAt })) };
+  }
+
+  async listRecent(user: AuthUser) {
+    const recent = await this.prisma.guidelineRecentOpen.findMany({ where: { userId: user.id, document: this.documentAccessWhere(user) }, orderBy: { lastOpenedAt: "desc" }, take: 20, include: { document: { include: { source: true, _count: { select: { chunks: true, sections: true } } } } } });
+    return { documents: recent.map((item) => ({ ...safeDocument(item.document), lastOpenedAt: item.lastOpenedAt, lastPage: item.lastPage, isFavorite: false })) };
+  }
+
+  async setFavorite(id: string, favorite: boolean, user: AuthUser) {
+    await this.ensureDocument(id, user);
+    if (favorite) await this.prisma.guidelineFavorite.upsert({ where: { userId_documentId: { userId: user.id, documentId: id } }, update: {}, create: { userId: user.id, documentId: id } });
+    else await this.prisma.guidelineFavorite.deleteMany({ where: { userId: user.id, documentId: id } });
+    await this.audit.record({ actorUserId: user.id, action: favorite ? "guideline.favorite_added" : "guideline.favorite_removed", resourceType: "guideline_document", resourceId: id, severity: "low" });
+    return { documentId: id, favorite };
+  }
+
+  async trackOpen(id: string, pageValue: number | undefined, user: AuthUser) {
+    await this.ensureDocument(id, user);
+    const page = Number.isInteger(pageValue) ? Math.max(1, Math.min(10000, Number(pageValue))) : 1;
+    await this.prisma.guidelineRecentOpen.upsert({ where: { userId_documentId: { userId: user.id, documentId: id } }, update: { lastPage: page, lastOpenedAt: new Date(), openCount: { increment: 1 } }, create: { userId: user.id, documentId: id, lastPage: page } });
+    await this.audit.record({ actorUserId: user.id, action: "guideline.document_opened", resourceType: "guideline_document", resourceId: id, severity: "low", metadataJson: { page } });
+    return { documentId: id, page };
   }
 
   async getDocument(id: string, user: AuthUser) {
@@ -126,6 +154,7 @@ export class GuidelinesService {
         sections: { orderBy: { orderIndex: "asc" }, take: 20 },
         chunks: { orderBy: { chunkIndex: "asc" }, take: 20 },
         summaries: { orderBy: { createdAt: "desc" }, take: 3, include: { sections: { orderBy: { orderIndex: "asc" }, include: { citations: { orderBy: [{ bulletIndex: "asc" }, { pageStart: "asc" }] } } }, reviewedBy: { select: { id: true, displayName: true } } } },
+        favorites: { where: { userId: user.id }, select: { id: true } },
         _count: { select: { chunks: true, sections: true } }
       }
     });
@@ -144,7 +173,7 @@ export class GuidelinesService {
     });
     const storedPageCount = (document as typeof document & { pageCount?: number | null }).pageCount;
     const pageCount = storedPageCount ?? (Math.max(pageStats._max.pageEnd ?? 0, pageStats._max.pageStart ?? 0) || null);
-    return this.withLastFileAccess({ ...safeDocument(document), pageCount });
+    return this.withLastFileAccess({ ...safeDocument(document), pageCount, isFavorite: document.favorites.length > 0 });
   }
 
   async viewDocumentFile(id: string, user: AuthUser) {
@@ -261,12 +290,11 @@ export class GuidelinesService {
   }
 
   async upload(file: UploadedGuidelineFile, dto: UploadGuidelineDto, user: AuthUser) {
-    if (!file?.buffer) throw new BadRequestException("Upload a PDF, plain text, or Markdown guideline file.");
+    if (!file?.buffer) throw new BadRequestException("Upload an authoritative PDF guideline file.");
     const extension = extname(file.originalname).toLowerCase();
-    const accepted = file.mimetype === "application/pdf" && extension === ".pdf"
-      || ["text/plain", "text/markdown"].includes(file.mimetype) && [".txt", ".md", ".markdown"].includes(extension);
+    const accepted = file.mimetype === "application/pdf" && extension === ".pdf";
     if (!accepted) {
-      throw new BadRequestException("Only matching PDF, TXT, and Markdown files are accepted.");
+      throw new BadRequestException("Only a matching PDF file is accepted.");
     }
     assertGuidelineFileSignature(file.buffer, file.mimetype);
 
@@ -285,7 +313,7 @@ export class GuidelinesService {
       ? await this.ensureSource(dto.sourceId)
       : await this.findOrCreateLicensedUploadSource(dto.sourceOrganization ?? "Private Licensed Upload");
 
-    const storageRoot = join(process.cwd(), "storage", "guidelines", "private");
+    const storageRoot = vaultRoot();
     await mkdir(storageRoot, { recursive: true });
     const fileName = `${hash}${extension}`;
     const localFilePath = join(storageRoot, fileName);
@@ -307,6 +335,11 @@ export class GuidelinesService {
         topic: dto.topic,
         subtopic: dto.subtopic,
         versionLabel: dto.versionLabel,
+        guidelineCode: dto.guidelineCode,
+        language: dto.language,
+        tags: dto.tags,
+        publicationDate: dto.publicationDate ? new Date(dto.publicationDate) : undefined,
+        documentType: "official_pdf",
         licenseStatus: dto.licenseStatus ?? "LICENSED_PRIVATE",
         accessLevel: dto.accessLevel ?? "OWNER_DOCTOR",
         fileName: file.originalname,
@@ -561,6 +594,9 @@ export class GuidelinesService {
       where: {
         document: {
           ...this.documentAccessWhere(user),
+          documentType: "official_pdf",
+          fileSha256: { not: null },
+          localFilePath: { not: null },
           ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
           ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
           ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
@@ -598,7 +634,7 @@ export class GuidelinesService {
     const metadataDocuments = await this.prisma.guidelineDocument.findMany({
       where: {
         ...this.documentAccessWhere(user),
-        documentType: "official_metadata_link",
+        documentType: "__metadata_excluded_from_clinical_search__",
         ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
         ...(query.topic ? { topic: query.topic.toLowerCase() } : {}),
         ...(query.organization ? { organization: { contains: query.organization, mode: "insensitive" } } : {}),
@@ -745,6 +781,11 @@ export class GuidelinesService {
     topic: string;
     subtopic?: string;
     versionLabel?: string;
+    guidelineCode?: string;
+    language?: string;
+    tags?: string[];
+    publicationDate?: Date;
+    documentType?: string;
     licenseStatus: GuidelineLicenseStatus;
     accessLevel: GuidelineAccessLevel;
     originalUrl?: string;
@@ -770,6 +811,12 @@ export class GuidelinesService {
         subtopic: clean(input.subtopic),
         organization: input.source.organization,
         versionLabel: clean(input.versionLabel),
+        guidelineCode: clean(input.guidelineCode),
+        language: clean(input.language) ?? "en",
+        tags: input.tags ?? [input.specialty.trim().toLowerCase(), input.topic.trim().toLowerCase()],
+        publicationDate: input.publicationDate,
+        documentType: input.documentType ?? "demo_text",
+        ingestStatus: input.documentType === "official_pdf" ? (input.versionLabel && input.guidelineCode ? "NEEDS_SUMMARY" : "NEEDS_METADATA") : "NEEDS_SUMMARY",
         guidelineStatus: "NEEDS_REVIEW",
         licenseStatus: input.licenseStatus,
         originalUrl: input.originalUrl,
@@ -859,7 +906,7 @@ export class GuidelinesService {
   }
 
   private async storeOpenImportFile(buffer: Buffer, hash: string, extension: string) {
-    const storageRoot = join(process.cwd(), "storage", "guidelines", "private");
+    const storageRoot = vaultRoot();
     await mkdir(storageRoot, { recursive: true });
     const fileName = `${hash}${extension}`;
     const localFilePath = join(storageRoot, fileName);
@@ -908,12 +955,16 @@ export class GuidelinesService {
     if (user.roles.includes("Owner") || user.permissions.includes("guidelines.manage_private")) return {};
     if (user.roles.includes("Doctor")) return {
       accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] },
-      guidelineStatus: "ACTIVE",
       documentType: "official_pdf",
       fileSha256: { not: null },
       localFilePath: { not: null }
     };
     return { accessLevel: "CLINICAL_TEAM" };
+  }
+
+  private documentReviewAccessWhere(user: AuthUser): Prisma.GuidelineDocumentWhereInput {
+    if (user.roles.includes("Owner") || user.roles.includes("Admin") || user.permissions.includes("guidelines.manage_private")) return {};
+    return { accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] } };
   }
 
   private async documentFileResponse(id: string, user: AuthUser, action: FileAction) {
@@ -1115,7 +1166,9 @@ function isOwner(user: AuthUser) {
 }
 
 function vaultRoot() {
-  return resolve(process.cwd(), "storage", "guidelines", "private");
+  const cwd = resolve(process.cwd());
+  const workspaceRoot = basename(cwd).toLowerCase() === "api" && basename(dirname(cwd)).toLowerCase() === "apps" ? resolve(cwd, "..", "..") : cwd;
+  return process.env.GUIDELINE_PRIVATE_STORAGE_ROOT ? resolve(process.env.GUIDELINE_PRIVATE_STORAGE_ROOT) : resolve(workspaceRoot, "storage", "guidelines", "private");
 }
 
 function isPathInsideVault(path: string) {
