@@ -1467,6 +1467,13 @@ const canonicalItems = [
 ];
 
 const ALIAS_MAP = {
+  "HPV_DNA_TEST": [
+    "HPV test"
+  ],
+  "CARDIOLOGY_REVIEW": [
+    "Cardiology Assessment",
+    "cardiology opinion"
+  ],
   "COMPLETE_BLOOD_COUNT_CBC": [
     "CBC",
     "Complete Blood Picture",

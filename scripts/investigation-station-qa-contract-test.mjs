@@ -14,10 +14,10 @@ const expectedCategories = [
 ];
 const requiredCodes = [
   "SEMEN_ANALYSIS",
-  "URINALYSIS",
-  "URINE_CULTURE",
+  "ROUTINE_URINE_ANALYSIS",
+  "URINE_CULTURE_AND_SENSITIVITY",
   "COAGULATION_PROFILE",
-  "OBSTETRIC_DOPPLER"
+  "OBSTETRIC_DOPPLER_ULTRASOUND"
 ];
 
 if (!PASSWORD) throw new Error("Synthetic CI password is required.");
