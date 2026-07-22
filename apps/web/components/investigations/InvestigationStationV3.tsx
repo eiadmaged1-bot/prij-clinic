@@ -213,11 +213,6 @@ export default function InvestigationStationV3() {
   const [openItemNotes, setOpenItemNotes] = useState<Set<string>>(() => new Set());
   const [undo, setUndo] = useState<BasketSnapshot | null>(null);
   const [overallNote, setOverallNote] = useState("");
-  const [priority, setPriority] = useState("routine");
-  const [destination, setDestination] = useState<"internal" | "external">("internal");
-  const [followOwner, setFollowOwner] = useState("");
-  const [expectedDate, setExpectedDate] = useState("");
-  const [moreOpen, setMoreOpen] = useState(false);
   const [listName, setListName] = useState("");
   const [listNameAr, setListNameAr] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -421,12 +416,7 @@ export default function InvestigationStationV3() {
     if (!patientId || !basket.length) return;
     const payload = {
       patientId,
-      priority,
-      requestedFollowUpDate: expectedDate || undefined,
-      expectedResultDate: expectedDate || undefined,
       requestNote: overallNote.trim() || undefined,
-      internalExternal: destination,
-      responsibilityJson: { followUpOwner: followOwner.trim() || "unassigned" },
       items: basket.map((item) => ({
         title: item.name,
         catalogItemId: item.id,
@@ -459,11 +449,6 @@ export default function InvestigationStationV3() {
     setSavedId("");
     setSavedPrintPath("");
     setOverallNote("");
-    setPriority("routine");
-    setDestination("internal");
-    setFollowOwner("");
-    setExpectedDate("");
-    setMoreOpen(false);
     setStatus("");
     if (!encounterId) changePatient();
   }
@@ -626,12 +611,6 @@ export default function InvestigationStationV3() {
           ) : (
             <div className={styles.form}>
               <label>{t.overall}<textarea value={overallNote} onChange={(event) => setOverallNote(event.target.value)} /></label>
-              <div className={styles.twoFields}>
-                <label>{t.priority}<select value={priority} onChange={(event) => setPriority(event.target.value)}><option value="routine">{t.routine}</option><option value="urgent">{t.urgent}</option><option value="stat">STAT</option></select></label>
-                <label>{t.destination}<select value={destination} onChange={(event) => setDestination(event.target.value as "internal" | "external")}><option value="internal">{t.internal}</option><option value="external">{t.external}</option></select></label>
-              </div>
-              <button className={styles.moreButton} type="button" onClick={() => setMoreOpen((value) => !value)}>{t.more} {moreOpen ? "▴" : "▾"}</button>
-              {moreOpen ? <div className={styles.moreFields}><label>{t.followOwner}<input value={followOwner} onChange={(event) => setFollowOwner(event.target.value)} /></label><label>{t.expectedDate}<input type="date" value={expectedDate} onChange={(event) => setExpectedDate(event.target.value)} /></label></div> : null}
               <button className="button" type="button" disabled={!patientId || !basket.length || saving} onClick={openReview}>{t.review}</button>
             </div>
           )}
@@ -642,7 +621,7 @@ export default function InvestigationStationV3() {
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setReviewOpen(false); }}>
           <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="investigation-review-title">
             <h2 id="investigation-review-title">{t.reviewTitle}</h2>
-            <dl><div><dt>{t.selectedPatient}</dt><dd>{patient ? patientLabel(patient) : patientId}</dd></div><div><dt>{t.selected}</dt><dd>{basket.length}</dd></div><div><dt>{t.priority}</dt><dd>{priority}</dd></div><div><dt>{t.destination}</dt><dd>{destination}</dd></div></dl>
+            <dl><div><dt>{t.selectedPatient}</dt><dd>{patient ? patientLabel(patient) : patientId}</dd></div><div><dt>{t.selected}</dt><dd>{basket.length}</dd></div></dl>
             <ol>{basket.map((item) => <li key={item.id}>{item.name}</li>)}</ol>
             {overallNote ? <p>{overallNote}</p> : null}
             <div className={styles.modalActions}><button className="button secondary" type="button" onClick={() => setReviewOpen(false)}>{t.back}</button><button className="button" type="button" disabled={saving} onClick={() => void submitOrder()}>{saving ? t.saving : t.submit}</button></div>
