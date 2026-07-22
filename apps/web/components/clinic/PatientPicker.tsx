@@ -73,7 +73,12 @@ export function PatientPicker({
   useEffect(() => {
     if (!liveSearch) return;
     const text = query.trim();
-    if (text.length < minSearchLength) return;
+    if (text.length < minSearchLength) {
+      setLivePatients([]);
+      setSearchError("");
+      setSearchState("idle");
+      return;
+    }
     const timer = window.setTimeout(() => {
       setPage(1);
       setSearchError("");
@@ -88,30 +93,25 @@ export function PatientPicker({
   const matches = useMemo(() => {
     const text = query.trim().toLowerCase();
     if (text.length < minSearchLength) return [];
-    return sourcePatients
-      .filter((patient) => patientSearchText(patient).includes(text));
+    return sourcePatients.filter((patient) => patientSearchText(patient).includes(text));
   }, [minSearchLength, query, sourcePatients]);
 
   return (
     <div className="patient-picker" data-patient-picker>
       <div className="section-heading compact-heading">
-        <div><h3>{label}</h3><p className="muted">{selected ? "Selected patient" : required ? "Select a patient before continuing" : "Patient can be attached later"}</p></div>
+        <div><h3>{label}</h3>{selected ? <p className="muted">Selected patient</p> : null}</div>
         {selected ? <button className="button secondary compact" type="button" onClick={() => setExpanded((value) => !value)}>{expanded ? "Collapse" : "Change patient"}</button> : null}
       </div>
-      {selected ? <SelectedPatientSummary patient={selected} /> : <p className="empty-state compact smart-empty-state"><span>{required ? "No patient selected." : standaloneLabel}</span></p>}
+      {selected ? <SelectedPatientSummary patient={selected} /> : null}
       {expanded ? <div className="patient-picker-panel">
-        <label>Search patient<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, phone, MRN, or permanent QR" aria-label="Search patient" /></label>
+        <label>Search patient<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Type at least ${minSearchLength} characters · name, phone, MRN, or QR`} aria-label="Search patient" /></label>
         {searchState === "loading" ? <p className="muted" role="status">Searching permitted clinic patient files…</p> : null}
         {searchError ? <p className={searchState === "permission" ? "form-error" : "notice"} role="alert">{searchError}</p> : null}
         <div className="dense-card-list patient-picker-results" ref={resultsRef} onScroll={(event) => sessionStorage.setItem(`prij:${storageKey}:scroll`, String(event.currentTarget.scrollTop))} aria-label="Patient results">
           {allowStandalone ? <article className={`patient-search-card ${!selectedPatientId ? "active" : ""}`}>
-            <div className="patient-search-card-info">
-              <strong>{standaloneLabel}</strong>
-              <span>No patient file attached</span>
-            </div>
+            <div className="patient-search-card-info"><strong>{standaloneLabel}</strong><span>No patient file attached</span></div>
             <div className="patient-search-card-actions"><button className="button secondary compact" type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}>Select</button></div>
           </article> : null}
-          {query.trim().length < minSearchLength ? <p className="empty-state compact smart-empty-state"><span>Enter at least {minSearchLength} characters.</span></p> : null}
           {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
           {query.trim().length >= minSearchLength && searchState === "empty" && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
           {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }).catch(() => setSearchError("Could not load more patients. Existing results were kept.")); }}>Load more patients</button> : null}
