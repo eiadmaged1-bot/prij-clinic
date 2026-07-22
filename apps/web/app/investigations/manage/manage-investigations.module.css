@@ -1,0 +1,25 @@
+.header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .75rem; }
+.header h1 { margin: 0; }
+.header p { margin: .2rem 0 0; color: #617887; }
+.status { padding: .6rem .75rem; border-radius: .6rem; background: #eaf7f5; }
+.grid { display: grid; grid-template-columns: minmax(280px, .9fr) minmax(0, 2.1fr); gap: .75rem; align-items: start; }
+.form { display: grid; gap: .65rem; position: sticky; top: .75rem; }
+.form h2 { margin: 0; font-size: 1.05rem; }
+.form label, .modal label { display: grid; gap: .28rem; font-size: .82rem; font-weight: 700; }
+.form input, .form select, .form textarea, .modal input { width: 100%; border: 1px solid #ccdde3; border-radius: .55rem; padding: .58rem; background: #fff; }
+.form textarea { min-height: 5rem; resize: vertical; }
+.catalogue { min-width: 0; }
+.tools { display: flex; justify-content: space-between; gap: .6rem; margin-bottom: .65rem; }
+.tools > input { flex: 1; min-width: 0; border: 1px solid #ccdde3; border-radius: .55rem; padding: .58rem; }
+.tools > div { display: flex; gap: .25rem; }
+.tools button { border: 1px solid #ccdde3; border-radius: .5rem; background: #fff; padding: .45rem .6rem; font-weight: 700; }
+.tools .activeFilter { background: #e5f7f5; border-color: #78c7c2; color: #087b76; }
+.rows { display: grid; gap: .35rem; max-height: calc(100vh - 10rem); overflow: auto; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: .65rem; padding: .55rem .65rem; border: 1px solid #d4e1e7; border-radius: .62rem; background: #fff; }
+.row > div { display: grid; gap: .12rem; min-width: 0; }
+.row span { color: #607684; font-size: .78rem; }
+.modalBackdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 1rem; background: rgb(15 32 42 / 48%); }
+.modal { width: min(520px, 100%); display: grid; gap: .65rem; padding: 1rem; border-radius: .85rem; background: #fff; box-shadow: 0 24px 70px rgb(0 0 0 / 25%); }
+.modal h2, .modal p { margin: 0; }
+.modal > div { display: flex; justify-content: flex-end; gap: .45rem; }
+@media (max-width: 850px) { .header { align-items: stretch; flex-direction: column; } .grid { grid-template-columns: 1fr; } .form { position: static; } .tools { flex-direction: column; } .rows { max-height: none; overflow: visible; } }
