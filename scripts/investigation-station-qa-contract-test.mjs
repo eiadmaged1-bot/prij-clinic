@@ -12,6 +12,13 @@ const expectedCategories = [
   "Procedures and Referrals",
   "Other"
 ];
+const requiredCodes = [
+  "SEMEN_ANALYSIS",
+  "URINALYSIS",
+  "URINE_CULTURE",
+  "COAGULATION_PROFILE",
+  "OBSTETRIC_DOPPLER"
+];
 
 if (!PASSWORD) throw new Error("Synthetic CI password is required.");
 
@@ -36,10 +43,9 @@ try {
   const missingCategories = expectedCategories.filter((category) => !categories.has(category));
   if (missingCategories.length) throw new Error(`Station workspace is missing categories: ${missingCategories.join(", ")}`);
 
-  const requiredNames = ["Semen Analysis", "Urinalysis", "Urine Culture", "Coagulation Profile", "Obstetric Doppler"];
-  const normalizedNames = new Set(catalog.map((item) => normalize(item.name)));
-  const missingNames = requiredNames.filter((name) => !normalizedNames.has(normalize(name)));
-  if (missingNames.length) throw new Error(`Station workspace is missing critical investigations: ${missingNames.join(", ")}`);
+  const codes = new Set(catalog.map((item) => item.code));
+  const missingCodes = requiredCodes.filter((code) => !codes.has(code));
+  if (missingCodes.length) throw new Error(`Station workspace is missing critical investigation codes: ${missingCodes.join(", ")}`);
 
   const patientsResponse = await fetch(`${API_URL}/patients?page=1&limit=20`, { headers });
   if (!patientsResponse.ok) throw new Error(`Patient search failed with ${patientsResponse.status}.`);
@@ -55,7 +61,7 @@ try {
     patient = await createPatient.json();
   }
 
-  const selected = catalog.find((item) => normalize(item.name) === normalize("Coagulation Profile")) ?? catalog[0];
+  const selected = catalog.find((item) => item.code === "COAGULATION_PROFILE") ?? catalog[0];
   if (!selected?.id) throw new Error("Station workspace did not provide a usable investigation item.");
 
   const listName = `Station QA ${Date.now()}`;
@@ -116,7 +122,7 @@ try {
   if (!persisted || persisted.items[0]?.testName !== selected.name) throw new Error("Direct order was not persisted correctly.");
 
   console.log(`PASS station workspace exposes ${catalog.length} active investigations and all six canonical categories`);
-  console.log("PASS critical andrology, urine, coagulation, and Doppler investigations are present");
+  console.log("PASS critical andrology, urine, coagulation, and Doppler investigation codes are present");
   console.log("PASS normalized duplicate personal-list names are blocked");
   console.log("PASS list duplication creates a unique explicit copy");
   console.log("PASS real frontend direct-order payload accepts catalogItemId without fabricating an encounter");
