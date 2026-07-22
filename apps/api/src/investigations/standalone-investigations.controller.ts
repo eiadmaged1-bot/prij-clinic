@@ -29,6 +29,10 @@ class StandaloneInvestigationItemDto {
   title!: string;
 
   @IsOptional()
+  @IsUUID()
+  catalogItemId?: string;
+
+  @IsOptional()
   @IsString()
   @MaxLength(120)
   requestType?: string;
@@ -134,6 +138,7 @@ export class StandaloneInvestigationsController {
         patientId: order.patientId,
         encounterId: null,
         itemCount: order.items.length,
+        catalogItemIds: dto.items.map((item) => item.catalogItemId).filter(Boolean),
         priority: order.priority,
         source: "investigation_station"
       }
