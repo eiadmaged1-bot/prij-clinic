@@ -1,37 +1,213 @@
+
 const RETRIEVED_AT = new Date("2026-07-17T00:00:00.000Z");
-const sets = [
-  set("V152_FIRST_ANTENATAL", "First antenatal visit candidates", "مرشحات الزيارة الأولى للحمل", "NICE-NG201", "NG201", "https://www.nice.org.uk/guidance/ng201", "Booking appointment and screening sections", ["OBSTETRIC"], ["CBC", "BLOOD_GROUP_RH", "HIV_AG_AB", "HBSAG", "VDRL_RPR", "URINE_CULTURE"]),
-  set("V152_TRIMESTER_MONITORING", "Routine trimester review candidates", "مرشحات متابعة الحمل الدورية", "NICE-NG201", "NG201", "https://www.nice.org.uk/guidance/ng201", "Schedule of antenatal appointments", ["OBSTETRIC"], ["CBC", "URINALYSIS"]),
-  set("V152_HIGH_RISK", "High-risk pregnancy review candidates", "مرشحات مراجعة الحمل عالي الخطورة", "NICE-NG133", "NG133", "https://www.nice.org.uk/guidance/ng133", "Assessment and monitoring sections", ["HIGH_RISK_OBSTETRIC"], ["CBC", "KIDNEY_FUNCTION_TESTS", "LIVER_FUNCTION_TESTS", "PLATELET_COUNT", "URINALYSIS", "DOPPLER_ULTRASOUND"]),
-  set("V152_INFERTILITY", "Initial infertility workup candidates", "مرشحات تقييم تأخر الحمل الأولي", "NICE-NG257", "NG257 (31 March 2026)", "https://www.nice.org.uk/guidance/ng257", "Initial assessment and investigation sections", ["INFERTILITY"], ["FSH", "LH", "PROLACTIN", "TSH", "HYSTEROSALPINGOGRAPHY", "SEMEN_ANALYSIS"]),
-  set("V152_PCOS", "PCOS assessment candidates", "مرشحات تقييم تكيس المبايض", "ESHRE-PCOS-2023", "2023", "https://www.eshre.eu/Guidelines%20and%20Legal.aspx", "Polycystic Ovary Syndrome guideline registry entry", ["INFERTILITY", "GYNECOLOGY"], ["TOTAL_TESTOSTERONE", "FREE_TESTOSTERONE", "DHEAS", "HBA1C"]),
-  set("V152_RPL", "Recurrent pregnancy loss review candidates", "مرشحات مراجعة فقد الحمل المتكرر", "ESHRE-RPL-2023", "2023", "https://www.eshre.eu/Guidelines%20and%20Legal.aspx", "Recurrent Pregnancy Loss guideline registry entry", ["INFERTILITY", "OBSTETRIC"], ["TSH", "HBA1C", "PELVIC_ULTRASOUND"]),
-  set("V152_AUB", "Abnormal uterine bleeding candidates", "مرشحات تقييم النزيف الرحمي", "NICE-NG88", "NG88", "https://www.nice.org.uk/guidance/ng88", "Assessment and investigation sections", ["GYNECOLOGY"], ["CBC", "FERRITIN", "PELVIC_ULTRASOUND"]),
-  set("V152_PREOPERATIVE", "Caesarean preoperative candidates", "مرشحات ما قبل الولادة القيصرية", "NICE-NG192", "NG192", "https://www.nice.org.uk/guidance/ng192", "Preoperative preparation section", ["OBSTETRIC"], ["CBC", "BLOOD_GROUP_RH", "COAGULATION_PROFILE"]),
-  set("V152_ONCOLOGY_CONCERN", "Gynecologic oncology concern candidates", "مرشحات الاشتباه بأورام النساء", "NICE-NG12", "NG12", "https://www.nice.org.uk/guidance/ng12", "Gynaecological cancer recognition and referral sections", ["GYNECOLOGY", "PREVENTIVE_WELL_WOMAN"], ["PELVIC_ULTRASOUND", "CA_125"]),
-  set("V152_INFECTION_STI", "Maternal infection and STI candidates", "مرشحات عدوى الحمل والأمراض المنقولة جنسيا", "WHO-9789240080591", "2nd edition 2025", "https://www.who.int/publications/i/item/9789240080591", "Maternal infections recommendations index", ["OBSTETRIC", "GYNECOLOGY"], ["HIV_AG_AB", "HBSAG", "VDRL_RPR", "CHLAMYDIA_NAAT", "GONORRHEA_NAAT"]),
-  set("V152_POSTOPERATIVE", "Postoperative review — clinician selection required", "مراجعة ما بعد الجراحة — يتطلب اختيار الطبيب", "NICE-NG192", "NG192", "https://www.nice.org.uk/guidance/ng192", "Recovery after caesarean birth", ["POSTPARTUM", "OBSTETRIC"], [], false),
-  set("V152_MENOPAUSE", "Menopause assessment — no routine test bundle", "تقييم انقطاع الطمث — لا توجد حزمة فحوصات روتينية", "NICE-NG23", "NG23", "https://www.nice.org.uk/guidance/ng23", "Identification and diagnosis sections", ["GYNECOLOGY", "PREVENTIVE_WELL_WOMAN"], [], false)
+
+const CATALOG_CODE_ALIASES = {
+  EARLY_PREGNANCY_SCAN: "EARLY_PREGNANCY_VIABILITY_SCAN",
+  CARDIOTOCOGRAPHY: "CARDIOTOCOGRAPHY_NON_STRESS_TEST_CTG_NST",
+  ESTRADIOL: "ESTRADIOL_E2",
+  HYSTEROSALPINGOGRAPHY: "HYSTEROSALPINGOGRAPHY_HSG",
+  ANTICARDIOLIPIN_ANTIBODIES: "ANTICARDIOLIPIN_ANTIBODIES_IGG_IGM",
+  BETA2_GLYCOPROTEIN_ANTIBODIES: "BETA_2_GLYCOPROTEIN_I_ANTIBODIES_IGG_IGM",
+  THYROID_PEROXIDASE_ANTIBODY: "THYROID_PEROXIDASE_ANTIBODIES",
+  UTERUS_3D_ULTRASOUND: "3D_PELVIC_ULTRASOUND",
+  ECG: "ELECTROCARDIOGRAM_ECG",
+  VAGINAL_SWAB_CULTURE: "VAGINAL_SWAB_CULTURE_AND_SENSITIVITY",
+  CERVICAL_SWAB: "ENDOCERVICAL_SWAB"
+};
+
+const templates = [
+  {
+    name: "First-Trimester Booking Panel",
+    sourceIdentifier: "CLINIC-TMPL-1",
+    patientTypes: ["OBSTETRIC"],
+    items: [
+      { code: "COMPLETE_BLOOD_COUNT_CBC", required: true },
+      { code: "ABO_BLOOD_GROUP_AND_RH_TYPING", required: true },
+      { code: "ROUTINE_URINE_ANALYSIS", required: true },
+      { code: "HBSAG", required: true },
+      { code: "HCV_ANTIBODY", required: true },
+      { code: "HIV_1_2_ANTIGEN_AND_ANTIBODY_TEST", required: true },
+      { code: "VDRL_RPR", required: true },
+      { code: "RUBELLA_IGG", required: true },
+      { code: "RANDOM_BLOOD_GLUCOSE", required: false, responsibilityJson: { alternativeGroup: "Glucose Assessment" } },
+      { code: "FASTING_BLOOD_GLUCOSE", required: false, responsibilityJson: { alternativeGroup: "Glucose Assessment" } },
+      { code: "FIRST_TRIMESTER_OBSTETRIC_ULTRASOUND", required: false, responsibilityJson: { alternativeGroup: "Viability Assessment" } },
+      { code: "EARLY_PREGNANCY_SCAN", required: false, responsibilityJson: { alternativeGroup: "Viability Assessment" } }
+    ]
+  },
+  {
+    name: "PIH / Pre-Eclampsia Workup",
+    sourceIdentifier: "CLINIC-TMPL-2",
+    patientTypes: ["HIGH_RISK_OBSTETRIC"],
+    items: [
+      { code: "COMPLETE_BLOOD_COUNT_CBC", required: true },
+      { code: "UREA", required: true },
+      { code: "CREATININE", required: true },
+      { code: "URIC_ACID", required: true },
+      { code: "AST", required: true },
+      { code: "ALT", required: true },
+      { code: "LDH", required: true },
+      { code: "URINE_PROTEIN_CREATININE_RATIO", required: false, responsibilityJson: { alternativeGroup: "Protein Assessment" } },
+      { code: "24_HOUR_URINARY_PROTEIN", required: false, responsibilityJson: { alternativeGroup: "Protein Assessment" } },
+      { code: "BIOPHYSICAL_PROFILE", required: false, rationale: "Fetal assessment subgroup" },
+      { code: "UMBILICAL_ARTERY_DOPPLER", required: false, rationale: "Fetal assessment subgroup" },
+      { code: "MIDDLE_CEREBRAL_ARTERY_DOPPLER", required: false, rationale: "Fetal assessment subgroup" },
+      { code: "CARDIOTOCOGRAPHY", required: false, rationale: "Fetal assessment subgroup" }
+    ]
+  },
+  {
+    name: "Basic Infertility Workup (Female)",
+    sourceIdentifier: "CLINIC-TMPL-3",
+    patientTypes: ["INFERTILITY"],
+    items: [
+      { code: "AMH", required: true },
+      { code: "FSH", required: true },
+      { code: "LH", required: true },
+      { code: "ESTRADIOL", required: true },
+      { code: "PROLACTIN", required: true },
+      { code: "TSH", required: true },
+      { code: "RUBELLA_IGG", required: true },
+      { code: "TRANSVAGINAL_ULTRASOUND", required: true },
+      { code: "ANTRAL_FOLLICLE_COUNT", required: true },
+      { code: "HYSTEROSALPINGOGRAPHY", required: true }
+    ]
+  },
+  {
+    name: "PCOS / Hyperandrogenism Panel",
+    sourceIdentifier: "CLINIC-TMPL-4",
+    patientTypes: ["INFERTILITY", "GYNECOLOGY"],
+    items: [
+      { code: "TOTAL_TESTOSTERONE", required: true },
+      { code: "FREE_TESTOSTERONE", required: true },
+      { code: "SHBG", required: true },
+      { code: "FSH", required: true },
+      { code: "LH", required: true },
+      { code: "FASTING_INSULIN", required: true },
+      { code: "LIPID_PROFILE", required: true },
+      { code: "TRANSVAGINAL_ULTRASOUND", required: true },
+      { code: "FASTING_BLOOD_GLUCOSE", required: false, responsibilityJson: { alternativeGroup: "Glucose Assessment" } },
+      { code: "ORAL_GLUCOSE_TOLERANCE_TEST_OGTT", required: false, responsibilityJson: { alternativeGroup: "Glucose Assessment" } }
+    ]
+  },
+  {
+    name: "Recurrent Pregnancy Loss (RPL) Screen",
+    sourceIdentifier: "CLINIC-TMPL-5",
+    patientTypes: ["INFERTILITY", "OBSTETRIC"],
+    items: [
+      { code: "LUPUS_ANTICOAGULANT", required: true },
+      { code: "ANTICARDIOLIPIN_ANTIBODIES", required: true },
+      { code: "BETA2_GLYCOPROTEIN_ANTIBODIES", required: true },
+      { code: "TSH", required: true },
+      { code: "THYROID_PEROXIDASE_ANTIBODY", required: true },
+      { code: "PROLACTIN", required: true },
+      { code: "HBA1C", required: true },
+      { code: "KARYOTYPE", required: true },
+      { code: "UTERUS_3D_ULTRASOUND", required: true }
+    ]
+  },
+  {
+    name: "Abnormal Uterine Bleeding (AUB) Workup",
+    sourceIdentifier: "CLINIC-TMPL-6",
+    patientTypes: ["GYNECOLOGY"],
+    items: [
+      { code: "COMPLETE_BLOOD_COUNT_CBC", required: true },
+      { code: "TSH", required: true },
+      { code: "TRANSVAGINAL_ULTRASOUND", required: true },
+      { code: "QUANTITATIVE_SERUM_BETA_HCG", required: false, rationale: "reproductive age or pregnancy possibility" },
+      { code: "COAGULATION_PROFILE", required: false, rationale: "particularly adolescents or suspected bleeding disorder" },
+      { code: "OFFICE_ENDOMETRIAL_BIOPSY_SAMPLING", required: false, rationale: "age above 45 or appropriate risk factors" },
+      { code: "ENDOMETRIAL_BIOPSY_HISTOPATHOLOGY", required: false, rationale: "Related pathology, shown but not selected automatically" }
+    ]
+  },
+  {
+    name: "Pre-Operative Assessment (Major Surgery)",
+    sourceIdentifier: "CLINIC-TMPL-7",
+    patientTypes: ["GYNECOLOGY", "OBSTETRIC"],
+    items: [
+      { code: "COMPLETE_BLOOD_COUNT_CBC", required: true },
+      { code: "ABO_BLOOD_GROUP_AND_RH_TYPING", required: true },
+      { code: "FASTING_BLOOD_GLUCOSE", required: true },
+      { code: "PT", required: true },
+      { code: "INR", required: true },
+      { code: "APTT", required: true },
+      { code: "ECG", required: true },
+      { code: "ANESTHESIA_ASSESSMENT", required: true }
+    ]
+  },
+  {
+    name: "Vaginitis / Pelvic Infection Panel",
+    sourceIdentifier: "CLINIC-TMPL-8",
+    patientTypes: ["GYNECOLOGY"],
+    items: [
+      { code: "ROUTINE_URINE_ANALYSIS", required: true },
+      { code: "VAGINAL_SWAB_CULTURE", required: true },
+      { code: "CERVICAL_SWAB", required: true },
+      { code: "CHLAMYDIA_NAAT", required: true },
+      { code: "GONORRHEA_NAAT", required: true },
+      { code: "TRANSVAGINAL_ULTRASOUND", required: false, rationale: "suspected PID, pelvic mass, or tubo-ovarian abscess" }
+    ]
+  }
 ];
 
 async function seedV152InvestigationSets(prisma) {
   const owner = await prisma.user.findFirst({ where: { status: "active", userRoles: { some: { role: { name: "Owner" } } } }, orderBy: { createdAt: "asc" }, select: { id: true } });
   if (!owner) throw new Error("An active Owner is required to attribute governed clinic investigation sets.");
-  const catalog = await prisma.investigationCatalogItem.findMany({ where: { code: { in: [...new Set(sets.flatMap((item) => item.codes))] }, active: true }, select: { id: true, code: true } });
+  
+  // Clean up any old templates seeded previously to avoid duplicates or name collisions
+  await prisma.investigationFavoriteSet.deleteMany({
+    where: { scope: "clinic" }
+  });
+
+  const requestedCodes = [...new Set(templates.flatMap(t => t.items.map(i => i.code)))];
+  const allCodes = [...new Set(requestedCodes.map(code => CATALOG_CODE_ALIASES[code] || code))];
+  const catalog = await prisma.investigationCatalogItem.findMany({ where: { code: { in: allCodes }, active: true }, select: { id: true, code: true } });
   const byCode = new Map(catalog.map((item) => [item.code, item.id]));
-  const missing = [...new Set(sets.flatMap((item) => item.codes))].filter((code) => !byCode.has(code));
-  if (missing.length) throw new Error(`Missing active investigation catalog codes: ${missing.join(", ")}`);
-  let created = 0; let updated = 0;
-  for (const item of sets) {
-    const existing = await prisma.investigationFavoriteSet.findFirst({ where: { sourceIdentifier: item.sourceIdentifier, name: item.name } });
-    const data = { userId: owner.id, name: item.name, nameAr: item.nameAr, icon: "investigations", scope: "clinic", branchId: null, defaultVisitType: null, active: true, publicationState: "SOURCE_VERIFIED_REFERENCE", sourceIdentifier: item.sourceIdentifier, sourceUrl: item.sourceUrl, sourceVersion: item.sourceVersion, sourceSection: item.sourceSection, sourceRetrievedAt: RETRIEVED_AT, version: 1, patientTypesJson: item.patientTypes, guidanceText: item.actionable ? "Optional source-linked candidates only. Applying this set fills the basket; Doctor review and separate confirmation are required." : "The source does not support a universal routine bundle here. Select investigations individually after assessment.", actionable: item.actionable };
-    const target = existing ? await prisma.investigationFavoriteSet.update({ where: { id: existing.id }, data }) : await prisma.investigationFavoriteSet.create({ data });
-    existing ? updated += 1 : created += 1;
-    await prisma.investigationFavoriteSetItem.deleteMany({ where: { favoriteSetId: target.id } });
-    if (item.codes.length) await prisma.investigationFavoriteSetItem.createMany({ data: item.codes.map((code, position) => ({ favoriteSetId: target.id, investigationCatalogItemId: byCode.get(code), position, required: false, rationale: `${item.sourceIdentifier} · ${item.sourceSection} · optional candidate; Doctor confirmation required.`, responsibilityJson: { ordering: "doctor_confirmation_required", followUp: "assign_at_order_review" } })) });
+  const resolveCode = (code) => CATALOG_CODE_ALIASES[code] || code;
+  
+  // Note missing codes if any, but continue seeding the ones we have
+  const missing = requestedCodes.filter((code) => !byCode.has(resolveCode(code)));
+  if (missing.length) console.warn("WARN: Missing active investigation catalog codes:", missing.join(", "));
+
+  let created = 0;
+  for (const item of templates) {
+    const data = { 
+      userId: owner.id, 
+      name: item.name, 
+      icon: "investigations", 
+      scope: "clinic", 
+      active: true, 
+      publicationState: "SOURCE_VERIFIED_REFERENCE", 
+      sourceIdentifier: item.sourceIdentifier, 
+      sourceRetrievedAt: RETRIEVED_AT, 
+      version: 1, 
+      patientTypesJson: item.patientTypes, 
+      guidanceText: "Applying this template replaces the basket contents upon confirmation.", 
+      actionable: true 
+    };
+    
+    const target = await prisma.investigationFavoriteSet.create({ data });
+    created += 1;
+    
+    const itemsToCreate = [];
+    for (let i = 0; i < item.items.length; i++) {
+        const itemDef = item.items[i];
+        const catalogCode = resolveCode(itemDef.code);
+        if (!byCode.has(catalogCode)) continue;
+        itemsToCreate.push({
+            favoriteSetId: target.id, 
+            investigationCatalogItemId: byCode.get(catalogCode),
+            position: i, 
+            required: itemDef.required, 
+            rationale: itemDef.rationale || null, 
+            responsibilityJson: itemDef.responsibilityJson || null
+        });
+    }
+    
+    if (itemsToCreate.length) {
+        await prisma.investigationFavoriteSetItem.createMany({ data: itemsToCreate });
+    }
   }
-  return { target: sets.length, created, updated, ownerAttribution: "existing_active_owner", missingCatalogCodes: missing.length };
+  return { target: templates.length, created, missingCatalogCodes: missing.length };
 }
 
-function set(stableCode, name, nameAr, sourceIdentifier, sourceVersion, sourceUrl, sourceSection, patientTypes, codes, actionable = true) { return { stableCode, name, nameAr, sourceIdentifier, sourceVersion, sourceUrl, sourceSection, patientTypes, codes, actionable }; }
-module.exports = { seedV152InvestigationSets, v152InvestigationSets: sets };
+module.exports = { seedV152InvestigationSets, v152InvestigationSets: templates };

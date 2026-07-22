@@ -2,6 +2,15 @@ import { Type } from "class-transformer";
 import { ArrayMinSize, IsArray, IsBoolean, IsDateString, IsEnum, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateNested } from "class-validator";
 import { InvestigationCategory, InvestigationOrderStatus, InvestigationPriority } from "@prisma/client";
 
+export const INVESTIGATION_CATALOG_CATEGORIES = [
+  "Laboratory",
+  "Imaging",
+  "Pathology",
+  "Cardiac and Functional Tests",
+  "Procedures and Referrals",
+  "Other"
+] as const;
+
 export class InvestigationOrderItemDto {
   @IsEnum(InvestigationCategory)
   category!: InvestigationCategory;
@@ -111,6 +120,7 @@ export class InvestigationCatalogItemDto {
   name!: string;
 
   @IsString()
+  @IsIn(INVESTIGATION_CATALOG_CATEGORIES)
   @MaxLength(120)
   category!: string;
 
