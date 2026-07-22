@@ -1,6 +1,20 @@
 
 const RETRIEVED_AT = new Date("2026-07-17T00:00:00.000Z");
 
+const CATALOG_CODE_ALIASES = {
+  EARLY_PREGNANCY_SCAN: "EARLY_PREGNANCY_VIABILITY_SCAN",
+  CARDIOTOCOGRAPHY: "CARDIOTOCOGRAPHY_NON_STRESS_TEST_CTG_NST",
+  ESTRADIOL: "ESTRADIOL_E2",
+  HYSTEROSALPINGOGRAPHY: "HYSTEROSALPINGOGRAPHY_HSG",
+  ANTICARDIOLIPIN_ANTIBODIES: "ANTICARDIOLIPIN_ANTIBODIES_IGG_IGM",
+  BETA2_GLYCOPROTEIN_ANTIBODIES: "BETA_2_GLYCOPROTEIN_I_ANTIBODIES_IGG_IGM",
+  THYROID_PEROXIDASE_ANTIBODY: "THYROID_PEROXIDASE_ANTIBODIES",
+  UTERUS_3D_ULTRASOUND: "3D_PELVIC_ULTRASOUND",
+  ECG: "ELECTROCARDIOGRAM_ECG",
+  VAGINAL_SWAB_CULTURE: "VAGINAL_SWAB_CULTURE_AND_SENSITIVITY",
+  CERVICAL_SWAB: "ENDOCERVICAL_SWAB"
+};
+
 const templates = [
   {
     name: "First-Trimester Booking Panel",
@@ -144,12 +158,14 @@ async function seedV152InvestigationSets(prisma) {
     where: { scope: "clinic" }
   });
 
-  const allCodes = [...new Set(templates.flatMap(t => t.items.map(i => i.code)))];
+  const requestedCodes = [...new Set(templates.flatMap(t => t.items.map(i => i.code)))];
+  const allCodes = [...new Set(requestedCodes.map(code => CATALOG_CODE_ALIASES[code] || code))];
   const catalog = await prisma.investigationCatalogItem.findMany({ where: { code: { in: allCodes }, active: true }, select: { id: true, code: true } });
   const byCode = new Map(catalog.map((item) => [item.code, item.id]));
+  const resolveCode = (code) => CATALOG_CODE_ALIASES[code] || code;
   
   // Note missing codes if any, but continue seeding the ones we have
-  const missing = allCodes.filter((code) => !byCode.has(code));
+  const missing = requestedCodes.filter((code) => !byCode.has(resolveCode(code)));
   if (missing.length) console.warn("WARN: Missing active investigation catalog codes:", missing.join(", "));
 
   let created = 0;
@@ -175,10 +191,11 @@ async function seedV152InvestigationSets(prisma) {
     const itemsToCreate = [];
     for (let i = 0; i < item.items.length; i++) {
         const itemDef = item.items[i];
-        if (!byCode.has(itemDef.code)) continue;
+        const catalogCode = resolveCode(itemDef.code);
+        if (!byCode.has(catalogCode)) continue;
         itemsToCreate.push({
             favoriteSetId: target.id, 
-            investigationCatalogItemId: byCode.get(itemDef.code), 
+            investigationCatalogItemId: byCode.get(catalogCode),
             position: i, 
             required: itemDef.required, 
             rationale: itemDef.rationale || null, 

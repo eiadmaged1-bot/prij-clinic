@@ -1479,9 +1479,19 @@ const ALIAS_MAP = {
   "CERVICAL_CYTOLOGY_PAP_SMEAR": [
     "Pap smear",
     "Pap test",
+    "Cervical cytology",
     "cervical smear",
     "Pap smear cytology",
     "مسحة عنق الرحم"
+  ],
+  "ANTICARDIOLIPIN_ANTIBODIES_IGG_IGM": [
+    "Anticardiolipin Antibodies"
+  ],
+  "HCV_ANTIBODY": [
+    "HCV Ab"
+  ],
+  "HIV_1_2_ANTIGEN_AND_ANTIBODY_TEST": [
+    "HIV 1/2 Ag/Ab"
   ],
   "PELVIC_MRI": [
     "MRI pelvis",
@@ -1577,12 +1587,12 @@ async function seedInvestigationCatalog(prisma) {
   }
 
   // 2. Identify Legacy items to archive and map
-  const activeExistingItems = await prisma.investigationCatalogItem.findMany({ where: { active: true } });
+  const existingItems = await prisma.investigationCatalogItem.findMany();
   
   // Create reverse mapping for legacy resolution
   const legacyToCanonicalCodeMap = new Map();
   
-  for (const legacy of activeExistingItems) {
+  for (const legacy of existingItems) {
     if (canonicalIdsByCode.has(legacy.code)) continue; // It's canonical
     
     // Check if it matches any alias or should be mapped
@@ -1615,10 +1625,12 @@ async function seedInvestigationCatalog(prisma) {
     }
     
     // Archive it
-    await prisma.investigationCatalogItem.update({
-      where: { id: legacy.id },
-      data: { active: false } // NEVER silently reactivate
-    });
+    if (legacy.active) {
+      await prisma.investigationCatalogItem.update({
+        where: { id: legacy.id },
+        data: { active: false } // NEVER silently reactivate
+      });
+    }
   }
   
   // 3. Remap Favorites
