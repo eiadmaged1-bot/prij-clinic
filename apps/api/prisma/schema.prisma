@@ -3167,6 +3167,7 @@ enum GuidelineStatus {
   ARCHIVED
   DRAFT_IMPORT
   NEEDS_REVIEW
+  NEEDS_SOURCE_PDF
 }
 
 enum GuidelineLicenseStatus {
@@ -3920,6 +3921,8 @@ model GuidelineDocument {
   fileEncryptionTag   String?
   downloadsAllowed    Boolean                @default(false)
   reviewStatus        String                 @default("pending_governance_review")
+  ingestStatus        String                 @default("NEEDS_SUMMARY")
+  importBatch         String?
   citationLabel       String                 @default("Local evidence library citation")
   storageRef          String?
   archivedAt          DateTime?              @db.Timestamptz(3)
@@ -3941,6 +3944,7 @@ model GuidelineDocument {
   reviewDecisions          GuidelineReviewDecision[]
   summaries                GuidelineSummary[]
   GuidelineSummaryCitation GuidelineSummaryCitation[]
+  clinicalProtocols         ClinicalProtocol[]
 
   @@index([sourceId])
   @@index([specialty])
@@ -3952,6 +3956,9 @@ model GuidelineDocument {
   @@index([downloadsAllowed])
   @@index([reviewStatus])
   @@index([archivedAt])
+  @@index([ingestStatus])
+  @@index([importBatch])
+  @@unique([fileSha256])
 }
 
 model GuidelineVersion {
@@ -4216,6 +4223,11 @@ model ClinicalProtocol {
   sourceYear           Int?
   sourceUrl            String?
   sourceVersion        String?
+  sourceOrganization   String?
+  guidelineCode       String?
+  sourcePublicationDate DateTime? @db.Date
+  sourceEdition       String?
+  provenanceNote      String?
   contentJson          Json
   safetyJson           Json?
   completionQuestionnaireJson Json?
@@ -4230,11 +4242,16 @@ model ClinicalProtocol {
   sourceCitationsJson  Json?
   patientTypesJson     Json?
   locallyCustomized    Boolean  @default(false)
+  sourceDocumentId     String?  @db.Uuid
+  exactPageCitationsJson Json?
+  publicationApprovedByUserId String? @db.Uuid
+  publicationApprovedAt DateTime? @db.Timestamptz(3)
   createdAt            DateTime @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime @updatedAt @db.Timestamptz(3)
 
   managementSnapshots AIManagementSnapshot[]
   versions            ClinicalProtocolVersion[]
+  sourceDocument      GuidelineDocument? @relation(fields: [sourceDocumentId], references: [id], onDelete: Restrict)
 
   @@index([specialtyGroup])
   @@index([condition])
@@ -4243,6 +4260,8 @@ model ClinicalProtocol {
   @@index([completionPercentage])
   @@index([publicationState])
   @@index([sourceIdentifier])
+  @@index([sourceDocumentId])
+  @@index([guidelineCode])
 }
 
 model ClinicalProtocolVersion {

@@ -23,7 +23,17 @@ export type ProtocolForVerification = {
   sourceUrl?: string | null;
   sourceVersion?: string | null;
   contentJson?: unknown;
+  sourceOrganization?: string | null;
+  guidelineCode?: string | null;
+  sourcePublicationDate?: Date | string | null;
+  sourceEdition?: string | null;
+  provenanceNote?: string | null;
+  exactPageCitationsJson?: unknown;
+  publicationApprovedByUserId?: string | null;
+  publicationApprovedAt?: Date | null;
 };
+
+export type ProtocolSourceDocument = { documentType?: string | null; fileSha256?: string | null; localFilePath?: string | null; guidelineStatus?: string | null };
 
 const emptyContent: StructuredProtocolContent = {
   summary: "",
@@ -137,6 +147,22 @@ export function validateVerifiedProtocolRequirements(protocol: ProtocolForVerifi
     else throw error;
   }
 
+  if (errors.length) throw new BadRequestException(errors.join(" "));
+}
+
+export function validateProtocolPublicationEvidence(protocol: ProtocolForVerification, source: ProtocolSourceDocument | null | undefined) {
+  const errors: string[] = [];
+  if (source?.documentType !== "official_pdf" || !source.fileSha256 || !source.localFilePath || source.guidelineStatus !== "ACTIVE") errors.push("Publication requires an ACTIVE official source PDF.");
+  if (!protocol.sourceOrganization?.trim()) errors.push("Source organization is required.");
+  if (!protocol.guidelineCode?.trim()) errors.push("Guideline code is required.");
+  const publicationDate = protocol.sourcePublicationDate ? new Date(protocol.sourcePublicationDate) : null;
+  if (!publicationDate || Number.isNaN(publicationDate.valueOf())) errors.push("A valid source publication date is required.");
+  const version = protocol.sourceVersion?.trim() || protocol.sourceEdition?.trim();
+  if (!version || /^(unknown|current|latest|draft|n\/a)$/i.test(version)) errors.push("An exact source version or edition is required.");
+  if (!protocol.sourceUrl?.trim() && (protocol.provenanceNote?.trim().length ?? 0) < 20) errors.push("A source URL or meaningful provenance note is required.");
+  const citations = Array.isArray(protocol.exactPageCitationsJson) ? protocol.exactPageCitationsJson : [];
+  if (!citations.length || citations.some((item) => !isObject(item) || !Number.isInteger(item.pageStart) || Number(item.pageStart) < 1 || (item.pageEnd !== undefined && (!Number.isInteger(item.pageEnd) || Number(item.pageEnd) < Number(item.pageStart))))) errors.push("Exact page citations with valid page ranges are required.");
+  if (!protocol.publicationApprovedByUserId || !protocol.publicationApprovedAt) errors.push("Human publication approval is required.");
   if (errors.length) throw new BadRequestException(errors.join(" "));
 }
 
