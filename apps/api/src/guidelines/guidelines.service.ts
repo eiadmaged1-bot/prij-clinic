@@ -518,6 +518,9 @@ export class GuidelinesService {
   async reviewDocument(id: string, dto: ReviewGuidelineDto, user: AuthUser) {
     const existing = await this.ensureDocument(id, user);
     const status = reviewDecisionToStatus(dto.decision);
+    if (dto.decision === "APPROVED" && !isCanonicalClinicalDocument(existing)) {
+      throw new BadRequestException("Approval requires an official PDF with a SHA-256 hash, private storage path, and version label.");
+    }
     if ((dto.decision === "REJECTED" || dto.decision === "ARCHIVED") && !dto.reason?.trim()) {
       throw new BadRequestException("A reason is required for reject or archive decisions.");
     }
@@ -903,7 +906,13 @@ export class GuidelinesService {
 
   private documentAccessWhere(user: AuthUser): Prisma.GuidelineDocumentWhereInput {
     if (user.roles.includes("Owner") || user.permissions.includes("guidelines.manage_private")) return {};
-    if (user.roles.includes("Doctor")) return { accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] } };
+    if (user.roles.includes("Doctor")) return {
+      accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] },
+      guidelineStatus: "ACTIVE",
+      documentType: "official_pdf",
+      fileSha256: { not: null },
+      localFilePath: { not: null }
+    };
     return { accessLevel: "CLINICAL_TEAM" };
   }
 
@@ -1093,8 +1102,12 @@ function safeDocument<T extends { localFilePath?: string | null; fileSha256?: st
   return { 
     ...safe, 
     hasAsset: Boolean(_localFilePath && document.fileSha256),
-    isCanonical: document.guidelineStatus === "ACTIVE"
+    isCanonical: document.guidelineStatus === "ACTIVE" && Boolean(_localFilePath && document.fileSha256 && (document as { documentType?: string }).documentType === "official_pdf")
   };
+}
+
+function isCanonicalClinicalDocument(document: { documentType?: string | null; fileSha256?: string | null; localFilePath?: string | null; versionLabel?: string | null }) {
+  return document.documentType === "official_pdf" && Boolean(document.fileSha256 && document.localFilePath && document.versionLabel?.trim());
 }
 
 function isOwner(user: AuthUser) {

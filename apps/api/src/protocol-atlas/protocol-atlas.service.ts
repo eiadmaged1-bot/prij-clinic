@@ -7,7 +7,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { ProtocolReasonDto, UpdateProtocolAliasesDto, UpdateProtocolCompletionDto, UpdateProtocolSourceDto, UpdateStructuredProtocolContentDto } from "./dto/editor-protocol.dto";
 import { SearchProtocolsDto } from "./dto/search-protocols.dto";
 import { UpdateProtocolStatusDto } from "./dto/update-protocol-status.dto";
-import { normalizeProtocolContent, validateProtocolContentForStatus, validateVerifiedProtocolRequirements } from "./protocol-content.schema";
+import { normalizeProtocolContent, validateProtocolContentForStatus, validateProtocolPublicationEvidence, validateVerifiedProtocolRequirements } from "./protocol-content.schema";
 
 const allowedStatuses = new Set(["verified", "draft", "catalog_only", "retired"]);
 
@@ -20,7 +20,7 @@ export class ProtocolAtlasService {
 
   async list(user: AuthUser) {
     const protocols = await this.prisma.clinicalProtocol.findMany({
-      where: { implementationStatus: { not: "retired" } },
+      where: publishedProtocolWhere,
       orderBy: [{ specialtyGroup: "asc" }, { title: "asc" }],
       take: 500,
       select: protocolSummarySelect
@@ -32,7 +32,7 @@ export class ProtocolAtlasService {
   async groups() {
     const groups = await this.prisma.clinicalProtocol.groupBy({
       by: ["specialtyGroup"],
-      where: { implementationStatus: { not: "retired" } },
+      where: publishedProtocolWhere,
       _count: { _all: true },
       orderBy: { specialtyGroup: "asc" }
     });
@@ -45,7 +45,8 @@ export class ProtocolAtlasService {
     const status = dto.verifiedOnly ? "verified" : dto.status?.trim();
     const riskLevel = dto.riskLevel?.trim();
     const where: Prisma.ClinicalProtocolWhereInput = {
-      implementationStatus: status ? status : { not: "retired" },
+      ...publishedProtocolWhere,
+      ...(status && status !== "verified" ? { id: "__review_queue_only__" } : {}),
       ...(group ? { specialtyGroup: { contains: group, mode: "insensitive" } } : {}),
       ...(riskLevel ? { riskLevel } : {}),
       ...(query
@@ -67,14 +68,14 @@ export class ProtocolAtlasService {
   }
 
   async get(id: string, user: AuthUser) {
-    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { id, implementationStatus: { not: "retired" } }, include: { versions: { orderBy: { createdAt: "desc" }, take: 20 } } });
+    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { id, ...publishedProtocolWhere }, include: { versions: { orderBy: { createdAt: "desc" }, take: 20 } } });
     if (!protocol) throw new NotFoundException("Protocol not found.");
     await this.audit.record({ actorUserId: user.id, action: "protocol_atlas.read", resourceType: "clinical_protocol", branchId: user.branchId, severity: "medium", metadataJson: { protocolId: protocol.id, code: protocol.code, status: protocol.implementationStatus } });
     return protocol;
   }
 
   async getByCode(code: string, user: AuthUser) {
-    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { code, implementationStatus: { not: "retired" } } });
+    const protocol = await this.prisma.clinicalProtocol.findFirst({ where: { code, ...publishedProtocolWhere } });
     if (!protocol) throw new NotFoundException("Protocol not found.");
     await this.audit.record({ actorUserId: user.id, action: "protocol_atlas.read", resourceType: "clinical_protocol", branchId: user.branchId, severity: "medium", metadataJson: { protocolId: protocol.id, code: protocol.code, status: protocol.implementationStatus } });
     return protocol;
@@ -84,7 +85,7 @@ export class ProtocolAtlasService {
     if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can change protocol verification status.");
     if (!allowedStatuses.has(dto.implementationStatus)) throw new BadRequestException("Unsupported implementation status.");
     assertReason(dto.reason);
-    const existing = await this.prisma.clinicalProtocol.findUnique({ where: { id } });
+    const existing = await this.prisma.clinicalProtocol.findUnique({ where: { id }, include: { sourceDocument: true } });
     if (!existing) throw new NotFoundException("Protocol not found.");
     const sourceName = dto.sourceName?.trim() || existing.sourceName;
     const content = validateProtocolContentForStatus(dto.implementationStatus, existing.contentJson);
@@ -98,6 +99,15 @@ export class ProtocolAtlasService {
         sourceUrl: dto.sourceUrl?.trim() || existing.sourceUrl,
         contentJson: content
       });
+      validateProtocolPublicationEvidence({
+        ...existing,
+        sourceName,
+        sourceYear: dto.sourceYear ?? existing.sourceYear,
+        sourceVersion: dto.sourceVersion?.trim() || existing.sourceVersion,
+        sourceUrl: dto.sourceUrl?.trim() || existing.sourceUrl,
+        publicationApprovedByUserId: user.id,
+        publicationApprovedAt: new Date()
+      }, existing.sourceDocument);
     }
     const protocol = await this.prisma.clinicalProtocol.update({
       where: { id },
@@ -107,7 +117,10 @@ export class ProtocolAtlasService {
         sourceYear: dto.sourceYear ?? existing.sourceYear,
         sourceVersion: dto.sourceVersion?.trim() || existing.sourceVersion,
         sourceUrl: dto.sourceUrl?.trim() || existing.sourceUrl,
-        contentJson: content as unknown as Prisma.InputJsonValue
+        contentJson: content as unknown as Prisma.InputJsonValue,
+        publicationState: dto.implementationStatus === "verified" ? "PUBLISHED" : "LOCAL_DRAFT",
+        publicationApprovedByUserId: dto.implementationStatus === "verified" ? user.id : null,
+        publicationApprovedAt: dto.implementationStatus === "verified" ? new Date() : null
       }
     });
     await this.audit.record({ actorUserId: user.id, action: "protocol_status_changed", resourceType: "clinical_protocol", branchId: user.branchId, severity: "high", reason: dto.reason, metadataJson: { protocolId: id, fromStatus: existing.implementationStatus, toStatus: protocol.implementationStatus, code: protocol.code } });
@@ -127,13 +140,23 @@ export class ProtocolAtlasService {
     assertReason(dto.reason);
     if (!dto.sourceName?.trim()) throw new BadRequestException("Source name is required.");
     const existing = await this.findExisting(id);
+    validateExactPageCitations(dto.exactPageCitations);
+    const sourceDocument = await this.prisma.guidelineDocument.findUnique({ where: { id: dto.sourceDocumentId } });
+    if (!sourceDocument || sourceDocument.documentType !== "official_pdf" || !sourceDocument.fileSha256 || !sourceDocument.localFilePath || sourceDocument.guidelineStatus !== "ACTIVE") throw new BadRequestException("Source document must be an ACTIVE private official PDF.");
     const protocol = await this.prisma.clinicalProtocol.update({
       where: { id },
       data: {
         sourceName: dto.sourceName.trim(),
         sourceYear: dto.sourceYear ?? null,
         sourceVersion: dto.sourceVersion?.trim() || null,
-        sourceUrl: dto.sourceUrl?.trim() || null
+        sourceUrl: dto.sourceUrl?.trim() || null,
+        sourceOrganization: dto.sourceOrganization.trim(),
+        guidelineCode: dto.guidelineCode.trim(),
+        sourcePublicationDate: new Date(dto.sourcePublicationDate),
+        sourceEdition: dto.sourceEdition?.trim() || null,
+        provenanceNote: dto.provenanceNote?.trim() || null,
+        sourceDocumentId: dto.sourceDocumentId,
+        exactPageCitationsJson: dto.exactPageCitations as unknown as Prisma.InputJsonValue
       }
     });
     await this.audit.record({ actorUserId: user.id, action: "protocol_source_updated", resourceType: "clinical_protocol", branchId: user.branchId, severity: "high", reason: dto.reason, metadataJson: { protocolId: id, code: protocol.code, fromSourceName: existing.sourceName, toSourceName: protocol.sourceName } });
@@ -164,7 +187,8 @@ export class ProtocolAtlasService {
   async updateCompletion(id: string, dto: UpdateProtocolCompletionDto, user: AuthUser) {
     if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can update protocol completion.");
     assertReason(dto.reason);
-    const existing = await this.findExisting(id);
+    const existing = await this.prisma.clinicalProtocol.findUnique({ where: { id }, include: { sourceDocument: true } });
+    if (!existing) throw new NotFoundException("Protocol not found.");
     const questionnaire = normalizeCompletionQuestionnaire(dto.questionnaire);
     const completionPercentage = protocolCompletionPercentage(questionnaire);
     const protocol = await this.prisma.clinicalProtocol.update({ where: { id }, data: { completionQuestionnaireJson: questionnaire as Prisma.InputJsonValue, connectionsJson: dto.connections as Prisma.InputJsonValue, completionPercentage, completionReviewerUserId: user.id, completionVersion: { increment: 1 } } as never });
@@ -186,11 +210,14 @@ export class ProtocolAtlasService {
   async verify(id: string, dto: ProtocolReasonDto, user: AuthUser) {
     if (!isOwnerOrAdmin(user)) throw new ForbiddenException("Only owner/admin can verify protocols.");
     assertReason(dto.reason);
-    const existing = await this.findExisting(id);
+    const existing = await this.prisma.clinicalProtocol.findUnique({ where: { id }, include: { sourceDocument: true } });
+    if (!existing) throw new NotFoundException("Protocol not found.");
     if (existing.implementationStatus !== "draft") throw new BadRequestException("Only draft protocols can be verified.");
     const content = { ...validateProtocolContentForStatus("verified", existing.contentJson), verifiedManagementAvailable: true };
+    const approval = { publicationApprovedByUserId: user.id, publicationApprovedAt: new Date() };
     validateVerifiedProtocolRequirements({ ...existing, implementationStatus: "verified", contentJson: content });
-    const protocol = await this.prisma.clinicalProtocol.update({ where: { id }, data: { implementationStatus: "verified", contentJson: content as unknown as Prisma.InputJsonValue } });
+    validateProtocolPublicationEvidence({ ...existing, ...approval }, existing.sourceDocument);
+    const protocol = await this.prisma.clinicalProtocol.update({ where: { id }, data: { implementationStatus: "verified", publicationState: "PUBLISHED", ...approval, contentJson: content as unknown as Prisma.InputJsonValue } });
     await this.audit.record({ actorUserId: user.id, action: "protocol_verified", resourceType: "clinical_protocol", branchId: user.branchId, severity: "high", reason: dto.reason, metadataJson: { protocolId: id, code: protocol.code, fromStatus: existing.implementationStatus, toStatus: protocol.implementationStatus, sourceName: protocol.sourceName } });
     return { ...protocol, structuredContent: content };
   }
@@ -214,13 +241,27 @@ export class ProtocolAtlasService {
   private async aliasSearch(query: string, excludeIds: string[]) {
     const normalized = query.toLowerCase();
     const candidates = await this.prisma.clinicalProtocol.findMany({
-      where: { id: { notIn: excludeIds }, implementationStatus: { not: "retired" } },
+      where: { id: { notIn: excludeIds }, ...publishedProtocolWhere },
       select: protocolSummarySelect,
       take: 500
     });
     return candidates.filter((protocol) => JSON.stringify(protocol.aliases).toLowerCase().includes(normalized)).slice(0, 15);
   }
+
+  async reviewQueue(user: AuthUser) {
+    if (!user.roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role))) throw new ForbiddenException("Only Owner, Admin, or Doctor roles can view the protocol review queue.");
+    const protocols = await this.prisma.clinicalProtocol.findMany({
+      where: { NOT: publishedProtocolWhere, implementationStatus: { not: "retired" } },
+      orderBy: [{ publicationState: "asc" }, { title: "asc" }],
+      take: 500,
+      select: protocolSummarySelect
+    });
+    await this.audit.record({ actorUserId: user.id, action: "protocol_review_queue.list_read", resourceType: "clinical_protocol", branchId: user.branchId, severity: "medium", metadataJson: { count: protocols.length } });
+    return protocols;
+  }
 }
+
+const publishedProtocolWhere = { implementationStatus: "verified", publicationState: "PUBLISHED" } satisfies Prisma.ClinicalProtocolWhereInput;
 
 const protocolSummarySelect = {
   id: true,
@@ -244,6 +285,10 @@ const protocolSummarySelect = {
 
 function assertReason(reason?: string | null) {
   if (!reason?.trim()) throw new BadRequestException("Audit reason is required.");
+}
+
+function validateExactPageCitations(citations: Array<{ pageStart: number; pageEnd?: number }>) {
+  if (!citations.length || citations.some((citation) => !Number.isInteger(citation.pageStart) || citation.pageStart < 1 || (citation.pageEnd !== undefined && (!Number.isInteger(citation.pageEnd) || citation.pageEnd < citation.pageStart)))) throw new BadRequestException("Exact page citations require valid positive page ranges.");
 }
 
 const completionKeys = ["scope", "inclusion", "exclusion", "requiredHistory", "examination", "investigations", "redFlags", "management", "medicationConsiderations", "followUp", "escalationReferral", "counselling", "sourceVersion", "clinicWorkflow", "reviewer", "approval"] as const;

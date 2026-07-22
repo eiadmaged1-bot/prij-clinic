@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { ArrayMaxSize, IsArray, IsBoolean, IsInt, IsObject, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsInt, IsObject, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class ProtocolReasonDto {
   @IsString()
@@ -27,6 +27,27 @@ export class UpdateProtocolSourceDto extends ProtocolReasonDto {
   @IsUrl({ require_protocol: true })
   @MaxLength(500)
   sourceUrl?: string;
+
+  @IsString() @MaxLength(200)
+  sourceOrganization!: string;
+
+  @IsString() @MaxLength(120)
+  guidelineCode!: string;
+
+  @IsDateString()
+  sourcePublicationDate!: string;
+
+  @IsOptional() @IsString() @MaxLength(120)
+  sourceEdition?: string;
+
+  @IsOptional() @IsString() @MaxLength(1000)
+  provenanceNote?: string;
+
+  @IsString() @MaxLength(36)
+  sourceDocumentId!: string;
+
+  @IsArray() @ArrayMaxSize(100)
+  exactPageCitations!: Array<{ pageStart: number; pageEnd?: number; label?: string }>;
 }
 
 export class UpdateProtocolAliasesDto extends ProtocolReasonDto {

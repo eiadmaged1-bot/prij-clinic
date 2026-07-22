@@ -26,6 +26,12 @@ export class ProtocolAtlasController {
     return { groups: await this.atlas.groups() };
   }
 
+  @Get("review-queue")
+  @Permissions("protocol_atlas.read")
+  async reviewQueue(@CurrentUser() user: AuthUser) {
+    return { protocols: await this.atlas.reviewQueue(user) };
+  }
+
   @Get("by-code/:code")
   @Permissions("protocol_atlas.read")
   byCode(@Param("code") code: string, @CurrentUser() user: AuthUser) {
