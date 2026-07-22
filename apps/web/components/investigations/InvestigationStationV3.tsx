@@ -30,7 +30,12 @@ type InvestigationSet = {
   actionable?: boolean;
   editable?: boolean;
   guidanceText?: string | null;
-  items: Array<{ investigationCatalogItem: CatalogItem }>;
+  items: Array<{ 
+    investigationCatalogItem: CatalogItem;
+    required?: boolean;
+    rationale?: string | null;
+    responsibilityJson?: unknown;
+  }>;
 };
 
 type OrderRecord = {
@@ -220,6 +225,8 @@ export default function InvestigationStationV3() {
   const [status, setStatus] = useState("");
   const [savedId, setSavedId] = useState("");
   const [savedPrintPath, setSavedPrintPath] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<InvestigationSet | null>(null);
+  const [previewSelected, setPreviewSelected] = useState<Set<string>>(new Set());
 
   const loadWorkspace = useCallback(async () => {
     const [workspaceBody, orderBody] = await Promise.all([
@@ -342,6 +349,14 @@ export default function InvestigationStationV3() {
 
   function changePatient() {
     if (encounterId) return;
+    const hasMeaningfulNotes = Object.values(itemNotes).some(note => typeof note === "string" && note.trim().length > 0);
+    if (basket.length > 0 || overallNote.trim().length > 0 || hasMeaningfulNotes) {
+      if (!window.confirm("Changing patient will clear your current basket. Continue?")) return;
+      setBasket([]);
+      setItemNotes({});
+      setOverallNote("");
+      setUndo(null);
+    }
     setPatient(null);
     setPatientId("");
     setPatientOrders([]);
@@ -360,6 +375,30 @@ export default function InvestigationStationV3() {
     setBasket(dedupe(set.items.map((entry) => entry.investigationCatalogItem)));
     setItemNotes({});
     setStatus("");
+  }
+
+  function openTemplatePreview(set: InvestigationSet) {
+    setPreviewTemplate(set);
+    const defaults = new Set<string>();
+    for (const item of set.items) {
+      if (item.required !== false) defaults.add(item.investigationCatalogItem.id);
+    }
+    setPreviewSelected(defaults);
+  }
+
+  function applyTemplatePreview() {
+    if (!previewTemplate) return;
+    const selectedItems = previewTemplate.items
+      .filter(i => previewSelected.has(i.investigationCatalogItem.id))
+      .map(i => i.investigationCatalogItem);
+    
+    if (selectedItems.length > 0) {
+      remember();
+      // MERGE, don't clear basket/notes
+      const newItems = selectedItems.filter(item => !basket.some(b => b.id === item.id));
+      setBasket(current => [...current, ...newItems]);
+    }
+    setPreviewTemplate(null);
   }
 
   async function toggleFavorite(item: CatalogItem) {
@@ -464,9 +503,6 @@ export default function InvestigationStationV3() {
             setStatus("");
             setListName("");
             setListNameAr("");
-            setBasket([]);
-            setItemNotes({});
-            setUndo(null);
           }}>{mode === "order" ? t.createList : t.cancelList}</button>
         </div>
       </header>
@@ -537,7 +573,7 @@ export default function InvestigationStationV3() {
           {activeTab === "lists" ? (
             <SetGrid sets={personalLists} empty={t.listsEmpty} selectLabel={t.selectList} duplicateLabel={t.duplicate} archiveLabel={t.archive} onSelect={applySet} onDuplicate={duplicateList} onArchive={archiveList} />
           ) : activeTab === "templates" ? (
-            <SetGrid sets={templates} empty={t.templatesEmpty} selectLabel={t.selectList} onSelect={applySet} />
+            <SetGrid sets={templates} empty={t.templatesEmpty} selectLabel={t.selectList} onSelect={openTemplatePreview} />
           ) : (
             <section className={`panel ${styles.catalogue}`}>
               <div className={styles.catalogueHeader}>
@@ -625,6 +661,53 @@ export default function InvestigationStationV3() {
             <ol>{basket.map((item) => <li key={item.id}>{item.name}</li>)}</ol>
             {overallNote ? <p>{overallNote}</p> : null}
             <div className={styles.modalActions}><button className="button secondary" type="button" onClick={() => setReviewOpen(false)}>{t.back}</button><button className="button" type="button" disabled={saving} onClick={() => void submitOrder()}>{saving ? t.saving : t.submit}</button></div>
+          </section>
+        </div>
+      ) : null}
+
+      {previewTemplate ? (
+        <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setPreviewTemplate(null); }}>
+          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="template-preview-title">
+            <h2 id="template-preview-title">{previewTemplate.name}</h2>
+            {previewTemplate.guidanceText ? <p>{previewTemplate.guidanceText}</p> : null}
+            
+            <div className={styles.templatePreviewItems}>
+              {previewTemplate.items.map((entry) => {
+                const item = entry.investigationCatalogItem;
+                const isSelected = previewSelected.has(item.id);
+                const resp = entry.responsibilityJson as { alternativeGroup?: string } | undefined;
+                const altGroup = resp?.alternativeGroup;
+                
+                return (
+                  <label key={item.id} style={{ display: 'flex', gap: '1rem', padding: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected} 
+                      onChange={(e) => {
+                        setPreviewSelected(curr => {
+                          const next = new Set(curr);
+                          if (e.target.checked) next.add(item.id);
+                          else next.delete(item.id);
+                          return next;
+                        });
+                      }} 
+                    />
+                    <div>
+                      <strong>{item.name}</strong>
+                      <div style={{ fontSize: '0.85em', color: 'var(--text-muted)' }}>
+                        {entry.required !== false ? "Core" : altGroup ? `Alternative: ${altGroup}` : "Conditional"}
+                        {entry.rationale ? ` — ${entry.rationale}` : ""}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+            
+            <div className={styles.modalActions}>
+              <button className="button secondary" type="button" onClick={() => setPreviewTemplate(null)}>Cancel</button>
+              <button className="button" type="button" disabled={previewSelected.size === 0} onClick={applyTemplatePreview}>Add {previewSelected.size} items</button>
+            </div>
           </section>
         </div>
       ) : null}

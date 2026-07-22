@@ -86,7 +86,12 @@ export class InvestigationStationController {
       favoriteSets: sets.map((set) => ({
         ...set,
         editable: set.userId === user.id,
-        items: set.items.map((entry) => ({ investigationCatalogItem: entry.investigationCatalogItem }))
+        items: set.items.map((entry) => ({ 
+          investigationCatalogItem: entry.investigationCatalogItem,
+          required: entry.required,
+          rationale: entry.rationale,
+          responsibilityJson: entry.responsibilityJson
+        }))
       }))
     };
   }
