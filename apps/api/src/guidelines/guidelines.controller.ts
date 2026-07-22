@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import type { Request, Response } from "express";
 import { CurrentUser } from "../auth/current-user.decorator";
@@ -55,9 +55,24 @@ export class GuidelinesController {
 
   @Get("documents")
   @Permissions("guidelines.read")
-  documents(@CurrentUser() user: AuthUser, @Query("page") page?: string, @Query("limit") limit?: string, @Query("status") status?: string) {
-    return this.guidelines.listDocuments(user, { page, limit, status });
+  documents(@CurrentUser() user: AuthUser, @Query("page") page?: string, @Query("limit") limit?: string, @Query("status") status?: string, @Query("view") view?: string) {
+    return this.guidelines.listDocuments(user, { page, limit, status, view });
   }
+
+  @Get("me/favorites") @Permissions("guidelines.read")
+  favorites(@CurrentUser() user: AuthUser) { return this.guidelines.listFavorites(user); }
+
+  @Get("me/recent") @Permissions("guidelines.read")
+  recent(@CurrentUser() user: AuthUser) { return this.guidelines.listRecent(user); }
+
+  @Post("documents/:id/favorite") @Permissions("guidelines.read")
+  favorite(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.guidelines.setFavorite(id, true, user); }
+
+  @Delete("documents/:id/favorite") @Permissions("guidelines.read")
+  unfavorite(@Param("id") id: string, @CurrentUser() user: AuthUser) { return this.guidelines.setFavorite(id, false, user); }
+
+  @Post("documents/:id/open") @Permissions("guidelines.read")
+  opened(@Param("id") id: string, @Body() body: { page?: number }, @CurrentUser() user: AuthUser) { return this.guidelines.trackOpen(id, body.page, user); }
 
   @Get("documents/:id")
   @Permissions("guidelines.read")
