@@ -6583,6 +6583,9 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .missing-information-groups > details { border: 1px solid var(--border); border-radius: 8px; padding: .45rem; }
 .missing-information-groups > details > summary { display: flex; justify-content: space-between; gap: .5rem; cursor: pointer; }
 .patient-workspace-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: .8rem; align-items: start; }
+.hybrid-workspace-tabs { position:sticky; top:calc(58px + env(safe-area-inset-top)); z-index:8; background:var(--background,#f7f5ef); }
+.hybrid-workspace-accordions > .patient-workspace-panel { grid-column:1 / -1; }
+.guideline-patient-workspace { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
 .legacy-patient-context-bar { display: none !important; }
 .patient-smart-identity-bar {
   --patient-type-accent: var(--accent, #0f766e);
@@ -6812,6 +6815,9 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 @media (max-width: 760px) {
   .patient-smart-identity-bar { position: static; grid-template-columns: 1fr; padding: .65rem; }
   .patient-smart-actions .button { flex: 1 1 auto; min-height: 44px; }
+  .hybrid-workspace-tabs { flex-wrap:nowrap; overflow-x:auto; }
+  .hybrid-workspace-tabs .tab-button { flex:0 0 auto; min-width:max-content; }
+  .guideline-patient-workspace { align-items:stretch; flex-direction:column; }
 }
 
 .patient-search-card {
