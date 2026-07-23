@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+import { acquirePdfDocument, loadPdfJs } from "./pdf-document-cache";
 
 type Props = { url: string; page: number; zoom: number; rotation: number; fit: "width" | "page" | "custom"; search: string; token?: string | null; onLoaded: (pages: number) => void; onError: (reason: string) => void; onPageSelect: (page: number) => void; onSearchMatches?: (pages: number[]) => void };
 
@@ -18,14 +19,15 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
 
   useEffect(() => {
     let cancelled = false;
-    let loaded: PDFDocumentProxy | null = null;
-    void loadPdfJs().then(async (pdfjs) => {
-      const documentProxy = await pdfjs.getDocument({ url, withCredentials: true, httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined }).promise;
-      loaded = documentProxy;
-      if (cancelled) return void documentProxy.destroy();
-      setPdf(documentProxy); onLoadedRef.current(documentProxy.numPages);
-    }).catch((error) => onErrorRef.current(error instanceof Error ? error.message : "pdf_load_failed"));
-    return () => { cancelled = true; if (loaded) void loaded.destroy(); setPdf(null); };
+    let release: (() => void) | null = null;
+    void acquirePdfDocument(url, token).then((acquired) => {
+      release = acquired.release;
+      if (cancelled) return acquired.release();
+      setPdf(acquired.document); onLoadedRef.current(acquired.document.numPages);
+    }).catch((error) => {
+      if (!cancelled && !(error instanceof Error && error.name === "AbortError")) onErrorRef.current(friendlyPdfError(error));
+    });
+    return () => { cancelled = true; release?.(); setPdf(null); };
   }, [token, url]);
 
   useEffect(() => {
@@ -83,15 +85,13 @@ async function renderSelectableText(pdfPage: PDFPageProxy, viewport: ReturnType<
   }
 }
 
-async function loadPdfJs() {
-  const moduleUrl = "/api/pdfjs/pdf.mjs";
-  const pdfjs = await import(/* webpackIgnore: true */ moduleUrl) as typeof import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/api/pdfjs/pdf.worker.mjs";
-  return pdfjs;
-}
-
 function PdfThumbnail({ pdf, page, active, onSelect }: { pdf: PDFDocumentProxy; page: number; active: boolean; onSelect: (page: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => { let cancelled = false; let task: { cancel: () => void; promise: Promise<unknown> } | null = null; void pdf.getPage(page).then((pdfPage) => { if (cancelled || !ref.current) return; const viewport = pdfPage.getViewport({ scale: 0.18 }); const canvas = ref.current; canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height); const context = canvas.getContext("2d"); if (!context) return; task = pdfPage.render({ canvasContext: context, viewport }); return task.promise; }).catch(() => undefined); return () => { cancelled = true; task?.cancel(); }; }, [page, pdf]);
   return <button className={active ? "active" : ""} type="button" onClick={() => onSelect(page)}><canvas ref={ref} aria-hidden="true" /><span>Page {page}</span></button>;
+}
+
+function friendlyPdfError(error: unknown) {
+  if (error instanceof Error && error.message === "pdf_rate_limited") return "The document server is busy. Please wait a moment or open the original.";
+  return "This PDF could not be displayed. You can still open the original document.";
 }
