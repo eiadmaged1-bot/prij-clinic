@@ -6715,6 +6715,7 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .real-guideline-filters label { display:grid; gap:.3rem; min-width:0; }
 .real-guideline-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
 .real-guideline-card,.real-protocol-card { min-width:0; overflow:hidden; border:1px solid #d8e3e2; border-radius:14px; background:#fff; box-shadow:0 8px 22px rgba(22,55,61,.06); }
+.real-guideline-card,.patient-result-card,.patient-search-card-selectable,.patient-workspace-panel { transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease; }
 .real-guideline-card { position:relative; }
 .real-guideline-card-link { display:grid; grid-template-rows:190px 1fr; min-height:100%; color:inherit; text-decoration:none; }
 .real-guideline-card-link:focus-visible { outline:3px solid var(--library-teal); outline-offset:-3px; border-radius:13px; }
@@ -6785,6 +6786,10 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .patient-result-branch { align-self:flex-start; }
 .patient-result-favorite { position:absolute; z-index:2; inset-block-start:.55rem; inset-inline-end:.55rem; min-width:38px; min-height:38px; border:1px solid var(--border); border-radius:999px; background:var(--surface,#fff); color:#a66a00; font-size:1.15rem; }
 @media (max-width:760px) { .patient-result-list { grid-template-columns:1fr; gap:.5rem; } .patient-result-card,.patient-result-card-link { min-height:82px; } }
+@media (prefers-reduced-motion:reduce) {
+  .real-guideline-card,.patient-result-card,.patient-search-card-selectable,.patient-workspace-panel { transition:none; }
+  .patient-search-skeleton span { animation:none; }
+}
 .ultrasound-template-rail, .ultrasound-image-rail { position: sticky; top: 1rem; display: grid; gap: .75rem; max-height: calc(100vh - 2rem); overflow: auto; }
 .template-list { display: grid; gap: .35rem; }
 .template-list button { padding: .6rem .7rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: start; cursor: pointer; }
