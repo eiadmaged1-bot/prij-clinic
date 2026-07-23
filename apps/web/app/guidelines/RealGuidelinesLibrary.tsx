@@ -64,7 +64,25 @@ export function RealGuidelinesLibrary() {
   </main></AppShell>;
 }
 
-function DocumentCard({document,t,language,onFavorite}:{document:Document;t:typeof copy.en;language:"en"|"ar";onFavorite:()=>void}) { const metadataComplete=Boolean(document.guidelineCode&&(document.publicationDate||document.versionLabel)); return <article className="real-guideline-card"><PdfFirstPageThumbnail documentId={document.id} title={document.title}/><div className="real-guideline-card-body"><div className="card-topline"><span>{document.organization}</span><button aria-label={document.isFavorite?'Remove favorite':'Add favorite'} aria-pressed={document.isFavorite} onClick={onFavorite} type="button">{document.isFavorite?'★':'☆'}</button></div><h2>{document.title}</h2><p>{document.guidelineCode || t.incomplete} · {document.publicationDate ? new Date(document.publicationDate).toLocaleDateString() : document.versionLabel || t.incomplete}</p><p>{document.topic}</p><div className="guideline-status-line"><span>{humanStatus(document.ingestStatus,language)}</span>{!metadataComplete?<span className="warning-text">{t.incomplete}</span>:null}</div><Link className="button" href={`/guidelines/${document.id}`}>{t.open}</Link></div></article>; }
+function DocumentCard({document,t,language,onFavorite}:{document:Document;t:typeof copy.en;language:"en"|"ar";onFavorite:()=>void}) {
+  const metadataComplete=Boolean(document.guidelineCode&&(document.publicationDate||document.versionLabel));
+  return <article className="real-guideline-card">
+    <Link className="real-guideline-card-link" href={`/guidelines/${document.id}`} aria-label={`${t.open}: ${document.title}`}>
+      <PdfFirstPageThumbnail documentId={document.id} title={document.title}/>
+      <div className="real-guideline-card-body">
+        <span className="guideline-card-organization">{document.organization}</span>
+        <h2>{document.title}</h2>
+        <div className="guideline-card-desktop-details">
+          <p>{document.guidelineCode || t.incomplete} · {document.publicationDate ? new Date(document.publicationDate).toLocaleDateString() : document.versionLabel || t.incomplete}</p>
+          <p>{document.topic}</p>
+          <div className="guideline-status-line"><span>{humanStatus(document.ingestStatus,language)}</span>{!metadataComplete?<span className="warning-text">{t.incomplete}</span>:null}</div>
+          <span className="button">{t.open}</span>
+        </div>
+      </div>
+    </Link>
+    <button className="guideline-favorite-overlay" aria-label={document.isFavorite?'Remove favorite':'Add favorite'} aria-pressed={document.isFavorite} onClick={onFavorite} type="button">{document.isFavorite?'★':'☆'}</button>
+  </article>;
+}
 function LibraryState({text,action}:{text:string;action?:ReactNode}) { return <section className="library-state"><span aria-hidden>□</span><p>{text}</p>{action}</section>; }
 function humanStatus(value:string,language:"en"|"ar"){const ar:Record<string,string>={NEEDS_METADATA:"يحتاج بيانات وصفية",NEEDS_SOURCE_PDF:"يحتاج ملف المصدر",NEEDS_SUMMARY:"يحتاج ملخصًا",NEEDS_CORRECTION_REVIEW:"يحتاج مراجعة التصحيح",NEEDS_REVIEW:"يحتاج مراجعة سريرية",APPROVED:"معتمد",FAILED:"فشل",ARCHIVED:"مؤرشف",SUPERSEDED:"مستبدل"};return language==="ar"?(ar[value]??value):value.replaceAll('_',' ').toLowerCase().replace(/^./,(letter)=>letter.toUpperCase());}
 function areaLabel(value:string,language:"en"|"ar"){if(language==="en")return value;return ({Obstetrics:"طب التوليد",Gynecology:"أمراض النساء","Fertility & ART":"الخصوبة وتقنيات الإخصاب","Family Planning":"تنظيم الأسرة","Gynecologic Oncology":"أورام النساء",Menopause:"سن اليأس",Emergency:"الطوارئ"} as Record<string,string>)[value]??value;}

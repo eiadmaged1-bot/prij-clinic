@@ -22,7 +22,7 @@ export function PdfFirstPageThumbnail({ documentId, title }: { documentId: strin
       const token = sessionStorage.getItem("prijClinicToken");
       const pdf = await pdfjs.getDocument({ url: `/api/backend/guidelines/documents/${encodeURIComponent(documentId)}/view?thumbnail=1`, withCredentials: true, httpHeaders: token ? { Authorization: `Bearer ${token}` } : undefined }).promise;
       loaded = pdf; const page = await pdf.getPage(1); if (cancelled || !canvasRef.current) return;
-      const base = page.getViewport({ scale: 1 }); const viewport = page.getViewport({ scale: 260 / base.width });
+      const base = page.getViewport({ scale: 1 }); const viewport = page.getViewport({ scale: 420 / base.width });
       const canvas = canvasRef.current; canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
       const context = canvas.getContext("2d"); if (!context) throw new Error("canvas unavailable");
       await page.render({ canvasContext: context, viewport }).promise; if (!cancelled) setState("ready");
