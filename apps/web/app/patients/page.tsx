@@ -226,17 +226,9 @@ export default function PatientsPage() {
   );
 }
 
-function friendlyStatus(value: string) {
-  return value ? value.replaceAll("_", " ") : "Not set";
-}
-
 function patientDisplayName(patient: Patient) {
   const name = `${patient.firstName} ${patient.lastName}`.trim();
   return name || "Patient file";
-}
-
-function patientFileNumber(patient: Patient) {
-  return patient.medicalRecordNumber;
 }
 
 function compactAge(patient: Patient) {

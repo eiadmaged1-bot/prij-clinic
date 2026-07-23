@@ -492,10 +492,3 @@ export default function PatientFilePage() {
     </AppShell>
   );
 }
-
-function workspaceGridColumn(placement?: WorkspacePanelPlacement) {
-  if (!placement || placement.size === "FULL" || placement.column <= 1) return undefined;
-  const span = placement.size === "SMALL" ? 4 : placement.size === "MEDIUM" ? 6 : 8;
-  const start = Math.min(placement.column, 13 - span);
-  return `${start} / span ${span}`;
-}
