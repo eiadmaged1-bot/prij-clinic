@@ -92,25 +92,27 @@ async function seedV152ProtocolReferences(prisma) {
     const sourceRow = sources[item.sourceKey];
     const contentJson = content(item, sourceRow);
     const questionnaire = questionnaireFor(item, sourceRow);
+    const safePublicationState = item.publicationState === "ARCHIVED" ? "ARCHIVED" : "LOCAL_DRAFT";
     const data = {
       title: item.title, specialtyGroup: item.group, condition: item.condition,
       aliases: [item.title, item.condition], bodySystem: "Women's health", clinicalArea: item.group,
-      protocolType: "source_verified_reference", implementationStatus: item.publicationState === "ARCHIVED" ? "retired" : "verified",
-      publicationState: item.publicationState, riskLevel: item.riskLevel,
+      protocolType: "source_verified_reference", implementationStatus: item.publicationState === "ARCHIVED" ? "retired" : "catalog_only",
+      publicationState: safePublicationState, riskLevel: item.riskLevel,
       sourceName: sourceRow.organization, sourceYear: yearFrom(sourceRow.version), sourceUrl: sourceRow.url,
       sourceVersion: sourceRow.version, sourceIdentifier: sourceRow.identifier, sourceRetrievedAt: RETRIEVED_AT,
       sourceCitationsJson: [{ sourceIdentifier: sourceRow.identifier, sourceTitle: sourceRow.organization, version: sourceRow.version, sourceUrl: sourceRow.url, section: item.section, page: null, pageUnavailableReason: "Official web/registry section citation; no local page is claimed." }],
       patientTypesJson: item.patientTypes, locallyCustomized: false, contentJson,
       safetyJson: { referenceOnly: true, noAutomaticDiagnosis: true, noAutomaticOrdering: true, noAutomaticPrescribing: true, noDoseSelection: true, patientConfirmationRequired: true, doctorReviewRequired: true },
-      completionQuestionnaireJson: questionnaire, connectionsJson: { patientTypes: item.patientTypes, investigationPreviewOnly: true, medicationReferenceOnly: true, ultrasoundTemplatePreviewOnly: true }, completionPercentage: 100
+      completionQuestionnaireJson: questionnaire, connectionsJson: { patientTypes: item.patientTypes, investigationPreviewOnly: true, medicationReferenceOnly: true, ultrasoundTemplatePreviewOnly: true }, completionPercentage: 100,
+      sourceDocumentId: null, exactPageCitationsJson: null, publicationApprovedByUserId: null, publicationApprovedAt: null
     };
     const existing = await prisma.clinicalProtocol.findUnique({ where: { code: item.code } });
     const protocol = existing ? await prisma.clinicalProtocol.update({ where: { code: item.code }, data }) : await prisma.clinicalProtocol.create({ data: { code: item.code, ...data } });
     existing ? updated += 1 : created += 1;
     await prisma.clinicalProtocolVersion.upsert({
       where: { protocolId_versionLabel_sourceIdentifier: { protocolId: protocol.id, versionLabel: sourceRow.version, sourceIdentifier: sourceRow.identifier } },
-      update: { publicationState: item.publicationState, sourceName: sourceRow.organization, sourceUrl: sourceRow.url, sourceRetrievedAt: RETRIEVED_AT, contentJson, sourceCitationsJson: data.sourceCitationsJson },
-      create: { protocolId: protocol.id, versionLabel: sourceRow.version, publicationState: item.publicationState, sourceIdentifier: sourceRow.identifier, sourceName: sourceRow.organization, sourceUrl: sourceRow.url, sourceRetrievedAt: RETRIEVED_AT, contentJson, sourceCitationsJson: data.sourceCitationsJson }
+      update: { publicationState: safePublicationState, sourceName: sourceRow.organization, sourceUrl: sourceRow.url, sourceRetrievedAt: RETRIEVED_AT, contentJson, sourceCitationsJson: data.sourceCitationsJson },
+      create: { protocolId: protocol.id, versionLabel: sourceRow.version, publicationState: safePublicationState, sourceIdentifier: sourceRow.identifier, sourceName: sourceRow.organization, sourceUrl: sourceRow.url, sourceRetrievedAt: RETRIEVED_AT, contentJson, sourceCitationsJson: data.sourceCitationsJson }
     });
   }
   return { target: protocolReferences.length, created, updated };

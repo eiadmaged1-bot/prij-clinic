@@ -146,10 +146,19 @@ const catalogGroups = [
 async function seedWomensHealthProtocols(prisma) {
   const verifiedBaseCodes = new Set(["ENDOMETRIOSIS", "PCOS_OVULATION_INDUCTION", "UNEXPLAINED_INFERTILITY"]);
   for (const protocol of verifiedProtocols) {
+    const unpublishedProtocol = {
+      ...protocol,
+      implementationStatus: "catalog_only",
+      publicationState: "LOCAL_DRAFT",
+      sourceDocumentId: null,
+      exactPageCitationsJson: null,
+      publicationApprovedByUserId: null,
+      publicationApprovedAt: null
+    };
     await prisma.clinicalProtocol.upsert({
       where: { code: protocol.code },
-      update: protocol,
-      create: protocol
+      update: unpublishedProtocol,
+      create: unpublishedProtocol
     });
   }
 
