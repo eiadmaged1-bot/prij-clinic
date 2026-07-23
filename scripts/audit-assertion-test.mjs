@@ -22,11 +22,13 @@ async function main() {
   await apiJson("PATCH", `/reports/${ids.reportId}/review`, owner);
   await apiJson("PATCH", `/pregnancies/${ids.pregnancyId}`, owner, { notes: "Demo audit assertion pregnancy update only." });
   await apiJson("PATCH", `/ob-ultrasounds/${ids.obUltrasoundId}`, owner, {
+    scanType: "Demo audit scan",
     impressionText: "Demo audit assertion ultrasound note only. No diagnosis."
   });
-  await apiJson("PATCH", `/ob-ultrasounds/${ids.obUltrasoundId}/review`, owner, {
-    reviewNote: "Demo audit assertion OB review only."
-  });
+  // This audit suite has no secured image upload fixture. Exercise the valid
+  // complete-for-review transition; final clinical review remains protected by
+  // the separate required-image gate.
+  await apiJson("PATCH", `/ob-ultrasounds/${ids.obUltrasoundId}/complete-for-review`, owner);
   await apiJson("PATCH", `/billing/invoices/${ids.invoiceId}`, owner, { notes: "Demo audit assertion invoice update only." });
   await apiJson("POST", `/billing/invoices/${ids.draftInvoiceId}/issue`, owner);
   await apiJson("POST", `/billing/payments/${ids.paymentId}/reverse`, owner, {
@@ -62,7 +64,7 @@ async function main() {
     ["pregnancy.updated", ids.pregnancyId],
     ["ob_ultrasound.created", ids.obUltrasoundId],
     ["ob_ultrasound.updated", ids.obUltrasoundId],
-    ["ob_ultrasound.reviewed", ids.obUltrasoundId],
+    ["ob_ultrasound.completed_for_review", ids.obUltrasoundId],
     ["invoice.created", ids.invoiceId],
     ["invoice.updated", ids.invoiceId],
     ["invoice.issued", ids.draftInvoiceId],

@@ -6680,6 +6680,54 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .pdfjs-text-layer span { position: absolute; color: transparent; white-space: pre; transform-origin: 0 0; cursor: text; user-select: text; }
 .pdfjs-text-layer span::selection { background: rgb(45 112 220 / .55); }
 .pdfjs-text-layer .pdf-search-highlight { color: transparent; background: rgb(255 210 40 / .72); border-radius: 2px; }
+
+/* Real Guidelines Library */
+.real-guidelines { --library-ink:#17333a; --library-teal:#176b63; display:grid; gap:1rem; min-width:0; color:var(--library-ink); }
+.real-guidelines-header { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; padding:1.25rem 1.4rem; border:1px solid #d8e5e3; border-radius:16px; background:linear-gradient(135deg,#f4faf8,#fffaf0); }
+.real-guidelines-header h1 { margin:.15rem 0; font-size:clamp(1.7rem,2.5vw,2.55rem); letter-spacing:-.035em; }
+.real-guidelines-header p { margin:.2rem 0; }
+.real-guideline-header-actions,.card-topline,.guideline-status-line { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; }
+.real-guideline-search { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:.55rem; padding:.55rem .65rem; border:1px solid #cddfdd; border-radius:14px; background:#fff; box-shadow:0 8px 24px rgba(25,70,74,.06); }
+.real-guideline-search input { min-width:0; border:0; outline:0; background:transparent; font-size:1rem; }
+.real-guideline-search button { min-height:42px; padding:.5rem 1rem; border:0; border-radius:10px; background:var(--library-teal); color:#fff; }
+.real-guideline-tabs,.clinical-area-strip { display:flex; gap:.35rem; overflow-x:auto; scrollbar-width:thin; }
+.real-guideline-tabs { border-bottom:1px solid #dbe5e5; }
+.real-guideline-tabs button,.clinical-area-strip button { flex:0 0 auto; min-height:44px; padding:.55rem .9rem; border:0; background:transparent; color:#52686d; white-space:nowrap; }
+.real-guideline-tabs button.active { border-bottom:3px solid var(--library-teal); color:var(--library-teal); font-weight:750; }
+.clinical-area-strip button { border:1px solid #d5e1e1; border-radius:999px; background:#fff; }
+.clinical-area-strip button.active { border-color:var(--library-teal); background:#e8f5f2; color:#0c5952; }
+.topic-panel { padding:1rem; border:1px solid #d6e2e1; border-radius:12px; background:#fff; }
+.topic-panel input { width:100%; margin-bottom:.7rem; }
+.topic-panel div { display:flex; flex-wrap:wrap; gap:.4rem; }
+.topic-panel button { padding:.4rem .65rem; border:1px solid #d7e2e2; border-radius:8px; background:#f8fbfb; }
+.real-guideline-filters { border:1px solid #dbe5e4; border-radius:12px; background:#fbfdfc; }
+.real-guideline-filters summary { cursor:pointer; padding:.75rem 1rem; font-weight:700; }
+.real-guideline-filters > div { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.7rem; padding:0 1rem 1rem; }
+.real-guideline-filters label { display:grid; gap:.3rem; min-width:0; }
+.real-guideline-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+.real-guideline-card,.real-protocol-card { min-width:0; overflow:hidden; border:1px solid #d8e3e2; border-radius:14px; background:#fff; box-shadow:0 8px 22px rgba(22,55,61,.06); }
+.real-guideline-card { display:grid; grid-template-rows:190px 1fr; }
+.real-guideline-card-body { display:flex; min-width:0; flex-direction:column; gap:.5rem; padding:1rem; }
+.real-guideline-card h2,.real-protocol-card h2 { margin:0; font-size:1.02rem; line-height:1.35; overflow-wrap:normal; word-break:normal; hyphens:none; }
+.real-guideline-card p { margin:0; color:#617277; font-size:.88rem; line-height:1.45; }
+.real-guideline-card .button { margin-top:auto; align-self:flex-start; }
+.card-topline { justify-content:space-between; color:#176b63; font-size:.8rem; font-weight:750; text-transform:uppercase; letter-spacing:.03em; }
+.card-topline button { min-width:40px; min-height:40px; border:0; background:transparent; color:#a66a00; font-size:1.45rem; }
+.guideline-status-line span:first-child { padding:.22rem .48rem; border-radius:999px; background:#edf6f4; color:#165f58; font-size:.76rem; }
+.guideline-real-thumbnail { position:relative; display:grid; place-items:center; overflow:hidden; background:linear-gradient(145deg,#edf2f2,#dce6e6); color:#607176; }
+.guideline-real-thumbnail canvas { display:block; width:auto; max-width:100%; height:100%; object-fit:cover; box-shadow:0 3px 12px rgba(0,0,0,.16); }
+.guideline-real-thumbnail span { position:absolute; z-index:1; font-size:.8rem; }
+.guideline-real-thumbnail.ready span { display:none; }
+.real-protocol-card { display:flex; flex-direction:column; gap:.6rem; padding:1rem; }
+.library-state { display:grid; min-height:180px; place-items:center; align-content:center; gap:.5rem; padding:1.5rem; border:1px dashed #cfdcda; border-radius:14px; background:#fafcfb; text-align:center; }
+.library-state > span { font-size:2rem; color:#78908f; }
+.recent-guidelines { padding:1rem; border-top:1px solid #dce5e4; }
+.recent-guidelines div { display:flex; flex-wrap:wrap; gap:.5rem; }
+.recent-guidelines a { padding:.45rem .65rem; border:1px solid #d7e2e1; border-radius:8px; background:#fff; text-decoration:none; }
+@media (min-width:2200px) { .real-guideline-card-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media (max-width:1180px) { .real-guideline-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .real-guideline-filters > div { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:700px) { .real-guidelines-header { align-items:flex-start; flex-direction:column; padding:1rem; } .real-guideline-header-actions { width:100%; } .real-guideline-header-actions a { flex:1; text-align:center; } .real-guideline-card-grid,.real-guideline-filters > div { grid-template-columns:1fr; } .real-guideline-card { grid-template-rows:170px 1fr; } .real-guideline-search button { padding-inline:.7rem; } }
+[dir="rtl"] .real-guidelines { text-align:right; }
 .pdfjs-thumbnails { display: flex; gap: .5rem; overflow-x: auto; padding: .5rem 0; }
 .pdfjs-thumbnails button { display: grid; flex: 0 0 auto; gap: .25rem; padding: .35rem; border: 1px solid var(--border-color); background: var(--surface); }
 .pdfjs-thumbnails button.active { outline: 2px solid var(--accent); }

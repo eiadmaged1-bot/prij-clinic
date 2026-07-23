@@ -29,6 +29,7 @@ type Document = {
   topic: string;
   versionLabel?: string;
   guidelineStatus: string;
+  ingestStatus?: string;
   licenseStatus: string;
   accessLevel: string;
   downloadsAllowed: boolean;
@@ -114,7 +115,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
   async function loadBasics() {
     const [sourceBody, documentBody] = await Promise.all([
       apiGet("/guidelines/sources"),
-      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20`)
+      apiGet(`/guidelines/documents?page=${inventoryPage}&limit=20${["review", "upload", "imports", "private"].includes(view) ? "&view=review" : ""}`)
     ]);
     setSources(sourceBody.sources ?? []);
     setDocuments(documentBody.documents ?? []);
@@ -253,7 +254,7 @@ export function GuidelineCenter({ view }: GuidelineCenterProps) {
         {view === "sources" ? <SourceList sources={sources} canManageSources={canManageSources} /> : null}
         {view === "upload" ? <UploadPanel sources={sources} canUpload={canUpload} /> : null}
         {view === "imports" ? <Empty text={canImport ? "Import job history will appear after uploads or open guideline imports." : "Import tools are restricted."} /> : null}
-        {view === "review" ? <DocumentList canReview={canReview} documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus === "NEEDS_REVIEW"))} title="Documents needing review" /> : null}
+        {view === "review" ? <DocumentList canReview={canReview} documents={filterTrainingDocuments(documents.filter((item) => item.guidelineStatus !== "ACTIVE" || item.ingestStatus !== "APPROVED"))} title="Documents needing review" /> : null}
         {view === "updates" ? <Empty text={canImport ? "Possible guideline updates will appear after local update checks." : "Update checks are restricted."} /> : null}
         {view === "private" ? (
           <PrivateVault
@@ -366,11 +367,12 @@ function SourceList({ sources, canManageSources }: { sources: Source[]; canManag
 }
 
 function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boolean }) {
-  const [title, setTitle] = useState(""); const [specialty, setSpecialty] = useState(""); const [topic, setTopic] = useState(""); const [version, setVersion] = useState(""); const [sourceId, setSourceId] = useState(""); const [file, setFile] = useState<File | null>(null); const [status, setStatus] = useState(""); const [uploadIntent, setUploadIntent] = useState("");
+  const [title, setTitle] = useState(""); const [specialty, setSpecialty] = useState(""); const [topic, setTopic] = useState(""); const [version, setVersion] = useState(""); const [code, setCode] = useState(""); const [publicationDate, setPublicationDate] = useState(""); const [language, setLanguage] = useState("en"); const [tags, setTags] = useState(""); const [sourceId, setSourceId] = useState(""); const [file, setFile] = useState<File | null>(null); const [status, setStatus] = useState(""); const [uploadIntent, setUploadIntent] = useState("");
   async function upload(event: FormEvent) {
     event.preventDefault();
     if (!file || !title.trim() || !specialty.trim() || !topic.trim() || !uploadIntent) return setStatus("Intent, title, specialty, topic, and file are required.");
-    const form = new FormData(); form.set("file", file); form.set("uploadIntent", uploadIntent); form.set("title", title.trim()); form.set("specialty", specialty.trim()); form.set("topic", topic.trim()); form.set("accessLevel", "OWNER_DOCTOR"); form.set("licenseStatus", "LICENSED_PRIVATE"); if (version.trim()) form.set("versionLabel", version.trim()); if (sourceId) form.set("sourceId", sourceId);
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) return setStatus("Only a valid PDF can be uploaded.");
+    const form = new FormData(); form.set("file", file); form.set("uploadIntent", uploadIntent); form.set("title", title.trim()); form.set("specialty", specialty.trim()); form.set("topic", topic.trim()); form.set("accessLevel", "OWNER_DOCTOR"); form.set("licenseStatus", "LICENSED_PRIVATE"); if (version.trim()) form.set("versionLabel", version.trim()); if (code.trim()) form.set("guidelineCode", code.trim()); if (publicationDate) form.set("publicationDate", publicationDate); form.set("language", language); if (tags.trim()) form.set("tags", tags.trim()); if (sourceId) form.set("sourceId", sourceId);
     setStatus("Uploading to protected storage for review");
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/guidelines/upload`, { method: "POST", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined, body: form });
@@ -379,7 +381,7 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
   }
   return (
     <section className="panel">
-      <div className="section-heading"><h2>Upload licensed PDF or text</h2><span className="badge warning">Private vault</span></div>
+      <div className="section-heading"><h2>Upload licensed PDF</h2><span className="badge warning">Private vault · never auto-published</span></div>
       {canUpload ? (
         <form className="form-grid" onSubmit={upload} noValidate>
           <label>Upload intent<select required value={uploadIntent} onChange={(event) => setUploadIntent(event.target.value)}><option value="">Choose explicitly</option><option value="create_new_guideline">Create new guideline</option><option value="create_new_version">Create new version (blocked until version asset storage is configured)</option><option value="restore_archived">Restore archived record (blocked until version asset storage is configured)</option></select></label>
@@ -387,9 +389,13 @@ function UploadPanel({ sources, canUpload }: { sources: Source[]; canUpload: boo
           <label>Specialty<input value={specialty} onChange={(event) => setSpecialty(event.target.value)} placeholder="obstetrics or gynecology" /></label>
           <label>Topic<input value={topic} onChange={(event) => setTopic(event.target.value)} placeholder="Topic" /></label>
           <label>Version<input value={version} onChange={(event) => setVersion(event.target.value)} placeholder="Version label" /></label>
+          <label>Guideline code<input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Official code" /></label>
+          <label>Publication date<input type="date" value={publicationDate} onChange={(event) => setPublicationDate(event.target.value)} /></label>
+          <label>Language<select value={language} onChange={(event) => setLanguage(event.target.value)}><option value="en">English</option><option value="ar">العربية</option></select></label>
+          <label>Tags<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="Comma-separated database tags" /></label>
           <label>Source<select value={sourceId} onChange={(event) => setSourceId(event.target.value)}><option value="">Private licensed upload</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.organization}</option>)}</select></label>
           <label>Access<select><option>Owner and Doctor</option><option>Owner only</option></select></label>
-          <label>File<input type="file" accept=".pdf,.txt,.md,.markdown,text/plain,text/markdown,application/pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
+          <label>PDF file<input type="file" accept=".pdf,application/pdf" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
           <button className="button" type="submit"><ThreeDMedicalIcon name="files" size="sm" />Upload for review</button>
           {status ? <p className="notice wide">{status}</p> : null}
         </form>

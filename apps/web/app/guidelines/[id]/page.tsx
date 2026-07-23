@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { AppShell } from "../../mvp-page";
 import { getApiBaseUrl } from "@/lib/api-base-url";
@@ -12,7 +12,7 @@ type Chunk = { id: string; heading?: string | null; sectionPath?: string | null;
 type SummaryCitation = { id: string; bulletIndex: number; pageStart: number; pageEnd?: number | null; citationType: string; label: string };
 type SummarySection = { id: string; heading: string; sectionType: string; bulletsJson: string[]; citations: SummaryCitation[] };
 type GuidelineSummary = { id: string; status: string; provenanceType: string; reviewReason?: string | null; sections: SummarySection[]; reviewedBy?: { displayName: string } | null };
-type Document = { id: string; title: string; organization: string; versionLabel?: string | null; guidelineStatus: string; reviewStatus: string; specialty: string; topic: string; pageCount?: number | null; fileMimeType?: string | null; downloadsAllowed?: boolean; source?: { name?: string; organization?: string }; sections?: Section[]; chunks?: Chunk[]; summaries?: GuidelineSummary[]; versions?: Array<{ id: string; versionLabel: string; publishedYear?: number | null; publicationDate?: string | null; status: string; createdAt: string }> };
+type Document = { id: string; title: string; organization: string; guidelineCode?: string | null; publicationDate?: string | null; versionLabel?: string | null; language?: string; tags?: string[] | null; guidelineStatus: string; reviewStatus: string; ingestStatus?: string; specialty: string; topic: string; pageCount?: number | null; fileMimeType?: string | null; downloadsAllowed?: boolean; isFavorite?: boolean; source?: { name?: string; organization?: string }; sections?: Section[]; chunks?: Chunk[]; summaries?: GuidelineSummary[]; versions?: Array<{ id: string; versionLabel: string; publishedYear?: number | null; publicationDate?: string | null; status: string; createdAt: string }> };
 type MobileTab = "Overview" | "PDF" | "Clinical Summary" | "Related Protocols" | "Notes" | "Version History" | "Sections" | "Sources";
 
 export default function GuidelineViewerPage() {
@@ -33,13 +33,15 @@ export default function GuidelineViewerPage() {
   const [renderFailureReason, setRenderFailureReason] = useState("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("PDF");
   const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [favorite, setFavorite] = useState(false);
+  const [pdfMatchPages, setPdfMatchPages] = useState<number[]>([]);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const token = sessionStorage.getItem("prijClinicToken");
     const controller = new AbortController();
     void fetch(`${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}`, { credentials: "include", signal: controller.signal, headers: token ? { authorization: `Bearer ${token}` } : undefined })
-      .then(async (response) => { if (!response.ok) throw new Error(); setDocument(await response.json() as Document); })
+      .then(async (response) => { if (!response.ok) throw new Error(); const loaded = await response.json() as Document; setDocument(loaded); setFavorite(Boolean(loaded.isFavorite)); })
       .catch((loadError) => { if (!(loadError instanceof Error && loadError.name === "AbortError")) setError("This guideline is unavailable, archived outside your scope, or you do not have permission."); });
     return () => controller.abort();
   }, [params.id]);
@@ -54,6 +56,12 @@ export default function GuidelineViewerPage() {
   useEffect(() => { localStorage.setItem(`guideline:last-page:${params.id}`, String(page)); }, [page, params.id]);
 
   useEffect(() => {
+    if (!document) return;
+    const timeout = window.setTimeout(() => { void api(`/guidelines/documents/${document.id}/open`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ page }) }); }, 700);
+    return () => window.clearTimeout(timeout);
+  }, [document, page]);
+
+  useEffect(() => {
     if (!document || document.fileMimeType !== "application/pdf" || pdfLoaded || renderFailed) return;
     const timeout = window.setTimeout(() => setRenderFailed(true), 12_000);
     return () => window.clearTimeout(timeout);
@@ -63,15 +71,18 @@ export default function GuidelineViewerPage() {
   const sections = useMemo(() => indexedSections.filter((section) => Number.isInteger(section.pageStart) && Number(section.pageStart) > 0 && reliableHeading(section.heading)), [indexedSections]);
   const pageCount = useMemo(() => renderedPageCount ?? (document?.pageCount && document.pageCount > 0 ? document.pageCount : null), [document?.pageCount, renderedPageCount]);
   const matches = useMemo(() => query.trim() ? sections.filter((section) => `${section.heading} ${section.text ?? ""}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())) : [], [query, sections]);
+  const matchPages = useMemo(() => [...new Set([...pdfMatchPages, ...matches.map((item) => item.pageStart).filter((item): item is number => Boolean(item))])].sort((a, b) => a - b), [matches, pdfMatchPages]);
   const summary = useMemo(() => document?.summaries?.find((item) => item.status === "CLINIC_APPROVED") ?? document?.summaries?.[0] ?? null, [document]);
   const isPdf = document?.fileMimeType === "application/pdf";
 
   function goToPage(next: number) { setPage(pageCount ? Math.min(pageCount, Math.max(1, next)) : Math.max(1, next)); }
   function goToMatch(direction: -1 | 1) {
-    if (!matches.length) return;
-    const next = (matchIndex + direction + matches.length) % matches.length;
-    setMatchIndex(next); goToPage(matches[next]?.pageStart ?? 1);
+    if (!matchPages.length) return;
+    const next = (matchIndex + direction + matchPages.length) % matchPages.length;
+    setMatchIndex(next); goToPage(matchPages[next] ?? 1);
   }
+  const receiveSearchMatches = useCallback((pages: number[]) => { setPdfMatchPages(pages); setMatchIndex(0); }, []);
+  async function toggleFavorite() { const next = !favorite; setFavorite(next); try { await api(`/guidelines/documents/${document!.id}/favorite`, { method: next ? "POST" : "DELETE" }); } catch { setFavorite(!next); } }
   function swipeEnd(x: number) {
     if (touchStart === null) return;
     if (x - touchStart > 55) goToPage(page - 1);
@@ -83,7 +94,7 @@ export default function GuidelineViewerPage() {
   if (!document) return <AppShell><section className="panel"><p className="empty-state">Loading guideline…</p></section></AppShell>;
 
   return <AppShell>
-    <section className="page-header compact-guideline-header"><div className="header-row"><div><p className="eyebrow">Authoritative document viewer</p><h1>{document.title}</h1><p className="muted">{document.organization} · {document.versionLabel || "Version not recorded"} · {document.guidelineStatus}</p></div><Link className="button secondary" href="/guidelines">Back to library</Link></div></section>
+    <section className="page-header compact-guideline-header"><div className="header-row"><div><p className="eyebrow">Authoritative document viewer</p><h1>{document.title}</h1><p className="muted">{document.organization} · {document.versionLabel || "Version not recorded"} · {document.guidelineStatus}</p></div><div className="form-actions"><button className="button secondary" aria-pressed={favorite} onClick={() => void toggleFavorite()} type="button">{favorite ? "★ Favorited" : "☆ Favorite"}</button><Link className="button secondary" href="/guidelines">Back to library</Link></div></div></section>
     <p className="notice">The original PDF is authoritative. Extracted text and summaries are navigation aids only. Doctor review is required; this viewer cannot finalize clinical decisions.</p>
     <nav className="guideline-mobile-tabs guideline-viewer-tabs" aria-label="Guideline viewer tabs">{(["Overview", "PDF", "Clinical Summary", "Related Protocols", "Notes", "Version History"] as MobileTab[]).map((tab) => <button className={mobileTab === tab ? "active" : ""} key={tab} type="button" onClick={() => setMobileTab(tab)}>{tab}</button>)}</nav>
     {mobileTab === "Overview" ? <section className="panel guideline-overview-grid"><div><h2>Document overview</h2><p>{document.organization} · {document.specialty} · {document.topic}</p><p>Version: {document.versionLabel || "Not recorded"} · Pages: {pageCount ?? "Loading from PDF"}</p></div><div><h3>Governance</h3><p>{humanReviewStatus(document.reviewStatus)} · {document.guidelineStatus}</p><p>The authoritative PDF remains primary.</p></div></section> : null}
@@ -93,7 +104,7 @@ export default function GuidelineViewerPage() {
     {["PDF", "Clinical Summary", "Sections", "Sources"].includes(mobileTab) ? <section className="guideline-pdf-workspace" ref={viewerRef}>
       <aside className={`panel guideline-thumbnails ${mobileTab === "Sections" ? "mobile-active" : ""}`}>
         <label>Search original text<input value={query} onChange={(event) => { setQuery(event.target.value); setMatchIndex(0); }} /></label>
-        <div className="guideline-search-nav"><button type="button" disabled={!matches.length} onClick={() => goToMatch(-1)}>Previous match</button><span>{matches.length ? `${matchIndex + 1}/${matches.length}` : "0 matches"}</span><button type="button" disabled={!matches.length} onClick={() => goToMatch(1)}>Next match</button></div>
+        <div className="guideline-search-nav"><button type="button" disabled={!matchPages.length} onClick={() => goToMatch(-1)}>Previous match</button><span>{matchPages.length ? `${matchIndex + 1}/${matchPages.length} pages` : "0 matches"}</span><button type="button" disabled={!matchPages.length} onClick={() => goToMatch(1)}>Next match</button></div>
         <details open><summary>Table of contents</summary><nav className="history-category-list">{sections.map((section) => <button className={page >= Number(section.pageStart) && page <= (section.pageEnd ?? section.pageStart ?? 1) ? "active" : ""} key={section.id} type="button" onClick={() => { goToPage(Number(section.pageStart) || 1); setMobileTab("PDF"); }}>{section.heading}<small>Page {section.pageStart ?? "?"}</small></button>)}</nav></details>
         <details><summary>Page thumbnails</summary><div className="pdf-thumbnail-list">{pageCount ? Array.from({ length: pageCount }, (_, index) => index + 1).map((number) => <button className={page === number ? "active" : ""} key={number} type="button" onClick={() => goToPage(number)}><span className="pdf-thumbnail-placeholder">PDF</span>Page {number}</button>) : <p className="muted">Page metadata is loading.</p>}</div></details>
       </aside>
@@ -102,7 +113,7 @@ export default function GuidelineViewerPage() {
           <button type="button" aria-label="Previous page" onClick={() => goToPage(page - 1)} disabled={page <= 1}>‹</button><label>Page<input inputMode="numeric" value={page} onChange={(event) => goToPage(Number(event.target.value) || 1)} /></label><span>/ {pageCount ?? "…"}</span><button type="button" aria-label="Next page" onClick={() => goToPage(page + 1)} disabled={!pageCount || page >= pageCount}>›</button>
           <button type="button" onClick={() => { setFit("custom"); setZoom((value) => Math.max(50, value - 10)); }}>−</button><span>{zoom}%</span><button type="button" onClick={() => { setFit("custom"); setZoom((value) => Math.min(200, value + 10)); }}>+</button><details className="pdf-more-menu"><summary>⋯</summary><button type="button" onClick={() => { setFit("width"); setZoom(100); }}>Fit width</button><button type="button" onClick={() => { setFit("page"); setZoom(100); }}>Fit page</button><button type="button" onClick={() => setRotation((value) => (value + 90) % 360)}>Rotate</button><button type="button" onClick={() => void viewerRef.current?.requestFullscreen()}>Full screen</button><button type="button" onClick={() => window.open(`${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}/view`, "_blank", "noopener,noreferrer")}>Open original</button></details>
         </div>
-        {isPdf && !renderFailed ? <>{!pdfLoaded ? <p className="empty-state">Loading authoritative PDF…</p> : null}<PdfCanvasViewer key={renderAttempt} url={`${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}/view?renderer=pdfjs`} page={page} zoom={zoom} rotation={rotation} fit={fit} search={query} token={typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")} onLoaded={(pages) => { setPdfLoaded(true); setRenderedPageCount(pages); setRenderFailureReason(""); }} onError={(reason) => { setRenderFailureReason(reason); setRenderFailed(true); }} onPageSelect={goToPage} /></> : <GuidelinePageFallback page={page} sections={indexedSections} />}
+        {isPdf && !renderFailed ? <>{!pdfLoaded ? <p className="empty-state">Loading authoritative PDF…</p> : null}<PdfCanvasViewer key={renderAttempt} url={`${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}/view?renderer=pdfjs`} page={page} zoom={zoom} rotation={rotation} fit={fit} search={query} token={typeof window === "undefined" ? null : sessionStorage.getItem("prijClinicToken")} onLoaded={(pages) => { setPdfLoaded(true); setRenderedPageCount(pages); setRenderFailureReason(""); }} onError={(reason) => { setRenderFailureReason(reason); setRenderFailed(true); }} onPageSelect={goToPage} onSearchMatches={receiveSearchMatches} /></> : <GuidelinePageFallback page={page} sections={indexedSections} />}
         {!isPdf ? <p className="warning-text">No original PDF is attached to this record. Showing preserved extracted source text.</p> : null}
         {renderFailed ? <div className="notice"><p>PDF rendering unavailable — Text fallback mode</p>{renderFailureReason ? <p className="muted" role="status">Renderer error: {renderFailureReason}</p> : null}<button className="button secondary compact" type="button" onClick={() => { setRenderFailed(false); setPdfLoaded(false); setRenderFailureReason(""); setRenderAttempt((value) => value + 1); }}>Retry PDF</button><button className="button secondary compact" type="button" onClick={() => window.open(`${getApiBaseUrl()}/guidelines/documents/${encodeURIComponent(params.id)}/view#page=${page}`, "_blank", "noopener,noreferrer")}>Open Original</button></div> : null}
       </main>
@@ -133,3 +144,4 @@ function GuidelinePageFallback({ page, sections }: { page: number; sections: Sec
 function humanSummaryStatus(value?: string) { if (value === "CLINIC_APPROVED") return "Approved"; if (value === "SOURCE_INCOMPLETE") return "Source incomplete"; return "Needs review"; }
 function humanReviewStatus(value: string) { if (/approved/i.test(value)) return "Approved"; if (/incomplete/i.test(value)) return "Source incomplete"; return "Needs review"; }
 function reliableHeading(value: string) { const heading = value.trim(); return heading.length >= 3 && heading.length <= 160 && !/^page\s*\d*$/i.test(heading) && !/[.!?]$/.test(heading); }
+async function api(path: string, init?: RequestInit) { const token = sessionStorage.getItem("prijClinicToken"); const response = await fetch(`${getApiBaseUrl()}${path}`, { credentials: "include", ...init, headers: { ...(init?.headers ?? {}), ...(token ? { authorization: `Bearer ${token}` } : {}) } }); if (!response.ok) throw new Error(`Request failed ${response.status}`); return response.status === 204 ? {} : response.json(); }
