@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { patientTypeLabel, phaseTypeLabel } from "@/lib/patient-labels";
@@ -95,6 +96,7 @@ export function PatientPicker({
     if (text.length < minSearchLength) return [];
     return sourcePatients.filter((patient) => patientSearchText(patient).includes(text));
   }, [minSearchLength, query, sourcePatients]);
+  const resultsSpanBranches = new Set(matches.map((patient) => patient.branch?.name).filter(Boolean)).size > 1;
 
   return (
     <div className="patient-picker" data-patient-picker>
@@ -105,14 +107,14 @@ export function PatientPicker({
       {selected ? <SelectedPatientSummary patient={selected} /> : null}
       {expanded ? <div className="patient-picker-panel">
         <label>Search patient<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Type at least ${minSearchLength} characters · name, phone, MRN, or QR`} aria-label="Search patient" /></label>
-        {searchState === "loading" ? <p className="muted" role="status">Searching permitted clinic patient files…</p> : null}
+        {searchState === "loading" ? <div className="patient-search-skeleton" role="status" aria-label="Searching permitted clinic patient files"><span /><span /></div> : null}
         {searchError ? <p className={searchState === "permission" ? "form-error" : "notice"} role="alert">{searchError}</p> : null}
         <div className="dense-card-list patient-picker-results" ref={resultsRef} onScroll={(event) => sessionStorage.setItem(`prij:${storageKey}:scroll`, String(event.currentTarget.scrollTop))} aria-label="Patient results">
           {allowStandalone ? <article className={`patient-search-card ${!selectedPatientId ? "active" : ""}`}>
             <div className="patient-search-card-info"><strong>{standaloneLabel}</strong><span>No patient file attached</span></div>
             <div className="patient-search-card-actions"><button className="button secondary compact" type="button" onClick={() => { setSelectedSnapshot(null); onSelect(""); onPatientSelect?.(null); }}>Select</button></div>
           </article> : null}
-          {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
+          {matches.map((patient) => <PatientSearchResult key={patient.id} patient={patient} selected={selectedPatientId === patient.id} showBranch={resultsSpanBranches} showFileNumber={query.trim().toLocaleLowerCase() === patient.medicalRecordNumber?.toLocaleLowerCase()} onSelect={() => { setSelectedSnapshot(patient); onSelect(patient.id); onPatientSelect?.(patient); }} />)}
           {query.trim().length >= minSearchLength && searchState === "empty" && !matches.length ? <p className="empty-state compact smart-empty-state"><span>No matching patients.</span></p> : null}
           {hasMore ? <button className="button secondary compact" type="button" onClick={() => { const nextPage = page + 1; void fetchPatients(query.trim(), nextPage).then((data) => { setLivePatients((current) => [...current, ...data.patients.filter((row) => !current.some((item) => item.id === row.id))]); setPage(nextPage); setHasMore(data.hasMore); }).catch(() => setSearchError("Could not load more patients. Existing results were kept.")); }}>Load more patients</button> : null}
         </div>
@@ -125,15 +127,11 @@ export function SelectedPatientSummary({ patient }: { patient: PatientPickerPati
   return <div className="selected-patient-card"><strong>{patientLabel(patient)}</strong><span>{patient.medicalRecordNumber ?? "No MRN"} | {patientAgeLabel(patient)} | {patient.status ?? "active"} | today: {patient.queueState?.status ? `${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not queued"}</span></div>;
 }
 
-export function PatientSearchResult({ patient, selected = false, onSelect }: { patient: PatientPickerPatient; selected?: boolean; onSelect?: () => void }) {
-  return <article className={`patient-search-card ${selected ? "active" : ""}`}>
-    <div className="patient-search-card-info">
-      <strong>{patientLabel(patient)}</strong>
-      <span>{patient.medicalRecordNumber ?? "No MRN"} | phone …{patient.phoneSuffix ?? patient.phone?.replace(/\D/g, "").slice(-4) ?? "none"} | {patientAgeLabel(patient)} | {patient.patientType ? patientTypeLabel(patient.patientType) : phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
-      <span>{patient.status ?? "active"} | {patient.branch?.name ?? "Branch unavailable"} | {patient.queueState?.status ? `queue ${patient.queueState.status}${patient.queueState.queueNumber ? ` #${patient.queueState.queueNumber}` : ""}` : "not queued"} | {patient.latestVisitDate ? `last visit ${patient.latestVisitDate.slice(0, 10)}` : "no visit"}</span>
-    </div>
-    {onSelect ? <div className="patient-search-card-actions"><button className="button secondary compact" type="button" onClick={onSelect}>Select</button></div> : null}
-  </article>;
+export function PatientSearchResult({ patient, selected = false, onSelect, showBranch = false, showFileNumber = false }: { patient: PatientPickerPatient; selected?: boolean; onSelect?: () => void; showBranch?: boolean; showFileNumber?: boolean }) {
+  const content = <><strong>{patientLabel(patient)}</strong><span>{patient.phone ?? (patient.phoneSuffix ? `…${patient.phoneSuffix}` : "Phone not recorded")} · {patientAgeLabel(patient)} · {patient.currentPhase?.phaseType ? phaseTypeLabel(patient.currentPhase.phaseType) : patient.patientType ? patientTypeLabel(patient.patientType) : "Patient"}</span>{showFileNumber && patient.medicalRecordNumber ? <small>File: {patient.medicalRecordNumber}</small> : null}{showBranch && patient.branch?.name ? <small className="badge patient-result-branch">{patient.branch.name}</small> : null}</>;
+  return onSelect
+    ? <button className={`patient-search-card patient-search-card-selectable ${selected ? "active" : ""}`} aria-pressed={selected} type="button" onClick={onSelect}>{content}</button>
+    : <Link className={`patient-search-card patient-search-card-selectable ${selected ? "active" : ""}`} href={`/patients/${patient.id}`}>{content}</Link>;
 }
 
 export function patientLabel(patient?: PatientPickerPatient | null) {
@@ -165,9 +163,9 @@ function patientAgeLabel(patient: PatientPickerPatient) {
     const dob = new Date(patient.dateOfBirth);
     const now = new Date();
     const age = now.getUTCFullYear() - dob.getUTCFullYear() - (now.getUTCMonth() < dob.getUTCMonth() || (now.getUTCMonth() === dob.getUTCMonth() && now.getUTCDate() < dob.getUTCDate()) ? 1 : 0);
-    return `age ${age}`;
+    return `${age}y`;
   }
-  return patient.yearOfBirth ? `approximately ${new Date().getUTCFullYear() - patient.yearOfBirth} years (born ${patient.yearOfBirth})` : "age unavailable";
+  return patient.yearOfBirth ? `${new Date().getUTCFullYear() - patient.yearOfBirth}y` : "Age —";
 }
 
 class PatientSearchError extends Error {

@@ -62,6 +62,7 @@ export default function PatientsPage() {
   }, []);
 
   const filtered = patients;
+  const resultSpansBranches = branchId === "all" && new Set(filtered.map((patient) => patient.branchId).filter(Boolean)).size > 1;
   const visibleStatus = status === "Loading" ? t("loading") : status === "Login required" ? t("loginRequired") : status === "Connection unavailable" ? t("connectionUnavailable") : status;
 
   async function loadPatients(search = query.trim(), requestedPage = page) {
@@ -200,51 +201,17 @@ export default function PatientsPage() {
           </div>
         ) : null}
 
-        {filtered.length > 0 ? <><div className="table-scroll patient-directory-desktop-table"><table><thead><tr><th>{t("patient")}</th><th>{t("fileNumber")}</th><th>{t("phone")}</th><th>{t("ageDob")}</th><th>{t("type")}</th><th>{t("branch")}</th><th>{t("lastVisit")}</th><th>{t("queue")}</th><th>{t("importantTags")}</th><th>{t("actions")}</th></tr></thead><tbody>{filtered.map((patient) => <tr key={patient.id}><td><strong>{patientDisplayName(patient)}</strong></td><td>{patientFileNumber(patient)}</td><td>{patient.phone || t("notRecorded")}</td><td>{patient.dateOfBirth ? `${ageLabel(patient.dateOfBirth)} · ${patient.dateOfBirth.slice(0, 10)}` : patient.yearOfBirth ? `${t("born")} ${patient.yearOfBirth}` : t("notRecorded")}</td><td>{patientTypeDisplay(patient.patientType, language)}</td><td>{patient.branch?.name ?? t("unavailable")}</td><td>{patient.latestVisitDate ? patient.latestVisitDate.slice(0, 10) : t("noVisit")}</td><td>{patient.queueState ? `#${patient.queueState.queueNumber} · ${friendlyStatus(patient.queueState.status)}` : t("notQueued")}</td><td>{phaseTypeLabel(patient.currentPhase?.phaseType)}</td><td><div className="table-row-actions"><Link className="button secondary compact" href={`/patients/${patient.id}`}>{t("open")}</Link><Link className="button secondary compact" href={`/reception/check-in?patientId=${patient.id}`}>{t("queue")}</Link><button className="button secondary compact" type="button" aria-pressed={Boolean(patient.favorited)} aria-label={`${patient.favorited ? t("removeFavorite") : t("addFavorite")} ${patientDisplayName(patient)}`} onClick={() => void toggleFavorite(patient)}>{patient.favorited ? "★" : "☆"}</button></div></td></tr>)}</tbody></table></div><div className="form-actions patient-directory-desktop-pagination" aria-label={t("patientDirectory")}><button className="button secondary compact" type="button" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t("previous")}</button><span className="muted">{t("page")} {pageInfo.page} {t("of")} {Math.max(1, Math.ceil(pageInfo.total / pageInfo.limit))}</span><button className="button secondary compact" type="button" disabled={!pageInfo.hasMore} onClick={() => setPage((value) => value + 1)}>{t("next")}</button></div></> : null}
-
         {filtered.length > 0 ? (
-          <div className="data-list patient-directory-mobile-list">
+          <div className="patient-result-list">
             {filtered.map((patient) => (
-              <article className="data-row patient-list-card" key={patient.id}>
-                <div className="data-row-header">
-                  <div className="patient-list-title">
-                    <ThreeDMedicalIcon name="patients" size="sm" />
-                    <div>
-                      <strong>{patientDisplayName(patient)}</strong>
-                      <span className="muted">{patient.sex || t("sexNotSet")} {patient.dateOfBirth ? `- ${patient.dateOfBirth.slice(0, 10)}` : ""}</span>
-                    </div>
-                  </div>
-                  <span className="badge">{friendlyStatus(patient.status)}</span>
-                </div>
-                <div className="workflow-band compact">
-                  <span>{patientTypeDisplay(patient.patientType, language)}</span>
-                  <span>{phaseTypeLabel(patient.currentPhase?.phaseType)}</span>
-                  <span>{patient.queueState ? `${t("queue")} #${patient.queueState.queueNumber} · ${friendlyStatus(patient.queueState.status)}` : t("notInTodaysQueue")}</span>
-                </div>
-                <dl>
-                  <div>
-                    <dt>{t("fileNumber")}</dt>
-                    <dd>{patientFileNumber(patient)}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("age")}</dt>
-                    <dd>{patient.dateOfBirth ? ageLabel(patient.dateOfBirth) : patient.yearOfBirth ? `${new Date().getUTCFullYear() - patient.yearOfBirth} (${t("born")} ${patient.yearOfBirth})` : t("notSet")}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("contact")}</dt>
-                    <dd>{patient.phone || patient.email || t("noContactSaved")}</dd>
-                  </div>
-                  <div>
-                    <dt>{t("branchLastVisit")}</dt>
-                    <dd>{patient.branch?.name ?? t("branchUnavailable")} · {patient.latestVisitDate ? patient.latestVisitDate.slice(0, 10) : t("noVisitRecorded")}</dd>
-                  </div>
-                </dl>
-                <Link className="button secondary" href={`/patients/${patient.id}`}>
-                  <ThreeDMedicalIcon name="files" size="sm" tone="slate" />
-                  {t("openFile")}
+              <article className="patient-result-card" key={patient.id}>
+                <Link className="patient-result-card-link" href={`/patients/${patient.id}`}>
+                  <strong>{patientDisplayName(patient)}</strong>
+                  <span>{patient.phone || t("notRecorded")} · {compactAge(patient)} · {patient.currentPhase?.phaseType ? phaseTypeLabel(patient.currentPhase.phaseType) : patientTypeDisplay(patient.patientType, language)}</span>
+                  {query.trim().toLocaleLowerCase() === patient.medicalRecordNumber.toLocaleLowerCase() ? <small>{t("fileNumber")}: {patient.medicalRecordNumber}</small> : null}
+                  {resultSpansBranches && patient.branch?.name ? <small className="badge patient-result-branch">{patient.branch.name}</small> : null}
                 </Link>
-                <Link className="button secondary compact" href={`/reception/check-in?patientId=${patient.id}`}>{t("addToQueue")}</Link>
-                <button className="button secondary compact" type="button" aria-pressed={Boolean(patient.favorited)} onClick={() => void toggleFavorite(patient)}>{patient.favorited ? t("removeFavorite") : t("addFavorite")}</button>
+                <button className="patient-result-favorite" type="button" aria-pressed={Boolean(patient.favorited)} aria-label={`${patient.favorited ? t("removeFavorite") : t("addFavorite")} ${patientDisplayName(patient)}`} onClick={() => void toggleFavorite(patient)}>{patient.favorited ? "★" : "☆"}</button>
               </article>
             ))}
             <div className="form-actions" aria-label={t("patientDirectory")}>
@@ -270,6 +237,11 @@ function patientDisplayName(patient: Patient) {
 
 function patientFileNumber(patient: Patient) {
   return patient.medicalRecordNumber;
+}
+
+function compactAge(patient: Patient) {
+  if (patient.dateOfBirth) return ageLabel(patient.dateOfBirth).replace(/^Age\s*/i, "").replace(/\s*years?$/i, "") + "y";
+  return patient.yearOfBirth ? `${new Date().getUTCFullYear() - patient.yearOfBirth}y` : "Age —";
 }
 
 function patientTypeDisplay(value: string | null | undefined, language: "en" | "ar") {

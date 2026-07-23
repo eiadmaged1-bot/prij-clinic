@@ -6769,6 +6769,19 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
 .patient-directory-desktop-table .table-row-actions { display: flex; flex-wrap: wrap; gap: .35rem; min-width: max-content; }
 .patient-directory-mobile-list { display: none; }
 @media (max-width: 760px) { .patient-directory-desktop-table, .patient-directory-desktop-pagination { display: none; } .patient-directory-mobile-list { display: grid; } }
+.patient-result-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,22rem),1fr)); gap:.65rem; }
+.patient-result-card { position:relative; min-width:0; min-height:92px; overflow:hidden; border:1px solid var(--border); border-radius:var(--theme-card-radius,12px); background:var(--surface,#fff); box-shadow:var(--shadow-sm); }
+.patient-result-card:hover { border-color:var(--accent); background:var(--accent-soft); }
+.patient-result-card-link { display:flex; min-height:92px; flex-direction:column; justify-content:center; gap:.28rem; padding:.75rem 3.15rem .75rem .85rem; color:inherit; text-decoration:none; }
+[dir="rtl"] .patient-result-card-link { padding-right:.85rem; padding-left:3.15rem; }
+.patient-result-card-link:focus-visible { outline:3px solid var(--accent); outline-offset:-3px; border-radius:inherit; }
+.patient-result-card strong,.patient-result-card span { overflow-wrap:normal; word-break:normal; }
+.patient-result-card strong { display:-webkit-box; overflow:hidden; line-height:1.3; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.patient-result-card span { color:var(--muted); font-size:.86rem; }
+.patient-result-card small { color:var(--muted); }
+.patient-result-branch { align-self:flex-start; }
+.patient-result-favorite { position:absolute; z-index:2; inset-block-start:.55rem; inset-inline-end:.55rem; min-width:38px; min-height:38px; border:1px solid var(--border); border-radius:999px; background:var(--surface,#fff); color:#a66a00; font-size:1.15rem; }
+@media (max-width:760px) { .patient-result-list { grid-template-columns:1fr; gap:.5rem; } .patient-result-card,.patient-result-card-link { min-height:82px; } }
 .ultrasound-template-rail, .ultrasound-image-rail { position: sticky; top: 1rem; display: grid; gap: .75rem; max-height: calc(100vh - 2rem); overflow: auto; }
 .template-list { display: grid; gap: .35rem; }
 .template-list button { padding: .6rem .7rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: start; cursor: pointer; }
@@ -6813,6 +6826,16 @@ html[dir="rtl"] .account-menu-panel { inset-left: 0; inset-right: auto; }
   padding: 0.75rem;
   text-align: left;
 }
+.patient-search-card-selectable { min-height:76px; justify-content:center; color:inherit; text-decoration:none; cursor:pointer; }
+button.patient-search-card-selectable { font:inherit; }
+.patient-search-card-selectable:hover { border-color:var(--accent); background:var(--accent-soft); }
+.patient-search-card-selectable:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+.patient-search-card-selectable strong,.patient-search-card-selectable span { overflow-wrap:normal; word-break:normal; }
+.patient-search-card-selectable strong { display:-webkit-box; overflow:hidden; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.patient-search-card-selectable small { align-self:flex-start; color:var(--muted); }
+.patient-search-skeleton { display:grid; gap:.35rem; min-height:58px; padding:.65rem; border:1px solid var(--border); border-radius:var(--theme-card-radius,12px); }
+.patient-search-skeleton span { height:.72rem; border-radius:999px; background:linear-gradient(90deg,var(--soft),#fff,var(--soft)); background-size:200% 100%; animation:skeleton-shimmer 1.2s linear infinite; }
+.patient-search-skeleton span:last-child { width:62%; }
 
 .patient-search-card.active {
   border-color: var(--accent);
