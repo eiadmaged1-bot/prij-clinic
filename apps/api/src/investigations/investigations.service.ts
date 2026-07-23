@@ -22,19 +22,19 @@ export class InvestigationsService {
   ) {}
 
   async createOrder(dto: CreateInvestigationOrderDto, user: AuthUser) {
-    if (!dto.patientId || !dto.encounterId) {
-      throw new BadRequestException("Patient and active visit context are required before saving an investigation request.");
-    }
-    await assertCanReferencePatient(this.prisma, dto.patientId, user);
+    if (!dto.encounterId) throw new BadRequestException("Active visit context is required before saving an investigation request.");
     await assertCanReferenceEncounter(this.prisma, dto.encounterId, user, {
-      patientId: dto.patientId,
       requireDoctorScope: true
     });
+    const encounter = await this.prisma.encounter.findUnique({ where: { id: dto.encounterId }, select: { patientId: true } });
+    if (!encounter) throw new NotFoundException("Encounter not found.");
+    const patientId = encounter.patientId;
+    await assertCanReferencePatient(this.prisma, patientId, user);
 
     try {
       const order = await this.prisma.investigationOrder.create({
         data: {
-          patientId: dto.patientId,
+          patientId,
           encounterId: dto.encounterId ?? null,
           doctorId: user.id,
           priority: dto.priority ?? "routine",
@@ -56,7 +56,7 @@ export class InvestigationsService {
         resourceType: "investigation_order",
         resourceId: order.id,
         severity: "high",
-        metadataJson: { patientId: order.patientId, priority: order.priority, itemCount: order.items.length }
+        metadataJson: { patientId: order.patientId, encounterId: order.encounterId, priority: order.priority, itemCount: order.items.length }
       });
 
       await (this.prisma as unknown as { investigationOrderDraft: any }).investigationOrderDraft.deleteMany({ where: { encounterId: dto.encounterId, userId: user.id } });

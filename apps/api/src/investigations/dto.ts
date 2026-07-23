@@ -26,8 +26,9 @@ export class InvestigationOrderItemDto {
 }
 
 export class CreateInvestigationOrderDto {
+  @IsOptional()
   @IsUUID()
-  patientId!: string;
+  patientId?: string;
 
   @IsOptional()
   @IsUUID()
@@ -176,8 +177,9 @@ export class ClinicalRequestItemDto {
 }
 
 export class CreateClinicalRequestDto {
+  @IsOptional()
   @IsUUID()
-  patientId!: string;
+  patientId?: string;
 
   @IsUUID()
   encounterId!: string;

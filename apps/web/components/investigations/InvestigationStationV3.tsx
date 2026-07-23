@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { PatientPicker, patientLabel, type PatientPickerPatient } from "../clinic/PatientPicker";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useI18n } from "@/i18n/useI18n";
-import { AppShell, SafetyAlert } from "@/app/mvp-page";
+import { AppShell } from "@/app/mvp-page";
 import styles from "./investigation-station-v3.module.css";
 
 type CatalogItem = {
@@ -80,8 +80,7 @@ const text = {
     categories: "Categories",
     all: "All",
     searchTests: "Search investigation, abbreviation, or alias",
-    searchPatient: "Search patient — type at least 2 characters",
-    build: "Build your order",
+    searchPatient: "Search patient by name or phone",
     listBuilder: "Create reusable list",
     selected: "Selected",
     empty: "Choose investigations from the library.",
@@ -90,16 +89,6 @@ const text = {
     addNote: "+ Note",
     hideNote: "Hide note",
     overall: "Clinical indication / request note",
-    priority: "Priority",
-    destination: "Destination",
-    routine: "Routine",
-    urgent: "Urgent",
-    internal: "Internal",
-    external: "External",
-    more: "More options",
-    followOwner: "Follow-up owner",
-    expectedDate: "Expected result / follow-up date",
-    review: "Review order",
     saveList: "Save list",
     listName: "List name",
     listNameAr: "Arabic name — optional",
@@ -114,8 +103,6 @@ const text = {
     archive: "Archive",
     replaceTitle: "Replace current basket?",
     replaceMessage: "Selecting a list replaces the current basket. Continue?",
-    reviewTitle: "Review investigation order",
-    back: "Back to edit",
     submit: "Submit order",
     saving: "Saving…",
     success: "Order submitted successfully.",
@@ -197,7 +184,7 @@ const text = {
   }
 } as const;
 
-export default function InvestigationStationV3() {
+export default function InvestigationStationV3({ lockedPatientId = "", lockedEncounterId = "", embedded = false, onSaved }: { lockedPatientId?: string; lockedEncounterId?: string; embedded?: boolean; onSaved?: () => void }) {
   const { language } = useI18n();
   const t = text[language];
   const [workspace, setWorkspace] = useState<Workspace>({});
@@ -220,7 +207,6 @@ export default function InvestigationStationV3() {
   const [overallNote, setOverallNote] = useState("");
   const [listName, setListName] = useState("");
   const [listNameAr, setListNameAr] = useState("");
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [savedId, setSavedId] = useState("");
@@ -245,8 +231,8 @@ export default function InvestigationStationV3() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const initialPatientId = params.get("patientId") ?? "";
-    const initialEncounterId = params.get("encounterId") ?? params.get("visitId") ?? "";
+    const initialPatientId = lockedPatientId || params.get("patientId") || "";
+    const initialEncounterId = lockedEncounterId || params.get("encounterId") || params.get("visitId") || "";
     setPatientId(initialPatientId);
     setEncounterId(initialEncounterId);
     if (initialPatientId) {
@@ -256,7 +242,7 @@ export default function InvestigationStationV3() {
       void loadPatientOrders(initialPatientId);
     }
     void loadWorkspace().catch((error: Error) => setStatus(error.message));
-  }, [loadPatientOrders, loadWorkspace]);
+  }, [loadPatientOrders, loadWorkspace, lockedEncounterId, lockedPatientId]);
 
   const catalogue = workspace.investigationCatalog ?? [];
   const favorites = workspace.favorites ?? [];
@@ -444,17 +430,9 @@ export default function InvestigationStationV3() {
     await loadWorkspace();
   }
 
-  function openReview() {
-    if (!basket.length) return setStatus(t.basketRequired);
-    if (mode === "order" && !patientId) return setStatus(t.patientRequired);
-    setStatus("");
-    setReviewOpen(true);
-  }
-
   async function submitOrder() {
     if (!patientId || !basket.length) return;
     const payload = {
-      patientId,
       requestNote: overallNote.trim() || undefined,
       items: basket.map((item) => ({
         title: item.name,
@@ -466,21 +444,20 @@ export default function InvestigationStationV3() {
     setSaving(true);
     const response = encounterId
       ? await apiRequest("/clinical-requests", "POST", { ...payload, encounterId })
-      : await apiRequest("/investigations/standalone-orders", "POST", payload);
+      : await apiRequest("/investigations/standalone-orders", "POST", { ...payload, patientId });
     setSaving(false);
     if (!response.ok) {
-      setReviewOpen(false);
       return setStatus(await responseMessage(response, t.failed));
     }
     const saved = await response.json() as { id: string };
     setSavedId(saved.id);
     setSavedPrintPath(encounterId ? `/clinical-requests/${encodeURIComponent(saved.id)}/print` : `/investigations/orders/${encodeURIComponent(saved.id)}/print`);
-    setReviewOpen(false);
     setBasket([]);
     setItemNotes({});
     setOpenItemNotes(new Set());
     setUndo(null);
     await Promise.all([loadWorkspace(), loadPatientOrders(patientId)]);
+    onSaved?.();
     setStatus(t.success);
   }
 
@@ -492,8 +469,9 @@ export default function InvestigationStationV3() {
     if (!encounterId) changePatient();
   }
 
+  const Shell = embedded ? Fragment : AppShell;
   return (
-    <AppShell>
+    <Shell>
       <header className={styles.header}>
         <h1>{t.title}</h1>
         <div className={styles.headerActions}>
@@ -506,8 +484,6 @@ export default function InvestigationStationV3() {
           }}>{mode === "order" ? t.createList : t.cancelList}</button>
         </div>
       </header>
-
-      <SafetyAlert />
 
       <nav className={styles.tabs} aria-label="Investigation views">
         <TabButton active={activeTab === "library"} onClick={() => selectTab("library")}>{t.library} <b>{catalogue.length}</b></TabButton>
@@ -605,14 +581,14 @@ export default function InvestigationStationV3() {
 
         <aside className={`panel ${styles.basket}`}>
           <div className={styles.basketHeader}>
-            <h2>{mode === "order" ? t.build : t.listBuilder}</h2>
+            <h2>{mode === "order" ? t.selected : t.listBuilder}</h2>
             <div><button className={styles.undo} type="button" disabled={!undo} onClick={undoLast}>{t.undo}</button><button className={styles.clear} type="button" disabled={!basket.length} onClick={clearBasket}>{t.clear}</button></div>
           </div>
 
           {mode === "order" ? (
             patient ? (
               <section className={styles.patientCard}>
-                <div><strong>{patientLabel(patient)}</strong><span>{patient.medicalRecordNumber ? `MRN ${patient.medicalRecordNumber}` : t.selectedPatient}</span></div>
+                <div><strong>{patientLabel(patient)}</strong><span>{t.selectedPatient}</span></div>
                 <div><Link className="button secondary compact" href={`/patients/${encodeURIComponent(patient.id)}`}>{t.openFile}</Link>{!encounterId ? <button className="button secondary compact" type="button" onClick={changePatient}>{t.changePatient}</button> : null}</div>
               </section>
             ) : (
@@ -647,23 +623,11 @@ export default function InvestigationStationV3() {
           ) : (
             <div className={styles.form}>
               <label>{t.overall}<textarea value={overallNote} onChange={(event) => setOverallNote(event.target.value)} /></label>
-              <button className="button" type="button" disabled={!patientId || !basket.length || saving} onClick={openReview}>{t.review}</button>
+              <button className="button" type="button" disabled={!patientId || !basket.length || saving} onClick={() => void submitOrder()}>{saving ? t.saving : t.submit}</button>
             </div>
           )}
         </aside>
       </section>
-
-      {reviewOpen ? (
-        <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setReviewOpen(false); }}>
-          <section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="investigation-review-title">
-            <h2 id="investigation-review-title">{t.reviewTitle}</h2>
-            <dl><div><dt>{t.selectedPatient}</dt><dd>{patient ? patientLabel(patient) : patientId}</dd></div><div><dt>{t.selected}</dt><dd>{basket.length}</dd></div></dl>
-            <ol>{basket.map((item) => <li key={item.id}>{item.name}</li>)}</ol>
-            {overallNote ? <p>{overallNote}</p> : null}
-            <div className={styles.modalActions}><button className="button secondary" type="button" onClick={() => setReviewOpen(false)}>{t.back}</button><button className="button" type="button" disabled={saving} onClick={() => void submitOrder()}>{saving ? t.saving : t.submit}</button></div>
-          </section>
-        </div>
-      ) : null}
 
       {previewTemplate ? (
         <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) setPreviewTemplate(null); }}>
@@ -711,7 +675,7 @@ export default function InvestigationStationV3() {
           </section>
         </div>
       ) : null}
-    </AppShell>
+    </Shell>
   );
 }
 

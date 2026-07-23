@@ -102,7 +102,7 @@ export class GuidelinesService {
     const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
     const reviewView = options.view === "review";
     if (reviewView && !user.roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role))) throw new ForbiddenException("Guideline review inventory is restricted.");
-    const accessWhere: Prisma.GuidelineDocumentWhereInput = reviewView ? this.documentReviewAccessWhere(user) : { ...this.documentAccessWhere(user), documentType: "official_pdf", fileSha256: { not: null }, localFilePath: { not: null }, guidelineStatus: { notIn: ["ARCHIVED", "SUPERSEDED"] } };
+    const accessWhere: Prisma.GuidelineDocumentWhereInput = reviewView ? this.documentReviewAccessWhere(user) : { ...this.documentAccessWhere(user), documentType: { in: ["official_pdf", "LOCAL_CLINICAL_PROTOCOL"] }, fileSha256: { not: null }, localFilePath: { not: null }, guidelineStatus: { notIn: ["ARCHIVED", "SUPERSEDED"] } };
     const where = { ...accessWhere, ...(isGuidelineStatus(options.status) ? { guidelineStatus: options.status } : {}) };
     const total = await this.prisma.guidelineDocument.count({ where });
     const documents = await this.prisma.guidelineDocument.findMany({
@@ -594,7 +594,7 @@ export class GuidelinesService {
       where: {
         document: {
           ...this.documentAccessWhere(user),
-          documentType: "official_pdf",
+          documentType: { in: ["official_pdf", "LOCAL_CLINICAL_PROTOCOL"] },
           fileSha256: { not: null },
           localFilePath: { not: null },
           ...(query.specialty ? { specialty: query.specialty.toLowerCase() } : {}),
@@ -955,7 +955,7 @@ export class GuidelinesService {
     if (user.roles.includes("Owner") || user.permissions.includes("guidelines.manage_private")) return {};
     if (user.roles.includes("Doctor")) return {
       accessLevel: { in: ["OWNER_DOCTOR", "CLINICAL_TEAM"] },
-      documentType: "official_pdf",
+      documentType: { in: ["official_pdf", "LOCAL_CLINICAL_PROTOCOL"] },
       fileSha256: { not: null },
       localFilePath: { not: null }
     };
