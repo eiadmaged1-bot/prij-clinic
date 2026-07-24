@@ -1,0 +1,180 @@
+name: Feature 46 Verify and Save
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/feature-46-verify-and-save.yml
+      - docs/FEATURE_46_REFRACTORY_COMPLAINT_CODEX_PROMPT.md
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feature-46-verify-and-save
+  cancel-in-progress: false
+
+jobs:
+  verify-and-save:
+    name: Verify Feature 46 and save to isolated branch
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 75
+
+    steps:
+      - name: Checkout isolated Feature 46 branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/feature-46-refractory-complaint
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Checkout control prompt
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 1
+          clean: true
+          path: control
+
+      - name: Verify runner and clean baseline
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          codex --version
+          $status = git -C workspace status --porcelain
+          if ($status) { throw 'Isolated target branch is not clean.' }
+          git -C workspace rev-parse HEAD | Set-Content baseline-sha.txt
+
+      - name: Install dependencies
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+
+      - name: Implement Feature 46 with Codex
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $promptPath = Join-Path $env:GITHUB_WORKSPACE 'control\docs\FEATURE_46_REFRACTORY_COMPLAINT_CODEX_PROMPT.md'
+          $basePrompt = Get-Content $promptPath -Raw
+          $extra = @'
+
+Additional mandatory verification contract:
+- Add or update a deterministic focused test named scripts/feature-46-refractory-complaint-test.mjs.
+- The focused test must run without production data and must not reset, delete, truncate, or seed the real database.
+- The focused test must verify canonical status acceptance, non-resolved active-family behavior, history preservation, idempotency protection, backward compatibility, and safe UI label rendering using the real implementation paths where practical.
+- Run the focused test, typecheck, and build before finishing.
+- Keep all changes limited to Feature 46 and its focused tests.
+- Do not commit or push; the workflow performs the isolated branch commit only after independent gates pass.
+'@
+          ($basePrompt + $extra) | & codex -a never -s danger-full-access exec --ephemeral
+          if ($LASTEXITCODE -ne 0) { throw "Codex failed with exit code $LASTEXITCODE." }
+
+      - name: Enforce scope and safety
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $baseline = (Get-Content ..\baseline-sha.txt -Raw).Trim()
+          $current = git rev-parse HEAD
+          if ($baseline -ne $current) { throw 'Codex created a commit unexpectedly.' }
+
+          $changed = @(git status --porcelain | ForEach-Object { $_.Substring(3) })
+          if ($changed.Count -eq 0) { throw 'No Feature 46 implementation changes were produced.' }
+
+          $forbidden = $changed | Where-Object {
+            $_ -match '(^|/)(\.env|uploads|backups|datasets)(/|$)' -or
+            $_ -match 'medication|drug-market|billing|payment|auth|rbac' -or
+            $_ -match 'prisma/migrations'
+          }
+          if ($forbidden) {
+            $forbidden | ForEach-Object { Write-Error "Forbidden unrelated path changed: $_" }
+            throw 'Feature 46 scope gate failed.'
+          }
+
+          if (-not (Test-Path 'scripts/feature-46-refractory-complaint-test.mjs')) {
+            throw 'Mandatory focused Feature 46 test is missing.'
+          }
+
+          git diff --check
+
+      - name: Run focused Feature 46 test
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Run TypeScript verification
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run typecheck
+
+      - name: Build application
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run build
+
+      - name: Create verification report
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $changed = git status --porcelain | ForEach-Object { $_.Substring(3) }
+          $report = @(
+            '# Feature 46 Verification',
+            '',
+            '- Branch: `test/feature-46-refractory-complaint`',
+            '- Runner: `SECTRA`',
+            '- Focused test: PASS',
+            '- Typecheck: PASS',
+            '- Build: PASS',
+            '- `git diff --check`: PASS',
+            '- Database reset/delete/truncate: NOT RUN',
+            '- Production patient data: NOT USED',
+            '- Merge to main: NOT PERFORMED',
+            '',
+            '## Changed files',
+            ''
+          )
+          $report += $changed | ForEach-Object { "- ``$_``" }
+          $report += @('', '## Safety result', '', 'Feature 46 remains isolated for review. No production branch was modified.')
+          $report | Set-Content 'docs/verification/FEATURE_46_VERIFICATION.md'
+          git diff --check
+
+      - name: Commit verified Feature 46 to isolated branch
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+
+          $staged = git diff --cached --name-only
+          if (-not $staged) { throw 'Nothing staged after successful verification.' }
+
+          git commit -m 'Add verified refractory complaint status'
+          git push origin HEAD:test/feature-46-refractory-complaint
+
+      - name: Final confirmation
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git status --porcelain
+          if (git status --porcelain) { throw 'Workspace is not clean after isolated branch push.' }
+          Write-Host 'FEATURE 46 VERIFIED AND SAVED TO ISOLATED TEST BRANCH'
+          Write-Host 'NO MAIN OR PRODUCTION BRANCH WAS MODIFIED'
