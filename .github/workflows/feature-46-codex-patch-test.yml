@@ -1,0 +1,172 @@
+name: Feature 46 Codex Patch Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - docs/FEATURE_46_REFRACTORY_COMPLAINT_CODEX_PROMPT.md
+      - .github/workflows/feature-46-codex-patch-test.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feature-46-codex-patch-test
+  cancel-in-progress: false
+
+jobs:
+  build-patch:
+    name: Build uncommitted Feature 46 patch on SECTRA
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout target application branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/feature-46-refractory-complaint
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Checkout controller documents
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 1
+          clean: true
+          path: control
+
+      - name: Verify runner and Codex CLI
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Write-Host "Runner: $env:RUNNER_NAME"
+          Write-Host "OS: $env:RUNNER_OS"
+          Write-Host "Arch: $env:RUNNER_ARCH"
+
+          if ($env:RUNNER_NAME -ne 'SECTRA') {
+            throw "Expected SECTRA, got '$env:RUNNER_NAME'."
+          }
+
+          if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Expected Windows, got '$env:RUNNER_OS'."
+          }
+
+          codex --version
+
+      - name: Capture clean baseline
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          New-Item -ItemType Directory -Force "$env:GITHUB_WORKSPACE\artifacts" | Out-Null
+
+          $status = git -C workspace status --porcelain
+          $status | Set-Content "$env:GITHUB_WORKSPACE\artifacts\baseline-status.txt"
+
+          if ($status) {
+            throw 'Target checkout is not clean before Codex execution.'
+          }
+
+          $baselineSha = git -C workspace rev-parse HEAD
+          $baselineSha | Set-Content "$env:GITHUB_WORKSPACE\artifacts\baseline-sha.txt"
+
+          git -C workspace branch --show-current
+          git -C workspace log -1 --oneline
+
+      - name: Run Codex for Feature 46 only
+        id: codex
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+
+          $promptPath = Join-Path $env:GITHUB_WORKSPACE 'control\docs\FEATURE_46_REFRACTORY_COMPLAINT_CODEX_PROMPT.md'
+          $logPath = Join-Path $env:GITHUB_WORKSPACE 'artifacts\codex-output.txt'
+
+          if (-not (Test-Path $promptPath)) {
+            throw "Missing prompt: $promptPath"
+          }
+
+          $promptText = Get-Content $promptPath -Raw
+          $promptText | & codex -a never -s danger-full-access exec --ephemeral 2>&1 | Tee-Object -FilePath $logPath
+          $exitCode = $LASTEXITCODE
+
+          "CodexExitCode=$exitCode" | Set-Content (Join-Path $env:GITHUB_WORKSPACE 'artifacts\codex-exit-code.txt')
+
+          if ($exitCode -ne 0) {
+            throw "Codex exited with code $exitCode."
+          }
+
+      - name: Collect patch and validation evidence
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          New-Item -ItemType Directory -Force $artifactDir | Out-Null
+
+          $baselineSha = (Get-Content (Join-Path $artifactDir 'baseline-sha.txt') -Raw).Trim()
+          $currentSha = git -C workspace rev-parse HEAD
+
+          $currentSha | Set-Content (Join-Path $artifactDir 'current-sha.txt')
+          git -C workspace status --porcelain=v1 | Set-Content (Join-Path $artifactDir 'final-status.txt')
+          git -C workspace diff --stat $baselineSha | Set-Content (Join-Path $artifactDir 'diff-stat.txt')
+          git -C workspace diff --binary $baselineSha | Set-Content (Join-Path $artifactDir 'feature-46.patch')
+          git -C workspace diff --name-only $baselineSha | Set-Content (Join-Path $artifactDir 'changed-files.txt')
+          git -C workspace log --oneline "$baselineSha..HEAD" | Set-Content (Join-Path $artifactDir 'unexpected-local-commits.txt')
+
+          git -C workspace diff --check $baselineSha 2>&1 | Set-Content (Join-Path $artifactDir 'diff-check.txt')
+          $diffCheckExit = $LASTEXITCODE
+          "DiffCheckExitCode=$diffCheckExit" | Set-Content (Join-Path $artifactDir 'diff-check-exit-code.txt')
+
+          if (Test-Path 'workspace\package.json') {
+            node --version | Set-Content (Join-Path $artifactDir 'node-version.txt')
+            npm --version | Set-Content (Join-Path $artifactDir 'npm-version.txt')
+          }
+
+      - name: Upload Feature 46 review artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-46-refractory-complaint-review
+          path: artifacts
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce no-commit review gate
+        if: always()
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts'
+          $baselineSha = (Get-Content (Join-Path $artifactDir 'baseline-sha.txt') -Raw).Trim()
+          $currentSha = (Get-Content (Join-Path $artifactDir 'current-sha.txt') -Raw).Trim()
+          $patchPath = Join-Path $artifactDir 'feature-46.patch'
+          $diffCheck = (Get-Content (Join-Path $artifactDir 'diff-check-exit-code.txt') -Raw).Trim()
+
+          if ('${{ steps.codex.outcome }}' -ne 'success') {
+            throw 'Codex step did not complete successfully. Review the uploaded artifact.'
+          }
+
+          if ($baselineSha -ne $currentSha) {
+            throw 'Codex created a local commit. Review artifact; nothing was pushed.'
+          }
+
+          if (-not (Test-Path $patchPath) -or (Get-Item $patchPath).Length -eq 0) {
+            throw 'Codex produced no implementation patch.'
+          }
+
+          if ($diffCheck -ne 'DiffCheckExitCode=0') {
+            throw 'git diff --check failed. Review the uploaded artifact.'
+          }
+
+          Write-Host 'FEATURE 46 PATCH READY FOR REVIEW'
+          Write-Host 'Application changes remain uncommitted and unpushed.'
