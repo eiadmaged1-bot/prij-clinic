@@ -89,11 +89,19 @@ jobs:
 
           git status --short
           git diff --check
-          git grep -n '<<<<<<<\|=======\|>>>>>>>' -- . ':!package-lock.json' 2>$null
 
-          if ($LASTEXITCODE -eq 0) {
-            throw 'Conflict markers found.'
+          git grep -n -e '^<<<<<<< ' -e '^=======$' -e '^>>>>>>> ' -- . ':!package-lock.json' 2>$null
+          $conflictMarkerExitCode = $LASTEXITCODE
+
+          if ($conflictMarkerExitCode -eq 0) {
+            throw 'Real Git conflict markers found.'
           }
+
+          if ($conflictMarkerExitCode -ne 1) {
+            throw "Conflict-marker scan failed with exit code $conflictMarkerExitCode."
+          }
+
+          Write-Host 'No Git conflict markers found.'
 
           if (Test-Path 'package.json') {
             node --version
