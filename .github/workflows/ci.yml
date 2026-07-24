@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
 
     env:
       DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/prij_clinic_ci
