@@ -1,0 +1,139 @@
+name: Sprint 1 Fix 3 Failure Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-fix3-failure-diagnostics.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sprint1-fix3-failure-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Diagnose protected Sprint 1 Fix 3 branch
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout protected branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-fix3-protected
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Verify runner and branch
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          git -C workspace branch --show-current
+          git -C workspace log -1 --oneline
+          if (git -C workspace status --porcelain) { throw 'Protected checkout is not clean.' }
+
+      - name: Install dependencies
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+
+      - name: Run diagnostics and capture logs
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          New-Item -ItemType Directory -Force '.diagnostics' | Out-Null
+
+          function Run-Check {
+            param(
+              [string]$Name,
+              [string]$Command
+            )
+            $log = ".diagnostics/$Name.log"
+            Write-Host "Running $Name: $Command"
+            & powershell -NoProfile -Command $Command *> $log
+            $code = $LASTEXITCODE
+            "${Name}=$code" | Add-Content '.diagnostics/exit-codes.txt'
+            Write-Host "$Name exit code: $code"
+          }
+
+          Run-Check 'clinical-workflow' 'node scripts/clinical-workflow-unification-test.mjs'
+          Run-Check 'fix3-medication' 'node scripts/recovery-fix3-medication-test.mjs'
+          Run-Check 'fix3-search' 'node scripts/recovery-fix3-search-test.mjs'
+          Run-Check 'typecheck' 'npm run typecheck'
+          Run-Check 'build' 'npm run build'
+
+          git diff --check *> '.diagnostics/diff-check.log'
+          "diff-check=$LASTEXITCODE" | Add-Content '.diagnostics/exit-codes.txt'
+
+      - name: Create diagnostic report
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+
+          $codes = Get-Content '.diagnostics/exit-codes.txt'
+          $report = @(
+            '# Sprint 1 Fix 3 Failure Diagnostics',
+            '',
+            '- Branch: `work/sprint1-fix3-protected`',
+            '- Runner: `SECTRA`',
+            '- Database reset/drop/truncate: NOT RUN',
+            '- Production patient data: NOT USED',
+            '',
+            '## Exit codes',
+            ''
+          )
+
+          foreach ($line in $codes) { $report += "- ``$line``" }
+
+          $report += @('', '## Log tails', '')
+          foreach ($name in @('clinical-workflow','fix3-medication','fix3-search','typecheck','build','diff-check')) {
+            $path = ".diagnostics/$name.log"
+            $report += "### $name"
+            $report += ''
+            $report += '```text'
+            if (Test-Path $path) {
+              $tail = Get-Content $path -Tail 100
+              if ($tail) { $report += $tail } else { $report += '[empty log]' }
+            } else {
+              $report += '[missing log]'
+            }
+            $report += '```'
+            $report += ''
+          }
+
+          $report | Set-Content 'docs/verification/SPRINT1_FIX3_FAILURE_DIAGNOSTICS.md'
+
+      - name: Save diagnostics to protected branch
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/SPRINT1_FIX3_FAILURE_DIAGNOSTICS.md
+          if (-not (git diff --cached --name-only)) {
+            Write-Host 'Diagnostic report unchanged.'
+            exit 0
+          }
+          git commit -m 'Document Sprint 1 Fix 3 failure diagnostics'
+          git push origin HEAD:work/sprint1-fix3-protected
+
+      - name: Final status
+        working-directory: workspace
+        shell: powershell
+        run: |
+          Write-Host 'SPRINT 1 FIX 3 FAILURE DIAGNOSTICS COMPLETE'
+          Write-Host 'No application source files were modified.'
