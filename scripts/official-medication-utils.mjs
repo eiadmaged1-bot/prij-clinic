@@ -667,8 +667,9 @@ export async function recordBlockedRun(source, status, message) {
 export function normalizeOfficialRow(row, countryCode) {
   const { __sourceRowHashRaw, ...officialRaw } = row;
   const normalizedCountryCode = String(pick(row, ["countryCode", "Country", "Country Code"]) || countryCode || "").toUpperCase();
-  const tradeName = pick(row, ["tradeName", "Trade Name", "Product Name", "Medicine Name", "MEDICINE NAME", "Name", "Brand Name", "DRUG NAME"]);
-  const genericName = pick(row, ["genericName", "Generic Name", "Scientific Name", "Active Ingredient", "ACTIVE SUBSTANCES", "Ingredient"]);
+  const tradeName = pick(row, ["tradeName", "commercial_name_en", "Trade Name", "Product Name", "Medicine Name", "MEDICINE NAME", "Name", "Brand Name", "DRUG NAME"]);
+  const tradeNameArabic = pick(row, ["tradeNameArabic", "commercial_name_ar", "Arabic Trade Name"]);
+  const genericName = pick(row, ["genericName", "scientific_name", "Generic Name", "Scientific Name", "Active Ingredient", "ACTIVE SUBSTANCES", "Ingredient"]);
   const strengthValue = pick(row, ["STRENGTH", "Strength"]);
   const strengthUnit = pick(row, ["UNIT OF STRENGTH", "Strength Unit"]);
   const strengthText = pick(row, ["strengthText", "Strength Text", "Strength + Strength Unit"]) || [strengthValue, strengthUnit].filter(Boolean).join(" ").trim() || null;
@@ -676,10 +677,13 @@ export function normalizeOfficialRow(row, countryCode) {
   const route = pick(row, ["route", "Route", "ROUTE OF ADMINISTRATION", "Route of Administration"]);
   const packageText = pick(row, ["packageText", "Package", "Pack", "PACK SIZE", "Pack Size", "Package Size"]);
   const registrationNumber = pick(row, ["registrationNumber", "Registration Number", "DRUG REGISTRATION NUMBER", "Register Number", "DRN", "Reg No"]);
-  const priceText = pick(row, ["officialPriceText", "priceText", "Price", "RETAIL PRICE", "Public Price", "Selling Price", "Public Price (KWD)"]);
+  const priceText = pick(row, ["officialPriceText", "priceText", "price_egp", "Price", "RETAIL PRICE", "Public Price", "Selling Price", "Public Price (KWD)"]);
   return {
     tradeName,
+    tradeNameArabic,
     genericName,
+    scientificName: genericName,
+    familyText: pick(row, ["drug_class", "drugClass", "Drug Class", "Therapeutic Class"]),
     countryCode: normalizedCountryCode,
     strengthText,
     dosageForm,
@@ -725,10 +729,55 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
   let rowsNeedsReview = 0;
   let rowsSkipped = 0;
   let rowsFailed = 0;
+  let rowsInserted = 0;
+  let rowsUpdated = 0;
+  let rowsUnchanged = 0;
+  let rowsConflicted = 0;
   let confidenceTotal = 0;
   const touchedProductIds = new Set();
 
-  if (mode !== "dry-run") {
+  if (mode === "dry-run") {
+    for (const rawRow of parsed.rows) {
+      try {
+        const row = normalizeOfficialRow(rawRow, countryCode);
+        if (!row.tradeName && !row.genericName) {
+          rowsSkipped += 1;
+          continue;
+        }
+        const product = await prisma.drugMarketProduct.findFirst({
+          where: {
+            tradeName: { equals: row.tradeName || row.genericName, mode: "insensitive" },
+            genericName: row.genericName ? { equals: row.genericName, mode: "insensitive" } : null,
+            manufacturer: row.manufacturer ? { equals: row.manufacturer, mode: "insensitive" } : null
+          },
+          select: { id: true, verificationStatus: true }
+        });
+        if (!product) {
+          rowsInserted += 1;
+          rowsNeedsReview += 1;
+        } else {
+          const hash = rowHash(row.rawHashInput ?? row.raw, row.countryCode);
+          const variant = await prisma.drugMarketVariant.findFirst({
+            where: {
+              productId: product.id,
+              countryCode: row.countryCode,
+              OR: [{ sourceRowHash: hash }, { sourceId: source.id, tradeName: { equals: row.tradeName || row.genericName, mode: "insensitive" } }]
+            },
+            select: { sourceRowHash: true, verificationStatus: true, sourceId: true }
+          });
+          if (!variant) rowsInserted += 1;
+          else if (variant.verificationStatus === "verified" && variant.sourceRowHash !== hash) rowsConflicted += 1;
+          else if (variant.sourceRowHash === hash) rowsUnchanged += 1;
+          else rowsUpdated += 1;
+          if (!variant || variant.verificationStatus !== "verified") rowsNeedsReview += 1;
+        }
+        rowsImported += 1;
+        confidenceTotal += row.parserConfidence;
+      } catch {
+        rowsFailed += 1;
+      }
+    }
+  } else {
     for (const [index, rawRow] of parsed.rows.entries()) {
       try {
         const row = normalizeOfficialRow(rawRow, countryCode);
@@ -738,8 +787,12 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
           continue;
         }
         const product = await upsertProduct(row, now);
-        const variant = await upsertVariant(product.id, row, run.id, source.id, now);
+        const { variant, action } = await upsertVariant(product.id, row, run.id, source.id, now);
         touchedProductIds.add(product.id);
+        if (action === "inserted") rowsInserted += 1;
+        if (action === "updated") rowsUpdated += 1;
+        if (action === "unchanged") rowsUnchanged += 1;
+        if (action === "conflict") rowsConflicted += 1;
         if (variant.verificationStatus !== "verified") {
           rowsNeedsReview += 1;
           await createOfficialReviewItem(product.id, variant.id, row, source.code);
@@ -777,7 +830,7 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
     }
   });
 
-  const status = rowsFailed ? "needs_review" : "imported";
+  const status = mode === "dry-run" ? "dry_run_complete" : rowsFailed ? "needs_review" : "imported";
   await prisma.drugMarketImportRun.update({
     where: { id: run.id },
     data: {
@@ -787,6 +840,7 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
       rowsNeedsReview,
       rowsSkipped,
       rowsFailed,
+      coverageJson: { countryCode, sourceCode: source.code, rowsInserted, rowsUpdated, rowsUnchanged, rowsConflicted, duplicateCount: rowsUnchanged },
       parserConfidence: rowsImported ? confidenceTotal / rowsImported : null,
       finishedAt: new Date()
     }
@@ -802,7 +856,7 @@ async function importParsedOfficialRows({ source, countryCode, mode, parsed, sna
     }
   });
 
-  return { source: source.code, status, rowsImported, rowsSeen: parsed.rows.length, rowsNeedsReview, rowsSkipped, rowsFailed, fileSha256: parsed.fileSha256, sourceUrl: snapshot.finalUrl ?? snapshot.sourceUrl };
+  return { source: source.code, status, rowsImported, rowsSeen: parsed.rows.length, rowsInserted, rowsUpdated, rowsUnchanged, duplicateCount: rowsUnchanged, conflictCount: rowsConflicted, rowsNeedsReview, rowsSkipped, rowsFailed, fileSha256: parsed.fileSha256, sourceUrl: snapshot.finalUrl ?? snapshot.sourceUrl };
 }
 
 async function createOfficialReviewItem(productId, variantId, row, sourceCode) {
@@ -858,16 +912,19 @@ function parserForSource(source, fallback) {
 }
 
 function searchText(row) {
-  return [row.tradeName, row.genericName, row.strengthText, row.dosageForm, row.route, row.packageText, row.registrationNumber, row.atcCode, row.manufacturer, row.marketingCompany].filter(Boolean).join(" ").toLowerCase();
+  return [row.tradeName, row.tradeNameArabic, row.genericName, row.scientificName, row.familyText, row.strengthText, row.dosageForm, row.route, row.packageText, row.registrationNumber, row.atcCode, row.manufacturer, row.marketingCompany].filter(Boolean).join(" ").toLowerCase();
 }
 
 async function upsertProduct(row, fetchedAt) {
   const tradeName = row.tradeName || row.genericName;
-  const existing = await prisma.drugMarketProduct.findFirst({ where: { tradeName, genericName: row.genericName, isDemo: false } });
+  const existing = await prisma.drugMarketProduct.findFirst({ where: { tradeName, genericName: row.genericName, manufacturer: row.manufacturer, isDemo: false } });
+  if (existing?.verificationStatus === "verified") return existing;
   const data = {
     tradeName,
     genericName: row.genericName,
+    scientificName: row.scientificName,
     normalizedSearchText: searchText(row),
+    familyText: row.familyText,
     manufacturer: row.manufacturer,
     marketingCompany: row.marketingCompany,
     verificationStatus: "needs_review",
@@ -880,12 +937,23 @@ async function upsertProduct(row, fetchedAt) {
 
 async function upsertVariant(productId, row, importRunId, sourceId, fetchedAt) {
   const sourceRowHash = rowHash(row.rawHashInput ?? row.raw, row.countryCode);
-  const existing = await prisma.drugMarketVariant.findUnique({ where: { countryCode_sourceRowHash: { countryCode: row.countryCode, sourceRowHash } } });
+  const hashExisting = await prisma.drugMarketVariant.findUnique({ where: { countryCode_sourceRowHash: { countryCode: row.countryCode, sourceRowHash } } });
+  const existing = hashExisting ?? await prisma.drugMarketVariant.findFirst({
+    where: {
+      productId,
+      countryCode: row.countryCode,
+      sourceId,
+      tradeName: row.tradeName || row.genericName,
+      genericName: row.genericName,
+      route: row.route,
+      manufacturer: row.manufacturer
+    }
+  });
   if (existing?.verificationStatus === "verified") {
     await prisma.drugMarketManualReviewQueue.create({
       data: { queueType: "verified_row_conflict", productId, variantId: existing.id, reason: "Verified official medication row matched a new import. Manual review required." }
     });
-    return existing;
+    return { variant: existing, action: "conflict" };
   }
   const data = {
     productId,
@@ -916,7 +984,8 @@ async function upsertVariant(productId, row, importRunId, sourceId, fetchedAt) {
     verificationStatus: "needs_review",
     isDemo: false
   };
-  return existing ? prisma.drugMarketVariant.update({ where: { id: existing.id }, data }) : prisma.drugMarketVariant.create({ data });
+  const variant = existing ? await prisma.drugMarketVariant.update({ where: { id: existing.id }, data }) : await prisma.drugMarketVariant.create({ data });
+  return { variant, action: existing ? (hashExisting ? "unchanged" : "updated") : "inserted" };
 }
 
 let legacyJobId = null;

@@ -24,6 +24,9 @@ export type DoctorVisitState = {
   prescriptions?: Record<string, unknown>[];
   investigationOrders?: Record<string, unknown>[];
   followUps?: Record<string, unknown>[];
+  recentEncounters?: Record<string, unknown>[];
+  pregnancyEpisode?: Record<string, unknown> | null;
+  infertilityEpisode?: Record<string, unknown> | null;
   warning?: string;
 };
 
@@ -35,7 +38,7 @@ export function getCurrentDoctorVisit(patientId: string) {
   return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/current`);
 }
 
-export function updateDoctorVisit(patientId: string, encounterId: string, input: Record<string, string>) {
+export function updateDoctorVisit(patientId: string, encounterId: string, input: Record<string, unknown>) {
   return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}`, { method: "PATCH", body: JSON.stringify(input) });
 }
 

@@ -43,9 +43,12 @@ export default function PrescriptionsPage() {
     const routePatientId = params.get("patientId");
     const routeVisitId = params.get("visitId") ?? params.get("encounterId");
     const routeMedication = params.get("medication")?.trim();
+    const routeTab = params.get("tab");
     if (routePatientId) setPatientId(routePatientId);
     if (routeVisitId) setEncounterId(routeVisitId);
     if (routePatientId && routeVisitId) setActive("builder");
+    else if (routeTab === "saved") setActive("shortcuts");
+    else if (routeTab === "templates") setActive("templates");
     if (routeMedication) setItems([{ ...emptyItem, medicationName: routeMedication }]);
     void load();
   }, []);
@@ -212,15 +215,15 @@ export default function PrescriptionsPage() {
       <section className="page-header">
         <div className="header-row">
           <div>
-            <p className="eyebrow">Doctor prescription center</p>
-            <h1>{lockedContext ? "Patient Prescription Draft" : "Prescription Templates & Frequent Medications"}</h1>
+            <p className="eyebrow">{lockedContext ? "Active patient visit" : "Medication Center"}</p>
+            <h1>{lockedContext ? "Patient Prescription Builder" : "Templates & Saved Medications"}</h1>
           </div>
           {lockedContext ? <button className="button secondary compact" type="button" disabled={!printReady} onClick={() => void preparePrint()}>
             <ThreeDMedicalIcon name="reports" size="sm" tone="slate" />
             Print
           </button> : <Link className="button secondary compact" href="/patients">Open patient file</Link>}
         </div>
-        <p className="muted">Doctor manual review required. No auto-prescribing or automatic dosing.</p>
+        <p className="muted">Doctor review is required before a patient prescription is finalized.</p>
       </section>
       <SafetyAlert />
       <section className="patient-tabs simple prescription-tabs" aria-label="Prescription Center sections">
@@ -232,7 +235,7 @@ export default function PrescriptionsPage() {
         ] as const).map(([key, label]) => <button className={`tab-button ${active === key ? "active" : ""}`} key={key} onClick={() => setActive(key)} type="button">{label}</button>)}
       </section>
 
-      {!lockedContext ? <section className="panel compact-panel prescription-center-intro"><div><h2>Template and shortcut center</h2><p className="muted">Manage reusable medication shortcuts and prescription sets here. Clinical prescriptions can only be created from a selected patient and active visit.</p></div><Link className="button compact" href="/patients">Find patient</Link></section> : null}
+      {!lockedContext ? <section className="panel compact-panel prescription-center-intro"><div><h2>Reusable prescribing tools</h2><p className="muted">Patient prescriptions require an active visit.</p></div><div className="form-actions"><Link className="button secondary compact" href="/medications">Medication Center</Link><Link className="button compact" href="/patients">Find patient</Link></div></section> : null}
 
       {active === "builder" && lockedContext ? (
         <section className="panel printable-summary">

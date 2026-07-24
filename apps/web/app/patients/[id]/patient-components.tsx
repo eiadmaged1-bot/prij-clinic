@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 import { AppActionLink } from "@/components/actions/AppActionLink";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { ThreeDMedicalIcon, IconName } from "../../../components/ThreeDMedicalIcon";
 import { HerbalSearchPanel, MedicationSafetyPanel, PatientAllergyList, PatientMedicationList, PrescriptionSafetyPanel } from "../../../components/medications/MedicationComponents";
@@ -109,6 +109,56 @@ export type InfertilityWorkspace = {
       monitoringVisits?: Record<string, unknown>[];
       estradiolResults?: Record<string, unknown>[];
     };
+export type PatientWorkspaceMode = "gynecology" | "infertility" | "pregnancy" | "postpartum" | "menopause" | "postoperative" | "general";
+export type PatientWorkspaceContext = {
+      mode: PatientWorkspaceMode;
+      activePhase?: ClinicalPhase;
+      pregnancy?: Record<string, unknown>;
+      infertilityEpisode?: Record<string, unknown>;
+      cycle?: Record<string, unknown>;
+      monitoringVisit?: Record<string, unknown>;
+    };
+
+export function resolvePatientWorkspaceContext({
+  patient,
+  clinicalPhases,
+  related,
+  infertility
+}: {
+  patient: Patient;
+  clinicalPhases: ClinicalPhase[];
+  related: Record<string, Record<string, unknown>[]>;
+  infertility: InfertilityWorkspace;
+}): PatientWorkspaceContext {
+  const activePhase = clinicalPhases.find((phase) => phase.status.toLowerCase() === "active");
+  const pregnancy = related.pregnancy?.find((row) => String(row.status ?? "").toLowerCase() === "active");
+  const infertilityEpisode = infertility.episodes?.find((row) => ["active", "current", "in_progress"].includes(String(row.status ?? "").toLowerCase()));
+  const activeCycle = infertility.cycles?.find((row) => ["active", "current", "in_progress"].includes(String(row.status ?? "").toLowerCase()));
+  const cycle = activeCycle ?? infertility.cycles?.[0];
+  const monitoringVisit = infertility.monitoringVisits?.[0];
+  const phaseMode = workspaceModeFromValue(activePhase?.phaseType);
+  const explicitTypeMode = workspaceModeFromValue(patient.patientType);
+  const mode = phaseMode
+    ?? (pregnancy ? "pregnancy" : undefined)
+    ?? (infertilityEpisode || activeCycle ? "infertility" : undefined)
+    ?? explicitTypeMode
+    ?? ((infertility.episodes?.length ?? 0) > 0 || (infertility.cycles?.length ?? 0) > 0 ? "infertility" : undefined)
+    ?? "general";
+
+  return { mode, activePhase, pregnancy, infertilityEpisode, cycle, monitoringVisit };
+}
+
+function workspaceModeFromValue(value?: string | null): PatientWorkspaceMode | undefined {
+  const normalized = String(value ?? "").trim().toLowerCase().replaceAll("-", "_").replaceAll(" ", "_");
+  if (["postpartum", "post_partum", "postnatal", "puerperium"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "postpartum";
+  if (["postoperative", "post_operative", "postop", "post_op", "surgical_follow_up", "hysterectomy", "post_hysterectomy"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "postoperative";
+  if (["menopause", "perimenopause", "postmenopause", "postmenopausal"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "menopause";
+  if (["gynecology", "gynaecology", "gynecologic", "gyn"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "gynecology";
+  if (["infertility", "fertility", "reproductive_medicine", "icsi", "ivf"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "infertility";
+  if (["pregnancy", "pregnant", "obstetric", "obstetrics", "antenatal", "high_risk_pregnancy"].some((mode) => normalized === mode || normalized.startsWith(`${mode}_`))) return "pregnancy";
+  if (["general", "other"].includes(normalized)) return "general";
+  return undefined;
+}
 export type ReferenceResult = {
       id: string;
       label: string;
@@ -539,6 +589,7 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
   const [tagBasket, setTagBasket] = useState<TagBasketItem[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string>(smartHistoryGroups[0].title);
+  const [historySearch, setHistorySearch] = useState("");
   const [historyStatus, setHistoryStatus] = useState<"current" | "historical" | "resolved">("current");
   const [tagDate, setTagDate] = useState("");
   const [tagYear, setTagYear] = useState("");
@@ -617,20 +668,21 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
   }
 
   return (
-    <section className="panel smart-ob-tags" aria-label="Smart history option chips">
+    <section className="panel smart-ob-tags structured-history-workspace" aria-label="Structured History">
       <div className="section-heading">
         <div>
-          <h2>Smart history option chips</h2>
-          <p className="muted">Select, review, then add. Draft items can be edited, removed, or restored. Finalized corrections require a reason and preserve the original audit record.</p>
+          <h2>Structured History</h2>
+          <p className="muted">Select compact history tags, add details only when relevant, then confirm the basket once.</p>
         </div>
         <span className="badge warning">Doctor review</span>
       </div>
+      <div className="inline-form history-search-row"><input type="search" value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Search history" /><span className="muted">Favorites and recent selections remain available in the selected basket.</span></div>
       <div className="clinical-history-layout">
         <nav className="history-category-list" aria-label="History categories">
           {smartHistoryGroups.map((group) => <button className={activeGroup === group.title ? "active" : ""} key={group.title} onClick={() => setActiveGroup(group.title)} type="button">{group.title}</button>)}
         </nav>
         <div>
-          {smartHistoryGroups.filter((group) => group.title === activeGroup).map((group) => <div key={group.title}><h3>{group.title}</h3><div className="clinical-tag-grid">{group.items.map(([code, label]) => <button className={`clinical-tag-card ${pending?.code === code ? "selected" : ""}`} key={code} type="button" onClick={() => chooseTag(code, label, group.sourceType)}><span>{group.title}</span><strong>{label}</strong></button>)}</div></div>)}
+          {smartHistoryGroups.filter((group) => group.title === activeGroup).map((group) => <div key={group.title}><h3>{group.title}</h3><div className="clinical-tag-grid">{group.items.filter(([, label]) => label.toLowerCase().includes(historySearch.trim().toLowerCase())).map(([code, label]) => <button className={`clinical-tag-card ${pending?.code === code ? "selected" : ""}`} key={code} type="button" onClick={() => chooseTag(code, label, group.sourceType)}><strong>{label}</strong></button>)}</div></div>)}
         </div>
       </div>
       <div className="selected-history-list" aria-label="Selected clinical history">
@@ -639,7 +691,7 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
         {tags.filter((tag) => tag.isRemoved).map((tag) => <article className="data-row removed" key={tag.id}><div><strong>{tag.label}</strong><span>Removed — {tag.removalReason}</span></div><button className="button secondary compact" type="button" onClick={() => void undoRemove(tag)}>Undo</button></article>)}
       </div>
       <SelectedBasket title="History tags to save" items={tagBasket} onChange={setTagBasket} onSave={saveTagBasket} saveLabel="Save tags once" />
-      <div className="form-grid compact-history-details">
+      {pending || editingId ? <div className="form-grid compact-history-details">
         <label>Status<select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value as typeof historyStatus)}><option value="current">Current</option><option value="historical">Historical</option><option value="resolved">Resolved</option></select></label>
         <label>Date<input type="date" value={tagDate} onChange={(event) => setTagDate(event.target.value)} /></label>
         <label>Year<input type="number" min="1900" max="2200" value={tagYear} onChange={(event) => setTagYear(event.target.value)} /></label>
@@ -651,7 +703,7 @@ export function SmartHistoryOptionChips({ patient }: { patient: Patient }) {
         {pending ? <button className="button" type="button" onClick={addTag}>Add {pending.label} to basket</button> : null}
         {editingId ? <button className="button" type="button" onClick={() => void updateTag()}>Save edit</button> : null}
         {pending || editingId ? <button className="button secondary" type="button" onClick={resetEditor}>Cancel</button> : null}
-      </div>
+      </div> : null}
       {status ? <p className="notice">{status}</p> : null}
     </section>
   );
@@ -718,71 +770,445 @@ export function SmartObHistoryTags() {
     </section>
     );
 }
-export function Overview({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
-    const pendingResults = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
-    const criticalResults = (related.results ?? []).filter((row) => row.criticalFlag === true && String(row.reviewStatus ?? "") !== "reviewed").length;
-    const missingConsents = (related.consents ?? []).filter((row) => ["unknown", "declined"].includes(String(row.status ?? ""))).length;
-    const openTasks = (related.tasks ?? []).filter((row) => ["open", "in_progress"].includes(String(row.status ?? ""))).length;
-    const unreviewedDocuments = (related.documents ?? []).filter((row) => ["draft_metadata", "active"].includes(String(row.status ?? ""))).length;
-    const urgentCount = pendingResults + criticalResults + missingConsents + openTasks + unreviewedDocuments;
-    const recentTimeline = timelineItems.slice(0, 5);
-    return (
-    <section className="doctor-friendly-grid patient-summary-grid">
-      <article className="panel compact-panel">
-        <div className="section-heading">
-          <div>
-            <h2>At a glance</h2>
-            <p className="muted">Simple patient summary for daily clinic use.</p>
-          </div>
-          <ThreeDMedicalIcon name="patients" size="sm" />
-        </div>
-        <dl className="profile-grid">
-          <div><dt>Name</dt><dd>{patient.firstName} {patient.lastName}</dd></div>
-          <div><dt>File number</dt><dd>{patient.medicalRecordNumber}</dd></div>
-          <div><dt>Contact</dt><dd>{patient.phone || patient.email || "Not saved"}</dd></div>
-          <div><dt>Status</dt><dd>{patient.status}</dd></div>
-          <div className="wide"><dt>Notes</dt><dd>{patient.notes || "No notes recorded."}</dd></div>
-        </dl>
-      </article>
-      <article className="panel compact-panel">
-        <div className="section-heading"><h2>Clinical badges</h2><span className="badge">Review</span></div>
-        <div className="workflow-band">
-          <span>{patient.patientType ?? "General"}</span>
-          <span>{patient.sexualActivityStatus ? String(patient.sexualActivityStatus).replaceAll("_", " ") : "Privacy not asked"}</span>
-          <span>{(related.pregnancy ?? []).length ? "Pregnancy context" : "No pregnancy record"}</span>
-          <span>Allergy review</span>
-        </div>
-      </article>
-      <article className="panel compact-panel">
-        <div className="section-heading"><h2>Today status</h2><span className="badge">{patient.status}</span></div>
-        <dl className="profile-grid">
-          <div><dt>Open tasks</dt><dd>{openTasks}</dd></div>
-          <div><dt>Pending results</dt><dd>{pendingResults}</dd></div>
-          <div><dt>Documents to review</dt><dd>{unreviewedDocuments}</dd></div>
-        </dl>
-      </article>
-      <article className="panel compact-panel next-step-card">
-        <ThreeDMedicalIcon name="doctor" size="lg" />
-        <h2>Next best step</h2>
-        <p className="muted">Start or continue the visit. The doctor writes the note; the app does not diagnose or prescribe automatically.</p>
-        <Link className="button large" href={`/doctor/visit?patientId=${patient.id}`}>
-          <ThreeDMedicalIcon name="encounter" size="sm" />
-          New Encounter
-        </Link>
-      </article>
-      <article className="panel compact-panel">
-        <div className="section-heading">
-          <h2>Recent activity</h2>
-          <span className="badge">{recentTimeline.length} items</span>
-        </div>
-        {urgentCount === 0 && recentTimeline.length === 0 ? <p className="empty-state compact smart-empty-state"><ThreeDMedicalIcon name="timeline" size="sm" tone="slate" /><span>No urgent activity.</span></p> : null}
-        {urgentCount > 0 ? <div className="compact-metric-grid"><MiniCount label="Needs attention" value={urgentCount} tone="warning" /><MiniCount label="Pending results" value={pendingResults} /><MiniCount label="Open tasks" value={openTasks} /><MiniCount label="Documents" value={unreviewedDocuments} /></div> : null}
-        {recentTimeline.length ? <div className="dense-card-list">{recentTimeline.map((item) => <article className="data-row dense" key={`${item.type}-${item.dateTime}-${item.title}`}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{item.status}</span></div><p className="muted">{item.description}</p></article>)}</div> : null}
-      </article>
+const overviewCardContracts = {
+  complaints: { title: "Active complaints", icon: "!", action: "+ Add", emptyAction: "+ Add complaint", maxItems: 3 },
+  ultrasound: { title: "Pelvic ultrasound", icon: "US", action: "Open", emptyAction: "+ Record pelvic ultrasound", maxItems: 1 },
+  timeline: { title: "Visit timeline", icon: "↟", emptyAction: "+ Start first visit", maxItems: 4 },
+  labs: { title: "Recent labs", icon: "△", action: "Add / view", emptyAction: "+ Request or record lab", maxItems: 4 },
+  medications: { title: "Current medications", icon: "Rx", action: "History", emptyAction: "+ Add medication", maxItems: 4 },
+  tags: { title: "Smart clinical tags", icon: "#", action: "+ Add", emptyAction: "+ Add clinical tag", maxItems: 8 },
+  carePlan: { title: "Care plan", icon: "✓", action: "Edit", emptyAction: "+ Create care plan", maxItems: 3 },
+  notes: { title: "Doctor notes", icon: "✎", action: "+ Add note", emptyAction: "+ Add doctor note", maxItems: 3 }
+} as const;
+
+export function Overview({ patient, related, timelineItems, workspaceContext, onNavigate }: {
+  patient: Patient;
+  related: Record<string, Record<string, unknown>[]>;
+  timelineItems: TimelineItem[];
+  workspaceContext: PatientWorkspaceContext;
+  onNavigate: (tab: string) => void;
+}) {
+  const ultrasound = firstOverviewRow((related.ultrasound ?? related.ultrasounds ?? []).filter((row) => {
+    const status = overviewValue(row, ["status", "reportStatus", "reviewStatus"]).toLowerCase();
+    return ["completed", "signed", "final", "finalized", "reviewed"].includes(status) || Boolean(overviewValue(row, ["reportSummary", "findings", "impression"]));
+  }));
+  const encounterRows = related.visits ?? related.encounters ?? related.gynecology ?? [];
+  const signedEncounterRows = encounterRows.filter((row) => String(row.status ?? "").toLowerCase() === "signed");
+  const complaintById = new Map<string, Record<string, unknown>>();
+  for (const row of signedEncounterRows) {
+    const input = structuredEncounterInput(row.examinationJson);
+    for (const complaint of input.complaints) {
+      const id = complaint.id || clinicalSummaryId(complaint.category, complaint.label);
+      if (!complaintById.has(id)) complaintById.set(id, { id, complaint: complaint.label, status: complaint.status || "Active", encounterDate: row.signedAt ?? row.startedAt ?? row.createdAt, sourceEncounterId: row.id });
+    }
+  }
+  const complaints = [...complaintById.values()].filter((row) => String(row.status).toLowerCase() !== "resolved").slice(0, overviewCardContracts.complaints.maxItems);
+  const labs = (related.results ?? []).filter((row) =>
+    overviewValue(row, ["testName", "investigationName", "title", "name"])
+  ).slice(0, overviewCardContracts.labs.maxItems);
+  const medications = (related.medications ?? related.prescriptions ?? []).filter((row) => {
+    const status = overviewValue(row, ["status", "medicationStatus"]).toLowerCase();
+    return !status || ["active", "current", "taking", "issued"].includes(status);
+  }).slice(0, overviewCardContracts.medications.maxItems);
+  const carePlan = (related.tasks ?? []).filter((row) => {
+    const status = overviewValue(row, ["status"]).toLowerCase();
+    return !status || ["open", "active", "planned", "in_progress"].includes(status);
+  }).slice(0, overviewCardContracts.carePlan.maxItems);
+  const notes = (related["doctor-note"] ?? related.visits ?? []).filter((row) =>
+    overviewValue(row, ["doctorNote", "clinicalNote", "notes", "assessment", "plan"])
+  ).slice(0, overviewCardContracts.notes.maxItems);
+  const tags = (related.tags ?? related["clinical-tags"] ?? []).map((row) =>
+    overviewValue(row, ["label", "name", "title"])
+  ).filter(Boolean).slice(0, overviewCardContracts.tags.maxItems);
+  const recentTimeline = timelineItems.slice(0, overviewCardContracts.timeline.maxItems);
+
+  return (
+    <section className="patient-clinical-overview" aria-label="Patient clinical overview">
+      <div className="patient-approved-overview-grid">
+        <OverviewCard className="overview-card-complaints overview-span-4" icon={overviewCardContracts.complaints.icon} tone="red" title={overviewCardContracts.complaints.title} action={overviewCardContracts.complaints.action} onAction={() => onNavigate("doctor-visit")}>
+          {complaints.length ? <div className="overview-data-rows">{complaints.map((row) => <article key={String(row.id)}><div><strong>{String(row.complaint)}</strong><p>{overviewDate(String(row.encounterDate ?? ""))} · {String(row.status)}</p></div><Link href={`/patients/${patient.id}/visits/${String(row.sourceEncounterId)}/complaint`}>Source visit</Link></article>)}</div> : <OverviewEmpty label={overviewCardContracts.complaints.emptyAction} onClick={() => onNavigate("doctor-visit")} />}
+        </OverviewCard>
+
+        <WorkspaceContextOverviewCard patient={patient} context={workspaceContext} related={related} onNavigate={onNavigate} />
+
+        <OverviewCard className="overview-card-ultrasound overview-span-4" icon={overviewCardContracts.ultrasound.icon} title={overviewUltrasoundTitle(workspaceContext.mode)} action={overviewCardContracts.ultrasound.action} onAction={() => onNavigate("ultrasound")}>
+          {ultrasound ? <div className="overview-ultrasound-summary"><span className="overview-ultrasound-placeholder" aria-hidden="true">US</span><div><strong>{overviewValue(ultrasound, ["title", "studyTitle", "scanType"]) || "Ultrasound study"}</strong><p>{overviewValue(ultrasound, ["summary", "reportSummary", "findings"]) || "Study recorded"}</p></div></div> : <OverviewEmpty label={overviewUltrasoundAction(workspaceContext.mode)} onClick={() => onNavigate("ultrasound")} visual />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-timeline overview-span-4" icon={overviewCardContracts.timeline.icon} tone="blue" title={overviewCardContracts.timeline.title}>
+          {recentTimeline.length ? <div className="overview-timeline">{recentTimeline.map((item) => <article key={`${item.type}-${item.dateTime}-${item.title}`}><span aria-hidden="true" /><div><strong>{overviewDate(item.dateTime)} · {item.title}</strong><p>{item.description}</p></div></article>)}</div> : <OverviewEmpty label={overviewCardContracts.timeline.emptyAction} onClick={() => onNavigate("doctor-visit")} />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-labs overview-span-4" icon={overviewCardContracts.labs.icon} tone="blue" title={overviewCardContracts.labs.title} action={overviewCardContracts.labs.action} onAction={() => onNavigate("investigations")}>
+          {labs.length ? <OverviewRows rows={labs} titleKeys={["testName", "investigationName", "title", "name"]} detailKeys={["result", "resultValue", "status", "reviewStatus"]} compact /> : <OverviewEmpty label={overviewCardContracts.labs.emptyAction} onClick={() => onNavigate("investigations")} />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-medications overview-span-6" icon={overviewCardContracts.medications.icon} tone="teal" title={overviewCardContracts.medications.title} action={overviewCardContracts.medications.action} onAction={() => onNavigate("medications")}>
+          {medications.length ? <OverviewRows rows={medications} titleKeys={["genericName", "medicationName", "drugName", "title"]} detailKeys={["instructions", "instructionSummary", "status"]} compact /> : <OverviewEmpty label={overviewCardContracts.medications.emptyAction} onClick={() => onNavigate("medications")} />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-tags overview-span-6" icon={overviewCardContracts.tags.icon} tone="teal" title={overviewCardContracts.tags.title} action={overviewCardContracts.tags.action} onAction={() => onNavigate("history")}>
+          {tags.length ? <div className="clinical-overview-tags">{tags.map((tag) => <span key={tag}>{tag}</span>)}</div> : <OverviewEmpty label={overviewCardContracts.tags.emptyAction} onClick={() => onNavigate("history")} />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-care-plan overview-span-6" icon={overviewCardContracts.carePlan.icon} tone="teal" title={overviewCardContracts.carePlan.title} action={overviewCardContracts.carePlan.action} onAction={() => onNavigate("care-plan")}>
+          {carePlan.length ? <OverviewRows rows={carePlan} titleKeys={["title", "taskType", "reason"]} detailKeys={["notes", "description", "status"]} /> : <OverviewEmpty label={overviewCardContracts.carePlan.emptyAction} onClick={() => onNavigate("case-boards")} />}
+        </OverviewCard>
+
+        <OverviewCard className="overview-card-notes overview-span-6" icon={overviewCardContracts.notes.icon} tone="blue" title={overviewCardContracts.notes.title} action={overviewCardContracts.notes.action} onAction={() => onNavigate("doctor-visit")}>
+          {notes.length ? <OverviewRows rows={notes} titleKeys={["doctorNote", "clinicalNote", "notes", "assessment"]} detailKeys={["createdAt", "date", "status"]} /> : <OverviewEmpty label={overviewCardContracts.notes.emptyAction} onClick={() => onNavigate("doctor-visit")} />}
+        </OverviewCard>
+      </div>
     </section>
-    );
+  );
 }
 
+function overviewUltrasoundTitle(mode: PatientWorkspaceMode) {
+  if (mode === "pregnancy") return "Obstetric Ultrasound";
+  if (mode === "infertility") return "Fertility Ultrasound / Folliculometry";
+  if (mode === "postpartum") return "Postpartum Ultrasound";
+  return "Pelvic Ultrasound";
+}
+
+function overviewUltrasoundAction(mode: PatientWorkspaceMode) {
+  if (mode === "pregnancy") return "+ Record obstetric ultrasound";
+  if (mode === "infertility") return "+ Record fertility scan / folliculometry";
+  if (mode === "postpartum") return "+ Record postpartum ultrasound";
+  return overviewCardContracts.ultrasound.emptyAction;
+}
+
+function WorkspaceContextOverviewCard({ patient, context, related, onNavigate }: {
+  patient: Patient;
+  context: PatientWorkspaceContext;
+  related: Record<string, Record<string, unknown>[]>;
+  onNavigate: (tab: string) => void;
+}) {
+  const signedSnapshots = (related.visits ?? related.encounters ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "signed").flatMap((row) => {
+    const snapshot = structuredEncounterInput(row.examinationJson).reproductiveSnapshot;
+    return snapshot ? [{ ...snapshot, sourceEncounterId: String(row.id ?? snapshot.encounterId ?? ""), visitDate: String(row.signedAt ?? row.startedAt ?? row.createdAt ?? snapshot.confirmedAt ?? "") }] : [];
+  });
+  const latestSnapshot = signedSnapshots[0];
+  const gynecology = firstOverviewRow(related.gynecology);
+  const postpartum = firstOverviewRow(related.postpartum);
+  const menopause = firstOverviewRow(related.menopause);
+  const postoperative = firstOverviewRow(related.postoperative ?? related.procedures ?? related.surgeries);
+  const generalEpisode = context.activePhase ?? firstOverviewRow(related.visits ?? related.encounters);
+  const modeContract: Record<PatientWorkspaceMode, { title: string; emptyAction: string; route: string; action: string }> = {
+    gynecology: { title: "Menstrual and endometrial pattern", emptyAction: "+ Record menstrual pattern", route: "history", action: "Expand month" },
+    infertility: { title: "Cycle and fertility context", emptyAction: "+ Record fertility context", route: "infertility", action: "Open" },
+    pregnancy: { title: "Pregnancy context", emptyAction: "+ Record pregnancy context", route: "pregnancy", action: "Open" },
+    postpartum: { title: "Postpartum context", emptyAction: "+ Record postpartum context", route: "mother-baby", action: "Open" },
+    menopause: { title: "Menopause context", emptyAction: "+ Record menopause context", route: "history", action: "Open" },
+    postoperative: { title: "Postoperative context", emptyAction: "+ Record postoperative context", route: "history", action: "Open" },
+    general: { title: "Clinical episode pattern", emptyAction: "+ Record clinical context", route: "doctor-visit", action: "Open" }
+  };
+  const contract = modeContract[context.mode];
+  const contextCardTitle = latestSnapshot?.context === "hysterectomy" ? "Hysterectomy and hormonal context" : contract.title;
+  const values: Array<[string, string]> = context.mode === "gynecology" ? [
+    ["LMP", overviewDateIfPresent(latestSnapshot?.lmp || overviewValue(gynecology, ["lmp", "lmpDate", "lastMenstrualPeriod"]))],
+    ["Cycle day", cycleDay(latestSnapshot?.lmp) || overviewValue(context.cycle ?? gynecology, ["cycleDay", "currentCycleDay"])],
+    ["Regularity", latestSnapshot?.regularity ?? ""],
+    ["Cycle interval", latestSnapshot?.cycleLength ? `${latestSnapshot.cycleLength} days` : ""],
+    ["Flow", latestSnapshot?.flow ?? ""],
+    ["Abnormal bleeding", latestSnapshot?.abnormalFlags?.join(", ") ?? ""],
+    ["Period start", overviewDateIfPresent(overviewValue(gynecology, ["periodStart", "menstrualPeriodStart"]))],
+    ["Period end", overviewDateIfPresent(overviewValue(gynecology, ["periodEnd", "menstrualPeriodEnd"]))],
+    ["Bleeding pattern", overviewValue(gynecology, ["bleedingPattern", "menstrualHistory"])],
+    ["Endometrial context", overviewValue(gynecology, ["endometrialContext", "endometrium", "endometrialPattern"])],
+    ["Calendar summary", overviewValue(gynecology, ["menstrualCalendarSummary", "cycleSummary"])]
+  ] : context.mode === "infertility" ? [
+    ["Cycle day", cycleDay(latestSnapshot?.lmp) || overviewValue(context.cycle, ["cycleDay", "currentCycleDay"])],
+    ["LMP", overviewDateIfPresent(latestSnapshot?.lmp || overviewValue(context.cycle, ["lmp", "lmpDate", "periodStart"]))],
+    ["Cycle pattern", [latestSnapshot?.regularity, latestSnapshot?.cycleLength ? `${latestSnapshot.cycleLength} days` : ""].filter(Boolean).join(" · ")],
+    ["Cycle number", latestSnapshot?.cycleNumber ?? overviewValue(context.cycle, ["cycleNumber"])],
+    ["Next scan", overviewDateIfPresent(latestSnapshot?.nextScanDate ?? "")],
+    ["Stimulation", overviewValue(context.cycle ?? context.infertilityEpisode, ["stimulationContext", "protocolName", "treatmentPlan"])],
+    ["Monitoring", overviewValue(context.monitoringVisit ?? context.cycle, ["follicularMonitoringContext", "monitoringSummary", "status"])],
+    ["Ovarian context", overviewValue(context.cycle ?? context.infertilityEpisode, ["ovarianContext", "ovarianFindings"])],
+    ["Episode", overviewValue(context.infertilityEpisode, ["title", "episodeType", "status"])]
+  ] : context.mode === "pregnancy" ? [
+    ["LMP", overviewDateIfPresent(overviewValue(context.pregnancy, ["lmp", "lmpDate"]) || latestSnapshot?.lmp || "")],
+    ["EDD", overviewDateIfPresent(overviewValue(context.pregnancy, ["edd", "estimatedDueDate"]) || latestSnapshot?.edd || "")],
+    ["GA", gestationalAge(overviewValue(context.pregnancy, ["edd", "estimatedDueDate"]) || latestSnapshot?.edd || "") || overviewValue(context.pregnancy, ["gestationalAge", "ga"])],
+    ["Trimester", pregnancyTrimester(overviewValue(context.pregnancy, ["edd", "estimatedDueDate"]) || latestSnapshot?.edd || "") || overviewValue(context.pregnancy, ["trimester", "currentTrimester"])],
+    ["Dating method", overviewValue(context.pregnancy, ["datingMethod"]) || latestSnapshot?.datingMethod || ""],
+    ["Dating status", latestSnapshot?.lmpCertainty || overviewValue(context.pregnancy, ["datingStatus", "confidenceStatus"])],
+    ["Episode", overviewValue(context.pregnancy, ["title", "episodeType", "status"])],
+    ["Gravida / Para", gravidaParaValue(context.pregnancy)],
+    ["Risk context", overviewValue(context.pregnancy, ["riskContext", "riskLevel", "riskStatus"])]
+  ] : context.mode === "postpartum" ? [
+    ["Delivery date", overviewDateIfPresent(latestSnapshot?.deliveryDate || overviewValue(postpartum ?? context.activePhase, ["deliveryDate", "deliveredAt", "startDate"]))],
+    ["Postpartum interval", postpartumInterval(latestSnapshot?.deliveryDate || overviewValue(postpartum ?? context.activePhase, ["deliveryDate", "deliveredAt", "startDate"]))],
+    ["Lochia / bleeding", latestSnapshot?.lochiaStatus || latestSnapshot?.abnormalFlags?.join(", ") || ""],
+    ["Menstruation", latestSnapshot?.returnOfMenstruation ?? ""],
+    ["Breastfeeding", latestSnapshot?.breastfeeding ?? ""],
+    ["Contraception", latestSnapshot?.contraception ?? ""],
+    ["Postpartum stage", overviewValue(postpartum, ["postpartumDay", "postpartumWeek", "stage"])],
+    ["Feeding", overviewValue(postpartum, ["feedingContext", "feedingMethod"])],
+    ["Recovery", overviewValue(postpartum, ["recoveryContext", "recoveryStatus"])],
+    ["Follow-up", overviewValue(postpartum, ["followUpContext", "followUpStatus", "status"])]
+  ] : context.mode === "menopause" ? [
+    ["Phase", latestSnapshot?.menopauseStatus || overviewValue(menopause ?? context.activePhase, ["phase", "phaseType", "title"])],
+    ["Last natural period", overviewDateIfPresent(latestSnapshot?.lastNaturalPeriod || overviewValue(menopause, ["lmp", "lmpDate", "lastMenstrualPeriod"]))],
+    ["Bleeding status", latestSnapshot?.abnormalFlags?.join(", ") ?? ""],
+    ["Hormone therapy", latestSnapshot?.hormoneTherapy ?? ""],
+    ["Symptoms", overviewValue(menopause, ["symptomContext", "symptoms"])],
+    ["Review", overviewValue(menopause, ["reviewStatus", "status"])]
+  ] : context.mode === "postoperative" ? [
+    ["Hysterectomy status", latestSnapshot?.hysterectomyStatus ?? ""],
+    ["Hysterectomy date", overviewDateIfPresent(latestSnapshot?.hysterectomyDate ?? "")],
+    ["Cervix", latestSnapshot?.cervixStatus ?? ""],
+    ["Ovaries", latestSnapshot?.ovariesStatus ?? ""],
+    ["Bleeding / discharge", latestSnapshot?.abnormalFlags?.join(", ") ?? ""],
+    ["Procedure", overviewValue(postoperative ?? context.activePhase, ["procedure", "procedureName", "title"])],
+    ["Procedure date", overviewDateIfPresent(overviewValue(postoperative ?? context.activePhase, ["procedureDate", "performedAt", "startDate"]))],
+    ["Postoperative stage", overviewValue(postoperative, ["postoperativeDay", "postoperativeWeek", "stage"])],
+    ["Follow-up", overviewValue(postoperative, ["followUpStatus", "status"])]
+  ] : [
+    ["Episode", overviewValue(generalEpisode, ["title", "episodeType", "phaseType"])],
+    ["Status", overviewValue(generalEpisode, ["status"])],
+    ["Started", overviewDateIfPresent(overviewValue(generalEpisode, ["startDate", "date", "createdAt"]))],
+    ["Context", overviewValue(generalEpisode, ["notes", "description", "reasonForVisit"])]
+  ];
+  const availableValues = values.filter(([, value]) => value);
+
+  return <OverviewCard className="overview-card-pattern overview-span-8" icon="□" tone="teal" title={contextCardTitle} action={contract.action} onAction={() => onNavigate(contract.route)}>
+    {availableValues.length ? <><div className="overview-context-values">{availableValues.slice(0, 8).map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>{latestSnapshot ? <p className="muted">Source: signed encounter {overviewDate(latestSnapshot.visitDate)}</p> : null}</> : <OverviewEmpty label={contract.emptyAction} onClick={() => onNavigate(contract.route)} />}
+    <ContextClinicalCalendar patientId={patient.id} mode={context.mode} snapshots={signedSnapshots} related={related} />
+    <MenstrualHistoryTimeline patientId={patient.id} snapshots={signedSnapshots} />
+  </OverviewCard>;
+}
+
+type ReproductiveSummarySnapshot = {
+  context?: string;
+  encounterId?: string;
+  sourceEncounterId?: string;
+  visitDate?: string;
+  confirmedAt?: string;
+  changeStatus?: string;
+  lmp?: string;
+  lmpCertainty?: string;
+  regularity?: string;
+  cycleLength?: string;
+  bleedingDuration?: string;
+  flow?: string;
+  abnormalFlags?: string[];
+  narrative?: string;
+  edd?: string;
+  datingMethod?: string;
+  cycleNumber?: string;
+  triggerDate?: string;
+  expectedOvulationDate?: string;
+  nextScanDate?: string;
+  deliveryDate?: string;
+  lochiaStatus?: string;
+  returnOfMenstruation?: string;
+  breastfeeding?: string;
+  contraception?: string;
+  menopauseStatus?: string;
+  lastNaturalPeriod?: string;
+  hormoneTherapy?: string;
+  hysterectomyDate?: string;
+  hysterectomyStatus?: string;
+  cervixStatus?: string;
+  ovariesStatus?: string;
+  baselineProfile?: {
+    usualRegularity?: string;
+    usualCycleLength?: string;
+    usualBleedingDuration?: string;
+    usualFlow?: string;
+    longstandingDysmenorrhea?: boolean;
+    menopauseStatus?: string;
+  };
+};
+
+function ContextClinicalCalendar({ patientId, mode, snapshots, related }: { patientId: string; mode: PatientWorkspaceMode; snapshots: ReproductiveSummarySnapshot[]; related: Record<string, Record<string, unknown>[]> }) {
+  const seed = snapshots[0]?.lmp || snapshots[0]?.deliveryDate || new Date().toISOString();
+  const [visibleMonth, setVisibleMonth] = useState(() => monthStart(seed));
+  const events = contextCalendarEvents(mode, snapshots, related);
+  const monthStartDate = new Date(`${visibleMonth}T00:00:00`);
+  const gridStart = new Date(monthStartDate);
+  gridStart.setDate(1 - monthStartDate.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return date;
+  });
+  const moveMonth = (offset: number) => {
+    const next = new Date(monthStartDate);
+    next.setMonth(next.getMonth() + offset);
+    setVisibleMonth(monthStart(next.toISOString()));
+  };
+  return <section className="context-clinical-calendar" aria-label={`${mode} calendar`}>
+    <div className="section-heading"><h4>{calendarTitle(mode)}</h4><div className="form-actions"><button className="text-button" type="button" onClick={() => moveMonth(-1)}>Previous</button><strong>{monthStartDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><button className="text-button" type="button" onClick={() => moveMonth(1)}>Next</button></div></div>
+    <div className="context-calendar-weekdays">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
+    <div className="context-calendar-grid">{days.map((date) => {
+      const key = date.toISOString().slice(0, 10);
+      const dayEvents = events.filter((event) => event.date === key);
+      return <div className={date.getMonth() === monthStartDate.getMonth() ? "context-calendar-day" : "context-calendar-day outside"} key={key}><span>{date.getDate()}</span>{dayEvents.map((event, index) => event.encounterId ? <Link title={event.label} href={`/patients/${patientId}/visits/${event.encounterId}/history`} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</Link> : <span title={event.label} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</span>)}</div>;
+    })}</div>
+    <div className="context-calendar-legend">{[...new Map(events.map((event) => [event.kind, event])).values()].map((event) => <span key={event.kind}><i className={event.kind} />{event.kind.replaceAll("_", " ")}</span>)}</div>
+  </section>;
+}
+
+function MenstrualHistoryTimeline({ patientId, snapshots }: { patientId: string; snapshots: ReproductiveSummarySnapshot[] }) {
+  const [filter, setFilter] = useState("all");
+  const filtered = snapshots.filter((snapshot) => filter === "all" || filter === "abnormal" ? filter === "all" || Boolean(snapshot.abnormalFlags?.length) : snapshot.context === filter);
+  const baseline = snapshots.find((snapshot) => snapshot.baselineProfile)?.baselineProfile;
+  if (!snapshots.length) return null;
+  return <details className="menstrual-history-timeline">
+    <summary>Complete menstrual / reproductive history ({snapshots.length})</summary>
+    {baseline ? <div className="reproductive-baseline-summary"><strong>Baseline menstrual profile</strong><span>{[baseline.usualRegularity, baseline.usualCycleLength ? `${baseline.usualCycleLength}-day interval` : "", baseline.usualBleedingDuration ? `${baseline.usualBleedingDuration}-day bleeding` : "", baseline.usualFlow].filter(Boolean).join(" · ") || baseline.menopauseStatus || "Baseline recorded"}</span></div> : null}
+    <div className="clinical-lenses clinical-filter-row">{["all", "abnormal", "gynecology", "infertility", "postpartum", "other"].map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} onClick={(event) => { event.preventDefault(); setFilter(item); }}>{item === "abnormal" ? "Abnormal only" : item}</button>)}</div>
+    <div className="menstrual-history-records">{filtered.map((snapshot, index) => <article key={`${snapshot.sourceEncounterId}-${index}`}><div className="data-row-header"><strong>{overviewDate(snapshot.visitDate ?? snapshot.confirmedAt ?? "")}</strong><span className="badge">{snapshot.changeStatus?.replaceAll("_", " ") || snapshot.context || "recorded"}</span></div><dl><div><dt>LMP</dt><dd>{snapshot.lmp ? overviewDate(snapshot.lmp) : "Not recorded"}</dd></div>{snapshot.lmp ? <div><dt>Cycle day</dt><dd>{cycleDay(snapshot.lmp) || "Not calculable"}</dd></div> : null}<div><dt>Pattern</dt><dd>{[snapshot.regularity, snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : "", snapshot.bleedingDuration ? `${snapshot.bleedingDuration}-day bleeding` : "", snapshot.flow].filter(Boolean).join(" · ") || "Not recorded"}</dd></div><div><dt>Flags</dt><dd>{snapshot.abnormalFlags?.join(", ") || "None recorded"}</dd></div>{snapshot.narrative ? <div><dt>Note</dt><dd>{snapshot.narrative}</dd></div> : null}</dl>{snapshot.sourceEncounterId ? <Link href={`/patients/${patientId}/visits/${snapshot.sourceEncounterId}/history`}>Open source encounter</Link> : null}</article>)}</div>
+  </details>;
+}
+
+export function PatientRecentActivity({ timelineItems, onViewTimeline }: { timelineItems: TimelineItem[]; onViewTimeline: () => void }) {
+  const recentTimeline = timelineItems.slice(0, 4);
+  return <section className="patient-recent-activity" aria-label="Recent patient activity">
+    <header><h3>Recent activity</h3><button className="text-button" type="button" onClick={onViewTimeline}>View all</button></header>
+    {recentTimeline.length ? <div>{recentTimeline.map((item) => <article key={`${item.type}-${item.dateTime}-${item.title}`}><strong>{item.title}</strong><span>{overviewDate(item.dateTime)} · {item.status}</span><p>{item.description}</p></article>)}</div> : <button className="overview-empty-action" type="button" onClick={onViewTimeline}>View timeline</button>}
+  </section>;
+}
+
+function OverviewCard({ className, icon, tone = "", title, action, onAction, children }: {
+  className: string;
+  icon: string;
+  tone?: string;
+  title: string;
+  action?: string;
+  onAction?: () => void;
+  children: ReactNode;
+}) {
+  return <article className={`clinical-overview-card ${className}`}><header><div className="overview-card-title"><span className={`overview-card-icon ${tone}`}>{icon}</span><h3>{title}</h3></div>{action ? <button className="text-button" type="button" onClick={onAction}>{action}</button> : null}</header><div className="overview-card-body">{children}</div></article>;
+}
+
+function OverviewEmpty({ label, onClick, visual = false }: { label: string; onClick: () => void; visual?: boolean }) {
+  return <div className={visual ? "overview-empty overview-empty-visual" : "overview-empty"}>{visual ? <span aria-hidden="true">US</span> : null}<button className="overview-empty-action" type="button" onClick={onClick}>{label}</button></div>;
+}
+
+function OverviewRows({ rows, titleKeys, detailKeys, compact = false }: { rows: Record<string, unknown>[]; titleKeys: string[]; detailKeys: string[]; compact?: boolean }) {
+  return <div className={compact ? "overview-data-rows compact" : "overview-data-rows"}>{rows.map((row, index) => <article key={String(row.id ?? index)}><div><strong>{overviewValue(row, titleKeys)}</strong><p>{overviewValue(row, detailKeys) || "Recorded"}</p></div>{overviewValue(row, ["status", "reviewStatus", "severity"]) ? <span>{overviewValue(row, ["status", "reviewStatus", "severity"])}</span> : null}</article>)}</div>;
+}
+
+function firstOverviewRow(rows?: Record<string, unknown>[]) {
+  return rows?.[0];
+}
+
+function structuredEncounterInput(value: unknown): { complaints: Array<{ id?: string; label: string; category: string; status?: string }>; reproductiveSnapshot?: ReproductiveSummarySnapshot } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return { complaints: [] };
+  const row = value as Record<string, unknown>;
+  return {
+    complaints: Array.isArray(row.complaints) ? row.complaints.filter((item): item is { id?: string; label: string; category: string; status?: string } => Boolean(item && typeof item === "object" && "label" in item)) : [],
+    reproductiveSnapshot: row.reproductiveSnapshot && typeof row.reproductiveSnapshot === "object" && !Array.isArray(row.reproductiveSnapshot) ? row.reproductiveSnapshot as ReproductiveSummarySnapshot : undefined
+  };
+}
+
+function clinicalSummaryId(category: string, label: string) {
+  return `${category}:${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function cycleDay(lmp?: string) {
+  if (!lmp) return "";
+  const start = new Date(`${lmp.slice(0, 10)}T00:00:00`);
+  const today = new Date();
+  if (!Number.isFinite(start.getTime()) || start > today) return "";
+  const days = Math.floor((today.getTime() - start.getTime()) / 86_400_000) + 1;
+  return days > 0 && days <= 365 ? String(days) : "";
+}
+
+function gestationalAge(edd: string) {
+  if (!edd) return "";
+  const due = new Date(`${edd.slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(due.getTime())) return "";
+  const conceptionAnchor = new Date(due);
+  conceptionAnchor.setDate(conceptionAnchor.getDate() - 280);
+  const days = Math.floor((Date.now() - conceptionAnchor.getTime()) / 86_400_000);
+  return days >= 0 && days <= 308 ? `${Math.floor(days / 7)}w ${days % 7}d` : "";
+}
+
+function pregnancyTrimester(edd: string) {
+  const ga = gestationalAge(edd);
+  const weeks = Number(ga.match(/^(\d+)w/)?.[1]);
+  if (!Number.isFinite(weeks)) return "";
+  return weeks < 14 ? "First" : weeks < 28 ? "Second" : "Third";
+}
+
+function postpartumInterval(deliveryDate: string) {
+  if (!deliveryDate) return "";
+  const delivery = new Date(`${deliveryDate.slice(0, 10)}T00:00:00`);
+  if (!Number.isFinite(delivery.getTime())) return "";
+  const days = Math.floor((Date.now() - delivery.getTime()) / 86_400_000);
+  return days >= 0 ? days < 14 ? `Day ${days}` : `Week ${Math.floor(days / 7)}` : "";
+}
+
+function monthStart(value: string) {
+  const date = new Date(value);
+  const safe = Number.isFinite(date.getTime()) ? date : new Date();
+  return `${safe.getFullYear()}-${String(safe.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function calendarTitle(mode: PatientWorkspaceMode) {
+  if (mode === "pregnancy") return "Pregnancy calendar";
+  if (mode === "infertility") return "Fertility cycle calendar";
+  if (mode === "postpartum") return "Postpartum calendar";
+  if (mode === "gynecology") return "Menstrual calendar";
+  return "Clinical calendar";
+}
+
+function contextCalendarEvents(mode: PatientWorkspaceMode, snapshots: ReproductiveSummarySnapshot[], related: Record<string, Record<string, unknown>[]>) {
+  const events: Array<{ date: string; label: string; kind: string; encounterId?: string }> = [];
+  const add = (date: unknown, label: string, kind: string, encounterId?: string) => {
+    const value = String(date ?? "").slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) events.push({ date: value, label, kind, encounterId });
+  };
+  for (const snapshot of snapshots) {
+    add(snapshot.visitDate ?? snapshot.confirmedAt, "Visit snapshot", "encounter", snapshot.sourceEncounterId);
+    add(snapshot.lmp, "LMP", "menstrual", snapshot.sourceEncounterId);
+    add(snapshot.triggerDate, "Trigger", "fertility_cycle", snapshot.sourceEncounterId);
+    add(snapshot.expectedOvulationDate, "Expected ovulation", "fertility_cycle", snapshot.sourceEncounterId);
+    add(snapshot.nextScanDate, "Next scan", "ultrasound", snapshot.sourceEncounterId);
+    add(snapshot.deliveryDate, "Delivery", "postpartum", snapshot.sourceEncounterId);
+    add(snapshot.edd, "EDD", "pregnancy", snapshot.sourceEncounterId);
+    if (mode === "gynecology" && snapshot.lmp && snapshot.regularity === "regular" && Number(snapshot.cycleLength) >= 15 && Number(snapshot.cycleLength) <= 90) {
+      const expected = new Date(`${snapshot.lmp.slice(0, 10)}T00:00:00`);
+      expected.setDate(expected.getDate() + Number(snapshot.cycleLength));
+      add(expected.toISOString(), "Expected cycle", "calculated");
+    }
+  }
+  for (const row of related.ultrasound ?? []) add(row.scanDate ?? row.studyDate ?? row.createdAt, "Ultrasound", "ultrasound", String(row.encounterId ?? "") || undefined);
+  for (const row of related.investigations ?? []) add(row.requestedAt ?? row.createdAt ?? row.expectedDate, "Investigation", "investigation", String(row.encounterId ?? "") || undefined);
+  for (const row of related.tasks ?? []) add(row.dueAt ?? row.followUpDate, "Follow-up", "follow_up", String(row.encounterId ?? "") || undefined);
+  for (const row of related.pregnancy ?? []) add(row.estimatedDueDate ?? row.edd, "EDD", "pregnancy");
+  return events;
+}
+
+function overviewValue(row: unknown, keys: string[]) {
+  if (!row || typeof row !== "object") return "";
+  const values = row as Record<string, unknown>;
+  for (const key of keys) {
+    const value = values[key];
+    if (value !== undefined && value !== null && String(value).trim()) return String(value);
+  }
+  return "";
+}
+
+function overviewDateIfPresent(value: string) {
+  return value ? overviewDate(value) : "";
+}
+
+function gravidaParaValue(pregnancy?: Record<string, unknown>) {
+  const gravida = overviewValue(pregnancy, ["gravida"]);
+  const para = overviewValue(pregnancy, ["para"]);
+  return gravida || para ? `${gravida || "—"} / ${para || "—"}` : "";
+}
+
+function overviewDate(value: string) {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : value;
+}
 export function MiniCount({ label, value, tone = "" }: { label: string; value: number; tone?: string }) {
     return (
     <div className={`mini-metric-card ${tone}`}>

@@ -15,6 +15,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export type DrugMarketProduct = {
   id: string;
   tradeName: string;
+  tradeNameArabic?: string | null;
   genericName?: string | null;
   scientificName?: string | null;
   family?: string | null;

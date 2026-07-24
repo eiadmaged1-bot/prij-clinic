@@ -155,6 +155,9 @@ export class EncountersService {
   async sign(id: string, user: AuthUser) {
     const existing = await this.get(id, user);
 
+    if (existing.status === "signed") {
+      return existing;
+    }
     if (existing.status !== "draft") {
       throw new BadRequestException("Only draft encounters can be signed.");
     }
@@ -167,6 +170,88 @@ export class EncountersService {
         await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });
         await tx.activeQueueTicketLock.deleteMany({ where: { queueTicketId: queueTicket.id } });
         await tx.auditLog.create({ data: { actorUserId: user.id, action: "queue.completed_with_encounter", resourceType: "queue_ticket", resourceId: queueTicket.id, branchId: signed.branchId, severity: "high", metadataJson: { patientId: signed.patientId, encounterId: signed.id, from: "in_room", to: "completed" } } });
+      }
+      const dating = pregnancyDatingFromEncounter(existing.examinationJson);
+      if (dating) {
+        const pregnancy = await tx.pregnancy.findFirst({
+          where: { patientId: signed.patientId, status: "active", ...(dating.episodeId ? { id: dating.episodeId } : {}) },
+          orderBy: { createdAt: "desc" }
+        });
+        if (pregnancy) {
+          const lmpChanged = Boolean(dating.lmp && pregnancy.lmpDate && dateKey(pregnancy.lmpDate) !== dating.lmp);
+          const eddChanged = Boolean(dating.edd && pregnancy.estimatedDueDate && dateKey(pregnancy.estimatedDueDate) !== dating.edd);
+          const correctionAllowed = !lmpChanged && !eddChanged || Boolean(dating.datingCorrectionReason);
+          if (correctionAllowed) {
+            const lmpDate = dating.lmp ? safeDate(dating.lmp) : pregnancy.lmpDate;
+            const estimatedDueDate = dating.edd ? safeDate(dating.edd) : pregnancy.estimatedDueDate;
+            await tx.pregnancy.update({
+              where: { id: pregnancy.id },
+              data: {
+                lmpDate,
+                estimatedDueDate,
+                datingMethod: dating.datingMethod || pregnancy.datingMethod
+              }
+            });
+            if (estimatedDueDate && dating.datingMethod) {
+              await tx.pregnancyDatingAssessment.create({
+                data: {
+                  patientId: signed.patientId,
+                  pregnancyEpisodeId: pregnancy.id,
+                  datingSource: dating.datingMethod,
+                  lmpDate,
+                  cycleLengthDays: positiveInteger(dating.cycleLength),
+                  knownEdd: estimatedDueDate,
+                  calculatedEdd: estimatedDueDate,
+                  confidenceStatus: dating.lmpCertainty || "doctor_confirmed",
+                  isBestObstetricEstimate: true,
+                  isLocked: true,
+                  lockedByUserId: user.id,
+                  lockedAt: completedAt,
+                  changeReason: dating.datingCorrectionReason || "Confirmed from signed antenatal encounter",
+                  inputJson: dating as Prisma.InputJsonValue,
+                  outputJson: { authoritativeEdd: dateKey(estimatedDueDate), sourceEncounterId: signed.id },
+                  createdByUserId: user.id,
+                  reviewedByUserId: user.id,
+                  reviewedAt: completedAt
+                }
+              });
+            }
+            await tx.auditLog.create({ data: { actorUserId: user.id, action: "pregnancy.dating_confirmed_from_encounter", resourceType: "pregnancy", resourceId: pregnancy.id, branchId: signed.branchId, severity: "high", metadataJson: { patientId: signed.patientId, encounterId: signed.id, datingMethod: dating.datingMethod, correctionReasonPresent: Boolean(dating.datingCorrectionReason) } } });
+          } else {
+            await tx.auditLog.create({ data: { actorUserId: user.id, action: "pregnancy.dating_change_requires_review", resourceType: "pregnancy", resourceId: pregnancy.id, branchId: signed.branchId, severity: "high", metadataJson: { patientId: signed.patientId, encounterId: signed.id, lmpChanged, eddChanged } } });
+          }
+        }
+      }
+      const derivedTags = structuredTagsFromEncounter(existing.examinationJson);
+      for (const tag of derivedTags) {
+        await tx.patientClinicalTag.updateMany({
+          where: { patientId: signed.patientId, tagCode: tag.tagCode, sourceType: "encounter_structured", sourceId: { not: signed.id }, isRemoved: false },
+          data: { status: tag.status === "resolved" ? "resolved" : "historical", historyStatus: tag.status === "resolved" ? "resolved" : "historical", resolutionDate: tag.status === "resolved" ? completedAt : undefined }
+        });
+        const existingTag = await tx.patientClinicalTag.findFirst({ where: { patientId: signed.patientId, tagCode: tag.tagCode, sourceType: "encounter_structured", sourceId: signed.id } });
+        if (!existingTag) {
+          const definition = await tx.clinicalTagDefinition.findUnique({ where: { code: tag.tagCode } });
+          await tx.patientClinicalTag.create({
+            data: {
+              patientId: signed.patientId,
+              tagDefinitionId: definition?.id,
+              tagCode: tag.tagCode,
+              label: tag.label,
+              category: tag.category,
+              sourceType: "encounter_structured",
+              sourceId: signed.id,
+              sourceEncounterId: signed.id,
+              assignmentType: "doctor_documented",
+              doctorConfirmed: true,
+              status: tag.status,
+              historyStatus: tag.status === "resolved" ? "resolved" : "current",
+              effectiveDate: completedAt,
+              tagDate: completedAt,
+              detailJson: tag.detail as Prisma.InputJsonValue,
+              createdByUserId: user.id
+            }
+          });
+        }
       }
       return { encounter: signed, queueTicketId: queueTicket?.id ?? null };
     });
@@ -256,6 +341,85 @@ export class EncountersService {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+function pregnancyDatingFromEncounter(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const snapshot = (value as Record<string, unknown>).reproductiveSnapshot;
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+  const row = snapshot as Record<string, unknown>;
+  if (String(row.context ?? "") !== "pregnancy") return null;
+  return {
+    episodeId: cleanText(row.episodeId),
+    lmp: dateText(row.lmp),
+    lmpCertainty: cleanText(row.lmpCertainty),
+    cycleLength: cleanText(row.cycleLength),
+    edd: dateText(row.edd),
+    datingMethod: cleanText(row.datingMethod),
+    datingCorrectionReason: cleanText(row.datingCorrectionReason)
+  };
+}
+
+function cleanText(value: unknown) {
+  return String(value ?? "").trim() || null;
+}
+
+function dateText(value: unknown) {
+  const text = cleanText(value);
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function safeDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function dateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function positiveInteger(value: string | null) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function structuredTagsFromEncounter(value: Prisma.JsonValue | null) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const row = value as Record<string, unknown>;
+  const tags: Array<{ tagCode: string; label: string; category: string; status: string; detail: Record<string, unknown> }> = [];
+  if (Array.isArray(row.complaints)) {
+    for (const value of row.complaints) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const complaint = value as Record<string, unknown>;
+      const label = String(complaint.label ?? "").trim();
+      if (!label) continue;
+      const lifecycle = String(complaint.status ?? "Active").toLowerCase();
+      tags.push({
+        tagCode: `complaint_${slugClinicalTag(String(complaint.id ?? label))}`,
+        label,
+        category: "presenting_complaint",
+        status: lifecycle === "resolved" ? "resolved" : "active",
+        detail: { structuredId: complaint.id ?? null, lifecycle, category: complaint.category ?? null }
+      });
+    }
+  }
+  const snapshot = row.reproductiveSnapshot;
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    const reproductive = snapshot as Record<string, unknown>;
+    for (const flag of Array.isArray(reproductive.abnormalFlags) ? reproductive.abnormalFlags : []) {
+      const label = String(flag).trim();
+      if (!label) continue;
+      tags.push({ tagCode: slugClinicalTag(label), label, category: "menstrual_reproductive", status: "active", detail: { context: reproductive.context ?? null, lmp: reproductive.lmp ?? null } });
+    }
+    if (String(reproductive.regularity ?? "").toLowerCase() === "irregular") {
+      tags.push({ tagCode: "irregular_cycle", label: "Irregular cycle", category: "menstrual_reproductive", status: "active", detail: { context: reproductive.context ?? null, lmp: reproductive.lmp ?? null } });
+    }
+  }
+  return tags;
+}
+
+function slugClinicalTag(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 96) || "structured_finding";
 }
 
 function jsonOrNull(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {

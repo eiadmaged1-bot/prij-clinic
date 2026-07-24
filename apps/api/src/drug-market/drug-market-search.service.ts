@@ -87,6 +87,7 @@ export class DrugMarketSearchService {
       products: products.map((product) => ({
         id: product.id,
         tradeName: product.tradeName,
+        tradeNameArabic: jsonText(product.variants[0]?.officialRowJson, "commercial_name_ar"),
         genericName: product.genericName,
         scientificName: product.scientificName,
         family: product.familyText,
@@ -117,7 +118,23 @@ export class DrugMarketSearchService {
           trustStatus: variant.verificationStatus === "verified" ? "verified" : "needs_review",
           isDemo: variant.isDemo
         }))
-      }))
+      })).sort((left, right) => searchRank(right, normalized) - searchRank(left, normalized))
     };
   }
+}
+
+function jsonText(value: unknown, key: string) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = (value as Record<string, unknown>)[key];
+  return candidate === undefined || candidate === null ? null : String(candidate);
+}
+
+function searchRank(product: { tradeName: string; tradeNameArabic: string | null; genericName: string | null; scientificName: string | null; family: string | null }, query: string) {
+  if (!query) return 0;
+  const values = [product.scientificName, product.genericName, product.tradeName, product.tradeNameArabic, product.family].map((value) => normalizeMedicationSearch(value ?? ""));
+  if (values[2] === query || values[3] === query) return 100;
+  if (values[0] === query || values[1] === query) return 95;
+  if (values[2]?.startsWith(query) || values[3]?.startsWith(query)) return 85;
+  if (values[0]?.startsWith(query) || values[1]?.startsWith(query)) return 80;
+  return values.some((value) => value.includes(query)) ? 50 : 0;
 }

@@ -25,6 +25,14 @@ export type MedicationResult = {
   genericName?: string | null;
   brandName?: string | null;
   tradeName?: string | null;
+  tradeNameArabic?: string | null;
+  manufacturer?: string | null;
+  genericIds?: string[];
+  linkedGenericId?: string | null;
+  linkedTradeNames?: string[];
+  mappingStatus?: string | null;
+  clinicalProfileAvailable?: boolean;
+  prescriptionEligible?: boolean;
   family?: string | null;
   familyName?: string | null;
   className?: string | null;

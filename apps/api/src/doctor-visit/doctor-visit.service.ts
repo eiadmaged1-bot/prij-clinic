@@ -114,7 +114,8 @@ export class DoctorVisitService {
         ...(dto.historyText !== undefined ? { historyText: clean(dto.historyText) } : {}),
         ...(dto.examText !== undefined ? { examText: clean(dto.examText) } : {}),
         ...(dto.assessmentText !== undefined ? { assessmentText: clean(dto.assessmentText) } : {}),
-        ...(dto.planText !== undefined ? { planText: clean(dto.planText) } : {})
+        ...(dto.planText !== undefined ? { planText: clean(dto.planText) } : {}),
+        ...(dto.examinationJson !== undefined ? { examinationJson: stampStructuredInput(dto.examinationJson, encounterId, user.id) } : {})
       }
     });
 
@@ -186,7 +187,7 @@ export class DoctorVisitService {
 
   private async visitState(patientId: string, encounterId: string, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
-    const [encounter, historySheet, careAssistFindings, prescriptions, investigationOrders, followUps] = await Promise.all([
+    const [encounter, historySheet, careAssistFindings, prescriptions, investigationOrders, followUps, recentEncounters, pregnancyEpisode, infertilityEpisode] = await Promise.all([
       this.prisma.encounter.findFirst({
         where: { id: encounterId, patientId, ...doctorScope(user), ...patientBranchScope(user) },
         include: { doctor: { select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true } } }
@@ -200,6 +201,23 @@ export class DoctorVisitService {
       }),
       this.prisma.investigationOrder.findMany({ where: { patientId, encounterId, ...doctorScope(user), ...patientBranchScope(user) }, include: { items: true }, orderBy: { createdAt: "desc" } }),
       this.prisma.patientTask.findMany({ where: { patientId, taskType: "schedule_follow_up" }, orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }], take: 20 })
+      ,
+      this.prisma.encounter.findMany({
+        where: { patientId, status: "signed", id: { not: encounterId }, ...patientBranchScope(user) },
+        select: { id: true, status: true, startedAt: true, signedAt: true, createdAt: true, examinationJson: true },
+        orderBy: [{ signedAt: "desc" }, { createdAt: "desc" }],
+        take: 24
+      }),
+      this.prisma.pregnancy.findFirst({
+        where: { patientId, status: "active" },
+        include: { datingAssessments: { where: { voidedAt: null }, orderBy: { createdAt: "desc" }, take: 5 } },
+        orderBy: { createdAt: "desc" }
+      }),
+      this.prisma.infertilityEpisode.findFirst({
+        where: { patientId, status: "active" },
+        include: { cycles: { orderBy: { cycleNumber: "desc" }, take: 1, include: { monitoringVisits: { orderBy: { monitoringDate: "desc" }, take: 5 } } } },
+        orderBy: { createdAt: "desc" }
+      })
     ]);
     if (!encounter) throw new NotFoundException("Doctor visit not found.");
     return {
@@ -224,7 +242,10 @@ export class DoctorVisitService {
         }))
       })),
       investigationOrders,
-      followUps
+      followUps,
+      recentEncounters,
+      pregnancyEpisode,
+      infertilityEpisode
     };
   }
 }
@@ -272,6 +293,20 @@ function safetySummary(profile: {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+function stampStructuredInput(value: Record<string, unknown>, encounterId: string, userId: string): Prisma.InputJsonValue {
+  const snapshot = value.reproductiveSnapshot;
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return value as Prisma.InputJsonValue;
+  return {
+    ...value,
+    reproductiveSnapshot: {
+      ...(snapshot as Record<string, unknown>),
+      encounterId,
+      confirmedAt: new Date().toISOString(),
+      confirmedByUserId: userId
+    }
+  } as Prisma.InputJsonValue;
 }
 
 export function normalizeDoctorColor(color: string | null | undefined, userId: string) {

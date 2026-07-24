@@ -1,0 +1,250 @@
+.foundation {
+  display: grid;
+  gap: 0.9rem;
+  color: #17333a;
+}
+.draftNotice {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-inline-start: 4px solid #176b63;
+  border-radius: 8px;
+  background: #edf7f5;
+  color: #31575b;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+.heading,
+.editor header,
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+.heading h2 {
+  margin: 0.1rem 0;
+  color: #0f2744;
+  font-size: clamp(1.35rem, 4vw, 1.7rem);
+}
+.eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.review,
+.caution {
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: #e8f3f1;
+  color: #175c57;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.section,
+.editor {
+  min-width: 0;
+  padding: 0.85rem 0;
+  border: 0;
+  border-bottom: 1px solid #dce5e4;
+  border-radius: 0;
+  background: var(--surface, #fff);
+}
+.section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 800;
+  color: #0f2744;
+  font-size: 1.05rem;
+}
+.section > summary::marker {
+  color: var(--accent);
+}
+.lenses,
+.tags,
+.statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.38rem;
+  margin: 0.65rem 0;
+}
+.lenses button,
+.tags button,
+.statuses button {
+  min-height: 38px;
+  padding: 0.42rem 0.7rem;
+  border: 1px solid #cbd9d7;
+  font-size: 0.86rem;
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+}
+.active,
+.selected {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent-dark) !important;
+  font-weight: 750;
+}
+.groupGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.45rem;
+}
+.groupGrid details,
+.examCard {
+  padding: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.groupGrid summary,
+.examCard summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.editor {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.fields,
+.lowerFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.55rem;
+  margin: 0.65rem 0;
+}
+.fields label,
+.lowerFields label {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.wide {
+  grid-column: 1/-1;
+}
+.calendarHeader {
+  margin: 0.7rem 0;
+}
+.calendarHeader button {
+  min-width: 40px;
+  min-height: 40px;
+}
+.legend,
+.cycle,
+.selection {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+.calendar > button {
+  display: grid;
+  align-content: start;
+  min-width: 0;
+  min-height: 58px;
+  padding: 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  text-align: start;
+}
+.calendar small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.markedDay {
+  border-color: #176b63 !important;
+  background: #eaf5f3 !important;
+}
+.examGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.examCard summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.examCard summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: capitalize;
+}
+.anomaly {
+  border-color: #9b5f2c;
+  background: #fffaf4;
+}
+.diagramGrid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.5fr);
+  gap: 1rem;
+}
+.diagram {
+  width: 100%;
+  max-height: 360px;
+}
+.diagram g {
+  cursor: pointer;
+}
+.diagram g:focus {
+  outline: none;
+}
+.diagram g:focus circle {
+  stroke-width: 6;
+}
+.lowerFields {
+  padding: 0.7rem;
+  border: 1px solid #d49a53;
+  border-radius: 10px;
+  background: #fffaf1;
+}
+@media (max-width: 700px) {
+  .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .groupGrid {
+    grid-template-columns: 1fr;
+  }
+  .diagramGrid {
+    grid-template-columns: 1fr;
+  }
+  .examGrid {
+    grid-template-columns: 1fr;
+  }
+  .calendar > button {
+    min-height: 48px;
+    padding: 0.2rem;
+  }
+  .calendar small {
+    display: none;
+  }
+  .fields,
+  .lowerFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wide {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 380px) {
+  .fields,
+  .lowerFields {
+    grid-template-columns: 1fr;
+  }
+}

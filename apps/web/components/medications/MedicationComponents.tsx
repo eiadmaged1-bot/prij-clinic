@@ -49,16 +49,16 @@ export function MedicationSearchBox({ queryValue, onQueryChange, onSelect, onAdd
       <div className="section-heading">
         <div>
           <h2>Medication Search</h2>
-          <p className="muted">Generic, brand, trade, family, class, and function lookup for clinician review.</p>
+          <p className="muted">Search the clinical atlas and Egyptian market catalogue.</p>
         </div>
         <span className="badge warning">Doctor approval required</span>
       </div>
       <form className="inline-form" onSubmit={submit}>
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search generic name, family, class, or listed trade name" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search trade name, generic, ingredient, class, manufacturer or Arabic name" />
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
-      {query.trim().length < 2 ? <p className="notice">Search medication by generic name, brand/trade alias, class/family, or function.</p> : null}
+      {query.trim().length < 2 ? <p className="notice">Enter at least two characters.</p> : null}
       <div className="dense-card-list">
         {results.map((result) => <MedicationResultCard key={`${result.type}-${result.id}`} result={result} onSelect={onSelect} onAddToPrescription={onAddToPrescription} />)}
       </div>
@@ -70,18 +70,21 @@ export function MedicationResultCard({ result, onSelect, onAddToPrescription }: 
   return (
     <article className="data-row dense">
       <div className="data-row-header">
-        <strong>{result.genericName || result.tradeName || result.family || result.familyName || "Medication reference"}</strong>
+        <strong>{result.tradeName || result.genericName || result.family || result.familyName || "Medication reference"}</strong>
         <span className="badge">{medicationStatusLabel(result.verificationStatus)}</span>
       </div>
       <dl>
         <div><dt>Generic name</dt><dd>{result.genericName || "Not listed"}</dd></div>
         <div><dt>Brand or trade</dt><dd>{result.tradeName || result.brandName || "Not listed"}</dd></div>
+        {result.tradeNameArabic ? <div><dt>Arabic trade name</dt><dd lang="ar" dir="rtl">{result.tradeNameArabic}</dd></div> : null}
         <div><dt>Drug family</dt><dd>{result.family || result.familyName || "Not listed"}</dd></div>
-        <div><dt>Pregnancy</dt><dd>{result.verificationStatus === "verified" ? "Reviewed source available" : "Review required"}</dd></div>
-        <div><dt>Lactation</dt><dd>{result.verificationStatus === "verified" ? "Reviewed source available" : "Review required"}</dd></div>
+        {result.manufacturer ? <div><dt>Manufacturer</dt><dd>{result.manufacturer}</dd></div> : null}
+        <div><dt>Mapping</dt><dd>{result.mappingStatus === "mapping_under_review" ? "Generic mapping under review" : result.mappingStatus === "mapping_confirmed" ? "Generic mapping confirmed" : medicationStatusLabel(result.verificationStatus)}</dd></div>
+        <div><dt>Clinical profile</dt><dd>{result.clinicalProfileAvailable || result.type === "generic_medication" ? "Clinical reference available" : "Safety information not yet verified"}</dd></div>
         <div><dt>Strength and form</dt><dd>{[result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Market variant only when listed"}</dd></div>
+        {result.source ? <div><dt>Source</dt><dd>{result.source}</dd></div> : null}
       </dl>
-      <div className="form-actions"><button className="button secondary compact" type="button" onClick={() => onSelect?.(result)}>View profile</button>{onAddToPrescription ? <button className="button secondary compact" type="button" onClick={() => onAddToPrescription(result)}>Add to prescription</button> : null}</div>
+      <div className="form-actions"><button className="button secondary compact" type="button" onClick={() => onSelect?.(result)}>View product</button>{result.linkedGenericId && result.genericName ? <Link className="button secondary compact" href={`/medications?tab=search&query=${encodeURIComponent(result.genericName)}`}>Open generic reference</Link> : null}{onAddToPrescription ? <button className="button secondary compact" type="button" onClick={() => onAddToPrescription(result)}>Add to prescription</button> : null}</div>
     </article>
   );
 }
@@ -111,7 +114,7 @@ export function MedicationProfileCard({ medication }: { medication?: MedicationR
   if (!medication) return <section className="panel"><h2>Medication Profile</h2><p className="muted">Select a medication to view its clinical reference profile.</p></section>;
   return <section className="panel"><div className="section-heading"><h2>{medication.genericName || medication.tradeName || "Medication profile"}</h2><span className="badge">{medicationStatusLabel(medication.reviewStatus || medication.verificationStatus)}</span></div><dl>
     <div><dt>Generic</dt><dd>{medication.genericName || "Not listed"}</dd></div>
-    <div><dt>Brands</dt><dd>{medication.tradeName || medication.brandName || "No reviewed brand listed"}</dd></div>
+    <div><dt>Linked trade names</dt><dd>{medication.linkedTradeNames?.join(", ") || medication.tradeName || medication.brandName || "No linked trade name listed"}</dd></div>
     <div><dt>Family / class</dt><dd>{[medication.family, medication.className, medication.pharmacologicClass].filter(Boolean).join(" · ") || "Not listed"}</dd></div>
     <div><dt>Form / strength</dt><dd>{[medication.strengthText, medication.dosageForm, medication.route].filter(Boolean).join(" · ") || "Select a reviewed product variant when available"}</dd></div>
     <div><dt>Country availability</dt><dd>{medication.countryCode || "No reviewed market availability listed"}</dd></div>
@@ -184,7 +187,7 @@ export function PatientAllergyList({ patientId }: { patientId: string }) {
   return <section className="panel"><h2>Allergies</h2><p className="muted">Authoritative patient allergy records; an empty list is not interpreted as “no known allergies.”</p>{state === "loading" ? <div className="skeleton" /> : state === "error" ? <p className="form-error">Allergy records could not be loaded.</p> : records.length ? <div className="dense-card-list">{records.map((record) => <article className="data-row compact" key={record.id}><div><strong>{record.displayName}</strong><span className="badge warning">{record.severity}</span></div><span>{record.reactionText || "Reaction not recorded"}</span><small>{record.allergyType} · {record.status}</small></article>)}</div> : <p className="empty-state compact">Allergy status has not been recorded.</p>}</section>;
 }
 
-export function DrugMarketSearchBox() {
+export function DrugMarketSearchBox({ onSelect }: { onSelect?: (product: DrugMarketProduct) => void } = {}) {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<DrugMarketProduct[]>([]);
   const [status, setStatus] = useState("Ready");
@@ -217,29 +220,48 @@ export function DrugMarketSearchBox() {
         <button className="button" type="submit">Search</button>
       </form>
       <p className="muted">{status}</p>
-      <div className="dense-card-list">{products.map((product) => <DrugMarketResultCard key={product.id} product={product} />)}</div>
+      <div className="dense-card-list">{products.map((product) => <DrugMarketResultCard key={product.id} product={product} onSelect={onSelect} />)}</div>
     </section>
   );
 }
 
-export function DrugMarketResultCard({ product }: { product: DrugMarketProduct }) {
+export function DrugMarketResultCard({ product, onSelect }: { product: DrugMarketProduct; onSelect?: (product: DrugMarketProduct) => void }) {
   const verified = product.variantSummary?.some((variant) => variant.verificationStatus === "verified");
+  const variant = product.variantSummary?.[0];
   return (
     <article className="data-row dense">
       <div className="data-row-header">
-        <strong>{product.tradeName}</strong>
+        <strong>{product.scientificName || product.genericName || "Scientific composition not listed"}</strong>
         <span>{product.isDemo ? <span className="badge warning">Excluded local row</span> : <span className={verified ? "badge accent" : "badge warning"}>{verified ? "Official source verified" : "Clinical review required"}</span>} {product.badges?.map((badge) => <CountryBadge key={badge} label={badge} />)}</span>
       </div>
       <dl>
-        <div><dt>Generic name</dt><dd>{product.genericName || "Not listed"}</dd></div>
-        <div><dt>Drug family</dt><dd>{product.family || "Not listed"}</dd></div>
+        <div><dt>Trade name</dt><dd>{product.tradeName}</dd></div>
+        {product.tradeNameArabic ? <div><dt>Arabic search alias</dt><dd lang="ar" dir="rtl">{product.tradeNameArabic}</dd></div> : null}
+        <div><dt>Scientific composition</dt><dd>{product.scientificName || product.genericName || "Not listed"}</dd></div>
+        <div><dt>Manufacturer</dt><dd>{variant?.manufacturer || "Not listed"}</dd></div>
+        <div><dt>Drug class</dt><dd>{product.family || variant?.atcCode || "Not listed"}</dd></div>
+        <div><dt>Route</dt><dd>{variant?.route || "Not listed"}</dd></div>
+        <div><dt>Reference price</dt><dd>{variant?.officialPriceAmount ? `${variant.officialPriceAmount} ${variant.currency || "EGP"}` : "Not listed"} — reference metadata only</dd></div>
         <div><dt>Variants</dt><dd><StrengthVariantList variants={product.variantSummary ?? []} /></dd></div>
         <div><dt>Review status</dt><dd>{verified ? "Source verified" : product.verificationStatus === "verified" ? "Source verified" : "Needs source review"}</dd></div>
         <div><dt>Updated</dt><dd>{product.sourceFreshness ? formatDate(product.sourceFreshness) : "Not listed"}</dd></div>
       </dl>
-      <Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link>
+      <div className="form-actions">{onSelect ? <button className="button compact" type="button" onClick={() => onSelect(product)}>Select for draft</button> : null}<Link className="button secondary compact" href={`/drug-market/products/${product.id}`}>View variants</Link></div>
     </article>
   );
+}
+
+export function PatientMedicationWorkspace({ patientId, prescriptions }: { patientId: string; prescriptions: Array<Record<string, unknown>> }) {
+  const builderHref = `/prescriptions?patientId=${encodeURIComponent(patientId)}`;
+  return <section className="patient-medication-workspace">
+    <div className="section-heading"><h2>Patient medications</h2><Link className="button compact" href={builderHref}>Open Prescription Builder</Link></div>
+    <div className="module-grid compact-grid">
+      <PatientMedicationList patientId={patientId} />
+      <PatientAllergyList patientId={patientId} />
+      <section className="panel compact-panel"><h2>Prescription history</h2>{prescriptions.length ? <div className="data-list">{prescriptions.slice(0, 4).map((row, index) => <article className="data-row compact" key={String(row.id ?? index)}><strong>{String(row.status ?? "Draft")}</strong><span>Doctor review and signature status retained</span></article>)}</div> : <p className="empty-state compact smart-empty-state"><Link className="button secondary compact" href={builderHref}>Open prescription builder</Link></p>}</section>
+      <section className="panel compact-panel"><h2>Medication safety</h2><p className="notice">Safety information not yet verified.</p></section>
+    </div>
+  </section>;
 }
 
 export function CountryBadge({ label }: { label: string }) {

@@ -33,7 +33,7 @@ export function PatientInvestigationPanel({ patient, related, permissions, roles
       <div className="panel compact-panel section-heading">
         <div><h2>Investigations & results</h2><p className="muted">Requests inherit this patient and the active visit.</p></div>
         {canCreate && encounter ? <Link className="button compact" href={`/investigations?patientId=${patient.id}&encounterId=${String(encounter.id)}`}><ThreeDMedicalIcon name="investigations" size="sm" />New request</Link> : null}
-        {canCreate && !encounter ? <ActiveVisitLauncher className="button compact" patientId={patient.id}>Start / resume visit</ActiveVisitLauncher> : null}
+        {canCreate && !encounter ? <span className="badge warning">Active visit required to add</span> : null}
       </div>
       {children}
     </section>

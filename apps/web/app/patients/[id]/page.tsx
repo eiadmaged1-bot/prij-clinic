@@ -14,10 +14,9 @@ import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorks
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useInterfaceMode } from "@/lib/interface-mode";
 import type { PatientWorkspaceSummary } from "@prij-clinic/shared";
-import { ageLabel as patientAgeLabel, phaseTypeLabel } from "@/lib/patient-labels";
-import { AppActionButton } from "@/components/actions/AppActionButton";
+import { ageLabel as patientAgeLabel } from "@/lib/patient-labels";
 import { autosaveLabel, loadLocalDraft, useAutosaveDraft } from "@/lib/autosave-draft";
-import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel } from "./patient-components";
+import { Patient, PregnancyRecord, TabConfig, TimelineItem, ClinicalPhase, InfertilityWorkspace, requestPatientWorkspaceRefresh, resolvePatientWorkspaceContext, PatientQuickActions, ReceptionPatientProfile, ImportantPatientBanner, PatientActionPanel, PatientQrModal, PrintPacketPanel, PatientRecentActivity } from "./patient-components";
 import { WorkspaceModuleRenderer } from "./workspace-module-renderer";
 import type { WorkspacePanelPlacement } from "../../../components/patients/PatientWorkspaceEditor";
 import { PatientPanelErrorBoundary } from "../../../components/patients/PatientPanelErrorBoundary";
@@ -68,12 +67,15 @@ const relatedLoaders: TabConfig[] = [
 ];
 
 const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "pregnancy", "gynecology", "infertility", "documents", "billing", "consents"]);
-const hybridWorkspaceGroups = [
-  { key: "overview", label: "Overview", icon: "patients" as const, modules: ["overview", "allergies", "documents", "consents", "tasks", "referrals", "billing", "more"] },
-  { key: "visits", label: "Visits", icon: "encounter" as const, modules: ["doctor-visit", "history", "timeline", "pregnancy", "infertility", "ultrasound", "files", "internal-notes", "ai-snapshot"] },
-  { key: "investigations", label: "Investigations", icon: "investigations" as const, modules: ["investigations"] },
-  { key: "prescriptions", label: "Prescriptions", icon: "prescription" as const, modules: ["prescriptions", "medications"] },
-  { key: "guidelines", label: "Guidelines", icon: "files" as const, modules: [] }
+const approvedEncounterTabs = [
+  ["overview", "Overview"],
+  ["history", "History"],
+  ["doctor-visit", "Current Visit"],
+  ["ultrasound", "Ultrasound"],
+  ["investigations", "Labs"],
+  ["medications", "Medications"],
+  ["case-boards", "Care Plan"],
+  ["follow-up-hints", "Follow-up"]
 ] as const;
 
 void legacyTabDefinitions;
@@ -188,16 +190,19 @@ export default function PatientFilePage() {
     }),
     [clinicalPhases, infertilityWorkspace.cycles?.length, interfaceMode, patient?.patientType, permissions, roles, workspacePanels]
   );
-  const visiblePanelKeys = useMemo(() => visibleTabs.map((tab) => tab.key).join(","), [visibleTabs]);
-  const activeGroup = useMemo(() => hybridWorkspaceGroups.find((group) => group.key === activeTab || group.modules.some((module) => module === activeTab)) ?? hybridWorkspaceGroups[0], [activeTab]);
-  const visibleGroups = useMemo(() => hybridWorkspaceGroups.filter((group) => group.key === "guidelines" ? permissions.some((permission) => ["guidelines.read", "guidelines.search"].includes(permission)) : group.modules.some((module) => visibleTabs.some((tab) => tab.key === module))), [permissions, visibleTabs]);
-  const activeGroupTabs = useMemo(() => visibleTabs.filter((tab) => activeGroup.modules.some((module) => module === tab.key)), [activeGroup, visibleTabs]);
+  const visiblePanelKeys = useMemo(() => Array.from(new Set([...visibleTabs.map((tab) => tab.key), ...approvedEncounterTabs.map(([key]) => key)])).join(","), [visibleTabs]);
+  const encounterTabs = useMemo(() => approvedEncounterTabs.flatMap(([key, label]) => {
+    const tab = patientWorkspaceRegistry.find((entry) => entry.key === key) ?? legacyTabDefinitions.find((entry) => entry.key === key);
+    return tab ? [{ tab, label }] : [];
+  }), []);
+  const activeWorkspaceTab = useMemo(() => approvedEncounterTabs.some(([key]) => key === activeTab)
+    ? patientWorkspaceRegistry.find((tab) => tab.key === activeTab) ?? legacyTabDefinitions.find((tab) => tab.key === activeTab)
+    : visibleTabs.find((tab) => tab.key === activeTab), [activeTab, visibleTabs]);
   const ageLabel = patientAgeLabel(patient?.dateOfBirth);
-  const activePregnancyCount = (related.pregnancy ?? []).filter((row) => String(row.status ?? "").toLowerCase() === "active").length;
-  const pendingResultCount = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
   const openFollowUpCount = (related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up" && ["open", "in_progress"].includes(String(row.status ?? ""))).length;
   const unpaidInvoiceCount = (related.billing ?? related.invoices ?? []).filter((row) => ["draft", "issued", "partially_paid"].includes(String(row.status ?? ""))).length;
   const currentPhase = clinicalPhases.find((phase) => phase.status === "active") ?? null;
+  const workspaceContext = useMemo(() => patient ? resolvePatientWorkspaceContext({ patient, clinicalPhases, related, infertility: infertilityWorkspace }) : null, [clinicalPhases, infertilityWorkspace, patient, related]);
   const roleContextReady = roles.length > 0 || permissions.length > 0;
   const isReceptionistOnly = roles.some((role) => ["Reception", "Receptionist"].includes(role)) && !roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
 
@@ -262,6 +267,7 @@ export default function PatientFilePage() {
     const token = sessionStorage.getItem("prijClinicToken");
     const controller = new AbortController();
     const load = async () => {
+      for (const requiredKey of ["visits", "prescriptions", "investigations", "pregnancy", "gynecology", "tasks", "timeline"]) visibleKeys.add(requiredKey);
       const pairs = await Promise.all(
         relatedLoaders
           .filter((tab) => visibleKeys.has(tab.key) && tab.endpoint && !["infertility", "timeline"].includes(tab.key))
@@ -378,39 +384,6 @@ export default function PatientFilePage() {
 
   return (
     <AppShell>
-      <section className="patient-context-bar legacy-patient-context-bar" aria-hidden="true">
-        <div className="patient-context-identity">
-          <strong>{patient ? `${patient.firstName} ${patient.lastName}` : "Opening patient"}</strong>
-          <span>{patient ? `MRN ${patient.medicalRecordNumber} · ${ageLabel}` : "Loading patient details"}</span>
-        </div>
-        <div className="patient-context-signals" aria-label="Patient safety context">
-          <span className={currentPhase ? "" : "warning"}>{currentPhase ? `Confirmed phase: ${phaseTypeLabel(currentPhase.phaseType)}` : activePregnancyCount ? "Pregnancy record present · phase needs review" : "Clinical phase missing"}</span>
-          <span className={(related.allergies?.length ?? 0) > 0 ? "" : "warning"}>{related.allergies ? `Allergies: ${related.allergies.length ? `${related.allergies.length} recorded` : "none recorded"}` : "Allergies: needs review"}</span>
-          {activePregnancyCount ? <span>Confirmed active pregnancy</span> : null}
-          {pendingResultCount ? <span>Results pending</span> : null}
-          <span data-autosave-state={autosave.state}>{autosaveStatus}</span>
-          {autosave.state === "failed" ? <button className="button secondary compact" type="button" onClick={() => void autosave.retry()}>Retry save</button> : null}
-        </div>
-        <div className="patient-context-actions">
-          <AppActionButton actionId="encounter.create" userPermissions={permissions} userRoles={roles} className="button compact" type="button" onClick={() => setActiveTab("doctor-visit")} disabled={!patient}>Start / Resume Visit</AppActionButton>
-          <button className="button secondary compact" type="button" onClick={() => setActiveTab("more")} disabled={!patient}>More</button>
-        </div>
-      </section>
-
-      {isPreviewMode ? (
-        <section className="alert preview-mode-banner" data-testid="doctor-queue-preview-mode">
-          <div>
-            <strong>Preview mode — visit not started</strong>
-            <p className="muted" dir="rtl">وضع المعاينة — الزيارة لم تبدأ</p>
-          </div>
-          <ActiveVisitLauncher className="button compact" patientId={patientId}>
-            <><ThreeDMedicalIcon name="encounter" size="sm" />Start Visit</>
-          </ActiveVisitLauncher>
-        </section>
-      ) : null}
-
-      <SafetyAlert />
-
       {error ? (
         <section className="panel">
           <p className="form-error">{error}</p>
@@ -424,41 +397,29 @@ export default function PatientFilePage() {
       {patient ? (
         <>
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
-          <ImportantPatientBanner patient={patient} related={related} />
-          <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
-          <PatientSmartIdentityBar patient={patient} currentPhase={currentPhase} related={related} infertility={infertilityWorkspace} autosaveStatus={autosaveStatus} onOpenVisit={() => setActiveTab("doctor-visit")} onOpenMore={() => setActiveTab("more")} />
-          <MissingInformationCenter patientId={patientId} canUpdate={permissions.includes("patient.update")} />
+          {/* Approved Patient Workspace Shell. Do not change navigation, grid areas, card order, or responsive sequence without explicit product approval. */}
+          <div className="approved-patient-profile-shell">
+          <Link className="patient-back-link" href="/patients">← Back to patient search</Link>
+          <PatientSmartIdentityBar patient={patient} currentPhase={currentPhase} related={related} infertility={infertilityWorkspace} workspaceContext={workspaceContext!} autosaveStatus={autosaveStatus} />
+          <section className="patient-active-record-strip patient-actionbar" data-testid={isPreviewMode ? "doctor-queue-preview-mode" : undefined}>
+            <div><strong>Single active record · {patient.firstName} {patient.lastName} · {patient.medicalRecordNumber}</strong><span>History, visits, results and plans use the same patient identity.</span></div>
+            <div className="patient-actionbar-buttons"><button className="button secondary compact" type="button" onClick={() => setActiveTab("history")}>History taking</button><ActiveVisitLauncher className="button compact" patientId={patientId}><><ThreeDMedicalIcon name="encounter" size="sm" />Start / continue visit</></ActiveVisitLauncher></div>
+          </section>
 
           <section className="patient-tabs simple hybrid-workspace-tabs" aria-label="Patient file sections">
-            {visibleGroups.map((group) => (
-              <button className={`tab-button ${activeGroup.key === group.key ? "active" : ""}`} data-tab-key={group.key} key={group.key} onClick={() => {
-                const firstModule = visibleTabs.find((tab) => group.modules.some((module) => module === tab.key));
-                setActiveTab(firstModule?.key ?? group.key);
-              }} type="button">
-                <ThreeDMedicalIcon name={group.icon} size="sm" />
-                {group.label}
+            {encounterTabs.map(({ tab, label }) => (
+              <button className={`tab-button ${activeTab === tab.key ? "active" : ""}`} data-tab-key={tab.key} key={tab.key} onClick={() => setActiveTab(tab.key)} type="button">
+                <ThreeDMedicalIcon name={tab.icon} size="sm" />
+                {label}
               </button>
             ))}
           </section>
 
-          {activeGroup.key === "guidelines" ? <section className="patient-workspace-grid" aria-label="Guideline evidence workspace">
-            <article className="patient-workspace-panel workspace-panel-size-full">
-              <div className="patient-workspace-panel-body guideline-patient-workspace">
-                <div><h2>Guidelines</h2><p className="muted">Open source-backed evidence and protocols in the governed library. Clinical application remains a separate Doctor-reviewed action.</p></div>
-                <div className="form-actions"><Link className="button" href="/guidelines">Open Guidelines Library</Link><Link className="button secondary" href="/protocol-atlas">Open Protocol Atlas</Link></div>
-              </div>
-            </article>
-          </section> : <section className="patient-workspace-grid hybrid-workspace-accordions" aria-label={`${activeGroup.label} workspace`}>
-            {activeGroupTabs.map((tab, index) => {
-              const placement = workspacePanels.find((panel) => panel.panelKey === tab.key);
-              const size = placement?.size ?? "FULL";
-              const commonlyNeeded = index === 0 || tab.key === activeTab || ["overview", "doctor-visit", "investigations", "prescriptions"].includes(tab.key);
-              return <article className={`patient-workspace-panel workspace-panel-size-${size.toLowerCase()} ${placement?.pinned ? "is-pinned" : ""}`} id={`patient-panel-${tab.key}`} key={tab.key}>
-                <PatientPanelErrorBoundary panelKey={tab.key} ownerDiagnostics={roles.some((role) => ["Owner", "Admin"].includes(role))}>
-                  <details open={commonlyNeeded && !placement?.collapsed} onToggle={(event) => { if ((event.currentTarget as HTMLDetailsElement).open && activeTab !== tab.key) setActiveTab(tab.key); }}>
-                    <summary className="workspace-panel-collapse-summary"><span><ThreeDMedicalIcon name={tab.icon} size="sm" />{tab.label}</span>{placement?.pinned ? <span className="badge">Pinned</span> : null}</summary>
-                    <div className="patient-workspace-panel-body"><WorkspaceModuleRenderer
-                      active={tab}
+          <section className="patient-view active" aria-label={`${activeWorkspaceTab?.label ?? "Patient"} workspace`}>
+            {activeWorkspaceTab ? <div id={`patient-panel-${activeWorkspaceTab.key}`}>
+                <PatientPanelErrorBoundary panelKey={activeWorkspaceTab.key} ownerDiagnostics={roles.some((role) => ["Owner", "Admin"].includes(role))}>
+                  <WorkspaceModuleRenderer
+                      active={activeWorkspaceTab}
                       patient={patient}
                       related={related}
                       timelineItems={timelineItems}
@@ -466,18 +427,29 @@ export default function PatientFilePage() {
                       loadMoreTimeline={loadMoreTimeline}
                       clinicalPhases={clinicalPhases}
                       infertilityWorkspace={infertilityWorkspace}
+                      workspaceContext={workspaceContext!}
                       actionStatus={actionStatus}
                       submitPatientAction={submitPatientAction}
                       requestPatientWorkspaceRefresh={requestPatientWorkspaceRefresh}
                       setActiveTab={setActiveTab}
                       permissions={permissions}
                       roles={roles}
-                    /></div>
-                  </details>
+                    />
                 </PatientPanelErrorBoundary>
-              </article>;
-            })}
-          </section>}
+              </div> : null}
+          </section>
+
+          {activeTab === "overview" ? <PatientRecentActivity timelineItems={timelineItems} onViewTimeline={() => setActiveTab("timeline")} /> : null}
+          <details className="patient-record-completeness">
+            <summary><span>Record completeness</span><span className="badge">Review</span></summary>
+            <div className="patient-secondary-review-grid">
+              <MissingInformationCenter patientId={patientId} canUpdate={permissions.includes("patient.update")} />
+              <ImportantPatientBanner patient={patient} related={related} />
+              <PregnancyDatingCard patient={patient} pregnancies={(related.pregnancy ?? []) as PregnancyRecord[]} compact />
+              <SafetyAlert />
+            </div>
+          </details>
+          </div>
         </>
       ) : !error ? (
         <div className="skeleton" />

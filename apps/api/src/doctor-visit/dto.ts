@@ -1,4 +1,4 @@
-import { IsDateString, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsDateString, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class StartDoctorVisitDto {
   @IsOptional()
@@ -7,6 +7,10 @@ export class StartDoctorVisitDto {
 }
 
 export class UpdateDoctorVisitDto {
+  @IsOptional()
+  @IsObject()
+  examinationJson?: Record<string, unknown>;
+
   @IsOptional()
   @IsString()
   @MaxLength(1000)

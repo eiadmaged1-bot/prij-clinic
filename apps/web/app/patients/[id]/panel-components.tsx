@@ -7,7 +7,7 @@ import { createSecureIdempotencyKey } from "@/lib/idempotency-key";
 import { addUniqueBasketItem, SelectedBasket, type SelectedBasketItem } from "@/components/clinical/SelectedBasket";
 
 type HistoryBasketItem = SelectedBasketItem & { endpoint: string; payload: Record<string, unknown> };
-import { Patient, GynecologyVisit, PregnancyRecord, InfertilityWorkspace, ClinicalPhase, ReferenceResult, RelatedPanel, Metric, formPayload, requestPatientWorkspaceRefresh, gynecologyTemplateFields, gynecologyTemplateOptions, templateLabel, templateSummary, formatDate, DoctorTemplateCards, ReferencePicker, values, numericPayload } from "./patient-components";
+import { Patient, GynecologyVisit, PregnancyRecord, InfertilityWorkspace, ClinicalPhase, ReferenceResult, RelatedPanel, Metric, formPayload, requestPatientWorkspaceRefresh, gynecologyTemplateFields, gynecologyTemplateOptions, templateLabel, templateSummary, formatDate, DoctorTemplateCards, ReferencePicker, values, numericPayload, type PatientWorkspaceContext } from "./patient-components";
 import { gpalSummary, gpalLooksInconsistent, CreatePregnancyEpisodeCard, PreviousPregnancyHistoryCard, FetusStarterCard, AntenatalVisitCard, UltrasoundReportBuilder } from "./pregnancy-components";
 
 export function MedicalPanel({ patient, related }: { patient: Patient; related: Record<string, Record<string, unknown>[]> }) {
@@ -145,23 +145,24 @@ export function CalculatorsPanel({ patient }: { patient: Patient }) {
     );
 }
 
-export function UltrasoundWorkspace({ patient, pregnancies, reports, orders }: { patient: Patient; pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[] }) {
+export function UltrasoundWorkspace({ patient, pregnancies, reports, orders, workspaceContext }: { patient: Patient; pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[]; workspaceContext: PatientWorkspaceContext }) {
     const searchParams = useSearchParams();
     const encounterId = searchParams.get("encounterId") ?? searchParams.get("visitId");
     const activePregnancy = pregnancies.find((item) => item.status === "active") ?? pregnancies[0];
+    const ultrasoundCopy = ultrasoundWorkspaceCopy(workspaceContext.mode);
     return (
     <section className="obgyn-workspace">
       <article className="obgyn-dashboard printable-summary">
         <div className="section-heading">
           <div>
             <p className="eyebrow">Ultrasound</p>
-            <h2>Ultrasound workspace</h2>
+            <h2>{ultrasoundCopy.title}</h2>
             <p className="muted">Recording-only ultrasound workflow for {patient.firstName} {patient.lastName}. The doctor completes interpretation.</p>
           </div>
           <ThreeDMedicalIcon name="ultrasound" size="lg" tone="teal" />
         </div>
         <dl className="obgyn-metric-grid">
-          <Metric label="Pregnancy context" value={activePregnancy ? "Linked pregnancy available" : "No pregnancy linked yet"} />
+          <Metric label={ultrasoundCopy.contextLabel} value={workspaceContext.mode === "pregnancy" && activePregnancy ? "Linked pregnancy available" : ultrasoundCopy.contextValue} />
           <Metric label="Reports" value={`${reports.length} report record(s)`} />
           <Metric label="Orders" value={`${orders.length} investigation order(s)`} />
         </dl>
@@ -169,7 +170,7 @@ export function UltrasoundWorkspace({ patient, pregnancies, reports, orders }: {
       <section className="obgyn-section-grid">
         <article className="panel">
           <div className="section-heading"><div><h2>Structured scan editor</h2><p className="muted">Open the dedicated editor for templates, images, comparisons, review, signing, and amendments.</p></div><ThreeDMedicalIcon name="ultrasound" size="sm" tone="violet" /></div>
-          {encounterId ? <Link className="button" href={`/patients/${encodeURIComponent(patient.id)}/ultrasounds/new?encounterId=${encodeURIComponent(encounterId)}${activePregnancy?.id ? `&pregnancyId=${encodeURIComponent(activePregnancy.id)}` : ""}`}>Create structured scan</Link> : <p className="notice">Start or open an active encounter before creating an ultrasound record.</p>}
+          {encounterId ? <Link className="button" href={`/patients/${encodeURIComponent(patient.id)}/ultrasounds/new?encounterId=${encodeURIComponent(encounterId)}${workspaceContext.mode === "pregnancy" && activePregnancy?.id ? `&pregnancyId=${encodeURIComponent(activePregnancy.id)}` : ""}`}>{ultrasoundCopy.action}</Link> : <p className="notice">Start or open an active encounter before creating an ultrasound record.</p>}
           <Link className="button secondary" href="/ob-ultrasounds">Open Ultrasound Center</Link>
         </article>
       </section>
@@ -683,6 +684,14 @@ export function HistorySheetWorkspace({
       <RelatedPanel config={{ key: "history-sheet", label: "Saved history sheets", icon: "doctor", empty: "No structured history sheet yet." }} rows={sheets} />
     </section>
     );
+}
+
+function ultrasoundWorkspaceCopy(mode: PatientWorkspaceContext["mode"]) {
+  if (mode === "pregnancy") return { title: "Obstetric ultrasound workspace", contextLabel: "Pregnancy context", contextValue: "Pregnancy episode not recorded", action: "Start obstetric ultrasound" };
+  if (mode === "infertility") return { title: "Fertility ultrasound workspace", contextLabel: "Fertility context", contextValue: "Cycle and ovarian monitoring", action: "Start fertility ultrasound" };
+  if (mode === "gynecology") return { title: "Pelvic ultrasound workspace", contextLabel: "Pelvic context", contextValue: "Uterus and adnexa / pelvic indication", action: "Start pelvic ultrasound" };
+  if (mode === "postpartum") return { title: "Postpartum ultrasound workspace", contextLabel: "Postpartum context", contextValue: "Postpartum indication", action: "Start postpartum ultrasound" };
+  return { title: "Ultrasound workspace", contextLabel: "Clinical context", contextValue: "Patient-linked indication", action: "Start ultrasound" };
 }
 
 function HistorySection({ title, children, open = false }: { title: string; children: ReactNode; open?: boolean }) {

@@ -1,55 +1,75 @@
-import Link from "next/link";
 import { ageLabel, patientTypeLabel, patientTypeSemanticClass } from "@/lib/patient-labels";
-import type { Patient, ClinicalPhase, InfertilityWorkspace } from "@/app/patients/[id]/patient-components";
+import type { Patient, ClinicalPhase, InfertilityWorkspace, PatientWorkspaceContext } from "@/app/patients/[id]/patient-components";
 
 type Row = Record<string, unknown>;
 
-export function PatientSmartIdentityBar({ patient, currentPhase, related, infertility, autosaveStatus, onOpenVisit, onOpenMore }: {
+export function PatientSmartIdentityBar({ patient, currentPhase, related, workspaceContext }: {
   patient: Patient;
   currentPhase?: ClinicalPhase | null;
   related: Record<string, Row[]>;
   infertility: InfertilityWorkspace;
+  workspaceContext: PatientWorkspaceContext;
   autosaveStatus: string;
-  onOpenVisit: () => void;
-  onOpenMore: () => void;
 }) {
-  const queue = related.queue?.[0];
-  const pregnancy = related.pregnancy?.find((row) => String(row.status ?? "").toUpperCase() === "ACTIVE") ?? related.pregnancy?.[0];
+  const pregnancy = workspaceContext.pregnancy;
   const allergies = related.allergies;
+  const cycle = workspaceContext.cycle;
   const ga = gestationalAge(pregnancy);
-  const cycleDay = firstValue(infertility, ["cycleDay", "currentCycleDay"]);
-  const doctor = firstValue(queue, ["doctorName", "assignedDoctorName", "doctor"]);
-  const branch = firstValue(queue, ["branchName"]) || patient.branchId;
-  const queueState = firstValue(queue, ["status"]);
-  const visitType = firstValue(queue, ["visitType"]);
+  const cycleDay = firstValue(cycle, ["cycleDay", "currentCycleDay"]);
+  const bloodGroup = normalizedBloodGroup(firstValue(patient, ["bloodGroup", "bloodType"]));
+  const edd = pregnancy ? firstValue(pregnancy, ["edd", "estimatedDueDate"]) : "";
+  const datingMethod = pregnancy ? firstValue(pregnancy, ["datingMethod"]) : "";
+  const datingStatus = pregnancy ? firstValue(pregnancy, ["datingCertainty", "confidenceStatus"]) : "";
+  const lmp = firstValue(pregnancy, ["lmp", "lmpDate"]) || firstValue(cycle, ["lmp", "lmpDate", "periodStart"]);
+  const gravida = firstValue(pregnancy, ["gravida"]);
+  const para = firstValue(pregnancy, ["para"]);
+  const phaseLabel = workspaceContext.activePhase?.title || workspaceContext.activePhase?.phaseType.replaceAll("_", " ") || "";
+  const specialtyFields = contextFields(workspaceContext.mode, {
+    gravidaPara: gravida || para ? `${gravida || "Not recorded"} / ${para || "Not recorded"}` : "",
+    ga,
+    edd: edd ? formatDate(edd) : "",
+    datingMethod,
+    datingStatus,
+    trimester: pregnancyTrimester(ga),
+    lmp: lmp ? formatDate(lmp) : "",
+    cycleDay: cycleDay ? `Day ${cycleDay}` : "",
+    phaseLabel,
+    phaseDate: workspaceContext.activePhase?.startDate ? formatDate(workspaceContext.activePhase.startDate) : ""
+  });
 
-  return <section className={`patient-smart-identity-bar ${patientTypeSemanticClass(patient.patientType)}`} aria-label="Current patient and clinical context">
+  return <section className={`patient-smart-identity-bar patient-banner ${patientTypeSemanticClass(patient.patientType)}`} aria-label="Current patient and clinical context">
     <div className="patient-smart-primary">
-      <strong>{patient.firstName} {patient.lastName}</strong>
-      <span>MRN {patient.medicalRecordNumber}</span>
-      <span>{ageLabel(patient.dateOfBirth)}</span>
-      <span>{patient.phone || "Phone not recorded"}</span>
+      <span className="patient-smart-avatar" aria-hidden="true">{patient.firstName?.[0]}{patient.lastName?.[0]}</span>
+      <div>
+        <div className="patient-smart-name">
+          <strong>{patient.firstName} {patient.lastName}</strong>
+          <span className="patient-type-badge">{currentPhase ? currentPhase.phaseType.replaceAll("_", " ") : patientTypeLabel(patient.patientType)}</span>
+        </div>
+        <p><span>{ageLabel(patient.dateOfBirth)}</span> · <span>MRN {patient.medicalRecordNumber}</span><br /><span>{patient.phone || "Not recorded"}</span></p>
+      </div>
     </div>
     <div className="patient-smart-signals">
-      <span className="patient-type-badge">{patientTypeLabel(patient.patientType)}</span>
-      <span>{currentPhase ? `Active phase: ${currentPhase.phaseType}` : "Active phase needs review"}</span>
-      <span>{visitType ? `Visit: ${visitType}` : "No active visit type"}</span>
-      <span>{queueState ? `Queue: ${queueState}` : "Not in today’s queue"}</span>
-      <span className={allergies === undefined ? "warning" : ""}>{allergies === undefined ? "Allergies unavailable" : allergies.length ? `Allergies: ${allergies.length} recorded` : "No recorded allergies"}</span>
-      {ga ? <span>GA {ga}</span> : null}
-      {pregnancy && firstValue(pregnancy, ["edd", "estimatedDueDate"]) ? <span>EDD {formatDate(firstValue(pregnancy, ["edd", "estimatedDueDate"]))}</span> : null}
-      {cycleDay ? <span>Cycle day {cycleDay}</span> : null}
-      {patientTypeLabel(patient.patientType).startsWith("High-risk") ? <span className="risk">High-risk status recorded</span> : null}
-      <span>{doctor ? `Doctor: ${doctor}` : "Doctor not assigned"}</span>
-      <span>{branch ? `Branch: ${branch}` : "Branch unavailable"}</span>
-      <span>{autosaveStatus}</span>
-    </div>
-    <div className="patient-smart-actions">
-      <button className="button compact" type="button" onClick={onOpenVisit}>Start / Resume visit</button>
-      <Link className="button secondary compact" href={`/patients/${patient.id}/workspace-editor`}>Edit workspace</Link>
-      <button className="button secondary compact" type="button" onClick={onOpenMore}>More</button>
+      <span className="patient-blood-group"><small>Blood group</small><strong>{bloodGroup}</strong></span>
+      <span className={allergies === undefined || allergies.length ? "warning patient-allergy-signal" : "patient-allergy-signal"}><small>Allergies</small><strong>{allergies === undefined ? "Not recorded" : allergies.length ? `${allergies.length} recorded` : "None recorded"}</strong></span>
+      {specialtyFields.map((field) => <span key={field.label}><small>{field.label}</small><strong>{field.value || "Not recorded"}</strong></span>)}
     </div>
   </section>;
+}
+
+function contextFields(mode: PatientWorkspaceContext["mode"], values: { gravidaPara: string; ga: string; edd: string; lmp: string; cycleDay: string; phaseLabel: string; phaseDate: string; datingMethod: string; datingStatus: string; trimester: string }) {
+  if (mode === "pregnancy") return [{ label: "LMP", value: values.lmp }, { label: "EDD", value: values.edd }, { label: "GA", value: values.ga }, { label: "Trimester", value: values.trimester }, { label: "Dating method", value: values.datingMethod }, { label: "Dating status", value: values.datingStatus }];
+  if (mode === "infertility") return [{ label: "Cycle day", value: values.cycleDay }, { label: "LMP", value: values.lmp }, { label: "Fertility context", value: values.phaseLabel }];
+  if (mode === "gynecology") return [{ label: "Gravida / Para", value: values.gravidaPara }, { label: "LMP", value: values.lmp }, { label: "Cycle context", value: values.cycleDay }];
+  if (mode === "postpartum") return [{ label: "Delivery date", value: values.phaseDate }, { label: "Postpartum interval", value: values.phaseLabel }, { label: "Feeding context", value: "" }];
+  if (mode === "menopause") return [{ label: "Menopause phase", value: values.phaseLabel }, { label: "LMP", value: values.lmp }, { label: "Review context", value: "" }];
+  if (mode === "postoperative") return [{ label: "Procedure", value: values.phaseLabel }, { label: "Procedure date", value: values.phaseDate }, { label: "Postoperative interval", value: "" }];
+  return [{ label: "Clinical phase", value: values.phaseLabel }];
+}
+
+function pregnancyTrimester(ga: string) {
+  const weeks = Number(ga.match(/^(\d+)/)?.[1]);
+  if (!Number.isFinite(weeks)) return "";
+  return weeks < 14 ? "First" : weeks < 28 ? "Second" : "Third";
 }
 
 function firstValue(value: unknown, keys: string[]): string {
@@ -75,4 +95,10 @@ function gestationalAge(pregnancy?: Row) {
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : value;
+}
+
+function normalizedBloodGroup(value: string) {
+  const allowed = new Set(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]);
+  const normalized = value.trim().toUpperCase().replaceAll("−", "-").replaceAll("–", "-");
+  return allowed.has(normalized) ? normalized : "Not recorded";
 }
