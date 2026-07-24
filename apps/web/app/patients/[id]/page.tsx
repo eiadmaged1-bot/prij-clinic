@@ -229,7 +229,14 @@ export default function PatientFilePage() {
         const names = summary.patient.displayName.trim().split(/\s+/);
         setPatient({ id: summary.patient.id, medicalRecordNumber: summary.patient.medicalRecordNumber, firstName: names.shift() ?? summary.patient.displayName, lastName: names.join(" "), dateOfBirth: summary.patient.dateOfBirth, phone: summary.patient.contactSummary, status: "active", patientType: summary.patient.patientType });
         setClinicalPhases(summary.activeClinicalPhase ? [{ id: "summary", status: "active", ...summary.activeClinicalPhase }] : []);
-        setRelated({ appointments: [summary.todayAppointment, summary.nextAppointment].filter(Boolean) as unknown as Record<string, unknown>[], queue: summary.currentQueueTicket ? [summary.currentQueueTicket as unknown as Record<string, unknown>] : [], results: Array.from({ length: summary.pendingResultCount ?? 0 }, () => ({ reviewStatus: "pending_review" })), tasks: summary.pendingFollowUp ? [summary.pendingFollowUp as unknown as Record<string, unknown>] : [], billing: summary.balanceState ? [summary.balanceState as unknown as Record<string, unknown>] : [] });
+        setRelated({
+          appointments: [summary.todayAppointment, summary.nextAppointment].filter(Boolean) as unknown as Record<string, unknown>[],
+          queue: summary.currentQueueTicket ? [summary.currentQueueTicket as unknown as Record<string, unknown>] : [],
+          results: Array.from({ length: summary.pendingResultCount ?? 0 }, () => ({ reviewStatus: "pending_review" })),
+          tasks: summary.pendingFollowUp ? [summary.pendingFollowUp as unknown as Record<string, unknown>] : [],
+          billing: summary.balanceState ? [summary.balanceState as unknown as Record<string, unknown>] : [],
+          complaints: (summary.complaints ?? []) as unknown as Record<string, unknown>[]
+        });
       })
       .catch((loadError) => {
         if (disposed) return;

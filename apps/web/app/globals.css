@@ -6942,3 +6942,9 @@ button.patient-search-card-selectable { font:inherit; }
     display: none;
   }
 }
+
+.complaint-status-badge.refractory {
+  border-color: color-mix(in srgb, #6d4aa2 38%, var(--border));
+  background: color-mix(in srgb, #6d4aa2 12%, var(--surface));
+  color: #60408f;
+}

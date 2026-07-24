@@ -719,6 +719,8 @@ export function SmartObHistoryTags() {
     );
 }
 export function Overview({ patient, related, timelineItems }: { patient: Patient; related: Record<string, Record<string, unknown>[]>; timelineItems: TimelineItem[] }) {
+    const complaintHistory = related.complaints ?? [];
+    const activeComplaints = complaintHistory.filter((row) => row.active === true);
     const pendingResults = (related.results ?? []).filter((row) => String(row.reviewStatus ?? "") === "pending_review").length;
     const criticalResults = (related.results ?? []).filter((row) => row.criticalFlag === true && String(row.reviewStatus ?? "") !== "reviewed").length;
     const missingConsents = (related.consents ?? []).filter((row) => ["unknown", "declined"].includes(String(row.status ?? ""))).length;
@@ -728,6 +730,14 @@ export function Overview({ patient, related, timelineItems }: { patient: Patient
     const recentTimeline = timelineItems.slice(0, 5);
     return (
     <section className="doctor-friendly-grid patient-summary-grid">
+      <article className="panel compact-panel">
+        <div className="section-heading"><h2>Active complaints</h2><span className="badge">{activeComplaints.length}</span></div>
+        {activeComplaints.length ? <div className="dense-card-list">{activeComplaints.map((complaint, index) => <ComplaintLifecycleRow complaint={complaint} key={`${String(complaint.encounterId ?? index)}-active`} />)}</div> : <p className="empty-state compact smart-empty-state">No active complaint recorded.</p>}
+      </article>
+      <article className="panel compact-panel">
+        <div className="section-heading"><h2>Complaint history</h2><span className="badge">{complaintHistory.length}</span></div>
+        {complaintHistory.length ? <div className="dense-card-list">{complaintHistory.map((complaint, index) => <ComplaintLifecycleRow complaint={complaint} key={`${String(complaint.encounterId ?? index)}-history`} />)}</div> : <p className="empty-state compact smart-empty-state">No longitudinal complaint history yet.</p>}
+      </article>
       <article className="panel compact-panel">
         <div className="section-heading">
           <div>
@@ -780,6 +790,17 @@ export function Overview({ patient, related, timelineItems }: { patient: Patient
         {recentTimeline.length ? <div className="dense-card-list">{recentTimeline.map((item) => <article className="data-row dense" key={`${item.type}-${item.dateTime}-${item.title}`}><div className="data-row-header"><strong>{item.title}</strong><span className="badge">{item.status}</span></div><p className="muted">{item.description}</p></article>)}</div> : null}
       </article>
     </section>
+    );
+}
+
+function ComplaintLifecycleRow({ complaint }: { complaint: Record<string, unknown> }) {
+    const label = typeof complaint.label === "string" && complaint.label.trim() ? complaint.label : "Unknown";
+    const refractory = complaint.status === "REFRACTORY";
+    return (
+      <article className="data-row dense">
+        <div className="data-row-header"><strong>{String(complaint.text ?? "Complaint")}</strong><span className={`badge complaint-status-badge ${refractory ? "refractory" : ""}`}>{label}</span></div>
+        <p className="muted">{String(complaint.recordedAt ?? "Date unavailable")} · {String(complaint.source ?? "Source unavailable")}</p>
+      </article>
     );
 }
 

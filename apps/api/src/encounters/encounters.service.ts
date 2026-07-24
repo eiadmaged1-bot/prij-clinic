@@ -1,10 +1,12 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceAppointment, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { complaintLifecycleFromJson, complaintStatusFromJson, mergeComplaintLifecycle } from "../complaints/complaint-lifecycle";
 import { CreateEncounterDto, UpdateEncounterDto } from "./dto";
 
 @Injectable()
@@ -31,13 +33,16 @@ export class EncountersService {
     }
 
     try {
+      const encounterId = randomUUID();
       const encounter = await this.prisma.encounter.create({
         data: {
+          id: encounterId,
           branchId,
           patientId: dto.patientId,
           appointmentId: dto.appointmentId ?? null,
           doctorId: user.id,
           chiefComplaint: clean(dto.chiefComplaint),
+          ...(dto.complaintStatus ? { followUpJson: mergeComplaintLifecycle(undefined, dto.complaintStatus, { encounterId, recordedAt: new Date() }) } : {}),
           historyText: clean(dto.historyText),
           examText: clean(dto.examText),
           assessmentText: clean(dto.assessmentText),
@@ -124,6 +129,12 @@ export class EncountersService {
 
     const data: Prisma.EncounterUpdateInput = {};
     if (dto.chiefComplaint !== undefined) data.chiefComplaint = clean(dto.chiefComplaint);
+    if (dto.complaintStatus !== undefined) {
+      data.followUpJson = mergeComplaintLifecycle(dto.followUpJson ?? existing.followUpJson, dto.complaintStatus, {
+        encounterId: existing.id,
+        recordedAt: existing.createdAt
+      });
+    }
     if (dto.historyText !== undefined) data.historyText = clean(dto.historyText);
     if (dto.examText !== undefined) data.examText = clean(dto.examText);
     if (dto.assessmentText !== undefined) data.assessmentText = clean(dto.assessmentText);
@@ -135,7 +146,7 @@ export class EncountersService {
     if (dto.ultrasoundFindingsJson !== undefined) data.ultrasoundFindingsJson = jsonOrNull(dto.ultrasoundFindingsJson);
     if (dto.clinicalImpression !== undefined) data.clinicalImpression = clean(dto.clinicalImpression);
     if (dto.riskClassification !== undefined) data.riskClassification = clean(dto.riskClassification);
-    if (dto.followUpJson !== undefined) data.followUpJson = jsonOrNull(dto.followUpJson);
+    if (dto.followUpJson !== undefined && dto.complaintStatus === undefined) data.followUpJson = jsonOrNull(dto.followUpJson);
 
     const encounter = await this.prisma.encounter.update({ where: { id }, data });
 
@@ -155,13 +166,31 @@ export class EncountersService {
   async sign(id: string, user: AuthUser) {
     const existing = await this.get(id, user);
 
+    if (existing.status === "signed" && complaintLifecycleFromJson(existing.followUpJson)) {
+      return existing;
+    }
+
     if (existing.status !== "draft") {
       throw new BadRequestException("Only draft encounters can be signed.");
     }
 
     const completedAt = new Date();
     const { encounter, queueTicketId } = await this.prisma.$transaction(async (tx) => {
-      const signed = await tx.encounter.update({ where: { id }, data: { status: "signed", signedAt: completedAt, signedByUserId: user.id } });
+      const signed = await tx.encounter.update({
+        where: { id },
+        data: {
+          status: "signed",
+          signedAt: completedAt,
+          signedByUserId: user.id,
+          ...(existing.chiefComplaint || complaintLifecycleFromJson(existing.followUpJson) ? {
+            followUpJson: mergeComplaintLifecycle(existing.followUpJson, complaintStatusFromJson(existing.followUpJson), {
+              encounterId: existing.id,
+              recordedAt: existing.createdAt,
+              signedAt: completedAt
+            })
+          } : {})
+        }
+      });
       const queueTicket = await tx.queueTicket.findFirst({ where: { patientId: signed.patientId, branchId: signed.branchId, status: "in_room" }, orderBy: { checkedInAt: "desc" } });
       if (queueTicket) {
         await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });

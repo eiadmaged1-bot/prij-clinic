@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
+import {
+  Action,
+  COMPLAINT_LIFECYCLE_STATUSES,
+  complaintLifecycleFromEncounter,
+  complaintStatusLabel,
+  hasAnyRolePermission
+} from "@prij-clinic/shared";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
 import InvestigationStationV3 from "@/components/investigations/InvestigationStationV3";
@@ -106,7 +112,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const roles = user?.roles ?? [];
   const canUseDoctorVisit = hasAnyRolePermission(roles, Action.VISIT_START) || roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
   const patient = visit?.patient as Record<string, string | null> | undefined;
-  const encounter = visit?.encounter as Record<string, string | null> | undefined;
+  const encounter = visit?.encounter as Record<string, unknown> | undefined;
   const contextReady = Boolean(patientId && visitId && patient?.id === patientId && encounter?.id === visitId);
 
   const loadVisit = useCallback(async () => {
@@ -118,8 +124,10 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         return;
       }
       setVisit(data);
+      const complaintLifecycle = complaintLifecycleFromEncounter((data.encounter ?? {}) as Record<string, unknown>);
       setEncounterForm({
         chiefComplaint: String(data.encounter?.chiefComplaint ?? ""),
+        complaintStatus: complaintLifecycle?.status ?? "ACTIVE",
         historyText: String(data.encounter?.historyText ?? ""),
         examText: String(data.encounter?.examText ?? ""),
         assessmentText: String(data.encounter?.assessmentText ?? ""),
@@ -243,6 +251,13 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
     setStatus("Print packet refreshed for locked visit.");
   }
 
+  async function signVisit() {
+    if (!contextReady) return;
+    await completeDoctorVisit(visitId);
+    setStatus("Encounter signed. Complaint history preserved.");
+    window.location.assign(`/patients/${patientId}`);
+  }
+
   if (sessionStatus === "loading") {
     return <section className="panel"><div className="skeleton" aria-label="Checking active visit access" /></section>;
   }
@@ -256,7 +271,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
       <PatientVisitIdentityBar
         error={error}
         patient={patient ? { id: String(patient.id), name: String(patient.name ?? ""), medicalRecordNumber: String(patient.medicalRecordNumber ?? ""), dateOfBirth: patient.dateOfBirth, patientType: patient.patientType } : null}
-        visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt } : null}
+        visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt == null ? null : String(encounter.startedAt) } : null}
         actions={
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
             <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
@@ -348,7 +363,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
             {activeModule === "investigations" ? <InvestigationStationV3 lockedPatientId={patientId} lockedEncounterId={visitId} embedded onSaved={() => void loadVisit()} /> : null}
             {activeModule === "ultrasound" ? <UltrasoundModule patientType={String(patient?.patientType ?? "")} /> : null}
             {activeModule === "follow-up" ? <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
-            {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} /> : null}
+            {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} onSign={signVisit} /> : null}
           </section>
         </>
       ) : null}
@@ -377,7 +392,15 @@ function EncounterModule({ activeModule, form, onChange, onSubmit }: { activeMod
   return (
     <form className="form-grid" onSubmit={onSubmit}>
       {activeModule === "examination" ? <ChipList labels={examinationChips} onPick={(label) => onChange({ ...form, examText: appendText(form.examText, label) })} /> : null}
+      {activeModule === "complaint" ? (
+        <label>Lifecycle status
+          <select value={form.complaintStatus ?? "ACTIVE"} onChange={(event) => onChange({ ...form, complaintStatus: event.target.value })}>
+            {COMPLAINT_LIFECYCLE_STATUSES.map((status) => <option key={status} value={status}>{complaintStatusLabel(status)}</option>)}
+          </select>
+        </label>
+      ) : null}
       <label className="wide">{fieldLabel(field)}<textarea value={form[field] ?? ""} onChange={(event) => onChange({ ...form, [field]: event.target.value })} /></label>
+      {activeModule === "complaint" ? <span className={`badge complaint-status-badge ${form.complaintStatus === "REFRACTORY" ? "refractory" : ""}`}>{complaintStatusLabel(form.complaintStatus)}</span> : null}
       {activeModule === "encounter" ? (
         <>
           <label>Chief complaint<input value={form.chiefComplaint ?? ""} onChange={(event) => onChange({ ...form, chiefComplaint: event.target.value })} /></label>
@@ -489,10 +512,10 @@ function FollowUpModule({ followUp, setFollowUp, onSubmit }: { followUp: { dueAt
   );
 }
 
-function FinishModule({ visit, patientName, onRefresh }: { visit: DoctorVisitState | null; patientName: string; onRefresh: () => void }) {
+function FinishModule({ visit, patientName, onRefresh, onSign }: { visit: DoctorVisitState | null; patientName: string; onRefresh: () => void; onSign: () => void }) {
   return (
     <div className="print-packet">
-      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" type="button" onClick={() => window.print()}>Print</button></div>
+      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button secondary" type="button" onClick={() => window.print()}>Print</button><button className="button" type="button" onClick={onSign}>Sign encounter</button></div>
       <h2>{patientName}</h2>
       <p>Doctor review required. This packet is documentation output, not autonomous diagnosis or prescribing.</p>
       <section><h3>Encounter</h3><p>{String(visit?.encounter?.chiefComplaint ?? "No chief complaint saved.")}</p></section>

@@ -18,6 +18,7 @@ import {
   Min,
   ValidateNested
 } from "class-validator";
+import { COMPLAINT_LIFECYCLE_STATUS, type ComplaintLifecycleStatus } from "../complaints/complaint-lifecycle";
 import {
   ConsentStatus,
   ConsentType,
@@ -526,6 +527,10 @@ export class PatientContextEncounterDto {
   @IsString()
   @MaxLength(1000)
   chiefComplaint?: string;
+
+  @IsOptional()
+  @IsEnum(COMPLAINT_LIFECYCLE_STATUS)
+  complaintStatus?: ComplaintLifecycleStatus;
 
   @IsOptional()
   @IsString()
