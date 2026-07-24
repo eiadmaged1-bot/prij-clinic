@@ -1,0 +1,261 @@
+name: Sprint 1 Fix 3 Protect Local Work
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-fix3-protect-local.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sprint1-fix3-protect-local
+  cancel-in-progress: false
+
+jobs:
+  protect:
+    name: Protect local Sprint 1 Fix 3 on SECTRA
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout protected checkpoint branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-fix3-protected
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Verify source and destination baselines
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+          $local = 'C:\Newfolder\prij-clinic'
+          if (-not (Test-Path (Join-Path $local '.git'))) { throw "Local repository missing: $local" }
+
+          $localBranch = (git -C $local branch --show-current).Trim()
+          $localHead = (git -C $local rev-parse HEAD).Trim()
+          $targetHead = (git -C workspace rev-parse HEAD).Trim()
+
+          if ($localBranch -ne 'feat/patient-clinical-input-foundation') {
+            throw "Unexpected local branch: $localBranch"
+          }
+          if ($localHead -ne $targetHead) {
+            throw "Baseline mismatch. Local: $localHead Target: $targetHead"
+          }
+
+          Write-Host "Local source: $localBranch at $localHead"
+          Write-Host 'Original local worktree will remain untouched.'
+
+      - name: Copy code changes into isolated checkpoint
+        id: copy
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $local = 'C:\Newfolder\prij-clinic'
+          $target = Join-Path $env:GITHUB_WORKSPACE 'workspace'
+          $patchPath = Join-Path $env:RUNNER_TEMP 'sprint1-fix3-local.patch'
+
+          $trackedPaths = @(git -C $local diff --name-only HEAD -- .)
+          $forbiddenTracked = @($trackedPaths | Where-Object {
+            $_ -match '(?i)(^|/)(\.env|uploads?|backups?|datasets?|local-reference|reference|secrets?|credentials?|patient-data|phi|pii)(/|$)' -or
+            $_ -match '(?i)\.(csv|xlsx?|pdf|db|sqlite\d*|bak|zip|7z|png|jpe?g|dcm)$'
+          })
+
+          if ($forbiddenTracked.Count -gt 0) {
+            $forbiddenTracked | ForEach-Object { Write-Error "Forbidden tracked path: $_" }
+            throw 'Sensitive or dataset path found among tracked changes.'
+          }
+
+          cmd.exe /d /c "git -C `"$local`" diff --no-ext-diff HEAD -- . > `"$patchPath`""
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to create tracked code patch.' }
+
+          if ((Get-Item $patchPath).Length -gt 0) {
+            git -C $target apply --check $patchPath
+            git -C $target apply $patchPath
+          }
+
+          $untracked = @(git -C $local ls-files --others --exclude-standard)
+          $copied = @()
+          $excludedCount = 0
+
+          foreach ($relative in $untracked) {
+            $normalized = $relative -replace '\\','/'
+            $allowedRoot = $normalized -match '^(apps|packages|scripts|tests|docs)/'
+            $allowedExtension = $normalized -match '(?i)\.(ts|tsx|js|mjs|cjs|css|scss|json|md|yml|yaml|ps1)$'
+            $forbidden = $normalized -match '(?i)(^|/)(\.env|uploads?|backups?|datasets?|local-reference|reference|secrets?|credentials?|patient-data|phi|pii|node_modules|dist|build|\.next|coverage|artifacts?)(/|$)'
+
+            if (-not $allowedRoot -or -not $allowedExtension -or $forbidden) {
+              $excludedCount += 1
+              continue
+            }
+
+            $sourcePath = Join-Path $local $relative
+            if (-not (Test-Path $sourcePath -PathType Leaf)) {
+              $excludedCount += 1
+              continue
+            }
+
+            $destinationPath = Join-Path $target $relative
+            New-Item -ItemType Directory -Force (Split-Path $destinationPath -Parent) | Out-Null
+            Copy-Item -LiteralPath $sourcePath -Destination $destinationPath -Force
+            $copied += $normalized
+          }
+
+          $changed = @(git -C $target status --porcelain=v1)
+          if ($changed.Count -eq 0) { throw 'No code changes were copied into the protected checkpoint.' }
+
+          git -C $target diff --check
+
+          New-Item -ItemType Directory -Force (Join-Path $target 'docs\verification') | Out-Null
+          $reportPath = Join-Path $target 'docs\verification\SPRINT1_FIX3_PROTECTED_CHECKPOINT.md'
+          $report = @(
+            '# Sprint 1 Fix 3 Protected Checkpoint',
+            '',
+            '- Source: local `C:\Newfolder\prij-clinic`',
+            '- Source branch: `feat/patient-clinical-input-foundation`',
+            "- Source HEAD: ``$((git -C $local rev-parse HEAD).Trim())``",
+            '- Destination branch: `work/sprint1-fix3-protected`',
+            "- Tracked changed paths copied: **$($trackedPaths.Count)**",
+            "- Safe untracked code files copied: **$($copied.Count)**",
+            "- Untracked entries excluded: **$excludedCount**",
+            '- Raw reference folders, datasets, uploads, backups, secrets, environment files, PHI, and PII: **NOT COPIED**',
+            '- Original local worktree: **NOT MODIFIED**',
+            '',
+            '## Safe untracked code files copied',
+            ''
+          )
+
+          if ($copied.Count -eq 0) {
+            $report += '- None'
+          } else {
+            $report += $copied | Sort-Object | ForEach-Object { "- ``$_``" }
+          }
+
+          $report | Set-Content -Path $reportPath -Encoding UTF8
+          git -C $target diff --check
+
+          "tracked_count=$($trackedPaths.Count)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "untracked_code_count=$($copied.Count)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "excluded_count=$excludedCount" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Commit protected checkpoint before testing
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+
+          $stagedPaths = @(git diff --cached --name-only)
+          if ($stagedPaths.Count -eq 0) { throw 'Nothing staged for protected checkpoint.' }
+
+          $forbidden = @($stagedPaths | Where-Object {
+            $_ -match '(?i)(^|/)(\.env|uploads?|backups?|datasets?|local-reference|reference|secrets?|credentials?|patient-data|phi|pii)(/|$)' -or
+            $_ -match '(?i)\.(csv|xlsx?|pdf|db|sqlite\d*|bak|zip|7z|png|jpe?g|dcm)$'
+          })
+          if ($forbidden.Count -gt 0) {
+            $forbidden | ForEach-Object { Write-Error "Forbidden staged path: $_" }
+            throw 'Protected checkpoint contains a forbidden path.'
+          }
+
+          git commit -m 'Checkpoint protected Sprint 1 Fix 3 local work'
+          git push origin HEAD:work/sprint1-fix3-protected
+
+      - name: Install dependencies
+        id: dependencies
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: npm ci
+
+      - name: Run clinical workflow test
+        id: clinical
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: node scripts/clinical-workflow-unification-test.mjs
+
+      - name: Run Fix 3 medication test
+        id: medication
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: node scripts/recovery-fix3-medication-test.mjs
+
+      - name: Run Fix 3 search test
+        id: search
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: node scripts/recovery-fix3-search-test.mjs
+
+      - name: Run typecheck
+        id: typecheck
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: npm run typecheck
+
+      - name: Run build
+        id: build
+        if: steps.dependencies.outcome == 'success'
+        continue-on-error: true
+        working-directory: workspace
+        shell: powershell
+        run: npm run build
+
+      - name: Publish checkpoint verification result
+        if: always()
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'docs/verification/SPRINT1_FIX3_PROTECTED_CHECKPOINT.md'
+          Add-Content $path ''
+          Add-Content $path '## Automated verification'
+          Add-Content $path ''
+          Add-Content $path '- Dependencies: `${{ steps.dependencies.outcome }}`'
+          Add-Content $path '- Clinical workflow test: `${{ steps.clinical.outcome }}`'
+          Add-Content $path '- Fix 3 medication test: `${{ steps.medication.outcome }}`'
+          Add-Content $path '- Fix 3 search test: `${{ steps.search.outcome }}`'
+          Add-Content $path '- Typecheck: `${{ steps.typecheck.outcome }}`'
+          Add-Content $path '- Build: `${{ steps.build.outcome }}`'
+          Add-Content $path '- Feature 46 integration: **NOT YET PERFORMED**'
+
+          git add -- $path
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Document Sprint 1 Fix 3 checkpoint verification'
+            git push origin HEAD:work/sprint1-fix3-protected
+          }
+
+      - name: Enforce verification gate
+        if: always()
+        shell: powershell
+        run: |
+          $outcomes = @(
+            '${{ steps.dependencies.outcome }}',
+            '${{ steps.clinical.outcome }}',
+            '${{ steps.medication.outcome }}',
+            '${{ steps.search.outcome }}',
+            '${{ steps.typecheck.outcome }}',
+            '${{ steps.build.outcome }}'
+          )
+          if ($outcomes -contains 'failure' -or $outcomes -contains 'cancelled' -or $outcomes -contains 'skipped') {
+            throw "Checkpoint saved, but verification is incomplete or failed: $($outcomes -join ', ')"
+          }
+          Write-Host 'SPRINT 1 FIX 3 PROTECTED CHECKPOINT VERIFIED'
+          Write-Host 'ORIGINAL LOCAL WORKTREE WAS NOT MODIFIED'
