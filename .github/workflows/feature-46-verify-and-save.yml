@@ -64,17 +64,18 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $promptPath = Join-Path $env:GITHUB_WORKSPACE 'control\docs\FEATURE_46_REFRACTORY_COMPLAINT_CODEX_PROMPT.md'
           $basePrompt = Get-Content $promptPath -Raw
-          $extra = @'
-
-Additional mandatory verification contract:
-- Add or update a deterministic focused test named scripts/feature-46-refractory-complaint-test.mjs.
-- The focused test must run without production data and must not reset, delete, truncate, or seed the real database.
-- The focused test must verify canonical status acceptance, non-resolved active-family behavior, history preservation, idempotency protection, backward compatibility, and safe UI label rendering using the real implementation paths where practical.
-- Run the focused test, typecheck, and build before finishing.
-- Keep all changes limited to Feature 46 and its focused tests.
-- Do not commit or push; the workflow performs the isolated branch commit only after independent gates pass.
-'@
-          ($basePrompt + $extra) | & codex -a never -s danger-full-access exec --ephemeral
+          $extraLines = @(
+            ''
+            'Additional mandatory verification contract:'
+            '- Add or update a deterministic focused test named scripts/feature-46-refractory-complaint-test.mjs.'
+            '- The focused test must run without production data and must not reset, delete, truncate, or seed the real database.'
+            '- The focused test must verify canonical status acceptance, non-resolved active-family behavior, history preservation, idempotency protection, backward compatibility, and safe UI label rendering using the real implementation paths where practical.'
+            '- Run the focused test, typecheck, and build before finishing.'
+            '- Keep all changes limited to Feature 46 and its focused tests.'
+            '- Do not commit or push; the workflow performs the isolated branch commit only after independent gates pass.'
+          )
+          $extra = $extraLines -join [Environment]::NewLine
+          ($basePrompt + [Environment]::NewLine + $extra) | & codex -a never -s danger-full-access exec --ephemeral
           if ($LASTEXITCODE -ne 0) { throw "Codex failed with exit code $LASTEXITCODE." }
 
       - name: Enforce scope and safety
@@ -162,10 +163,8 @@ Additional mandatory verification contract:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add --all
-
           $staged = git diff --cached --name-only
           if (-not $staged) { throw 'Nothing staged after successful verification.' }
-
           git commit -m 'Add verified refractory complaint status'
           git push origin HEAD:test/feature-46-refractory-complaint
 
@@ -174,7 +173,7 @@ Additional mandatory verification contract:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          git status --porcelain
-          if (git status --porcelain) { throw 'Workspace is not clean after isolated branch push.' }
+          $finalStatus = git status --porcelain
+          if ($finalStatus) { throw 'Workspace is not clean after isolated branch push.' }
           Write-Host 'FEATURE 46 VERIFIED AND SAVED TO ISOLATED TEST BRANCH'
           Write-Host 'NO MAIN OR PRODUCTION BRANCH WAS MODIFIED'
