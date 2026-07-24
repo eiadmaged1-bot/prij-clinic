@@ -1,0 +1,114 @@
+name: Sprint 1 Fix 3 Local Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-fix3-local-audit.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sprint1-fix3-local-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: Audit local Sprint 1 Fix 3 worktree on SECTRA
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout audit report branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 1
+          clean: true
+          path: control
+
+      - name: Inspect local repository without changing it
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $repo = 'C:\Newfolder\prij-clinic'
+          if (-not (Test-Path (Join-Path $repo '.git'))) {
+            throw "Local repository not found at $repo"
+          }
+
+          $branch = (git -C $repo branch --show-current).Trim()
+          $head = (git -C $repo rev-parse HEAD).Trim()
+          $lastCommit = (git -C $repo log -1 --pretty=format:'%h %s').Trim()
+          $status = @(git -C $repo status --porcelain=v1)
+          $modifiedCount = @($status | Where-Object { $_ -notmatch '^\?\?' }).Count
+          $untrackedCount = @($status | Where-Object { $_ -match '^\?\?' }).Count
+
+          git -C $repo diff --check
+          $unstagedDiffCheck = $LASTEXITCODE
+          git -C $repo diff --cached --check
+          $stagedDiffCheck = $LASTEXITCODE
+
+          $safePaths = foreach ($line in $status) {
+            if ($line.Length -lt 4) { continue }
+            $path = $line.Substring(3)
+            if ($path -match '(^|[\\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\\/]|$)') {
+              '[REDACTED-SENSITIVE-PATH]'
+            } else {
+              $path
+            }
+          }
+
+          $reportDir = Join-Path $env:GITHUB_WORKSPACE 'control\docs\verification'
+          New-Item -ItemType Directory -Force $reportDir | Out-Null
+          $reportPath = Join-Path $reportDir 'SPRINT1_FIX3_LOCAL_AUDIT.md'
+
+          $report = @(
+            '# Sprint 1 Fix 3 Local Worktree Audit',
+            '',
+            "- Local path: ``$repo``",
+            "- Branch: ``$branch``",
+            "- HEAD: ``$head``",
+            "- Last commit: ``$lastCommit``",
+            "- Modified/staged tracked entries: $modifiedCount",
+            "- Untracked entries: $untrackedCount",
+            "- Unstaged ``git diff --check`` exit: $unstagedDiffCheck",
+            "- Staged ``git diff --check`` exit: $stagedDiffCheck",
+            '- Reset/stash/clean/checkout: NOT RUN',
+            '- Commit/push/tag: NOT RUN on local application repository',
+            '',
+            '## Changed paths',
+            ''
+          )
+
+          if ($safePaths.Count -eq 0) {
+            $report += '- Clean worktree'
+          } else {
+            $report += $safePaths | Sort-Object -Unique | ForEach-Object { "- ``$_``" }
+          }
+
+          $report | Set-Content $reportPath
+
+      - name: Save audit report only
+        working-directory: control
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/SPRINT1_FIX3_LOCAL_AUDIT.md
+          if (-not (git diff --cached --name-only)) {
+            Write-Host 'Audit report unchanged.'
+            exit 0
+          }
+          git commit -m 'docs: audit local Sprint 1 Fix 3 worktree'
+          git push origin HEAD:docs/200-feature-architecture-and-sprint-a
+
+      - name: Confirm no local application changes
+        shell: powershell
+        run: |
+          Write-Host 'LOCAL SPRINT 1 FIX 3 AUDIT COMPLETE'
+          Write-Host 'The application worktree was inspected read-only.'
