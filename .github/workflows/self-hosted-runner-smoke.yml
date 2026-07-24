@@ -1,0 +1,49 @@
+name: Self-Hosted Runner Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ci/self-hosted-runner-smoke
+    paths:
+      - .github/workflows/self-hosted-runner-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke:
+    name: Verify SECTRA Windows Runner
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify runner and workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Write-Host "Runner name: $env:RUNNER_NAME"
+          Write-Host "Runner OS: $env:RUNNER_OS"
+          Write-Host "Runner architecture: $env:RUNNER_ARCH"
+          Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+          Write-Host "Branch: $env:GITHUB_REF_NAME"
+          Write-Host "Commit: $env:GITHUB_SHA"
+
+          if ($env:RUNNER_NAME -ne 'SECTRA') {
+            throw "Expected runner SECTRA, but job ran on '$env:RUNNER_NAME'."
+          }
+
+          if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Expected Windows runner, but got '$env:RUNNER_OS'."
+          }
+
+          if (-not (Test-Path (Join-Path $env:GITHUB_WORKSPACE '.git'))) {
+            throw 'Repository checkout was not found.'
+          }
+
+          git status --short
+          Write-Host 'SELF-HOSTED RUNNER SMOKE TEST PASSED'
