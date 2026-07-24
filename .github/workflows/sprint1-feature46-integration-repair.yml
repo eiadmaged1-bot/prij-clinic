@@ -19,7 +19,7 @@ jobs:
   integrate-repair-verify:
     name: Integrate, repair, and fully verify
     runs-on: [self-hosted, Windows, X64]
-    timeout-minutes: 120
+    timeout-minutes: 150
 
     steps:
       - name: Checkout protected Sprint 1 branch
@@ -30,7 +30,7 @@ jobs:
           clean: true
           path: workspace
 
-      - name: Verify isolated baseline
+      - name: Prepare isolated integration branch
         working-directory: workspace
         shell: powershell
         run: |
@@ -38,60 +38,51 @@ jobs:
           if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
           if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
           if (git status --porcelain) { throw 'Protected Sprint 1 checkout is not clean.' }
+          git fetch origin test/feature-46-refractory-complaint
           git checkout -B integration/sprint1-fix3-feature46
           codex --version
 
-      - name: Integrate verified Feature 46 commit
-        id: integrate
+      - name: Apply verified Feature 46
         working-directory: workspace
         shell: powershell
-        continue-on-error: true
         run: |
           $ErrorActionPreference = 'Continue'
-          git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3 2>&1 | Tee-Object -FilePath integration-output.txt
-          "CherryPickExit=$LASTEXITCODE" | Add-Content integration-output.txt
-          exit 0
+          git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0 -and -not (git diff --name-only --diff-filter=U)) {
+            throw "Feature 46 cherry-pick failed without resolvable conflicts. Exit $exitCode"
+          }
 
-      - name: Resolve integration conflicts and preserve both plans
+      - name: Resolve conflicts while preserving both plans
         working-directory: workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $conflicts = @(git diff --name-only --diff-filter=U)
-          if ($conflicts.Count -eq 0) {
-            Write-Host 'No merge conflicts.'
-            exit 0
-          }
-
-          $conflictList = $conflicts -join "`n- "
-          $prompt = @"
-You are repairing a conflict-safe integration in the Prij Clinic repository.
-
-Current branch combines:
-1. Sprint 1 Fix 3 protected clinical-input and medication/search work.
-2. Verified Feature 46 refractory complaint lifecycle commit.
-
-Resolve every Git conflict while preserving the intended behavior of both plans.
+          if ($conflicts.Count -gt 0) {
+            $conflictList = $conflicts -join "`n- "
+            $prompt = @"
+Resolve every Git conflict in this isolated Prij Clinic integration.
 
 Conflicted files:
 - $conflictList
 
-Mandatory rules:
-- Preserve Sprint 1 clinical-input foundation, medication/search corrections, and existing safety behavior.
-- Preserve Feature 46 status REFRACTORY across shared types, DTO validation, persistence, signing idempotency, history/provenance, patient overview, encounter UI, styling, and focused test.
-- Do not remove existing functions merely to resolve type errors.
-- Do not introduce database migrations, seed/reset/delete/truncate operations, fake clinical data, PHI, secrets, or external datasets.
-- Do not touch reference/ or local-reference/.
-- Clinical output remains doctor-controlled.
-- Remove every conflict marker.
-- Do not commit, push, reset, clean, stash, or checkout another branch.
+Preserve both:
+1. Sprint 1 Fix 3 clinical-input, medication, and search work.
+2. Feature 46 refractory complaint lifecycle across DTO validation, persistence, signing idempotency, longitudinal history/provenance, patient overview, encounter UI, styling, and focused tests.
 
-After resolving, run git diff --check and finish with a concise summary.
+Rules:
+- Do not weaken or remove tests.
+- No migrations, reset, delete, truncate, seed, PHI, secrets, datasets, reference/, or local-reference/.
+- Do not commit, push, reset, clean, stash, or switch branches.
+- Remove all conflict markers and run git diff --check.
 "@
-          $prompt | & codex -a never -s danger-full-access exec --ephemeral
-          if ($LASTEXITCODE -ne 0) { throw "Codex conflict repair failed with exit code $LASTEXITCODE." }
-          if (git diff --name-only --diff-filter=U) { throw 'Unresolved merge conflicts remain.' }
+            $prompt | & codex -a never -s danger-full-access exec --ephemeral
+            if ($LASTEXITCODE -ne 0) { throw "Codex conflict repair failed with exit code $LASTEXITCODE." }
+          }
+          if (git diff --name-only --diff-filter=U) { throw 'Unresolved conflicts remain.' }
           git add --all
+          git cherry-pick --quit 2>$null
           git diff --cached --check
 
       - name: Install dependencies
@@ -101,7 +92,7 @@ After resolving, run git diff --check and finish with a concise summary.
           $ErrorActionPreference = 'Stop'
           npm ci
 
-      - name: Repair until all required checks pass
+      - name: Repair until every required check passes
         working-directory: workspace
         shell: powershell
         run: |
@@ -115,8 +106,7 @@ After resolving, run git diff --check and finish with a concise summary.
           }
 
           $passed = $false
-          for ($attempt = 1; $attempt -le 4; $attempt++) {
-            Write-Host "Verification attempt $attempt"
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
             $results = [ordered]@{}
             $results['clinical-workflow'] = Invoke-Check 'clinical-workflow' 'node scripts/clinical-workflow-unification-test.mjs'
             $results['fix3-medication'] = Invoke-Check 'fix3-medication' 'node scripts/recovery-fix3-medication-test.mjs'
@@ -130,19 +120,17 @@ After resolving, run git diff --check and finish with a concise summary.
               $passed = $true
               break
             }
-
-            if ($attempt -eq 4) { break }
+            if ($attempt -eq 5) { break }
 
             $failureSummary = foreach ($entry in $failed) {
-              $path = ".verification-logs\$($entry.Key).log"
-              $tail = (Get-Content $path -Tail 160) -join "`n"
+              $tail = (Get-Content ".verification-logs\$($entry.Key).log" -Tail 180) -join "`n"
               "### $($entry.Key)`n$tail"
             }
 
             $prompt = @"
-Repair the current isolated Prij Clinic integration branch so every required verification passes.
+Repair this isolated Prij Clinic integration so all required checks pass.
 
-Failed checks and log tails:
+Failures:
 $($failureSummary -join "`n`n")
 
 Required checks:
@@ -153,15 +141,14 @@ Required checks:
 - npm run typecheck
 - npm run build
 
-Mandatory constraints:
-- Diagnose root causes; do not weaken, skip, delete, or falsify tests.
-- Preserve both Sprint 1 Fix 3 and Feature 46 behavior.
-- Keep Refractory clinically active, longitudinal, non-Resolved, provenance-preserving, and idempotent on repeated signing.
-- Preserve medication/search governance and server-side search behavior.
-- No database reset, delete, truncate, seed, migration, production data use, secrets, PHI, reference/, local-reference/, or external datasets.
+Rules:
+- Diagnose root causes; never weaken, skip, delete, or falsify tests.
+- Preserve Sprint 1 Fix 3 and Feature 46.
+- Refractory remains active, longitudinal, non-Resolved, provenance-preserving, and signing-idempotent.
+- Preserve medication/search governance and server-side search.
+- No reset, delete, truncate, seed, migration, production data, secrets, PHI, datasets, reference/, or local-reference/.
 - No commit, push, reset, clean, stash, or branch switch.
-- Keep changes narrowly scoped and backward compatible.
-- Run relevant checks while repairing, then stop without committing.
+- Keep repairs narrowly scoped and backward compatible.
 "@
             $prompt | & codex -a never -s danger-full-access exec --ephemeral
             if ($LASTEXITCODE -ne 0) { throw "Codex repair attempt $attempt failed with exit code $LASTEXITCODE." }
@@ -169,49 +156,41 @@ Mandatory constraints:
           }
 
           if (-not $passed) {
-            Write-Error 'Required checks still fail after four repair attempts.'
             Get-ChildItem '.verification-logs\*.log' | ForEach-Object {
               Write-Host "===== $($_.Name) ====="
-              Get-Content $_.FullName -Tail 120
+              Get-Content $_.FullName -Tail 160
             }
-            throw 'Integration repair did not reach green.'
+            throw 'Required checks still fail after five repair attempts.'
           }
 
-      - name: Enforce safety and scope gates
+      - name: Enforce final safety gates
         working-directory: workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $paths = @(git status --porcelain | ForEach-Object { if ($_.Length -ge 4) { $_.Substring(3) } })
           $forbidden = @($paths | Where-Object {
-            $_ -match '(^|[\\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\\/]|$)' -or
-            $_ -match '(^|[\\/])(reference|local-reference)([\\/]|$)' -or
-            $_ -match 'prisma[\\/]migrations'
+            $_ -match '(^|[\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\/]|$)' -or
+            $_ -match '(^|[\/])(reference|local-reference)([\/]|$)' -or
+            $_ -match 'prisma[\/]migrations'
           })
-          if ($forbidden.Count -gt 0) {
-            $forbidden | ForEach-Object { Write-Error "Forbidden path: $_" }
-            throw 'Safety scope gate failed.'
-          }
-
-          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') {
-            throw 'Conflict markers remain.'
-          }
-
+          if ($forbidden.Count -gt 0) { throw "Forbidden paths changed: $($forbidden -join ', ')" }
+          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
           git diff --check
           git diff --cached --check
 
-      - name: Create final verification report
+      - name: Write final verification report
         working-directory: workspace
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
-          $report = @(
+          @(
             '# Sprint 1 Fix 3 + Feature 46 Integration Verification',
             '',
             '- Integration branch: `integration/sprint1-fix3-feature46`',
-            '- Sprint 1 protected source: `work/sprint1-fix3-protected`',
-            '- Feature 46 source commit: `149c22dd7f3d91c82d184d7d4087403feb8506b3`',
+            '- Sprint 1 source: `work/sprint1-fix3-protected`',
+            '- Feature 46 commit: `149c22dd7f3d91c82d184d7d4087403feb8506b3`',
             '- Clinical workflow test: PASS',
             '- Fix 3 medication test: PASS',
             '- Fix 3 search test: PASS',
@@ -223,15 +202,13 @@ Mandatory constraints:
             '- Database reset/delete/truncate/seed: NOT RUN',
             '- Main or production branch modified: NO',
             '',
-            '## Result',
-            '',
             'Sprint 1 Fix 3 and Feature 46 are integrated, repaired, and verified on an isolated branch.'
-          )
-          $report | Set-Content 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md'
+          ) | Set-Content 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md'
+          Remove-Item '.verification-logs' -Recurse -Force -ErrorAction SilentlyContinue
           git add --all
           git diff --cached --check
 
-      - name: Commit and push verified integration
+      - name: Commit and push verified result
         working-directory: workspace
         shell: powershell
         run: |
@@ -242,12 +219,4 @@ Mandatory constraints:
           if (-not (git diff --cached --name-only)) { throw 'No verified integration changes to commit.' }
           git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
           git push --force-with-lease origin HEAD:integration/sprint1-fix3-feature46
-
-      - name: Final confirmation
-        working-directory: workspace
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if (git status --porcelain) { throw 'Workspace is not clean after verified push.' }
-          Write-Host 'SPRINT 1 FIX 3 + FEATURE 46 FULLY VERIFIED'
-          Write-Host 'ISOLATED INTEGRATION BRANCH SAVED'
+          if (git status --porcelain) { throw 'Workspace is not clean after push.' }
