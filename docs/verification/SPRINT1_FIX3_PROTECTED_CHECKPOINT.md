@@ -17,3 +17,13 @@
 - `scripts/recovery-fix3-medication-test.mjs`
 - `scripts/recovery-fix3-search-test.mjs`
 - `scripts/sync-egyptian-drug-database.mjs`
+
+## Automated verification
+
+- Dependencies: `success`
+- Clinical workflow test: `failure`
+- Fix 3 medication test: `failure`
+- Fix 3 search test: `failure`
+- Typecheck: `failure`
+- Build: `failure`
+- Feature 46 integration: **NOT YET PERFORMED**
