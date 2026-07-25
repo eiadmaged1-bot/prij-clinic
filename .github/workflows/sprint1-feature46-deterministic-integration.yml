@@ -1,0 +1,238 @@
+name: Sprint 1 Feature 46 Deterministic Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-feature46-deterministic-integration.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sprint1-feature46-deterministic-integration
+  cancel-in-progress: false
+
+jobs:
+  integrate-verify-push:
+    name: Deterministically integrate, verify, and push
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+    env:
+      DIAG_DIR: ${{ github.workspace }}/diagnostics/feature46-${{ github.run_id }}
+
+    steps:
+      - name: Verify SECTRA and reset isolated paths
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('control', 'workspace', 'diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force $env:DIAG_DIR | Out-Null
+
+      - name: Checkout deterministic resolver
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 1
+          clean: true
+          path: control
+
+      - name: Checkout protected Sprint 1 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-fix3-protected
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Apply Feature 46 and deterministic conflict resolution
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (git status --porcelain) { throw 'Protected Sprint 1 baseline is not clean.' }
+          git fetch origin test/feature-46-refractory-complaint
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Feature 46 branch.' }
+          git checkout -B integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create integration branch.' }
+
+          $previousErrorPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
+          try {
+            git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3
+            $applyExit = $LASTEXITCODE
+          } finally {
+            $ErrorActionPreference = $previousErrorPreference
+          }
+          $unmergedBefore = @(git ls-files -u)
+          if ($applyExit -ne 0 -and $unmergedBefore.Count -eq 0) {
+            throw "Feature 46 failed without expected conflicts. Exit $applyExit"
+          }
+
+          node ..\control\scripts\resolve-sprint1-feature46-conflicts.mjs $env:GITHUB_WORKSPACE\workspace
+          if ($LASTEXITCODE -ne 0) { throw 'Deterministic conflict resolver failed.' }
+
+          $conflictedPaths = @(
+            'apps/api/src/doctor-visit/dto.ts',
+            'apps/api/src/encounters/encounters.service.ts',
+            'apps/web/app/globals.css',
+            'apps/web/app/patients/[id]/patient-components.tsx',
+            'apps/web/components/clinic/ActiveVisitWorkspace.tsx'
+          )
+          foreach ($path in $conflictedPaths) {
+            git add -- $path
+            if ($LASTEXITCODE -ne 0) { throw "Could not stage resolved file: $path" }
+          }
+          git add --all
+          if ($LASTEXITCODE -ne 0) { throw 'Could not stage integration changes.' }
+          if (git ls-files -u) { throw 'Unmerged index entries remain after deterministic resolution.' }
+          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain after deterministic resolution.' }
+          git rev-parse -q --verify CHERRY_PICK_HEAD *> $null
+          if ($LASTEXITCODE -eq 0) {
+            git cherry-pick --quit
+            if ($LASTEXITCODE -ne 0) { throw 'Could not exit cherry-pick state.' }
+          }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Resolved integration has diff-check errors.' }
+
+      - name: Load local development database configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceEnv = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $sourceEnv)) {
+            throw 'Local Prij .env was not found at C:\Newfolder\prij-clinic\.env.'
+          }
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $foundDatabase = $false
+          foreach ($line in Get-Content -LiteralPath $sourceEnv) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $foundDatabase = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $foundDatabase) { throw 'DATABASE_URL is missing from the local Prij .env.' }
+          'Local environment loaded without printing secret values.' | Write-Host
+
+      - name: Install dependencies and generate Prisma client
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma client generation failed.' }
+
+      - name: Run all six mandatory checks
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force $env:DIAG_DIR | Out-Null
+
+          $checks = [ordered]@{
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          $failures = @()
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $env:DIAG_DIR "$($entry.Key).stdout.log"
+            $stderr = Join-Path $env:DIAG_DIR "$($entry.Key).stderr.log"
+            $combined = Join-Path $env:DIAG_DIR "$($entry.Key).log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            $output = @()
+            if (Test-Path -LiteralPath $stdout) { $output += @(Get-Content -LiteralPath $stdout) }
+            if (Test-Path -LiteralPath $stderr) { $output += @(Get-Content -LiteralPath $stderr) }
+            $output | Set-Content -LiteralPath $combined -Encoding utf8
+            $output | ForEach-Object { Write-Host $_ }
+            if ($process.ExitCode -ne 0) { $failures += "$($entry.Key):$($process.ExitCode)" }
+          }
+          if ($failures.Count -gt 0) {
+            throw "Mandatory checks failed: $($failures -join ', ')"
+          }
+
+      - name: Enforce safety gates and write report
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $paths = @(git status --porcelain | ForEach-Object { if ($_.Length -ge 4) { $_.Substring(3) } })
+          $forbidden = @($paths | Where-Object {
+            $_ -match '(^|[\\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\\/]|$)' -or
+            $_ -match '(^|[\\/])(reference|local-reference)([\\/]|$)' -or
+            $_ -match 'prisma[\\/]migrations'
+          })
+          if ($forbidden.Count -gt 0) { throw "Forbidden paths changed: $($forbidden -join ', ')" }
+          if (git ls-files -u) { throw 'Unmerged entries remain.' }
+          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Unstaged diff-check errors remain.' }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Staged diff-check errors remain.' }
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 Fix 3 + Feature 46 Integration Verification',
+            '',
+            '- Integration branch: `integration/sprint1-fix3-feature46`',
+            '- Sprint 1 baseline: `work/sprint1-fix3-protected`',
+            '- Feature 46 commit: `149c22dd7f3d91c82d184d7d4087403feb8506b3`',
+            '- Conflict resolution: deterministic, no Codex required',
+            '- Prisma client generation: PASS',
+            '- Clinical workflow test: PASS',
+            '- Fix 3 medication test: PASS',
+            '- Fix 3 search test: PASS',
+            '- Feature 46 focused test: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- `git diff --check`: PASS',
+            '- Database operations: read-only verification only',
+            '- Database reset/delete/truncate/seed/migration: NOT RUN',
+            '- Main or production branch modified: NO',
+            '',
+            'Sprint 1 Fix 3 and Feature 46 are integrated and fully verified.'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md' -Encoding utf8
+          git add --all
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification report introduced diff-check errors.' }
+
+      - name: Commit and push verified integration
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          if (-not (git diff --cached --name-only)) { throw 'No integration changes are staged.' }
+          git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified integration.' }
+          git push origin HEAD:integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push integration branch.' }
+          if (git status --porcelain) { throw 'Workspace is not clean after push.' }
+
+      - name: Upload deterministic diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint1-feature46-deterministic-${{ github.run_id }}
+          path: ${{ github.workspace }}/diagnostics/feature46-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
