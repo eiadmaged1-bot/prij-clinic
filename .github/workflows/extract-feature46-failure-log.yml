@@ -1,0 +1,130 @@
+name: Extract Latest Feature 46 Failure Log
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/extract-feature46-failure-log.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  extract:
+    name: Extract Feature 46 failure details
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+
+      - name: Download and record failure log
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+
+          $workflow = 'sprint1-feature46-integration-repair.yml'
+          $runsUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/$workflow/runs?branch=docs%2F200-feature-architecture-and-sprint-a&per_page=10"
+          $runs = Invoke-RestMethod -Method Get -Uri $runsUri -Headers $headers
+          $run = $runs.workflow_runs | Select-Object -First 1
+          if (-not $run) { throw 'No Feature 46 integration workflow run was found.' }
+
+          $jobsUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runs/$($run.id)/jobs?filter=latest&per_page=100"
+          $jobs = Invoke-RestMethod -Method Get -Uri $jobsUri -Headers $headers
+          $job = $jobs.jobs | Where-Object { $_.name -eq 'Integrate, repair, and fully verify' } | Select-Object -First 1
+          if (-not $job) { throw 'Integration job was not found.' }
+
+          $tempRoot = Join-Path $env:RUNNER_TEMP "feature46-log-$($run.id)"
+          Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $tempRoot | Out-Null
+          $zipPath = Join-Path $tempRoot 'job-logs.zip'
+          $extractPath = Join-Path $tempRoot 'logs'
+
+          $logUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/jobs/$($job.id)/logs"
+          Invoke-WebRequest -Uri $logUri -Headers $headers -OutFile $zipPath -UseBasicParsing
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+
+          $logFiles = @(Get-ChildItem -LiteralPath $extractPath -File -Recurse | Sort-Object FullName)
+          if ($logFiles.Count -eq 0) { throw 'Downloaded job log archive contained no files.' }
+
+          $patterns = @(
+            '##\[error\]',
+            'Process completed with exit code',
+            'Unresolved',
+            'conflict markers remain',
+            'needs merge',
+            'index.lock',
+            'could not stage',
+            'throw',
+            'fatal:',
+            'error:'
+          )
+
+          $lines = @(
+            '# Latest Feature 46 Integration Failure Details',
+            '',
+            "- Run ID: $($run.id)",
+            "- Run URL: $($run.html_url)",
+            "- Job ID: $($job.id)",
+            "- Job URL: $($job.html_url)",
+            "- Run conclusion: $($run.conclusion)",
+            "- Job conclusion: $($job.conclusion)",
+            '',
+            '## Error matches'
+          )
+
+          foreach ($file in $logFiles) {
+            $matches = @(Select-String -LiteralPath $file.FullName -Pattern $patterns -CaseSensitive:$false -ErrorAction SilentlyContinue)
+            if ($matches.Count -gt 0) {
+              $lines += ''
+              $lines += "### $($file.Name)"
+              foreach ($match in $matches | Select-Object -Last 120) {
+                $safeLine = [string]$match.Line
+                $lines += "- L$($match.LineNumber): $safeLine"
+              }
+            }
+          }
+
+          $lines += ''
+          $lines += '## Log tails'
+          foreach ($file in $logFiles) {
+            $lines += ''
+            $lines += "### $($file.Name)"
+            $lines += '```text'
+            $lines += @(Get-Content -LiteralPath $file.FullName -Tail 220)
+            $lines += '```'
+          }
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $report = 'docs/verification/LATEST_FEATURE46_FAILURE_DETAILS.md'
+          $lines | Set-Content -LiteralPath $report -Encoding utf8
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $report
+          git commit -m "ci: record Feature 46 failure details for run $($run.id)"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit failure details.' }
+          git push origin HEAD:security/rbac-scope-enforcement
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push failure details.' }
