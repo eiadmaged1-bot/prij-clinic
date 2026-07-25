@@ -21,7 +21,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 180
     env:
-      PRIJ_VERIFY_LOG_DIR: ${{ github.workspace }}/.runner-logs/prij-integration-${{ github.run_id }}
+      PRIJ_VERIFY_LOG_DIR: ${{ github.workspace }}/runner-logs/prij-integration-${{ github.run_id }}
 
     steps:
       - name: Reset isolated runner workspace
@@ -31,6 +31,9 @@ jobs:
           $workspace = Join-Path $env:GITHUB_WORKSPACE 'workspace'
           if (Test-Path -LiteralPath $workspace) {
             Remove-Item -LiteralPath $workspace -Recurse -Force
+          }
+          if (Test-Path -LiteralPath $env:PRIJ_VERIFY_LOG_DIR) {
+            Remove-Item -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Recurse -Force
           }
           New-Item -ItemType Directory -Force $env:PRIJ_VERIFY_LOG_DIR | Out-Null
 
@@ -55,6 +58,7 @@ jobs:
           git checkout -B integration/sprint1-fix3-feature46
           if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated integration branch.' }
           codex --version
+          if ($LASTEXITCODE -ne 0) { throw 'Codex CLI is unavailable on SECTRA.' }
 
       - name: Apply verified Feature 46
         working-directory: workspace
@@ -77,11 +81,29 @@ jobs:
           New-Item -ItemType Directory -Force $env:PRIJ_VERIFY_LOG_DIR | Out-Null
 
           function Invoke-CodexRepair([string]$Prompt, [string]$LogName) {
-            $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
-            $output = $Prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
-            $code = $LASTEXITCODE
-            $output | Tee-Object -FilePath $log | ForEach-Object { Write-Host $_ }
-            return [int]$code
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            $promptPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.prompt.txt"
+            $stdoutPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stdout.log"
+            $stderrPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stderr.log"
+            $logPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
+            [System.IO.File]::WriteAllText($promptPath, $Prompt, $utf8NoBom)
+
+            $process = Start-Process \
+              -FilePath 'codex.exe' \
+              -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') \
+              -NoNewWindow \
+              -Wait \
+              -PassThru \
+              -RedirectStandardInput $promptPath \
+              -RedirectStandardOutput $stdoutPath \
+              -RedirectStandardError $stderrPath
+
+            $combined = @()
+            if (Test-Path -LiteralPath $stdoutPath) { $combined += @(Get-Content -LiteralPath $stdoutPath) }
+            if (Test-Path -LiteralPath $stderrPath) { $combined += @(Get-Content -LiteralPath $stderrPath) }
+            $combined | Set-Content -LiteralPath $logPath -Encoding utf8
+            $combined | ForEach-Object { Write-Host $_ }
+            return [int]$process.ExitCode
           }
 
           function Get-UnmergedPaths {
@@ -138,8 +160,7 @@ jobs:
               Write-Host "Conflict markers remain after attempt $attempt."
             }
 
-            $remainingAfterAttempt = @(Get-UnmergedPaths)
-            if ($remainingAfterAttempt.Count -eq 0) { break }
+            if (@(Get-UnmergedPaths).Count -eq 0) { break }
           }
 
           $remaining = @(Get-UnmergedPaths)
@@ -149,7 +170,7 @@ jobs:
             Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter 'conflict-repair-*.log' -ErrorAction SilentlyContinue |
               ForEach-Object {
                 Write-Host "===== $($_.Name) ====="
-                Get-Content -LiteralPath $_.FullName -Tail 120
+                Get-Content -LiteralPath $_.FullName -Tail 160
               }
             throw 'Unresolved integration conflicts remain after three repair attempts.'
           }
@@ -164,20 +185,7 @@ jobs:
           }
 
           git diff --cached --check
-          if ($LASTEXITCODE -ne 0) {
-            $whitespacePrompt = @(
-              'Repair only whitespace errors, malformed conflict resolutions, and syntax damage in the current Prij Clinic integration.',
-              'Preserve all Sprint 1 Fix 3 and Feature 46 behavior.',
-              'Inspect both staged and unstaged changes.',
-              'Do not weaken tests, commit, push, reset, clean, stash, stage, or switch branches.',
-              'Finish with both git diff --check and git diff --cached --check passing.'
-            ) -join "`n"
-            Invoke-CodexRepair $whitespacePrompt 'conflict-whitespace-repair' | Out-Null
-            git add --all
-            if ($LASTEXITCODE -ne 0) { throw 'Could not stage whitespace repairs.' }
-            git diff --cached --check
-            if ($LASTEXITCODE -ne 0) { throw 'Conflict resolution still has diff-check errors.' }
-          }
+          if ($LASTEXITCODE -ne 0) { throw 'Conflict resolution has diff-check errors.' }
 
       - name: Install dependencies
         working-directory: workspace
@@ -195,10 +203,42 @@ jobs:
 
           function Invoke-Check([string]$Name, [string]$Command) {
             $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$Name.log"
-            $output = cmd /d /s /c "$Command" 2>&1
-            $code = $LASTEXITCODE
+            $previousErrorPreference = $ErrorActionPreference
+            $ErrorActionPreference = 'Continue'
+            try {
+              $output = cmd /d /s /c "$Command" 2>&1
+              $code = $LASTEXITCODE
+            } finally {
+              $ErrorActionPreference = $previousErrorPreference
+            }
             $output | Tee-Object -FilePath $log | ForEach-Object { Write-Host $_ }
             return [int]$code
+          }
+
+          function Invoke-CodexRepair([string]$Prompt, [string]$LogName) {
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            $promptPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.prompt.txt"
+            $stdoutPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stdout.log"
+            $stderrPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stderr.log"
+            $logPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
+            [System.IO.File]::WriteAllText($promptPath, $Prompt, $utf8NoBom)
+
+            $process = Start-Process \
+              -FilePath 'codex.exe' \
+              -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') \
+              -NoNewWindow \
+              -Wait \
+              -PassThru \
+              -RedirectStandardInput $promptPath \
+              -RedirectStandardOutput $stdoutPath \
+              -RedirectStandardError $stderrPath
+
+            $combined = @()
+            if (Test-Path -LiteralPath $stdoutPath) { $combined += @(Get-Content -LiteralPath $stdoutPath) }
+            if (Test-Path -LiteralPath $stderrPath) { $combined += @(Get-Content -LiteralPath $stderrPath) }
+            $combined | Set-Content -LiteralPath $logPath -Encoding utf8
+            $combined | ForEach-Object { Write-Host $_ }
+            return [int]$process.ExitCode
           }
 
           $passed = $false
@@ -249,10 +289,7 @@ jobs:
               '- Keep repairs narrowly scoped and backward compatible.'
             ) -join "`n"
 
-            $repairLog = Join-Path $env:PRIJ_VERIFY_LOG_DIR "repair-attempt-$attempt.log"
-            $repairOutput = $prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
-            $repairCode = $LASTEXITCODE
-            $repairOutput | Tee-Object -FilePath $repairLog | ForEach-Object { Write-Host $_ }
+            $repairCode = Invoke-CodexRepair $prompt "repair-attempt-$attempt"
             Write-Host "Codex repair attempt $attempt exit: $repairCode"
             git diff --check
             if ($LASTEXITCODE -ne 0) { throw 'Codex repair introduced diff-check errors.' }
@@ -262,7 +299,7 @@ jobs:
             Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter '*.log' -ErrorAction SilentlyContinue |
               ForEach-Object {
                 Write-Host "===== $($_.Name) ====="
-                Get-Content -LiteralPath $_.FullName -Tail 160
+                Get-Content -LiteralPath $_.FullName -Tail 180
               }
             throw 'Required checks still fail after five repair attempts.'
           }
@@ -335,6 +372,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sprint1-feature46-diagnostics-${{ github.run_id }}
-          path: ${{ github.workspace }}/.runner-logs/prij-integration-${{ github.run_id }}
+          path: ${{ github.workspace }}/runner-logs/prij-integration-${{ github.run_id }}
           if-no-files-found: ignore
           retention-days: 7
