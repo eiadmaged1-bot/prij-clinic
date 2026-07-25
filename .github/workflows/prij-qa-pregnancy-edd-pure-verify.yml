@@ -1,0 +1,120 @@
+name: Prij QA Pregnancy EDD Pure Verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-qa-pregnancy-edd-pure-verify.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-qa-pregnancy-edd-pure-verify
+  cancel-in-progress: false
+
+jobs:
+  patch-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          path: controls
+
+      - name: Checkout QA repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Apply guarded pregnancy and EDD UI patch
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ../controls/scripts/runner/apply-qa-pregnancy-edd-ui.mjs
+          node ../controls/scripts/runner/apply-qa-pregnancy-edd-ui.mjs "$PWD"
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all)"
+          printf '%s\n' "$changed"
+          if [[ -z "$changed" ]]; then
+            echo 'No UI implementation changes were produced.' >&2
+            exit 1
+          fi
+          unsafe="$(printf '%s\n' "$changed" | sed -E 's/^...//' | grep -Ev '^(apps/web/)' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope files changed:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Run locked pregnancy and EDD contract
+        working-directory: workspace
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Run Feature 46 regression
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Run typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Run production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Commit verified pure implementation
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          cat > docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md <<'REPORT'
+          # QA Pregnancy and EDD Pure Verification
+
+          - Locked pregnancy/EDD contract: PASS
+          - Feature 46 regression: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - Pregnancy ordinary menstrual-cycle UI: SUPPRESSED
+          - Pre-pregnancy menstrual baseline: PRESERVED
+          - Pregnancy-specific bleeding fields: IMPLEMENTED
+          - EDD candidate and clinician confirmation UI: IMPLEMENTED
+          - Full database-backed regression: PENDING SECTRA V2
+          - Migration/seed/reset/delete/truncate: NOT RUN
+          - Production data modified: NO
+          REPORT
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/web/|docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md$)' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m 'Implement pregnancy context and EDD interface'
+          git push origin HEAD:work/sprint1-qa-repair-batch
