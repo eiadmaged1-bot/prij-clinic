@@ -1004,7 +1004,17 @@ type ReproductiveSummarySnapshot = {
   abnormalFlags?: string[];
   narrative?: string;
   edd?: string;
+  eddMode?: string;
+  eddSource?: string;
   datingMethod?: string;
+  datingSourceDate?: string;
+  datingFormula?: string;
+  datingConfirmationDate?: string;
+  datingClinician?: string;
+  datingCorrectionReason?: string;
+  datingHistory?: Array<Record<string, unknown>>;
+  pregnancyBleedingStatus?: string;
+  pregnancyBleedingOnsetDate?: string;
   cycleNumber?: string;
   triggerDate?: string;
   expectedOvulationDate?: string;
@@ -1067,9 +1077,9 @@ function MenstrualHistoryTimeline({ patientId, snapshots }: { patientId: string;
   if (!snapshots.length) return null;
   return <details className="menstrual-history-timeline">
     <summary>Complete menstrual / reproductive history ({snapshots.length})</summary>
-    {baseline ? <div className="reproductive-baseline-summary"><strong>Baseline menstrual profile</strong><span>{[baseline.usualRegularity, baseline.usualCycleLength ? `${baseline.usualCycleLength}-day interval` : "", baseline.usualBleedingDuration ? `${baseline.usualBleedingDuration}-day bleeding` : "", baseline.usualFlow].filter(Boolean).join(" · ") || baseline.menopauseStatus || "Baseline recorded"}</span></div> : null}
+    {baseline ? <div className="reproductive-baseline-summary"><strong>Pre-pregnancy menstrual baseline</strong><span>{[baseline.usualRegularity, baseline.usualCycleLength ? `${baseline.usualCycleLength}-day interval` : "", baseline.usualBleedingDuration ? `${baseline.usualBleedingDuration}-day bleeding` : "", baseline.usualFlow].filter(Boolean).join(" · ") || baseline.menopauseStatus || "Baseline recorded"} · preserved historical context</span></div> : null}
     <div className="clinical-lenses clinical-filter-row">{["all", "abnormal", "gynecology", "infertility", "postpartum", "other"].map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} onClick={(event) => { event.preventDefault(); setFilter(item); }}>{item === "abnormal" ? "Abnormal only" : item}</button>)}</div>
-    <div className="menstrual-history-records">{filtered.map((snapshot, index) => <article key={`${snapshot.sourceEncounterId}-${index}`}><div className="data-row-header"><strong>{overviewDate(snapshot.visitDate ?? snapshot.confirmedAt ?? "")}</strong><span className="badge">{snapshot.changeStatus?.replaceAll("_", " ") || snapshot.context || "recorded"}</span></div><dl><div><dt>LMP</dt><dd>{snapshot.lmp ? overviewDate(snapshot.lmp) : "Not recorded"}</dd></div>{snapshot.lmp ? <div><dt>Cycle day</dt><dd>{cycleDay(snapshot.lmp) || "Not calculable"}</dd></div> : null}<div><dt>Pattern</dt><dd>{[snapshot.regularity, snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : "", snapshot.bleedingDuration ? `${snapshot.bleedingDuration}-day bleeding` : "", snapshot.flow].filter(Boolean).join(" · ") || "Not recorded"}</dd></div><div><dt>Flags</dt><dd>{snapshot.abnormalFlags?.join(", ") || "None recorded"}</dd></div>{snapshot.narrative ? <div><dt>Note</dt><dd>{snapshot.narrative}</dd></div> : null}</dl>{snapshot.sourceEncounterId ? <Link href={`/patients/${patientId}/visits/${snapshot.sourceEncounterId}/history`}>Open source encounter</Link> : null}</article>)}</div>
+    <div className="menstrual-history-records">{filtered.map((snapshot, index) => <article key={`${snapshot.sourceEncounterId}-${index}`}><div className="data-row-header"><strong>{overviewDate(snapshot.visitDate ?? snapshot.confirmedAt ?? "")}</strong><span className="badge">{snapshot.changeStatus?.replaceAll("_", " ") || snapshot.context || "recorded"}</span></div><dl><div><dt>LMP</dt><dd>{snapshot.lmp ? overviewDate(snapshot.lmp) : "Not recorded"}</dd></div>{snapshot.context !== "pregnancy" && snapshot.lmp ? <div><dt>Cycle day</dt><dd>{cycleDay(snapshot.lmp) || "Not calculable"}</dd></div> : null}<div><dt>Pattern</dt><dd>{[snapshot.regularity, snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : "", snapshot.bleedingDuration ? `${snapshot.bleedingDuration}-day bleeding` : "", snapshot.flow].filter(Boolean).join(" · ") || "Not recorded"}</dd></div><div><dt>Flags</dt><dd>{snapshot.context === "pregnancy" ? "Ordinary menstrual flags suppressed during active pregnancy" : snapshot.abnormalFlags?.join(", ") || "None recorded"}</dd></div>{snapshot.context === "pregnancy" ? <><div><dt>Pregnancy bleeding</dt><dd>{snapshot.pregnancyBleedingStatus || "None recorded"}</dd></div>{snapshot.pregnancyBleedingOnsetDate ? <div><dt>Bleeding onset</dt><dd>{overviewDate(snapshot.pregnancyBleedingOnsetDate)}</dd></div> : null}<div><dt>Authoritative EDD</dt><dd>{snapshot.edd ? overviewDate(snapshot.edd) : "Not confirmed"}</dd></div><div><dt>Dating provenance</dt><dd>{[snapshot.eddMode, snapshot.eddSource ?? snapshot.datingMethod, snapshot.datingClinician].filter(Boolean).join(" · ") || "Not recorded"}</dd></div></> : null}{snapshot.narrative ? <div><dt>Note</dt><dd>{snapshot.narrative}</dd></div> : null}</dl>{snapshot.sourceEncounterId ? <Link href={`/patients/${patientId}/visits/${snapshot.sourceEncounterId}/history`}>Open source encounter</Link> : null}</article>)}</div>
   </details>;
 }
 
@@ -1174,7 +1184,8 @@ function contextCalendarEvents(mode: PatientWorkspaceMode, snapshots: Reproducti
   };
   for (const snapshot of snapshots) {
     add(snapshot.visitDate ?? snapshot.confirmedAt, "Visit snapshot", "encounter", snapshot.sourceEncounterId);
-    add(snapshot.lmp, "LMP", "menstrual", snapshot.sourceEncounterId);
+    if (snapshot.lmp) add(snapshot.lmp, mode === "pregnancy" ? "Pregnancy dating LMP" : "LMP", mode === "pregnancy" ? "pregnancy_dating" : "menstrual", snapshot.sourceEncounterId);
+    if (mode === "pregnancy") add(snapshot.pregnancyBleedingOnsetDate, "Pregnancy bleeding", "pregnancy_event", snapshot.sourceEncounterId);
     add(snapshot.triggerDate, "Trigger", "fertility_cycle", snapshot.sourceEncounterId);
     add(snapshot.expectedOvulationDate, "Expected ovulation", "fertility_cycle", snapshot.sourceEncounterId);
     add(snapshot.nextScanDate, "Next scan", "ultrasound", snapshot.sourceEncounterId);
