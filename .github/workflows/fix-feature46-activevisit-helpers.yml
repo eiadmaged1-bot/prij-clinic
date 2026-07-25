@@ -1,0 +1,157 @@
+name: Fix Feature 46 Active Visit Helpers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/fix-feature46-activevisit-helpers.yml
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  repair:
+    name: Restore Active Visit helpers and rerun integration
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify SECTRA
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 0
+          clean: true
+
+      - name: Patch deterministic resolver
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'scripts/resolve-sprint1-feature46-conflicts.mjs'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          if ($text -match 'active visit helper restoration') {
+            Write-Host 'Active Visit helper restoration already present.'
+          } else {
+            $needle = @'
+  const duplicateSignVisit = /\n  async function signVisit\(\) \{\n    if \(!contextReady\) return;\n    await completeDoctorVisit\(visitId\);\n    setStatus\("Encounter signed\. Complaint history preserved\."\);\n    window\.location\.assign\(`\/patients\/\$\{patientId\}`\);\n  \}\n\n/;
+  if (duplicateSignVisit.test(content)) {
+    content = content.replace(duplicateSignVisit, '\n');
+  }
+
+'@
+
+            $replacement = @'
+  const duplicateSignVisit = /\n  async function signVisit\(\) \{\n    if \(!contextReady\) return;\n    await completeDoctorVisit\(visitId\);\n    setStatus\("Encounter signed\. Complaint history preserved\."\);\n    window\.location\.assign\(`\/patients\/\$\{patientId\}`\);\n  \}\n\n/;
+  if (duplicateSignVisit.test(content)) {
+    content = content.replace(duplicateSignVisit, '\n');
+  }
+
+  // active visit helper restoration
+  if (!content.includes('const examinationChips = [')) {
+    content = mustReplace(
+      content,
+      'const investigationCategories = ',
+      `const examinationChips = [
+  "General condition stable",
+  "Pallor absent",
+  "Pallor present",
+  "Abdomen soft",
+  "Abdominal tenderness",
+  "Fundal height recorded",
+  "Fetal heart heard",
+  "Speculum exam normal",
+  "Cervix closed",
+  "Cervix open",
+  "Cervix soft",
+  "Cervix dilated",
+  "Bleeding seen",
+  "Vaginal discharge seen",
+  "Uterus normal size",
+  "Uterus enlarged",
+  "Uterine tenderness",
+  "Adnexal tenderness",
+  "Cervical motion tenderness",
+  "Pelvic mass felt"
+];
+
+const investigationCategories = `,
+      'active visit examination chips'
+    );
+  }
+
+  if (!content.includes('function ChipList(')) {
+    content = mustReplace(
+      content,
+      'function normalizeModule(value?: string) {',
+      `function ChipList({ labels, onPick }: { labels: string[]; onPick: (label: string) => void }) {
+  return <div className="clinical-chip-cloud wide">{[...new Set(labels)].map((label) => <button className="clinical-chip" key={label} type="button" onClick={() => onPick(label)}><strong>{label}</strong><span>Examination</span></button>)}</div>;
+}
+
+function normalizeModule(value?: string) {`,
+      'active visit ChipList helper'
+    );
+  }
+
+  if (!content.includes('function appendText(')) {
+    content = mustReplace(
+      content,
+      'function updateLine(lines: PrescriptionLine[], index: number, patch: Partial<PrescriptionLine>) {',
+      `function appendText(existing = "", label: string) {
+  return [existing.trim(), label].filter(Boolean).join(existing.trim() ? "\\n" : "");
+}
+
+function updateLine(lines: PrescriptionLine[], index: number, patch: Partial<PrescriptionLine>) {`,
+      'active visit appendText helper'
+    );
+  }
+
+'@
+
+            if (-not $text.Contains($needle)) { throw 'Could not locate Active Visit post-conflict marker.' }
+            $text = $text.Replace($needle, $replacement)
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
+          }
+
+          node --check $path
+          if ($LASTEXITCODE -ne 0) { throw 'Resolver syntax check failed.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Resolver patch has diff-check errors.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $path
+          if (git diff --cached --quiet) {
+            Write-Host 'No resolver commit required.'
+          } else {
+            git commit -m 'fix: restore Active Visit helpers during Feature 46 integration'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not commit resolver repair.' }
+            git push origin HEAD:docs/200-feature-architecture-and-sprint-a
+            if ($LASTEXITCODE -ne 0) { throw 'Could not push resolver repair.' }
+          }
+
+      - name: Rerun failed integration job
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $uri = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/actions/runs/30170271601/rerun-failed-jobs"
+          Invoke-RestMethod -Method Post -Uri $uri -Headers $headers
+          Write-Host 'Feature 46 integration rerun requested.'
