@@ -1,0 +1,69 @@
+name: Repair QA Pregnancy EDD YAML
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/repair-qa-pregnancy-edd-yaml.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Indent locked implementation prompt and validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/prij-sprint1-qa-pregnancy-edd.yml')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          output = []
+          inside = False
+          found = False
+          closed = False
+
+          for line in lines:
+              if line == "          $prompt = @'":
+                  inside = True
+                  found = True
+                  output.append(line)
+                  continue
+              if inside and line == "'@":
+                  output.append("          '@")
+                  inside = False
+                  closed = True
+                  continue
+              if inside and not line.startswith('          '):
+                  output.append('          ' + line)
+              else:
+                  output.append(line)
+
+          if not found:
+              raise SystemExit('Implementation prompt opening marker not found.')
+          if inside or not closed:
+              raise SystemExit('Implementation prompt closing marker not found.')
+
+          path.write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+
+          go install github.com/rhysd/actionlint/cmd/actionlint@latest
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/prij-sprint1-qa-pregnancy-edd.yml
+
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/prij-sprint1-qa-pregnancy-edd.yml
+          git commit -m 'ci: fix pregnancy EDD workflow prompt indentation'
+          git push origin HEAD:security/rbac-scope-enforcement
