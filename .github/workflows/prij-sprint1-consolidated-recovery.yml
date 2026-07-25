@@ -1,0 +1,334 @@
+name: Prij Sprint 1 Consolidated Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-consolidated-recovery.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-consolidated-recovery
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Backup, integrate Feature 46, verify, and start QA repairs
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+
+    steps:
+      - name: Verify SECTRA and reset isolated paths
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('control', 'workspace', 'diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'diagnostics') | Out-Null
+
+      - name: Checkout recovery controls
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 1
+          clean: true
+          path: control
+
+      - name: Checkout protected Sprint 1 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-fix3-protected
+          fetch-depth: 0
+          clean: true
+          path: workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Create verified local-only PostgreSQL backup
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $projectRoot = 'C:\Newfolder\prij-clinic'
+          $envPath = Join-Path $projectRoot '.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+
+          $databaseUrl = $null
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            if ($parts[0].Trim() -eq 'DATABASE_URL') {
+              $databaseUrl = $parts[1].Trim().Trim('"').Trim("'")
+              break
+            }
+          }
+          if (-not $databaseUrl) { throw 'DATABASE_URL is missing from the local Prij .env.' }
+
+          $uri = [System.Uri]$databaseUrl
+          if ($uri.Scheme -notin @('postgresql', 'postgres')) { throw "Expected PostgreSQL DATABASE_URL, got '$($uri.Scheme)'." }
+          $userInfo = $uri.UserInfo.Split(':', 2)
+          $dbUser = [System.Uri]::UnescapeDataString($userInfo[0])
+          $dbPassword = if ($userInfo.Count -gt 1) { [System.Uri]::UnescapeDataString($userInfo[1]) } else { '' }
+          $dbName = [System.Uri]::UnescapeDataString($uri.AbsolutePath.TrimStart('/'))
+          $dbPort = if ($uri.Port -gt 0) { $uri.Port } else { 5432 }
+
+          $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backupDir = Join-Path $projectRoot "backups\sprint1-qa-repair-$timestamp"
+          New-Item -ItemType Directory -Force $backupDir | Out-Null
+          $dumpPath = Join-Path $backupDir 'prij-clinic-pre-repair.dump'
+          $manifestPath = Join-Path $backupDir 'BACKUP-MANIFEST.txt'
+          $backupMethod = $null
+
+          $pgDump = Get-Command pg_dump.exe -ErrorAction SilentlyContinue
+          if (-not $pgDump) {
+            $pgDump = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\pg_dump.exe' -File -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+          }
+
+          if ($pgDump) {
+            $pgDumpPath = if ($pgDump.Source) { $pgDump.Source } else { $pgDump.FullName }
+            $previousPassword = $env:PGPASSWORD
+            $env:PGPASSWORD = $dbPassword
+            try {
+              & $pgDumpPath --host $uri.Host --port $dbPort --username $dbUser --format custom --no-owner --no-privileges --file $dumpPath $dbName
+              if ($LASTEXITCODE -ne 0) { throw "Local pg_dump failed with exit code $LASTEXITCODE." }
+              $backupMethod = 'host-pg_dump'
+            } finally {
+              $env:PGPASSWORD = $previousPassword
+            }
+          } else {
+            $docker = Get-Command docker.exe -ErrorAction SilentlyContinue
+            if (-not $docker) { throw 'Neither pg_dump.exe nor docker.exe was found on SECTRA.' }
+            $container = 'prij-clinic-postgres'
+            & $docker.Source inspect $container *> $null
+            if ($LASTEXITCODE -ne 0) { throw "PostgreSQL container '$container' is unavailable." }
+            $remotePath = "/tmp/prij-clinic-pre-repair-$timestamp.dump"
+            try {
+              & $docker.Source exec --env "PGPASSWORD=$dbPassword" $container pg_dump --host 127.0.0.1 --port 5432 --username $dbUser --format custom --no-owner --no-privileges --file $remotePath $dbName
+              if ($LASTEXITCODE -ne 0) { throw "Docker pg_dump failed with exit code $LASTEXITCODE." }
+              & $docker.Source cp "$container`:$remotePath" $dumpPath
+              if ($LASTEXITCODE -ne 0) { throw "docker cp failed with exit code $LASTEXITCODE." }
+              $backupMethod = 'docker-pg_dump'
+            } finally {
+              & $docker.Source exec $container rm -f $remotePath *> $null
+            }
+          }
+
+          $dump = Get-Item -LiteralPath $dumpPath
+          if ($dump.Length -le 0) { throw 'Database dump is empty.' }
+          $hash = (Get-FileHash -LiteralPath $dumpPath -Algorithm SHA256).Hash
+          @(
+            'Prij Clinic pre-repair local backup',
+            "Created: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')",
+            "Method: $backupMethod",
+            "Dump path: $dumpPath",
+            "Dump size bytes: $($dump.Length)",
+            "SHA256: $hash",
+            'Uploaded to GitHub: NO',
+            'Database mutation performed: NO'
+          ) | Set-Content -LiteralPath $manifestPath -Encoding utf8
+          "PRIJ_BACKUP_DIR=$backupDir" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PRIJ_BACKUP_METHOD=$backupMethod" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PRIJ_BACKUP_SIZE=$($dump.Length)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PRIJ_BACKUP_SHA=$hash" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Apply Feature 46 with deterministic conflict resolution
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (git status --porcelain) { throw 'Protected Sprint 1 baseline is not clean.' }
+          git fetch origin test/feature-46-refractory-complaint
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Feature 46 branch.' }
+          git checkout -B integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create integration branch.' }
+
+          $previousPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
+          try {
+            git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3
+            $applyExit = $LASTEXITCODE
+          } finally {
+            $ErrorActionPreference = $previousPreference
+          }
+
+          $unmerged = @(git ls-files -u)
+          if ($applyExit -ne 0 -and $unmerged.Count -eq 0) { throw "Feature 46 failed without resolvable conflicts. Exit $applyExit" }
+          if ($unmerged.Count -gt 0) {
+            node ..\control\scripts\resolve-sprint1-feature46-conflicts.mjs $env:GITHUB_WORKSPACE\workspace
+            if ($LASTEXITCODE -ne 0) { throw 'Deterministic conflict resolver failed.' }
+          }
+
+          git add --all
+          if ($LASTEXITCODE -ne 0) { throw 'Could not stage integrated files.' }
+          if (git ls-files -u) { throw 'Unmerged index entries remain.' }
+          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
+          git rev-parse -q --verify CHERRY_PICK_HEAD *> $null
+          if ($LASTEXITCODE -eq 0) {
+            git cherry-pick --quit
+            if ($LASTEXITCODE -ne 0) { throw 'Could not exit cherry-pick state.' }
+          }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Integrated changes have diff-check errors.' }
+
+      - name: Load local development configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL was not loaded.' }
+          Write-Host 'Local environment loaded without printing secret values.'
+
+      - name: Install dependencies and generate Prisma client
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma client generation failed.' }
+
+      - name: Run six mandatory verification checks
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'diagnostics'
+          $checks = [ordered]@{
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          $failures = @()
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { $failures += "$($entry.Key):$($process.ExitCode)" }
+          }
+          if ($failures.Count -gt 0) { throw "Mandatory checks failed: $($failures -join ', ')" }
+
+      - name: Write verification and backup receipt
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (git ls-files -u) { throw 'Unmerged entries remain.' }
+          if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Diff-check errors remain.' }
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 Fix 3 + Feature 46 Integration Verification',
+            '',
+            '- Integration branch: `integration/sprint1-fix3-feature46`',
+            '- Feature 46 commit: `149c22dd7f3d91c82d184d7d4087403feb8506b3`',
+            '- Conflict resolution: deterministic',
+            '- Prisma client generation: PASS',
+            '- Clinical workflow test: PASS',
+            '- Fix 3 medication test: PASS',
+            '- Fix 3 search test: PASS',
+            '- Feature 46 focused test: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Database reset/delete/truncate/seed/migration: NOT RUN',
+            '',
+            '## Pre-repair backup',
+            '',
+            "- Method: `$env:PRIJ_BACKUP_METHOD`",
+            "- Local directory: `$env:PRIJ_BACKUP_DIR`",
+            "- Size: $env:PRIJ_BACKUP_SIZE bytes",
+            "- SHA256: `$env:PRIJ_BACKUP_SHA`",
+            '- Uploaded to GitHub: NO'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md' -Encoding utf8
+          git add --all
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification report introduced diff-check errors.' }
+
+      - name: Commit and push verified integration
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified integration.' }
+          git push --force-with-lease origin HEAD:integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push verified integration branch.' }
+
+      - name: Start QA repair batch branch
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git checkout -B work/sprint1-qa-repair-batch
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 QA Repair Batch',
+            '',
+            'Baseline: `integration/sprint1-fix3-feature46`',
+            '',
+            '## Approved QA repairs',
+            '',
+            '1. Separate active-pregnancy workflow from ordinary menstrual-cycle activity.',
+            '2. Add EDD modes: manual and calculated from LMP, ultrasound, IVF/embryo transfer, or known conception date.',
+            '3. Compact Patient Overview and Current Visit calendars for 2K displays.',
+            '4. Clean and reorganize pregnancy-history and EDD presentation.',
+            '5. Redesign medication search as compact cards with prominent trade name, generic, strength, form, classification, and safety chips.',
+            '6. Replace prescription dose/timing/duration free text with structured Arabic quantity, frequency templates, duration stepper/unit, and one optional Note field.',
+            '',
+            '## Safety gates',
+            '',
+            '- Preserve the verified Feature 46 behavior.',
+            '- No database migration, seed, reset, delete, or production-data mutation.',
+            '- Each repair requires focused tests, typecheck, production build, and visual contract checks.',
+            '',
+            'Status: STARTED — implementation pending.'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md' -Encoding utf8
+          git add -- 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md'
+          git commit -m 'Start Sprint 1 QA repair batch'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit QA repair checkpoint.' }
+          git push --force-with-lease origin HEAD:work/sprint1-qa-repair-batch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push QA repair branch.' }
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prij-sprint1-consolidated-${{ github.run_id }}
+          path: ${{ github.workspace }}/diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
