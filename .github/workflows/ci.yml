@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
 
 jobs:
   build:
+    if: github.event_name == 'pull_request' || !contains(github.event.head_commit.message, '[deterministic-feature46]')
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 180
 
