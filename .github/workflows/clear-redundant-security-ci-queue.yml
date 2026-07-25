@@ -57,4 +57,4 @@ jobs:
           git commit -m 'ci: record redundant security CI queue cleanup'
           git push origin HEAD:security/rbac-scope-enforcement
 
-# Package 2 cleanup
+# Package 2 corrected rerun cleanup
