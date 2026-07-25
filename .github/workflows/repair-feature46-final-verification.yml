@@ -1,0 +1,100 @@
+name: Repair Feature 46 Final Verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/repair-feature46-final-verification.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Patch final verification workflow
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify SECTRA
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout workflow controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+
+      - name: Patch all current verification blockers
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = '.github/workflows/prij-sprint1-feature46-final-integration.yml'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          $oldActivePatch = @'
+          $activeVisit = $activeVisit.Replace($oldCall, $newCall)
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+'@
+          $newActivePatch = @'
+          $activeVisit = $activeVisit.Replace($oldCall, $newCall)
+
+          $oldStatusValue = 'value={form.complaintStatus ?? "ACTIVE"}'
+          $newStatusValue = 'value={String(form.complaintStatus ?? "ACTIVE")}'
+          $statusValueCount = ([regex]::Matches($activeVisit, [regex]::Escape($oldStatusValue))).Count
+          if ($statusValueCount -ne 1) { throw "Expected exactly one complaint-status value, found $statusValueCount." }
+          $activeVisit = $activeVisit.Replace($oldStatusValue, $newStatusValue)
+
+          $oldBadge = 'className={"badge complaint-status-badge " + (form.complaintStatus === "REFRACTORY" ? "refractory" : "")}'
+          $newBadge = 'className={`badge complaint-status-badge ${form.complaintStatus === "REFRACTORY" ? "refractory" : ""}`}'
+          $badgeCount = ([regex]::Matches($activeVisit, [regex]::Escape($oldBadge))).Count
+          if ($badgeCount -ne 1) { throw "Expected exactly one complaint-status badge, found $badgeCount." }
+          $activeVisit = $activeVisit.Replace($oldBadge, $newBadge)
+
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+'@
+          if (-not $text.Contains($oldActivePatch)) { throw 'Could not locate Active Visit patch block.' }
+          $text = $text.Replace($oldActivePatch, $newActivePatch)
+
+          $oldInstall = @'
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+'@
+          $newInstall = @'
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceTarget = 'local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force $referenceTarget | Out-Null
+          Copy-Item -LiteralPath (Join-Path $referenceSource '*') -Destination $referenceTarget -Recurse -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $referenceTarget 'egyptian-drugs.csv'))) { throw 'Medication reference copy failed.' }
+
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild for search verification failed.' }
+'@
+          if (-not $text.Contains($oldInstall)) { throw 'Could not locate install/Prisma block.' }
+          $text = $text.Replace($oldInstall, $newInstall)
+
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
+
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Workflow repair has diff-check errors.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $path
+          git commit -m 'ci: fix Feature 46 final verification prerequisites'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit final verification repair.' }
+          git push origin HEAD:security/rbac-scope-enforcement
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push final verification repair.' }
