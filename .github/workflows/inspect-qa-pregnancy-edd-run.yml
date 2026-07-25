@@ -10,6 +10,7 @@ on:
 
 permissions:
   actions: read
+  checks: read
   contents: write
 
 jobs:
@@ -21,7 +22,7 @@ jobs:
           ref: security/rbac-scope-enforcement
           fetch-depth: 0
 
-      - name: Record latest target run
+      - name: Record latest target run and compiler annotations
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -34,18 +35,45 @@ jobs:
             echo "No target workflow run found." >&2
             exit 1
           fi
-          jq -r '.workflow_runs[0] | [
-            "# Latest QA Pregnancy and EDD Run Status",
-            "",
-            ("- Run ID: `" + (.id|tostring) + "`"),
-            ("- Status: `" + .status + "`"),
-            ("- Conclusion: `" + (.conclusion // "pending") + "`"),
-            ("- Event: `" + .event + "`"),
-            ("- Head SHA: `" + .head_sha + "`"),
-            ("- Created: `" + .created_at + "`"),
-            ("- Updated: `" + .updated_at + "`"),
-            ("- URL: " + .html_url)
-          ] | .[]' <<<"$response" > docs/verification/LATEST_QA_PREGNANCY_EDD_RUN_STATUS.md
+          run_id="$(jq -r '.workflow_runs[0].id' <<<"$response")"
+          head_sha="$(jq -r '.workflow_runs[0].head_sha' <<<"$response")"
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" > /tmp/run-view.txt 2>&1 || true
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/commits/${head_sha}/check-runs?per_page=100" > /tmp/check-runs.json 2>/tmp/check-runs-error.txt || true
+
+          {
+            jq -r '.workflow_runs[0] | [
+              "# Latest QA Pregnancy and EDD Run Status",
+              "",
+              ("- Run ID: `" + (.id|tostring) + "`"),
+              ("- Status: `" + .status + "`"),
+              ("- Conclusion: `" + (.conclusion // "pending") + "`"),
+              ("- Event: `" + .event + "`"),
+              ("- Head SHA: `" + .head_sha + "`"),
+              ("- Created: `" + .created_at + "`"),
+              ("- Updated: `" + .updated_at + "`"),
+              ("- URL: " + .html_url)
+            ] | .[]' <<<"$response"
+            echo
+            echo '## gh run view'
+            echo '```text'
+            cat /tmp/run-view.txt
+            echo '```'
+            echo
+            echo '## Check runs'
+            echo '```text'
+            if [[ -s /tmp/check-runs.json ]]; then
+              jq -r '.check_runs[]? | [
+                ("name=" + .name),
+                ("status=" + .status),
+                ("conclusion=" + (.conclusion // "pending")),
+                ("title=" + (.output.title // "")),
+                ("summary=" + (.output.summary // "")),
+                ("text=" + (.output.text // ""))
+              ] | join("\n") + "\n---"' /tmp/check-runs.json
+            fi
+            if [[ -s /tmp/check-runs-error.txt ]]; then cat /tmp/check-runs-error.txt; fi
+            echo '```'
+          } > docs/verification/LATEST_QA_PREGNANCY_EDD_RUN_STATUS.md
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -54,7 +82,5 @@ jobs:
             echo 'Status report unchanged.'
             exit 0
           fi
-          git commit -m 'ci: record latest pregnancy EDD QA run status'
+          git commit -m 'ci: record pregnancy EDD compiler annotations'
           git push origin HEAD:security/rbac-scope-enforcement
-
-# inspection refresh 2
