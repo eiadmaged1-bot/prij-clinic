@@ -1,5 +1,6 @@
 name: Inspect Latest Feature 46 Integration Run
 
+# Refresh after native-process-safe integration workflow e15760f.
 on:
   workflow_dispatch:
   push:
