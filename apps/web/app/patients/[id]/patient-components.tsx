@@ -1063,10 +1063,10 @@ function ContextClinicalCalendar({ patientId, mode, snapshots, related }: { pati
 
   return <section className="context-clinical-calendar compact-context-calendar" aria-label={`${mode} calendar`}>
     <div className="context-calendar-toolbar">
-      <button className="text-button compact" type="button" aria-label="Previous month" onClick={() => moveMonth(-1)}>‹</button>
+      <button className="text-button compact" type="button" aria-label="Previous month" onClick={() => moveMonth(-1)}>Previous</button>
       <strong>{calendarTitle(mode)} · {monthStartDate.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</strong>
       <button className="text-button compact" type="button" aria-label="Go to current month" onClick={goToCurrentMonth}>Today</button>
-      <button className="text-button compact" type="button" aria-label="Next month" onClick={() => moveMonth(1)}>›</button>
+      <button className="text-button compact" type="button" aria-label="Next month" onClick={() => moveMonth(1)}>Next</button>
     </div>
     <div className="context-calendar-weekdays">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
     <div className="context-calendar-grid">{days.map((date) => {

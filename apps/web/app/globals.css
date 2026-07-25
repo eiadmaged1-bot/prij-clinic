@@ -6436,12 +6436,12 @@ select {
 }
 .context-calendar-toolbar {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 5px;
 }
 .context-calendar-toolbar strong { text-align: center; }
-.context-calendar-toolbar .compact { min-width: 32px; min-height: 32px; padding: 3px 7px; }
+.context-calendar-toolbar .compact { min-width: 0; min-height: 30px; padding: 3px 7px; font-size: 10px; }
 .context-calendar-weekdays,
 .context-calendar-grid {
   display: grid;
