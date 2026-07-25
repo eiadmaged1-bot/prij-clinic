@@ -1,0 +1,199 @@
+name: Prij Sprint 1 QA Calendar History Final Verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-calendar-history-final-verify.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-calendar-history-final-verify
+  cancel-in-progress: false
+
+jobs:
+  final-verify:
+    name: Final verify compact calendar and History package
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+
+    steps:
+      - name: Prepare isolated SECTRA workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('qa-calendar-history-final-workspace', 'qa-calendar-history-final-diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'qa-calendar-history-final-diagnostics') | Out-Null
+
+      - name: Checkout QA repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          clean: true
+          path: qa-calendar-history-final-workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qa-calendar-history-final-workspace/package-lock.json
+
+      - name: Load local development configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL was not loaded.' }
+          Write-Host 'Local environment loaded without printing secret values.'
+
+      - name: Install and prepare verification prerequisites
+        working-directory: qa-calendar-history-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceTarget = 'local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force $referenceTarget | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination $referenceTarget -Recurse -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $referenceTarget 'egyptian-drugs.csv'))) { throw 'Medication reference copy failed.' }
+
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild for search verification failed.' }
+
+      - name: Run all eight mandatory checks
+        working-directory: qa-calendar-history-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'qa-calendar-history-final-diagnostics'
+          $checks = [ordered]@{
+            'qa-calendar-history' = 'node scripts/qa-calendar-history-contract-test.mjs'
+            'qa-pregnancy-edd' = 'node scripts/qa-pregnancy-edd-contract-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - name: Record verified Package 2
+        working-directory: qa-calendar-history-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $resultLines = @(
+            '# QA Compact Calendar and History Verification',
+            '',
+            '- Tickets: `QA-CAL-001`, `QA-HIST-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Compact calendar/History contract: PASS',
+            '- Pregnancy/EDD regression: PASS',
+            '- Feature 46 regression: PASS',
+            '- Clinical workflow regression: PASS',
+            '- Medication regression: PASS',
+            '- Search regression: PASS',
+            '- Prisma Client generation: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Calendar desktop maximum width: 760 px',
+            '- Calendar desktop/mobile day-cell minimums: 38 px / 34 px',
+            '- Visible events per day: 2 with overflow count',
+            '- Pregnancy and menopause History filters: PASS',
+            '- EDD provenance and correction History: PASS',
+            '- Source/provenance details: COLLAPSIBLE',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs/verification/QA_CALENDAR_HISTORY_RESULT.md'), $resultLines, (New-Object System.Text.UTF8Encoding($false)))
+
+          $batchPath = 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md'
+          $batchLines = @(
+            '# Sprint 1 QA Repair Batch',
+            '',
+            'Baseline: `integration/sprint1-fix3-feature46`',
+            '',
+            '## Approved QA repairs',
+            '',
+            '1. Separate active-pregnancy workflow from ordinary menstrual-cycle activity.',
+            '2. Add EDD modes: manual and calculated from LMP, ultrasound, IVF/embryo transfer, or known conception date.',
+            '3. Compact Patient Overview and Current Visit calendars for 2K displays.',
+            '4. Clean and reorganize pregnancy-history and EDD presentation.',
+            '5. Redesign medication search as compact cards with prominent trade name, generic, strength, form, classification, and safety chips.',
+            '6. Replace prescription dose/timing/duration free text with structured Arabic quantity, frequency templates, duration stepper/unit, and one optional Note field.',
+            '',
+            'Status: ACTIVE — Packages 1 and 2 verified; Packages 3 and 4 remain pending.',
+            '',
+            '## Verified packages',
+            '',
+            '- `QA-PREG-001`: VERIFIED',
+            '- `QA-EDD-001`: VERIFIED',
+            '- `QA-CAL-001`: VERIFIED',
+            '- `QA-HIST-001`: VERIFIED',
+            '',
+            '## Remaining packages',
+            '',
+            '- `QA-MED-001`: compact medication-result cards.',
+            '- `QA-RX-001` and `QA-RX-002`: structured Arabic prescription quantity, timing, and duration.'
+          )
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) $batchPath), $batchLines, (New-Object System.Text.UTF8Encoding($false)))
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/QA_CALENDAR_HISTORY_RESULT.md' $batchPath
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification documents have diff-check errors.' }
+          git commit -m 'Verify compact calendars and History cleanup'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit final Package 2 verification.' }
+          git push origin HEAD:work/sprint1-qa-repair-batch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push final Package 2 verification.' }
+
+      - name: Upload final diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-calendar-history-final-${{ github.run_id }}
+          path: qa-calendar-history-final-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
