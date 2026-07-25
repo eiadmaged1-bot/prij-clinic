@@ -23,7 +23,7 @@
 
 <w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|javascript/auto|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\next-flight-css-loader.js??ruleSet[1].rules[14].oneOf[5].use[0]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[1]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\components\investigations\investigation-station-v3.module.css|ssr': No serializer registered for Warning
 <w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
- âš  Compiled with warnings in 17.8s
+ âš  Compiled with warnings in 17.4s
 
 ./components/investigations/investigation-station-v3.module.css
 Warning
@@ -43,70 +43,63 @@ Import trace for requested module:
 ./components/investigations/investigation-station-v3.module.css
 ./components/investigations/InvestigationStationV3.tsx
 
-<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css': No serializer registered for PostCSSSyntaxError
-<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css': No serializer registered for Warning
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
 <w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\components\investigations\investigation-station-v3.module.css': No serializer registered for Warning
 <w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
-Failed to compile.
+ âš  Compiled with warnings in 5.9s
 
-./app/globals.css:7755:1
-Syntax error: C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css Unclosed block
+./components/investigations/investigation-station-v3.module.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[3]!./components/investigations/investigation-station-v3.module.css
+Warning
 
- [90m 7753 | [39m[33m}[39m
- [90m 7754 | [39m
-[1m[31m>[39m[22m[90m 7755 | [39m[36m@media[39m[36m [39m[36m(max-width: 390px)[39m [33m{[39m
- [90m      | [39m[1m[31m^[39m[22m
- [90m 7756 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-primary[39m [33m{[39m grid-template-columns[33m:[39m 48px [36mminmax[39m[36m(0, 1fr)[39m[33m;[39m [33m}[39m
- [90m 7757 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-avatar[39m [33m{[39m width[33m:[39m 48px[33m;[39m height[33m:[39m 48px[33m;[39m border-radius[33m:[39m 15px[33m;[39m [33m}[39m
-
-./app/globals.css
-Syntax error: C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css Unclosed block (7755:1)
-
- [90m 7753 | [39m[33m}[39m
- [90m 7754 | [39m
-[1m[31m>[39m[22m[90m 7755 | [39m[36m@media[39m[36m [39m[36m(max-width: 390px)[39m [33m{[39m
- [90m      | [39m[1m[31m^[39m[22m
- [90m 7756 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-primary[39m [33m{[39m grid-template-columns[33m:[39m 48px [36mminmax[39m[36m(0, 1fr)[39m[33m;[39m [33m}[39m
- [90m 7757 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-avatar[39m [33m{[39m width[33m:[39m 48px[33m;[39m height[33m:[39m 48px[33m;[39m border-radius[33m:[39m 15px[33m;[39m [33m}[39m
-
-    at tryRunOrWebpackError (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:316119)
-    at __webpack_require_module__ (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:131532)
-    at __nested_webpack_require_161494__ (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:130967)
-    at C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:131824
-    at symbolIterator (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\neo-async\async.js:1:14444)
-    at done (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\neo-async\async.js:1:14824)
-    at Hook.eval [as callAsync] (eval at create (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224), <anonymous>:15:1)
-    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:14:6378)
-    at C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:130687
-    at symbolIterator (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\neo-async\async.js:1:14402)
--- inner error --
-Syntax error: C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css Unclosed block (7755:1)
-
- [90m 7753 | [39m[33m}[39m
- [90m 7754 | [39m
-[1m[31m>[39m[22m[90m 7755 | [39m[36m@media[39m[36m [39m[36m(max-width: 390px)[39m [33m{[39m
- [90m      | [39m[1m[31m^[39m[22m
- [90m 7756 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-primary[39m [33m{[39m grid-template-columns[33m:[39m 48px [36mminmax[39m[36m(0, 1fr)[39m[33m;[39m [33m}[39m
- [90m 7757 | [39m  [33m.approved-patient-profile-shell[39m [33m.patient-smart-avatar[39m [33m{[39m width[33m:[39m 48px[33m;[39m height[33m:[39m 48px[33m;[39m border-radius[33m:[39m 15px[33m;[39m [33m}[39m
-
-    at Object.<anonymous> (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css:1:7)
-    at C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:962717
-    at Hook.eval [as call] (eval at create (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:14:9002), <anonymous>:7:1)
-    at Hook.CALL_DELEGATE [as _call] (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:14:6272)
-    at C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:131565
-    at tryRunOrWebpackError (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:316073)
-    at __webpack_require_module__ (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:131532)
-    at __nested_webpack_require_161494__ (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:130967)
-    at C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\webpack\bundle5.js:29:131824
-    at symbolIterator (C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\compiled\neo-async\async.js:1:14444)
-
-Generated code for C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\app\globals.css
+(177:65) autoprefixer: start value has mixed support, consider using flex-start instead
 
 Import trace for requested module:
+./components/investigations/investigation-station-v3.module.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[3]!./components/investigations/investigation-station-v3.module.css
+./components/investigations/investigation-station-v3.module.css
+./components/investigations/InvestigationStationV3.tsx
+
+./components/investigations/investigation-station-v3.module.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[3]!./components/investigations/investigation-station-v3.module.css
+Warning
+
+(203:61) autoprefixer: start value has mixed support, consider using flex-start instead
+
+Import trace for requested module:
+./components/investigations/investigation-station-v3.module.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[3]!./components/investigations/investigation-station-v3.module.css
+./components/investigations/investigation-station-v3.module.css
+./components/investigations/InvestigationStationV3.tsx
+
+./app/globals.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+Warning
+
+(6760:41) autoprefixer: end value has mixed support, consider using flex-end instead
+
+Import trace for requested module:
+./app/globals.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
 ./app/globals.css
 
+./app/globals.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+Warning
 
-> Build failed because of webpack errors
+(6813:61) autoprefixer: end value has mixed support, consider using flex-end instead
+
+Import trace for requested module:
+./app/globals.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+./app/globals.css
+
+Failed to compile.
+
+./components/clinic/ActiveVisitWorkspace.tsx:498:42
+Type error: Cannot find name 'ChipList'.
+
+[0m [90m 496 |[39m       {activeModule [33m===[39m [32m"history"[39m [33m?[39m [33m<[39m[33m>[39m[33m<[39m[33mReproductiveStatusEditor[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mreproductiveSnapshot} previous[33m=[39m{previousSnapshot} pregnancyEpisode[33m=[39m{pregnancyEpisode} infertilityEpisode[33m=[39m{infertilityEpisode} onChange[33m=[39m{(reproductiveSnapshot) [33m=>[39m updateStructured({ reproductiveSnapshot[33m,[39m version[33m:[39m [35m2[39m })} [35m/><StructuredTagPicker title="Structured History" groups={historyGroups} selected={structured.history} onChange={(history) => updateStructured({ history })} /[39m[33m>[39m[33m<[39m[33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+ [90m 497 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mStructuredExamination[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mexamination} onChange[33m=[39m{(examination) [33m=>[39m updateStructured({ examination })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+[31m[1m>[22m[39m[90m 498 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mChipList[39m labels[33m=[39m{examinationChips} onPick[33m=[39m{(label) [33m=>[39m onChange({ [33m...[39mform[33m,[39m examText[33m:[39m appendText(form[33m.[39mexamText[33m,[39m label) })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+ [90m     |[39m                                          [31m[1m^[22m[39m
+ [90m 499 |[39m       {activeModule [33m===[39m [32m"complaint"[39m [33m?[39m (
+ [90m 500 |[39m         [33m<[39m[33mlabel[39m[33m>[39m[33mLifecycle[39m status
+ [90m 501 |[39m           [33m<[39m[33mselect[39m value[33m=[39m{form[33m.[39mcomplaintStatus [33m?[39m[33m?[39m [32m"ACTIVE"[39m} onChange[33m=[39m{(event) [33m=>[39m onChange({ [33m...[39mform[33m,[39m complaintStatus[33m:[39m event[33m.[39mtarget[33m.[39mvalue })}[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null
 npm error Lifecycle script `build` failed with error:
 npm error code 1
 npm error path C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web
@@ -140,6 +133,8 @@ https://nextjs.org/telemetry
    â–² Next.js 15.5.19
 
    Creating an optimized production build ...
+ âœ“ Compiled successfully in 23.5s
+   Linting and checking validity of types ...
 
 > @prij-clinic/shared@0.1.0 build
 > tsc --noEmit -p tsconfig.json
