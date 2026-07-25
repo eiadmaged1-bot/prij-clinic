@@ -1,0 +1,128 @@
+name: Sprint 1 Pre-Repair Local Backup
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-pre-repair-local-backup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    name: Back up local Prij database before QA repairs
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 30
+
+    steps:
+      - name: Verify SECTRA
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout backup receipt branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 0
+          clean: true
+
+      - name: Create local PostgreSQL dump
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $projectRoot = 'C:\Newfolder\prij-clinic'
+          $envPath = Join-Path $projectRoot '.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+
+          $databaseUrl = $null
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            if ($parts[0].Trim() -eq 'DATABASE_URL') {
+              $databaseUrl = $parts[1].Trim().Trim('"').Trim("'")
+              break
+            }
+          }
+          if (-not $databaseUrl) { throw 'DATABASE_URL is missing from the local Prij .env.' }
+
+          $uri = [System.Uri]$databaseUrl
+          if ($uri.Scheme -notin @('postgresql', 'postgres')) { throw "Expected PostgreSQL DATABASE_URL, got '$($uri.Scheme)'." }
+          $userInfo = $uri.UserInfo.Split(':', 2)
+          $dbUser = [System.Uri]::UnescapeDataString($userInfo[0])
+          $dbPassword = if ($userInfo.Count -gt 1) { [System.Uri]::UnescapeDataString($userInfo[1]) } else { '' }
+          $dbName = [System.Uri]::UnescapeDataString($uri.AbsolutePath.TrimStart('/'))
+          $dbPort = if ($uri.Port -gt 0) { $uri.Port } else { 5432 }
+
+          $pgDump = Get-Command pg_dump.exe -ErrorAction SilentlyContinue
+          if (-not $pgDump) {
+            $pgDump = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\pg_dump.exe' -File -ErrorAction SilentlyContinue |
+              Sort-Object FullName -Descending |
+              Select-Object -First 1
+          }
+          if (-not $pgDump) { throw 'pg_dump.exe was not found on SECTRA.' }
+          $pgDumpPath = if ($pgDump.Source) { $pgDump.Source } else { $pgDump.FullName }
+
+          $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+          $backupDir = Join-Path $projectRoot "backups\sprint1-qa-repair-$timestamp"
+          New-Item -ItemType Directory -Force $backupDir | Out-Null
+          $dumpPath = Join-Path $backupDir 'prij-clinic-pre-repair.dump'
+          $manifestPath = Join-Path $backupDir 'BACKUP-MANIFEST.txt'
+
+          $previousPassword = $env:PGPASSWORD
+          $env:PGPASSWORD = $dbPassword
+          try {
+            & $pgDumpPath --host $uri.Host --port $dbPort --username $dbUser --format custom --no-owner --no-privileges --file $dumpPath $dbName
+            if ($LASTEXITCODE -ne 0) { throw "pg_dump failed with exit code $LASTEXITCODE." }
+          } finally {
+            $env:PGPASSWORD = $previousPassword
+          }
+
+          if (-not (Test-Path -LiteralPath $dumpPath)) { throw 'Database dump file was not created.' }
+          $dump = Get-Item -LiteralPath $dumpPath
+          if ($dump.Length -le 0) { throw 'Database dump is empty.' }
+          $hash = (Get-FileHash -LiteralPath $dumpPath -Algorithm SHA256).Hash
+
+          @(
+            'Prij Clinic pre-repair local backup',
+            "Created: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')",
+            "Machine: $env:COMPUTERNAME",
+            "Database host: $($uri.Host)",
+            "Database name: $dbName",
+            "Dump path: $dumpPath",
+            "Dump size bytes: $($dump.Length)",
+            "SHA256: $hash",
+            'Uploaded to GitHub: NO',
+            'Database mutation performed: NO'
+          ) | Set-Content -LiteralPath $manifestPath -Encoding utf8
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 Pre-Repair Backup Receipt',
+            '',
+            "- Created: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss K')",
+            '- Runner: `SECTRA`',
+            "- Local backup directory: `$backupDir`",
+            "- Dump file size: $($dump.Length) bytes",
+            "- SHA256: `$hash`",
+            '- Database dump uploaded to GitHub: **NO**',
+            '- Database mutation performed: **NO**',
+            '- Code backup branches:',
+            '  - `backup/pre-qa-repair-20260725-sprint1-fix3`',
+            '  - `backup/pre-qa-repair-20260725-feature46`',
+            '  - `backup/pre-qa-repair-20260725-roadmap-workflows`'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_PRE_REPAIR_BACKUP_RECEIPT.md' -Encoding utf8
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/SPRINT1_PRE_REPAIR_BACKUP_RECEIPT.md'
+          git commit -m 'docs: record Sprint 1 pre-repair local backup'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit backup receipt.' }
+          git push origin HEAD:docs/200-feature-architecture-and-sprint-a
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push backup receipt.' }
