@@ -1,44 +1,52 @@
 # Active GitHub Actions Queue
 
-- Captured: `2026-07-25T22:51:56Z`
+- Captured: `2026-07-25T23:08:21Z`
 
 ## CI
 
-- Run ID: `30178370537`
+- Run ID: `30178867233`
 - Status: `queued`
-- Created: `2026-07-25T22:51:46Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178370537
+- Created: `2026-07-25T23:08:12Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178867233
   - Job: `build` · status `queued` · runner `unassigned`
 
 ## Inspect Active Actions Queue
 
-- Run ID: `30178370517`
+- Run ID: `30178867197`
 - Status: `in_progress`
-- Created: `2026-07-25T22:51:46Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178370517
-  - Job: `inspect` · status `in_progress` · runner `GitHub Actions 1000000784`
+- Created: `2026-07-25T23:08:12Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178867197
+  - Job: `inspect` · status `in_progress` · runner `GitHub Actions 1000000793`
 
-## Prij QA Calendar History Pure Verify
+## Prij QA Calendar History Clinical Repair
 
-- Run ID: `30178350009`
+- Run ID: `30178852256`
 - Status: `in_progress`
-- Created: `2026-07-25T22:51:07Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178350009
-  - Job: `patch-verify` · status `in_progress` · runner `GitHub Actions 1000000783`
+- Created: `2026-07-25T23:07:43Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178852256
+  - Job: `repair-verify` · status `in_progress` · runner `GitHub Actions 1000000792`
 
 ## CI
 
-- Run ID: `30178349990`
+- Run ID: `30178852176`
 - Status: `queued`
-- Created: `2026-07-25T22:51:07Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178349990
+- Created: `2026-07-25T23:07:43Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178852176
   - Job: `build` · status `queued` · runner `unassigned`
 
 ## CI
 
-- Run ID: `30178304289`
-- Status: `in_progress`
-- Created: `2026-07-25T22:49:42Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178304289
-  - Job: `build` · status `in_progress` · runner `SECTRA`
+- Run ID: `30178837941`
+- Status: `queued`
+- Created: `2026-07-25T23:07:14Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178837941
+  - Job: `build` · status `queued` · runner ``
+
+## CI
+
+- Run ID: `30178785625`
+- Status: `queued`
+- Created: `2026-07-25T23:05:23Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30178785625
+  - Job: `build` · status `queued` · runner ``
 
