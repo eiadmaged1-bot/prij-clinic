@@ -1,21 +1,14 @@
 # Redundant Security CI Queue Cleanup
 
-- Captured: `2026-07-25T22:40:18Z`
-- Candidate queued CI runs: `13`
+- Captured: `2026-07-25T23:00:48Z`
+- Candidate queued CI runs: `6`
 
-- Cancel requested: `30178007549`
-- Cancel requested: `30177978300`
-- Cancel requested: `30177900939`
-- Cancel requested: `30177787226`
-- Cancel requested: `30177416165`
-- Cancel requested: `30177400623`
-- Cancel requested: `30177384367`
-- Cancel requested: `30177353164`
-- Cancel requested: `30177317877`
-- Cancel requested: `30177291262`
-- Cancel requested: `30177274465`
-- Cancel requested: `30177015479`
-- Cancel requested: `30176859339`
+- Cancel requested: `30178641582`
+- Cancel requested: `30178617799`
+- Cancel requested: `30178525097`
+- Cancel requested: `30178507158`
+- Cancel requested: `30178487683`
+- Cancel requested: `30178461125`
 
 - Protected final verification run: NOT CANCELLED
 - Non-CI workflows: NOT CANCELLED
