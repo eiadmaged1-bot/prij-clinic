@@ -1,0 +1,64 @@
+name: Inspect QA Calendar History Final V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-qa-calendar-history-final-v2.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Record corrected Package 2 final run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          response="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/prij-sprint1-qa-calendar-history-final-verify.yml/runs?per_page=10")"
+          latest="$(jq '.workflow_runs[0]' <<<"$response")"
+          run_id="$(jq -r '.id' <<<"$latest")"
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" > /tmp/view.txt 2>&1 || true
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failed.txt 2>&1 || true
+          {
+            echo '# Corrected QA Calendar History Final Run'
+            echo
+            jq -r '[
+              ("- Run ID: `" + (.id|tostring) + "`"),
+              ("- Status: `" + .status + "`"),
+              ("- Conclusion: `" + (.conclusion // "pending") + "`"),
+              ("- Head SHA: `" + .head_sha + "`"),
+              ("- Created: `" + .created_at + "`"),
+              ("- Updated: `" + .updated_at + "`"),
+              ("- URL: " + .html_url)
+            ] | .[]' <<<"$latest"
+            echo
+            echo '## Run summary'
+            echo '```text'
+            cat /tmp/view.txt
+            echo '```'
+            echo
+            echo '## Failed log tail'
+            echo '```text'
+            tail -n 160 /tmp/failed.txt
+            echo '```'
+          } > docs/verification/LATEST_QA_CALENDAR_HISTORY_FINAL_V2_RUN.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_QA_CALENDAR_HISTORY_FINAL_V2_RUN.md
+          git commit -m 'ci: record corrected Package 2 final run'
+          git push origin HEAD:security/rbac-scope-enforcement
