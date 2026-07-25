@@ -63,8 +63,10 @@ jobs:
           New-Item -ItemType Directory -Force '.verification-logs' | Out-Null
 
           function Invoke-CodexRepair([string]$Prompt, [string]$LogName) {
-            $Prompt | & codex -a never -s danger-full-access exec --ephemeral 2>&1 | Tee-Object -FilePath ".verification-logs\$LogName.log"
-            return $LASTEXITCODE
+            $output = $Prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
+            $code = $LASTEXITCODE
+            $output | Tee-Object -FilePath ".verification-logs\$LogName.log" | ForEach-Object { Write-Host $_ }
+            return [int]$code
           }
 
           for ($attempt = 1; $attempt -le 3; $attempt++) {
@@ -86,13 +88,26 @@ jobs:
               '- Resolve semantically; do not choose ours or theirs wholesale when both contain required behavior.',
               '- Do not weaken, remove, bypass, or falsify tests.',
               '- Do not create migrations or touch reference/, local-reference/, datasets, backups, secrets, uploads, or .env files.',
-              '- Do not reset, clean, stash, commit, push, or switch branches.',
+              '- Do not reset, clean, stash, stage, commit, push, or switch branches.',
               '- Remove all conflict markers.',
               '- Keep clinical output doctor-controlled and preserve backward compatibility.'
             ) -join "`n"
 
             $code = Invoke-CodexRepair $prompt "conflict-repair-$attempt"
             Write-Host "Conflict repair attempt $attempt exit: $code"
+
+            $markerHits = @()
+            foreach ($path in $conflicts) {
+              $markerHits += @(Select-String -LiteralPath $path -Pattern '^(<<<<<<<|=======|>>>>>>>)' -ErrorAction SilentlyContinue)
+            }
+
+            if ($markerHits.Count -eq 0) {
+              git add --all
+              if ($LASTEXITCODE -ne 0) { throw 'Outer workflow could not stage repaired conflict files.' }
+            }
+
+            $remainingAfterAttempt = @(git diff --name-only --diff-filter=U)
+            if ($remainingAfterAttempt.Count -eq 0) { break }
           }
 
           $remaining = @(git diff --name-only --diff-filter=U)
@@ -115,7 +130,7 @@ jobs:
             $whitespacePrompt = @(
               'Repair only whitespace errors, malformed conflict resolutions, and syntax damage in the current staged integration.',
               'Preserve all Sprint 1 Fix 3 and Feature 46 behavior.',
-              'Do not weaken tests, commit, push, reset, clean, stash, or switch branches.',
+              'Do not weaken tests, commit, push, reset, clean, stash, stage, or switch branches.',
               'Finish with git diff --check passing.'
             ) -join "`n"
             Invoke-CodexRepair $whitespacePrompt 'conflict-whitespace-repair' | Out-Null
@@ -140,8 +155,10 @@ jobs:
 
           function Invoke-Check([string]$Name, [string]$Command) {
             $log = ".verification-logs\$Name.log"
-            cmd /d /s /c "$Command" 2>&1 | Tee-Object -FilePath $log
-            return $LASTEXITCODE
+            $output = cmd /d /s /c "$Command" 2>&1
+            $code = $LASTEXITCODE
+            $output | Tee-Object -FilePath $log | ForEach-Object { Write-Host $_ }
+            return [int]$code
           }
 
           $passed = $false
@@ -155,7 +172,7 @@ jobs:
             $results['typecheck'] = Invoke-Check 'typecheck' 'npm run typecheck'
             $results['build'] = Invoke-Check 'build' 'npm run build'
 
-            $failed = @($results.GetEnumerator() | Where-Object { $_.Value -ne 0 })
+            $failed = @($results.GetEnumerator() | Where-Object { [int]$_.Value -ne 0 })
             if ($failed.Count -eq 0) {
               $passed = $true
               break
@@ -187,12 +204,14 @@ jobs:
               '- Refractory remains clinically active, longitudinal, non-Resolved, provenance-preserving, and signing-idempotent.',
               '- Preserve medication governance and server-side search behavior.',
               '- No reset, delete, truncate, seed, migration, production data, secrets, PHI, datasets, reference/, or local-reference/.',
-              '- Do not commit, push, reset, clean, stash, or switch branches.',
+              '- Do not commit, push, reset, clean, stash, stage, or switch branches.',
               '- Keep repairs narrowly scoped and backward compatible.'
             ) -join "`n"
 
-            $prompt | & codex -a never -s danger-full-access exec --ephemeral 2>&1 | Tee-Object -FilePath ".verification-logs\repair-attempt-$attempt.log"
-            Write-Host "Codex repair attempt $attempt exit: $LASTEXITCODE"
+            $repairOutput = $prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
+            $repairCode = $LASTEXITCODE
+            $repairOutput | Tee-Object -FilePath ".verification-logs\repair-attempt-$attempt.log" | ForEach-Object { Write-Host $_ }
+            Write-Host "Codex repair attempt $attempt exit: $repairCode"
             git diff --check
           }
 
@@ -211,9 +230,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $paths = @(git status --porcelain | ForEach-Object { if ($_.Length -ge 4) { $_.Substring(3) } })
           $forbidden = @($paths | Where-Object {
-            $_ -match '(^|[\\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\\/]|$)' -or
-            $_ -match '(^|[\\/])(reference|local-reference)([\\/]|$)' -or
-            $_ -match 'prisma[\\/]migrations'
+            $_ -match '(^|[\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\/]|$)' -or
+            $_ -match '(^|[\/])(reference|local-reference)([\/]|$)' -or
+            $_ -match 'prisma[\/]migrations'
           })
           if ($forbidden.Count -gt 0) { throw "Forbidden paths changed: $($forbidden -join ', ')" }
           if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
