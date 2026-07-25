@@ -1,0 +1,96 @@
+name: Fix Feature 46 Prisma Generation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/fix-feature46-prisma-generate.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Add Prisma generation to Feature 46 workflow
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 15
+
+    steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout workflow branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 0
+          clean: true
+
+      - name: Insert Prisma generation step
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = '.github/workflows/sprint1-feature46-integration-repair.yml'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          if ($text -match '(?m)^\s+- name: Generate Prisma client\s*$') {
+            Write-Host 'Prisma generation step already exists.'
+            exit 0
+          }
+
+          $needle = @'
+      - name: Install dependencies
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+
+'@
+
+          $replacement = @'
+      - name: Install dependencies
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+
+'@
+
+          if (-not $text.Contains($needle)) {
+            throw 'Could not locate the dependency installation block.'
+          }
+
+          $text = $text.Replace($needle, $replacement)
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
+
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Workflow edit introduced diff-check errors.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $path
+          if (-not (git diff --cached --name-only)) {
+            Write-Host 'No workflow change required.'
+            exit 0
+          }
+          git commit -m 'ci: generate Prisma client before Feature 46 verification'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit Prisma generation repair.' }
+          git push origin HEAD:docs/200-feature-architecture-and-sprint-a
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push Prisma generation repair.' }
