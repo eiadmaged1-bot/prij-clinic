@@ -1,0 +1,325 @@
+name: Prij Sprint 1 Feature 46 Final Integration V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-feature46-final-integration-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-feature46-final-integration-v2
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    name: Verify Feature 46 and open QA repairs
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+
+    steps:
+      - id: prepare
+        name: Prepare isolated SECTRA workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('v2-control', 'v2-workspace', 'v2-diagnostics', 'v2-failure')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'v2-diagnostics') | Out-Null
+
+      - name: Checkout known-good deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: 0df452dbc1d153c564017b5a2e7885df23bb660c
+          fetch-depth: 0
+          clean: true
+          path: v2-control
+
+      - name: Checkout protected Sprint 1 baseline
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-fix3-protected
+          fetch-depth: 0
+          clean: true
+          path: v2-workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: v2-workspace/package-lock.json
+
+      - id: integrate
+        name: Integrate Feature 46 and apply verified workspace repairs
+        working-directory: v2-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'v2-diagnostics'
+          if (git status --porcelain) { throw 'Protected Sprint 1 baseline is not clean.' }
+
+          git fetch origin test/feature-46-refractory-complaint
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch Feature 46 branch.' }
+          git checkout -B integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create integration branch.' }
+
+          $previousPreference = $ErrorActionPreference
+          $ErrorActionPreference = 'Continue'
+          try {
+            git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3
+            $applyExit = $LASTEXITCODE
+          } finally {
+            $ErrorActionPreference = $previousPreference
+          }
+
+          $unmerged = @(git ls-files -u)
+          if ($applyExit -ne 0 -and $unmerged.Count -eq 0) {
+            throw "Feature 46 failed without resolvable conflicts. Exit $applyExit"
+          }
+
+          if ($unmerged.Count -gt 0) {
+            $resolver = Join-Path $env:GITHUB_WORKSPACE 'v2-control\scripts\resolve-sprint1-feature46-conflicts.mjs'
+            $resolverOut = Join-Path $diag 'resolver.stdout.log'
+            $resolverErr = Join-Path $diag 'resolver.stderr.log'
+            $process = Start-Process -FilePath 'node.exe' -ArgumentList @($resolver, (Get-Location).Path) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $resolverOut -RedirectStandardError $resolverErr
+            if (Test-Path -LiteralPath $resolverOut) { Get-Content -LiteralPath $resolverOut | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $resolverErr) { Get-Content -LiteralPath $resolverErr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Deterministic resolver failed with exit $($process.ExitCode)." }
+          }
+
+          $activeVisitPath = 'apps/web/components/clinic/ActiveVisitWorkspace.tsx'
+          $activeVisit = Get-Content -LiteralPath $activeVisitPath -Raw
+          $repairs = @(
+            @('appendText(form.examText, label)', 'appendText(String(form.examText ?? ""), label)', 'examination text type'),
+            @('value={form.complaintStatus ?? "ACTIVE"}', 'value={String(form.complaintStatus ?? "ACTIVE")}', 'complaint status value'),
+            @('className={"badge complaint-status-badge " + (form.complaintStatus === "REFRACTORY" ? "refractory" : "")}', 'className={`badge complaint-status-badge ${form.complaintStatus === "REFRACTORY" ? "refractory" : ""}`}', 'refractory badge contract')
+          )
+          foreach ($repair in $repairs) {
+            $old = $repair[0]
+            $new = $repair[1]
+            $label = $repair[2]
+            $count = ([regex]::Matches($activeVisit, [regex]::Escape($old))).Count
+            if ($count -ne 1) { throw "Expected exactly one $label target, found $count." }
+            $activeVisit = $activeVisit.Replace($old, $new)
+          }
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText((Resolve-Path $activeVisitPath), $activeVisit, $utf8NoBom)
+
+          git add --all
+          if ($LASTEXITCODE -ne 0) { throw 'Could not stage integrated files.' }
+          if (git ls-files -u) { throw 'Unmerged index entries remain.' }
+          $markers = @(git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json' 2>$null)
+          if ($LASTEXITCODE -eq 0 -and $markers.Count -gt 0) { throw 'Conflict markers remain.' }
+
+          $gitDir = (git rev-parse --git-dir).Trim()
+          if (Test-Path -LiteralPath (Join-Path $gitDir 'CHERRY_PICK_HEAD')) {
+            git cherry-pick --quit
+            if ($LASTEXITCODE -ne 0) { throw 'Could not exit cherry-pick state.' }
+          }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Integrated changes have diff-check errors.' }
+
+      - id: env
+        name: Load local development configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL was not loaded.' }
+          Write-Host 'Local environment loaded without printing secret values.'
+
+      - id: install
+        name: Install dependencies, generate Prisma, and prepare local references
+        working-directory: v2-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceTarget = 'local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force $referenceTarget | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination $referenceTarget -Recurse -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $referenceTarget 'egyptian-drugs.csv'))) { throw 'Medication reference copy failed.' }
+
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild for search verification failed.' }
+
+      - id: checks
+        name: Run all six mandatory checks
+        working-directory: v2-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'v2-diagnostics'
+          $checks = [ordered]@{
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - id: push
+        name: Commit and push verified integration
+        working-directory: v2-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (git ls-files -u) { throw 'Unmerged entries remain.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Diff-check errors remain.' }
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 Fix 3 + Feature 46 Integration Verification',
+            '',
+            '- Integration branch: `integration/sprint1-fix3-feature46`',
+            '- Sprint 1 baseline: `work/sprint1-fix3-protected`',
+            '- Feature 46 commit: `149c22dd7f3d91c82d184d7d4087403feb8506b3`',
+            '- Recovery V2 database backup: PASS (run `30169958597`)',
+            '- Prisma Client generation: PASS',
+            '- Local medication reference prepared: PASS',
+            '- API prebuild for search verification: PASS',
+            '- Clinical workflow test: PASS',
+            '- Fix 3 medication test: PASS',
+            '- Fix 3 search test: PASS',
+            '- Feature 46 focused test: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Database reset/delete/truncate/seed/migration: NOT RUN',
+            '- Main or production branch modified: NO'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md' -Encoding utf8
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification report introduced diff-check errors.' }
+          git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified integration.' }
+          git push origin HEAD:integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push verified integration branch.' }
+
+      - id: qa
+        name: Create QA repair batch branch
+        working-directory: v2-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git checkout -B work/sprint1-qa-repair-batch
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Sprint 1 QA Repair Batch',
+            '',
+            'Baseline: `integration/sprint1-fix3-feature46`',
+            '',
+            '## Approved QA repairs',
+            '',
+            '1. Separate active-pregnancy workflow from ordinary menstrual-cycle activity.',
+            '2. Add EDD modes: manual and calculated from LMP, ultrasound, IVF/embryo transfer, or known conception date.',
+            '3. Compact Patient Overview and Current Visit calendars for 2K displays.',
+            '4. Clean and reorganize pregnancy-history and EDD presentation.',
+            '5. Redesign medication search as compact cards with prominent trade name, generic, strength, form, classification, and safety chips.',
+            '6. Replace prescription dose/timing/duration free text with structured Arabic quantity, frequency templates, duration stepper/unit, and one optional Note field.',
+            '',
+            'Status: STARTED — implementation pending.'
+          ) | Set-Content -LiteralPath 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md' -Encoding utf8
+          git add -- 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md'
+          git commit -m 'Start Sprint 1 QA repair batch'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit QA repair checkpoint.' }
+          git push origin HEAD:work/sprint1-qa-repair-batch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push QA repair branch.' }
+
+      - name: Checkout failure-report branch
+        if: failure()
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+          path: v2-failure
+
+      - name: Record exact V2 failure
+        if: failure()
+        working-directory: v2-failure
+        shell: powershell
+        env:
+          PREPARE_OUTCOME: ${{ steps.prepare.outcome }}
+          INTEGRATE_OUTCOME: ${{ steps.integrate.outcome }}
+          ENV_OUTCOME: ${{ steps.env.outcome }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          CHECKS_OUTCOME: ${{ steps.checks.outcome }}
+          PUSH_OUTCOME: ${{ steps.push.outcome }}
+          QA_OUTCOME: ${{ steps.qa.outcome }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $lines = @(
+            '# Latest Feature 46 Final Integration V2 Failure',
+            '',
+            "- Run ID: $env:GITHUB_RUN_ID",
+            "- Prepare: $env:PREPARE_OUTCOME",
+            "- Integrate: $env:INTEGRATE_OUTCOME",
+            "- Environment: $env:ENV_OUTCOME",
+            "- Install/Prisma/references/API build: $env:INSTALL_OUTCOME",
+            "- Six checks: $env:CHECKS_OUTCOME",
+            "- Integration push: $env:PUSH_OUTCOME",
+            "- QA branch: $env:QA_OUTCOME",
+            '',
+            '## Diagnostic tails'
+          )
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'v2-diagnostics'
+          if (Test-Path -LiteralPath $diag) {
+            foreach ($file in Get-ChildItem -LiteralPath $diag -File | Sort-Object Name) {
+              $lines += ''
+              $lines += "### $($file.Name)"
+              $lines += '```text'
+              $lines += @(Get-Content -LiteralPath $file.FullName -Tail 120)
+              $lines += '```'
+            }
+          }
+          $report = 'docs/verification/LATEST_FEATURE46_FINAL_V2_FAILURE.md'
+          $lines | Set-Content -LiteralPath $report -Encoding utf8
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $report
+          git commit -m "ci: record Feature 46 final V2 failure $env:GITHUB_RUN_ID"
+          if ($LASTEXITCODE -eq 0) { git push origin HEAD:security/rbac-scope-enforcement }
