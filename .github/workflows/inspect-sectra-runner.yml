@@ -1,0 +1,59 @@
+name: Inspect SECTRA Runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-sectra-runner.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Record repository runner state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          set +e
+          gh api -H 'Accept: application/vnd.github+json' "/repos/${GITHUB_REPOSITORY}/actions/runners?per_page=100" > /tmp/runners.json 2>/tmp/runners-error.txt
+          code=$?
+          set -e
+          {
+            echo '# SECTRA Runner State'
+            echo
+            echo "- API exit code: \`$code\`"
+            echo
+            if [[ "$code" -eq 0 ]]; then
+              jq -r '.runners[] | [
+                ("- Name: `" + .name + "`"),
+                ("  - Status: `" + .status + "`"),
+                ("  - Busy: `" + (.busy|tostring) + "`"),
+                ("  - OS: `" + .os + "`"),
+                ("  - Labels: `" + ([.labels[].name] | join(", ")) + "`")
+              ] | .[]' /tmp/runners.json
+            else
+              echo '```text'
+              cat /tmp/runners-error.txt
+              echo '```'
+            fi
+          } > docs/verification/LATEST_SECTRA_RUNNER_STATE.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_SECTRA_RUNNER_STATE.md
+          git commit -m 'ci: record SECTRA runner state'
+          git push origin HEAD:security/rbac-scope-enforcement
