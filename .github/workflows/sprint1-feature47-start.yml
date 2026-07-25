@@ -1,0 +1,77 @@
+name: Sprint 1 Feature 47 Start
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/sprint1-feature47-start.yml
+
+permissions:
+  contents: write
+
+jobs:
+  start-feature-47:
+    name: Start Feature 47 complaint severity evolution
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify SECTRA
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout verified Feature 46 integration
+        uses: actions/checkout@v4
+        with:
+          ref: integration/sprint1-fix3-feature46
+          fetch-depth: 0
+          clean: true
+
+      - name: Create Feature 47 working branch and checkpoint
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git checkout -B feature/47-complaint-severity-evolution
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create Feature 47 branch.' }
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# Feature 47 — Complaint Severity Evolution',
+            '',
+            '## Source baseline',
+            '',
+            '- `integration/sprint1-fix3-feature46`',
+            '',
+            '## Approved behavior',
+            '',
+            '- Use signed complaint snapshots only.',
+            '- Allowed display values: Mild, Moderate, Severe.',
+            '- Show at most the last three recorded points as a micro-trend.',
+            '- Preserve encounter, author, date, and source provenance.',
+            '- Do not infer diagnosis, improvement, deterioration, or treatment.',
+            '- Draft severity remains separate from confirmed longitudinal history.',
+            '',
+            '## Initial implementation targets',
+            '',
+            '- Complaint lifecycle shared service and event history.',
+            '- Encounter and doctor-visit DTO validation.',
+            '- Encounter persistence and signing idempotency.',
+            '- Doctor complaint editor severity control.',
+            '- Patient Overview three-point severity display.',
+            '- Focused backend and UI contract tests.',
+            '',
+            'Status: STARTED — implementation and verification pending.'
+          ) | Set-Content -LiteralPath 'docs/verification/FEATURE47_COMPLAINT_SEVERITY_START.md' -Encoding utf8
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/FEATURE47_COMPLAINT_SEVERITY_START.md'
+          git commit -m 'Start Feature 47 complaint severity evolution'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit Feature 47 checkpoint.' }
+          git push origin HEAD:feature/47-complaint-severity-evolution
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push Feature 47 branch.' }
