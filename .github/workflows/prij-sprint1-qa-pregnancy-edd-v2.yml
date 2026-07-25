@@ -1,0 +1,77 @@
+name: Prij Sprint 1 QA Pregnancy and EDD V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-pregnancy-edd-v2.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-pregnancy-edd-v2
+  cancel-in-progress: false
+
+jobs:
+  qa-package:
+    name: Run pregnancy context and EDD controller
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 240
+
+    steps:
+      - name: Prepare isolated directories
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          foreach ($name in @('qa-preg-edd-v2-controls', 'qa-preg-edd-v2-workspace', "qa-preg-edd-v2-logs-$env:GITHUB_RUN_ID")) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+
+      - name: Checkout controller controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+          path: qa-preg-edd-v2-controls
+
+      - name: Checkout QA repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          clean: true
+          path: qa-preg-edd-v2-workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qa-preg-edd-v2-workspace/package-lock.json
+
+      - name: Execute locked QA controller
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $controller = Join-Path $env:GITHUB_WORKSPACE 'qa-preg-edd-v2-controls\scripts\runner\qa-pregnancy-edd-controller.ps1'
+          $workspace = Join-Path $env:GITHUB_WORKSPACE 'qa-preg-edd-v2-workspace'
+          $controls = Join-Path $env:GITHUB_WORKSPACE 'qa-preg-edd-v2-controls'
+          $logs = Join-Path $env:GITHUB_WORKSPACE "qa-preg-edd-v2-logs-$env:GITHUB_RUN_ID"
+          if (-not (Test-Path -LiteralPath $controller)) { throw "Missing controller: $controller" }
+          & $controller -Workspace $workspace -Controls $controls -LogDir $logs -RunId $env:GITHUB_RUN_ID
+          if ($LASTEXITCODE -ne 0) { throw "QA controller exited with code $LASTEXITCODE." }
+
+      - name: Upload QA diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pregnancy-edd-v2-${{ github.run_id }}
+          path: qa-preg-edd-v2-logs-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
