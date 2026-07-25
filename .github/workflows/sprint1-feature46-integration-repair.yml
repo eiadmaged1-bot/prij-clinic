@@ -21,7 +21,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 180
     env:
-      PRIJ_VERIFY_LOG_DIR: ${{ runner.temp }}/prij-integration-${{ github.run_id }}
+      PRIJ_VERIFY_LOG_DIR: ${{ github.workspace }}/.runner-logs/prij-integration-${{ github.run_id }}
 
     steps:
       - name: Reset isolated runner workspace
@@ -335,6 +335,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sprint1-feature46-diagnostics-${{ github.run_id }}
-          path: ${{ runner.temp }}/prij-integration-${{ github.run_id }}
+          path: ${{ github.workspace }}/.runner-logs/prij-integration-${{ github.run_id }}
           if-no-files-found: ignore
           retention-days: 7
