@@ -198,4 +198,4 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-# rerun after restoring Previous and Next navigation contract
+# automation requeue after backup receipt confirmation
