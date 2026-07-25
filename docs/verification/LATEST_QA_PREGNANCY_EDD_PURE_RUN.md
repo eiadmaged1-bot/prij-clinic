@@ -10,7 +10,7 @@
 ```text
 
 * security/rbac-scope-enforcement Prij QA Pregnancy EDD Pure Verify · 30177384351
-Triggered via push less than a minute ago
+Triggered via push about 1 minute ago
 
 JOBS
 * patch-verify (ID 89728313740)
