@@ -52,7 +52,7 @@ jobs:
             echo
             echo '## Failed log tail'
             echo '```text'
-            tail -n 200 /tmp/failed.txt
+            tail -n 240 /tmp/failed.txt
             echo '```'
           } > docs/verification/LATEST_QA_CALENDAR_HISTORY_FINAL_RUN.md
 
@@ -62,3 +62,5 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'ci: record calendar history final verification status'
           git push origin HEAD:security/rbac-scope-enforcement
+
+# refresh failure log
