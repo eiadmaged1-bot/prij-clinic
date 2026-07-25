@@ -48,7 +48,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check ../controls/scripts/runner/apply-qa-calendar-history.mjs
+          node --check ../controls/scripts/runner/apply-qa-calendar-history-build-fix.mjs
           node ../controls/scripts/runner/apply-qa-calendar-history.mjs "$PWD"
+          node ../controls/scripts/runner/apply-qa-calendar-history-build-fix.mjs "$PWD"
           git diff --check
           changed="$(git status --porcelain=v1 --untracked-files=all)"
           printf '%s\n' "$changed"
