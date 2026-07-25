@@ -56,3 +56,5 @@ jobs:
           git add docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
           git commit -m 'ci: record redundant security CI queue cleanup'
           git push origin HEAD:security/rbac-scope-enforcement
+
+# Package 2 cleanup
