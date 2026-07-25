@@ -1,0 +1,58 @@
+name: Clear Redundant Security CI Queue
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/clear-redundant-security-ci-queue.yml
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  clear:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Cancel only queued redundant CI builds
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          runs="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs?status=queued&per_page=100")"
+          mapfile -t ids < <(jq -r '.workflow_runs[] | select(.name == "CI" and .head_branch == "security/rbac-scope-enforcement") | .id' <<<"$runs")
+          {
+            echo '# Redundant Security CI Queue Cleanup'
+            echo
+            echo "- Captured: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo "- Candidate queued CI runs: \`${#ids[@]}\`"
+            echo
+          } > docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+
+          for id in "${ids[@]}"; do
+            echo "Cancelling queued CI run $id"
+            if gh api --method POST "/repos/${GITHUB_REPOSITORY}/actions/runs/${id}/cancel" >/dev/null 2>&1; then
+              echo "- Cancel requested: \`${id}\`" >> docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+            else
+              echo "- Cancel failed or run already transitioned: \`${id}\`" >> docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+            fi
+          done
+
+          echo >> docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+          echo '- Protected final verification run: NOT CANCELLED' >> docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+          echo '- Non-CI workflows: NOT CANCELLED' >> docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_SECURITY_CI_QUEUE_CLEANUP.md
+          git commit -m 'ci: record redundant security CI queue cleanup'
+          git push origin HEAD:security/rbac-scope-enforcement
