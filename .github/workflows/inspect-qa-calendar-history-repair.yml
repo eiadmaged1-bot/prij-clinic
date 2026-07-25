@@ -1,0 +1,64 @@
+name: Inspect QA Calendar History Repair
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-qa-calendar-history-repair.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Record latest calendar navigation repair run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          response="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/prij-qa-calendar-history-clinical-repair.yml/runs?per_page=5")"
+          count="$(jq '.workflow_runs | length' <<<"$response")"
+          [[ "$count" -gt 0 ]]
+          run_id="$(jq -r '.workflow_runs[0].id' <<<"$response")"
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" > /tmp/view.txt 2>&1 || true
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" --log-failed > /tmp/failed.txt 2>&1 || true
+          {
+            jq -r '.workflow_runs[0] | [
+              "# Latest Calendar Navigation Repair Run",
+              "",
+              ("- Run ID: `" + (.id|tostring) + "`"),
+              ("- Status: `" + .status + "`"),
+              ("- Conclusion: `" + (.conclusion // "pending") + "`"),
+              ("- Head SHA: `" + .head_sha + "`"),
+              ("- URL: " + .html_url)
+            ] | .[]' <<<"$response"
+            echo
+            echo '## Run summary'
+            echo '```text'
+            cat /tmp/view.txt
+            echo '```'
+            echo
+            echo '## Failed log tail'
+            echo '```text'
+            tail -n 180 /tmp/failed.txt
+            echo '```'
+          } > docs/verification/LATEST_QA_CALENDAR_HISTORY_REPAIR_RUN.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_QA_CALENDAR_HISTORY_REPAIR_RUN.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'ci: record calendar navigation repair status'
+          git push origin HEAD:security/rbac-scope-enforcement
