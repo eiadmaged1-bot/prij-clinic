@@ -1,0 +1,61 @@
+name: Inspect Active Actions Queue
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-active-actions-queue.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Record queued and active jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          runs="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100")"
+          jq '[.workflow_runs[] | select(.status == "queued" or .status == "in_progress")]' <<<"$runs" > /tmp/active-runs.json
+          {
+            echo '# Active GitHub Actions Queue'
+            echo
+            echo "- Captured: \`$(date -u +%Y-%m-%dT%H:%M:%SZ)\`"
+            echo
+          } > docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+
+          count="$(jq 'length' /tmp/active-runs.json)"
+          if [[ "$count" -eq 0 ]]; then
+            echo 'No queued or in-progress runs.' >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+          else
+            while IFS=$'\t' read -r id name status created url; do
+              echo "## ${name}" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo "- Run ID: \`${id}\`" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo "- Status: \`${status}\`" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo "- Created: \`${created}\`" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo "- URL: ${url}" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              jobs="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${id}/jobs?per_page=100" 2>/dev/null || echo '{"jobs":[]}')"
+              jq -r '.jobs[]? | "  - Job: `" + .name + "` · status `" + .status + "` · runner `" + (.runner_name // "unassigned") + "`"' <<<"$jobs" >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+              echo >> docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+            done < <(jq -r '.[] | [.id, .name, .status, .created_at, .html_url] | @tsv' /tmp/active-runs.json)
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_ACTIVE_ACTIONS_QUEUE.md
+          git commit -m 'ci: record active Actions queue'
+          git push origin HEAD:security/rbac-scope-enforcement
