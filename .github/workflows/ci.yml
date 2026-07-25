@@ -6,7 +6,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
 
     env:
       DATABASE_URL: postgresql://ci_user:ci_password@localhost:5432/prij_clinic_ci
@@ -15,6 +16,17 @@ jobs:
       AI_PROVIDER: disabled
 
     steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') {
+            throw "Expected SECTRA self-hosted runner, got '$env:RUNNER_NAME'."
+          }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Expected Windows runner, got '$env:RUNNER_OS'."
+          }
+
       - name: Checkout
         uses: actions/checkout@v4
 
