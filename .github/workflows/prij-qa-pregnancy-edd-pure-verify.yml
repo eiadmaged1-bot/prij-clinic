@@ -67,6 +67,10 @@ jobs:
         working-directory: workspace
         run: npm ci
 
+      - name: Generate Prisma Client
+        working-directory: workspace
+        run: npm run prisma:generate
+
       - name: Run locked pregnancy and EDD contract
         working-directory: workspace
         run: node scripts/qa-pregnancy-edd-contract-test.mjs
@@ -94,6 +98,7 @@ jobs:
 
           - Locked pregnancy/EDD contract: PASS
           - Feature 46 regression: PASS
+          - Prisma Client generation: PASS
           - Typecheck: PASS
           - Production build: PASS
           - Pregnancy ordinary menstrual-cycle UI: SUPPRESSED
