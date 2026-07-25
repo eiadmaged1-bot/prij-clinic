@@ -1048,6 +1048,7 @@ function ContextClinicalCalendar({ patientId, mode, snapshots, related }: { pati
   const monthStartDate = new Date(`${visibleMonth}T00:00:00`);
   const gridStart = new Date(monthStartDate);
   gridStart.setDate(1 - monthStartDate.getDay());
+  const todayKey = new Date().toISOString().slice(0, 10);
   const days = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(gridStart);
     date.setDate(gridStart.getDate() + index);
@@ -1058,13 +1059,30 @@ function ContextClinicalCalendar({ patientId, mode, snapshots, related }: { pati
     next.setMonth(next.getMonth() + offset);
     setVisibleMonth(monthStart(next.toISOString()));
   };
-  return <section className="context-clinical-calendar" aria-label={`${mode} calendar`}>
-    <div className="section-heading"><h4>{calendarTitle(mode)}</h4><div className="form-actions"><button className="text-button" type="button" onClick={() => moveMonth(-1)}>Previous</button><strong>{monthStartDate.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</strong><button className="text-button" type="button" onClick={() => moveMonth(1)}>Next</button></div></div>
+  const goToCurrentMonth = () => setVisibleMonth(monthStart(new Date().toISOString()));
+
+  return <section className="context-clinical-calendar compact-context-calendar" aria-label={`${mode} calendar`}>
+    <div className="context-calendar-toolbar">
+      <button className="text-button compact" type="button" aria-label="Previous month" onClick={() => moveMonth(-1)}>‹</button>
+      <strong>{calendarTitle(mode)} · {monthStartDate.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</strong>
+      <button className="text-button compact" type="button" aria-label="Go to current month" onClick={goToCurrentMonth}>Today</button>
+      <button className="text-button compact" type="button" aria-label="Next month" onClick={() => moveMonth(1)}>›</button>
+    </div>
     <div className="context-calendar-weekdays">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => <span key={day}>{day}</span>)}</div>
     <div className="context-calendar-grid">{days.map((date) => {
       const key = date.toISOString().slice(0, 10);
       const dayEvents = events.filter((event) => event.date === key);
-      return <div className={date.getMonth() === monthStartDate.getMonth() ? "context-calendar-day" : "context-calendar-day outside"} key={key}><span>{date.getDate()}</span>{dayEvents.map((event, index) => event.encounterId ? <Link title={event.label} href={`/patients/${patientId}/visits/${event.encounterId}/history`} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</Link> : <span title={event.label} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</span>)}</div>;
+      const visibleEvents = dayEvents.slice(0, 2);
+      const className = ["context-calendar-day", date.getMonth() === monthStartDate.getMonth() ? "" : "outside", key === todayKey ? "today" : ""].filter(Boolean).join(" ");
+      return <div className={className} key={key}>
+        <span className="calendar-day-number">{date.getDate()}</span>
+        <div className="context-calendar-events-compact">
+          {visibleEvents.map((event, index) => event.encounterId
+            ? <Link title={event.label} aria-label={event.label} href={`/patients/${patientId}/visits/${event.encounterId}/history`} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</Link>
+            : <span title={event.label} aria-label={event.label} className={`calendar-event ${event.kind}`} key={`${event.kind}-${index}`}>{event.label}</span>)}
+          {dayEvents.length > 2 ? <span className="calendar-event-overflow" title={`${dayEvents.length - 2} more events`}>+{dayEvents.length - 2}</span> : null}
+        </div>
+      </div>;
     })}</div>
     <div className="context-calendar-legend">{[...new Map(events.map((event) => [event.kind, event])).values()].map((event) => <span key={event.kind}><i className={event.kind} />{event.kind.replaceAll("_", " ")}</span>)}</div>
   </section>;
@@ -1072,14 +1090,55 @@ function ContextClinicalCalendar({ patientId, mode, snapshots, related }: { pati
 
 function MenstrualHistoryTimeline({ patientId, snapshots }: { patientId: string; snapshots: ReproductiveSummarySnapshot[] }) {
   const [filter, setFilter] = useState("all");
-  const filtered = snapshots.filter((snapshot) => filter === "all" || filter === "abnormal" ? filter === "all" || Boolean(snapshot.abnormalFlags?.length) : snapshot.context === filter);
+  const historyFilters = ["all", "pregnancy", "gynecology", "infertility", "postpartum", "menopause", "abnormal"];
+  const filteredSnapshots = snapshots.filter((snapshot) => {
+    if (filter === "all") return true;
+    if (filter === "abnormal") return Boolean(snapshot.abnormalFlags?.length || snapshot.pregnancyBleedingStatus && snapshot.pregnancyBleedingStatus !== "none");
+    return snapshot.context === filter;
+  });
   const baseline = snapshots.find((snapshot) => snapshot.baselineProfile)?.baselineProfile;
+  const latestPregnancy = snapshots.find((snapshot) => snapshot.context === "pregnancy" && snapshot.edd);
+  const correctionHistoryCount = latestPregnancy?.datingHistory?.length ?? 0;
   if (!snapshots.length) return null;
-  return <details className="menstrual-history-timeline">
-    <summary>Complete menstrual / reproductive history ({snapshots.length})</summary>
+
+  return <details className="menstrual-history-timeline reproductive-history-workspace">
+    <summary><span>Complete menstrual / reproductive history</span><span className="badge">{snapshots.length}</span></summary>
+    {latestPregnancy ? <section className="history-edd-provenance" aria-label="EDD provenance">
+      <div><span>Authoritative EDD</span><strong>{overviewDate(latestPregnancy.edd ?? "")}</strong></div>
+      <div><span>EDD provenance</span><strong>{latestPregnancy.eddSource ?? latestPregnancy.datingMethod ?? "Not recorded"}</strong></div>
+      <div><span>Confirmed</span><strong>{latestPregnancy.datingConfirmationDate ? overviewDate(latestPregnancy.datingConfirmationDate) : "Not recorded"}</strong></div>
+      <div><span>Clinician</span><strong>{latestPregnancy.datingClinician || "Not recorded"}</strong></div>
+      <div><span>Correction history</span><strong>{correctionHistoryCount}</strong></div>
+    </section> : null}
     {baseline ? <div className="reproductive-baseline-summary"><strong>Pre-pregnancy menstrual baseline</strong><span>{[baseline.usualRegularity, baseline.usualCycleLength ? `${baseline.usualCycleLength}-day interval` : "", baseline.usualBleedingDuration ? `${baseline.usualBleedingDuration}-day bleeding` : "", baseline.usualFlow].filter(Boolean).join(" · ") || baseline.menopauseStatus || "Baseline recorded"} · preserved historical context</span></div> : null}
-    <div className="clinical-lenses clinical-filter-row">{["all", "abnormal", "gynecology", "infertility", "postpartum", "other"].map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} onClick={(event) => { event.preventDefault(); setFilter(item); }}>{item === "abnormal" ? "Abnormal only" : item}</button>)}</div>
-    <div className="menstrual-history-records">{filtered.map((snapshot, index) => <article key={`${snapshot.sourceEncounterId}-${index}`}><div className="data-row-header"><strong>{overviewDate(snapshot.visitDate ?? snapshot.confirmedAt ?? "")}</strong><span className="badge">{snapshot.changeStatus?.replaceAll("_", " ") || snapshot.context || "recorded"}</span></div><dl><div><dt>LMP</dt><dd>{snapshot.lmp ? overviewDate(snapshot.lmp) : "Not recorded"}</dd></div>{snapshot.context !== "pregnancy" && snapshot.lmp ? <div><dt>Cycle day</dt><dd>{cycleDay(snapshot.lmp) || "Not calculable"}</dd></div> : null}<div><dt>Pattern</dt><dd>{[snapshot.regularity, snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : "", snapshot.bleedingDuration ? `${snapshot.bleedingDuration}-day bleeding` : "", snapshot.flow].filter(Boolean).join(" · ") || "Not recorded"}</dd></div><div><dt>Flags</dt><dd>{snapshot.context === "pregnancy" ? "Ordinary menstrual flags suppressed during active pregnancy" : snapshot.abnormalFlags?.join(", ") || "None recorded"}</dd></div>{snapshot.context === "pregnancy" ? <><div><dt>Pregnancy bleeding</dt><dd>{snapshot.pregnancyBleedingStatus || "None recorded"}</dd></div>{snapshot.pregnancyBleedingOnsetDate ? <div><dt>Bleeding onset</dt><dd>{overviewDate(snapshot.pregnancyBleedingOnsetDate)}</dd></div> : null}<div><dt>Authoritative EDD</dt><dd>{snapshot.edd ? overviewDate(snapshot.edd) : "Not confirmed"}</dd></div><div><dt>Dating provenance</dt><dd>{[snapshot.eddMode, snapshot.eddSource ?? snapshot.datingMethod, snapshot.datingClinician].filter(Boolean).join(" · ") || "Not recorded"}</dd></div></> : null}{snapshot.narrative ? <div><dt>Note</dt><dd>{snapshot.narrative}</dd></div> : null}</dl>{snapshot.sourceEncounterId ? <Link href={`/patients/${patientId}/visits/${snapshot.sourceEncounterId}/history`}>Open source encounter</Link> : null}</article>)}</div>
+    <div className="clinical-lenses clinical-filter-row history-context-filter">{historyFilters.map((item) => <button className={filter === item ? "active" : ""} type="button" key={item} onClick={(event) => { event.preventDefault(); setFilter(item); }}>{item === "abnormal" ? "Abnormal only" : item}</button>)}</div>
+    <div className="menstrual-history-records">{filteredSnapshots.map((snapshot, index) => {
+      const contextLabel = snapshot.context?.replaceAll("_", " ") || "recorded";
+      const pattern = [snapshot.regularity, snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : "", snapshot.bleedingDuration ? `${snapshot.bleedingDuration}-day bleeding` : "", snapshot.flow].filter(Boolean).join(" · ") || "Not recorded";
+      const correctionCount = snapshot.datingHistory?.length ?? 0;
+      return <article className="reproductive-history-card" key={`${snapshot.sourceEncounterId}-${index}`}>
+        <header className="data-row-header"><div><strong>{overviewDate(snapshot.visitDate ?? snapshot.confirmedAt ?? "")}</strong><span>{contextLabel}</span></div><span className="badge">{snapshot.changeStatus?.replaceAll("_", " ") || "recorded"}</span></header>
+        <div className="reproductive-history-summary">
+          <div><span>LMP</span><strong>{snapshot.lmp ? overviewDate(snapshot.lmp) : "Not recorded"}</strong></div>
+          {snapshot.context !== "pregnancy" && snapshot.lmp ? <div><span>Cycle day</span><strong>{cycleDay(snapshot.lmp) || "Not calculable"}</strong></div> : null}
+          <div><span>Pattern</span><strong>{snapshot.context === "pregnancy" ? "Historical baseline only" : pattern}</strong></div>
+          <div><span>Flags</span><strong>{snapshot.context === "pregnancy" ? "Ordinary menstrual flags suppressed" : snapshot.abnormalFlags?.join(", ") || "None recorded"}</strong></div>
+          {snapshot.context === "pregnancy" ? <><div><span>Pregnancy bleeding</span><strong>{snapshot.pregnancyBleedingStatus || "None recorded"}</strong></div><div><span>Authoritative EDD</span><strong>{snapshot.edd ? overviewDate(snapshot.edd) : "Not confirmed"}</strong></div></> : null}
+        </div>
+        {snapshot.narrative ? <p className="reproductive-history-note">{snapshot.narrative}</p> : null}
+        <details className="reproductive-history-details">
+          <summary>Source and provenance</summary>
+          <dl>
+            <div><dt>Source encounter</dt><dd>{snapshot.sourceEncounterId || "Not linked"}</dd></div>
+            <div><dt>EDD provenance</dt><dd>{[snapshot.eddMode, snapshot.eddSource ?? snapshot.datingMethod, snapshot.datingSourceDate ? overviewDate(snapshot.datingSourceDate) : ""].filter(Boolean).join(" · ") || "Not recorded"}</dd></div>
+            <div><dt>Confirmation</dt><dd>{[snapshot.datingConfirmationDate ? overviewDate(snapshot.datingConfirmationDate) : "", snapshot.datingClinician].filter(Boolean).join(" · ") || "Not recorded"}</dd></div>
+            <div><dt>Correction reason</dt><dd>{snapshot.datingCorrectionReason || "None recorded"}</dd></div>
+            <div><dt>Correction history</dt><dd>{correctionCount}</dd></div>
+          </dl>
+        </details>
+        {snapshot.sourceEncounterId ? <Link href={`/patients/${patientId}/visits/${snapshot.sourceEncounterId}/history`}>Open source encounter</Link> : null}
+      </article>;
+    })}</div>
   </details>;
 }
 
