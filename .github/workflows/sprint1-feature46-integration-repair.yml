@@ -87,17 +87,7 @@ jobs:
             $stderrPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stderr.log"
             $logPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
             [System.IO.File]::WriteAllText($promptPath, $Prompt, $utf8NoBom)
-
-            $process = Start-Process \
-              -FilePath 'codex.exe' \
-              -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') \
-              -NoNewWindow \
-              -Wait \
-              -PassThru \
-              -RedirectStandardInput $promptPath \
-              -RedirectStandardOutput $stdoutPath \
-              -RedirectStandardError $stderrPath
-
+            $process = Start-Process -FilePath 'codex.exe' -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') -NoNewWindow -Wait -PassThru -RedirectStandardInput $promptPath -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
             $combined = @()
             if (Test-Path -LiteralPath $stdoutPath) { $combined += @(Get-Content -LiteralPath $stdoutPath) }
             if (Test-Path -LiteralPath $stderrPath) { $combined += @(Get-Content -LiteralPath $stderrPath) }
@@ -120,7 +110,6 @@ jobs:
           for ($attempt = 1; $attempt -le 3; $attempt++) {
             $conflicts = @(Get-UnmergedPaths)
             if ($conflicts.Count -eq 0) { break }
-
             $conflictList = $conflicts -join "`n- "
             $prompt = @(
               'Resolve every Git conflict in this isolated Prij Clinic integration.',
@@ -140,17 +129,12 @@ jobs:
               '- Remove all conflict markers.',
               '- Keep clinical output doctor-controlled and preserve backward compatibility.'
             ) -join "`n"
-
             $code = Invoke-CodexRepair $prompt "conflict-repair-$attempt"
             Write-Host "Conflict repair attempt $attempt exit: $code"
-
             $markerHits = @()
             foreach ($path in $conflicts) {
-              $markerHits += @(
-                Select-String -LiteralPath $path -Pattern '^(<<<<<<<|=======|>>>>>>>)' -ErrorAction SilentlyContinue
-              )
+              $markerHits += @(Select-String -LiteralPath $path -Pattern '^(<<<<<<<|=======|>>>>>>>)' -ErrorAction SilentlyContinue)
             }
-
             if ($markerHits.Count -eq 0) {
               foreach ($path in $conflicts) {
                 git add -- $path
@@ -159,7 +143,6 @@ jobs:
             } else {
               Write-Host "Conflict markers remain after attempt $attempt."
             }
-
             if (@(Get-UnmergedPaths).Count -eq 0) { break }
           }
 
@@ -167,23 +150,20 @@ jobs:
           if ($remaining.Count -gt 0) {
             Write-Host 'Unresolved files:'
             $remaining | ForEach-Object { Write-Host $_ }
-            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter 'conflict-repair-*.log' -ErrorAction SilentlyContinue |
-              ForEach-Object {
-                Write-Host "===== $($_.Name) ====="
-                Get-Content -LiteralPath $_.FullName -Tail 160
-              }
+            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter 'conflict-repair-*.log' -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "===== $($_.Name) ====="
+              Get-Content -LiteralPath $_.FullName -Tail 160
+            }
             throw 'Unresolved integration conflicts remain after three repair attempts.'
           }
 
           git add --all
           if ($LASTEXITCODE -ne 0) { throw 'Could not stage the resolved integration.' }
-
           git rev-parse -q --verify CHERRY_PICK_HEAD *> $null
           if ($LASTEXITCODE -eq 0) {
             git cherry-pick --quit
             if ($LASTEXITCODE -ne 0) { throw 'Could not exit cherry-pick state safely.' }
           }
-
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) { throw 'Conflict resolution has diff-check errors.' }
 
@@ -222,17 +202,7 @@ jobs:
             $stderrPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.stderr.log"
             $logPath = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
             [System.IO.File]::WriteAllText($promptPath, $Prompt, $utf8NoBom)
-
-            $process = Start-Process \
-              -FilePath 'codex.exe' \
-              -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') \
-              -NoNewWindow \
-              -Wait \
-              -PassThru \
-              -RedirectStandardInput $promptPath \
-              -RedirectStandardOutput $stdoutPath \
-              -RedirectStandardError $stderrPath
-
+            $process = Start-Process -FilePath 'codex.exe' -ArgumentList @('-a', 'never', '-s', 'workspace-write', 'exec', '--ephemeral') -NoNewWindow -Wait -PassThru -RedirectStandardInput $promptPath -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath
             $combined = @()
             if (Test-Path -LiteralPath $stdoutPath) { $combined += @(Get-Content -LiteralPath $stdoutPath) }
             if (Test-Path -LiteralPath $stderrPath) { $combined += @(Get-Content -LiteralPath $stderrPath) }
@@ -251,20 +221,17 @@ jobs:
             $results['feature46'] = Invoke-Check 'feature46' 'node scripts/feature-46-refractory-complaint-test.mjs'
             $results['typecheck'] = Invoke-Check 'typecheck' 'npm run typecheck'
             $results['build'] = Invoke-Check 'build' 'npm run build'
-
             $failed = @($results.GetEnumerator() | Where-Object { [int]$_.Value -ne 0 })
             if ($failed.Count -eq 0) {
               $passed = $true
               break
             }
             if ($attempt -eq 5) { break }
-
             $failureSummary = foreach ($entry in $failed) {
               $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$($entry.Key).log"
               $tail = (Get-Content -LiteralPath $log -Tail 180) -join "`n"
               "### $($entry.Key)`n$tail"
             }
-
             $prompt = @(
               'Repair this isolated Prij Clinic integration so every required check passes.',
               '',
@@ -288,7 +255,6 @@ jobs:
               '- Do not commit, push, reset, clean, stash, stage, or switch branches.',
               '- Keep repairs narrowly scoped and backward compatible.'
             ) -join "`n"
-
             $repairCode = Invoke-CodexRepair $prompt "repair-attempt-$attempt"
             Write-Host "Codex repair attempt $attempt exit: $repairCode"
             git diff --check
@@ -296,11 +262,10 @@ jobs:
           }
 
           if (-not $passed) {
-            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter '*.log' -ErrorAction SilentlyContinue |
-              ForEach-Object {
-                Write-Host "===== $($_.Name) ====="
-                Get-Content -LiteralPath $_.FullName -Tail 180
-              }
+            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter '*.log' -ErrorAction SilentlyContinue | ForEach-Object {
+              Write-Host "===== $($_.Name) ====="
+              Get-Content -LiteralPath $_.FullName -Tail 180
+            }
             throw 'Required checks still fail after five repair attempts.'
           }
 
