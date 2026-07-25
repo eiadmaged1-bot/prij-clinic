@@ -1,0 +1,109 @@
+name: Repair and Dispatch Sprint 1 Feature 46
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/repair-dispatch-sprint1-feature46.yml
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  repair-dispatch:
+    name: Repair and dispatch Feature 46 integration
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout workflow branch
+        uses: actions/checkout@v4
+        with:
+          ref: docs/200-feature-architecture-and-sprint-a
+          fetch-depth: 0
+          clean: true
+
+      - name: Repair invalid workflow context
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = '.github/workflows/sprint1-feature46-integration-repair.yml'
+          $text = Get-Content -LiteralPath $path -Raw
+
+          $exprOpen = '$' + '{{'
+          $exprClose = '}}'
+          $logExpression = "$exprOpen github.workspace $exprClose/.runner-logs/prij-integration-$exprOpen github.run_id $exprClose"
+
+          $jobEnvLine = "      PRIJ_VERIFY_LOG_DIR: $logExpression"
+          $artifactPathLine = "          path: $logExpression"
+
+          $text = [regex]::Replace(
+            $text,
+            '(?m)^      PRIJ_VERIFY_LOG_DIR: .+$',
+            [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $jobEnvLine },
+            1
+          )
+          $text = [regex]::Replace(
+            $text,
+            '(?m)^          path: .*prij-integration.*$',
+            [System.Text.RegularExpressions.MatchEvaluator]{ param($match) $artifactPathLine },
+            1
+          )
+
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
+
+          if (Select-String -LiteralPath $path -SimpleMatch 'runner.temp') {
+            throw 'Invalid runner.temp reference still remains.'
+          }
+
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Workflow repair introduced diff-check errors.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $path
+          if (-not (git diff --cached --name-only)) { throw 'Workflow file was not changed.' }
+          git commit -m 'ci: fix Feature 46 workflow context for SECTRA'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit workflow repair.' }
+          git push origin HEAD:docs/200-feature-architecture-and-sprint-a
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push workflow repair.' }
+
+      - name: Dispatch repaired integration workflow
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $body = @{ ref = 'docs/200-feature-architecture-and-sprint-a' } | ConvertTo-Json
+          $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/sprint1-feature46-integration-repair.yml/dispatches"
+
+          $lastError = $null
+          for ($attempt = 1; $attempt -le 6; $attempt++) {
+            try {
+              Start-Sleep -Seconds 5
+              Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -ContentType 'application/json'
+              Write-Host 'Repaired Sprint 1 Feature 46 integration workflow dispatched.'
+              exit 0
+            } catch {
+              $lastError = $_
+              Write-Host "Dispatch attempt $attempt failed: $($_.Exception.Message)"
+            }
+          }
+
+          throw $lastError
