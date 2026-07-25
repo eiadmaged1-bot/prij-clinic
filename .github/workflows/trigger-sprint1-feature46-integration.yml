@@ -1,0 +1,46 @@
+name: Trigger Sprint 1 Feature 46 Integration
+
+on:
+  push:
+    branches:
+      - docs/200-feature-architecture-and-sprint-a
+    paths:
+      - .github/workflows/trigger-sprint1-feature46-integration.yml
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  dispatch-integration:
+    name: Dispatch repaired integration workflow
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') {
+            throw "Expected SECTRA self-hosted runner, got '$env:RUNNER_NAME'."
+          }
+          if ($env:RUNNER_OS -ne 'Windows') {
+            throw "Expected Windows runner, got '$env:RUNNER_OS'."
+          }
+
+      - name: Dispatch integration workflow
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $body = @{ ref = 'docs/200-feature-architecture-and-sprint-a' } | ConvertTo-Json
+          $uri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/sprint1-feature46-integration-repair.yml/dispatches"
+          Invoke-RestMethod -Method Post -Uri $uri -Headers $headers -Body $body -ContentType 'application/json'
+          Write-Host 'Sprint 1 Feature 46 integration workflow dispatched.'
