@@ -1,0 +1,57 @@
+name: Inspect QA Pregnancy EDD Pure Verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-qa-pregnancy-edd-pure.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Record latest pure-verification run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p docs/verification
+          response="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/prij-qa-pregnancy-edd-pure-verify.yml/runs?per_page=5")"
+          count="$(jq '.workflow_runs | length' <<<"$response")"
+          [[ "$count" -gt 0 ]]
+          run_id="$(jq -r '.workflow_runs[0].id' <<<"$response")"
+          gh run view "$run_id" --repo "$GITHUB_REPOSITORY" > /tmp/view.txt 2>&1 || true
+          {
+            jq -r '.workflow_runs[0] | [
+              "# Latest QA Pregnancy EDD Pure Verify Run",
+              "",
+              ("- Run ID: `" + (.id|tostring) + "`"),
+              ("- Status: `" + .status + "`"),
+              ("- Conclusion: `" + (.conclusion // "pending") + "`"),
+              ("- Head SHA: `" + .head_sha + "`"),
+              ("- URL: " + .html_url)
+            ] | .[]' <<<"$response"
+            echo
+            echo '```text'
+            cat /tmp/view.txt
+            echo '```'
+          } > docs/verification/LATEST_QA_PREGNANCY_EDD_PURE_RUN.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/LATEST_QA_PREGNANCY_EDD_PURE_RUN.md
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'ci: record pregnancy EDD pure verification status'
+          git push origin HEAD:security/rbac-scope-enforcement
