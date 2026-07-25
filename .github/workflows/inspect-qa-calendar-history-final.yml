@@ -63,4 +63,4 @@ jobs:
           git commit -m 'ci: record calendar history final verification status'
           git push origin HEAD:security/rbac-scope-enforcement
 
-# refresh failure log
+# inspect corrected rerun
