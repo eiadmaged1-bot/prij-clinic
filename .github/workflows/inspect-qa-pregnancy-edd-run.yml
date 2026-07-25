@@ -22,17 +22,17 @@ jobs:
           ref: security/rbac-scope-enforcement
           fetch-depth: 0
 
-      - name: Record latest target run and compiler annotations
+      - name: Record latest V2 target run
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p docs/verification
-          response="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/prij-sprint1-qa-pregnancy-edd.yml/runs?per_page=10")"
+          response="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/prij-sprint1-qa-pregnancy-edd-v2.yml/runs?per_page=10")"
           count="$(jq '.workflow_runs | length' <<<"$response")"
           if [[ "$count" -lt 1 ]]; then
-            echo "No target workflow run found." >&2
+            echo "No V2 target workflow run found." >&2
             exit 1
           fi
           run_id="$(jq -r '.workflow_runs[0].id' <<<"$response")"
@@ -42,7 +42,7 @@ jobs:
 
           {
             jq -r '.workflow_runs[0] | [
-              "# Latest QA Pregnancy and EDD Run Status",
+              "# Latest QA Pregnancy and EDD V2 Run Status",
               "",
               ("- Run ID: `" + (.id|tostring) + "`"),
               ("- Status: `" + .status + "`"),
@@ -82,5 +82,5 @@ jobs:
             echo 'Status report unchanged.'
             exit 0
           fi
-          git commit -m 'ci: record pregnancy EDD compiler annotations'
+          git commit -m 'ci: record pregnancy EDD v2 run status'
           git push origin HEAD:security/rbac-scope-enforcement
