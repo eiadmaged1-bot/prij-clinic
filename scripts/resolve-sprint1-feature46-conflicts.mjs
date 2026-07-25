@@ -214,6 +214,70 @@ function ensureBalancedCss(relative, content) {
     content = content.replace(duplicateSignVisit, '\n');
   }
 
+  if (!content.includes('const examinationChips = [')) {
+    content = mustReplace(
+      content,
+      'const investigationCategories = ',
+      `const examinationChips = [
+  "General condition stable",
+  "Pallor absent",
+  "Pallor present",
+  "Abdomen soft",
+  "Abdominal tenderness",
+  "Fundal height recorded",
+  "Fetal heart heard",
+  "Speculum exam normal",
+  "Cervix closed",
+  "Cervix open",
+  "Cervix soft",
+  "Cervix dilated",
+  "Bleeding seen",
+  "Vaginal discharge seen",
+  "Uterus normal size",
+  "Uterus enlarged",
+  "Uterine tenderness",
+  "Adnexal tenderness",
+  "Cervical motion tenderness",
+  "Pelvic mass felt"
+];
+
+const investigationCategories = `,
+      'active visit examination chips'
+    );
+  }
+
+  if (!content.includes('function ChipList(')) {
+    content = mustReplace(
+      content,
+      'function normalizeModule(value?: string) {',
+      `function ChipList({ labels, onPick }: { labels: string[]; onPick: (label: string) => void }) {
+  return <div className="clinical-chip-cloud wide">{[...new Set(labels)].map((label) => <button className="clinical-chip" key={label} type="button" onClick={() => onPick(label)}><strong>{label}</strong><span>Examination</span></button>)}</div>;
+}
+
+function normalizeModule(value?: string) {`,
+      'active visit ChipList helper'
+    );
+  }
+
+  if (!content.includes('function appendText(')) {
+    content = mustReplace(
+      content,
+      'function updateLine(lines: PrescriptionLine[], index: number, patch: Partial<PrescriptionLine>) {',
+      `function appendText(existing = "", label: string) {
+  return [existing.trim(), label].filter(Boolean).join(existing.trim() ? "\\n" : "");
+}
+
+function updateLine(lines: PrescriptionLine[], index: number, patch: Partial<PrescriptionLine>) {`,
+      'active visit appendText helper'
+    );
+  }
+
+  for (const required of ['const examinationChips = [', 'function ChipList(', 'function appendText(']) {
+    if (!content.includes(required)) {
+      throw new Error(`Required Active Visit helper missing after resolution: ${required}`);
+    }
+  }
+
   assertClean(relative, content);
   write(relative, content);
 }
