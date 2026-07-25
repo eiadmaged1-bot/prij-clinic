@@ -44,24 +44,12 @@ jobs:
             exit 0
           }
 
-          $needle = @'
-      - name: Install dependencies
-        working-directory: workspace
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          npm ci
+          $marker = '      - name: Repair until every required check passes'
+          if (-not $text.Contains($marker)) {
+            throw 'Could not locate the verification-step marker.'
+          }
 
-'@
-
-          $replacement = @'
-      - name: Install dependencies
-        working-directory: workspace
-        shell: powershell
-        run: |
-          $ErrorActionPreference = 'Stop'
-          npm ci
-
+          $insert = @'
       - name: Generate Prisma client
         working-directory: workspace
         shell: powershell
@@ -72,11 +60,11 @@ jobs:
 
 '@
 
-          if (-not $text.Contains($needle)) {
-            throw 'Could not locate the dependency installation block.'
+          $text = $text.Replace($marker, $insert + $marker)
+          if ($text -notmatch '(?m)^\s+- name: Generate Prisma client\s*$') {
+            throw 'Prisma generation step was not inserted.'
           }
 
-          $text = $text.Replace($needle, $replacement)
           $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
           [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
 
