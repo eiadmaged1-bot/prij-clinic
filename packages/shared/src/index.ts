@@ -4,6 +4,7 @@ export const appName = "Dr Maged Attia Clinics";
 export * from "./permissions";
 export * from "./app-actions";
 export * from "./complaint-lifecycle";
+export * from "./pregnancy-dating";
 
 export type PatientWorkspaceSummary = {
   patient: { id: string; displayName: string; medicalRecordNumber: string; dateOfBirth: string | null; ageSummary: string | null; contactSummary: string | null; patientType: string };
