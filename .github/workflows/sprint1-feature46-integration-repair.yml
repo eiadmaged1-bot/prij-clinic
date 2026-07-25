@@ -20,8 +20,20 @@ jobs:
     name: Integrate, repair, and fully verify
     runs-on: [self-hosted, Windows, X64]
     timeout-minutes: 180
+    env:
+      PRIJ_VERIFY_LOG_DIR: ${{ runner.temp }}/prij-integration-${{ github.run_id }}
 
     steps:
+      - name: Reset isolated runner workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $workspace = Join-Path $env:GITHUB_WORKSPACE 'workspace'
+          if (Test-Path -LiteralPath $workspace) {
+            Remove-Item -LiteralPath $workspace -Recurse -Force
+          }
+          New-Item -ItemType Directory -Force $env:PRIJ_VERIFY_LOG_DIR | Out-Null
+
       - name: Checkout protected Sprint 1 branch
         uses: actions/checkout@v4
         with:
@@ -39,7 +51,9 @@ jobs:
           if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
           if (git status --porcelain) { throw 'Protected Sprint 1 checkout is not clean.' }
           git fetch origin test/feature-46-refractory-complaint
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch verified Feature 46 branch.' }
           git checkout -B integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create isolated integration branch.' }
           codex --version
 
       - name: Apply verified Feature 46
@@ -60,17 +74,29 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force '.verification-logs' | Out-Null
+          New-Item -ItemType Directory -Force $env:PRIJ_VERIFY_LOG_DIR | Out-Null
 
           function Invoke-CodexRepair([string]$Prompt, [string]$LogName) {
+            $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$LogName.log"
             $output = $Prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
             $code = $LASTEXITCODE
-            $output | Tee-Object -FilePath ".verification-logs\$LogName.log" | ForEach-Object { Write-Host $_ }
+            $output | Tee-Object -FilePath $log | ForEach-Object { Write-Host $_ }
             return [int]$code
           }
 
+          function Get-UnmergedPaths {
+            return @(
+              git ls-files -u |
+                ForEach-Object {
+                  $parts = $_ -split "`t", 2
+                  if ($parts.Count -eq 2) { $parts[1] }
+                } |
+                Sort-Object -Unique
+            )
+          }
+
           for ($attempt = 1; $attempt -le 3; $attempt++) {
-            $conflicts = @(git diff --name-only --diff-filter=U)
+            $conflicts = @(Get-UnmergedPaths)
             if ($conflicts.Count -eq 0) { break }
 
             $conflictList = $conflicts -join "`n- "
@@ -98,43 +124,57 @@ jobs:
 
             $markerHits = @()
             foreach ($path in $conflicts) {
-              $markerHits += @(Select-String -LiteralPath $path -Pattern '^(<<<<<<<|=======|>>>>>>>)' -ErrorAction SilentlyContinue)
+              $markerHits += @(
+                Select-String -LiteralPath $path -Pattern '^(<<<<<<<|=======|>>>>>>>)' -ErrorAction SilentlyContinue
+              )
             }
 
             if ($markerHits.Count -eq 0) {
-              git add --all
-              if ($LASTEXITCODE -ne 0) { throw 'Outer workflow could not stage repaired conflict files.' }
+              foreach ($path in $conflicts) {
+                git add -- $path
+                if ($LASTEXITCODE -ne 0) { throw "Outer workflow could not stage repaired file: $path" }
+              }
+            } else {
+              Write-Host "Conflict markers remain after attempt $attempt."
             }
 
-            $remainingAfterAttempt = @(git diff --name-only --diff-filter=U)
+            $remainingAfterAttempt = @(Get-UnmergedPaths)
             if ($remainingAfterAttempt.Count -eq 0) { break }
           }
 
-          $remaining = @(git diff --name-only --diff-filter=U)
+          $remaining = @(Get-UnmergedPaths)
           if ($remaining.Count -gt 0) {
             Write-Host 'Unresolved files:'
             $remaining | ForEach-Object { Write-Host $_ }
-            Get-ChildItem '.verification-logs\conflict-repair-*.log' | ForEach-Object {
-              Write-Host "===== $($_.Name) ====="
-              Get-Content $_.FullName -Tail 120
-            }
+            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter 'conflict-repair-*.log' -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "===== $($_.Name) ====="
+                Get-Content -LiteralPath $_.FullName -Tail 120
+              }
             throw 'Unresolved integration conflicts remain after three repair attempts.'
           }
 
           git add --all
+          if ($LASTEXITCODE -ne 0) { throw 'Could not stage the resolved integration.' }
+
           git rev-parse -q --verify CHERRY_PICK_HEAD *> $null
-          if ($LASTEXITCODE -eq 0) { git cherry-pick --quit }
+          if ($LASTEXITCODE -eq 0) {
+            git cherry-pick --quit
+            if ($LASTEXITCODE -ne 0) { throw 'Could not exit cherry-pick state safely.' }
+          }
 
           git diff --cached --check
           if ($LASTEXITCODE -ne 0) {
             $whitespacePrompt = @(
-              'Repair only whitespace errors, malformed conflict resolutions, and syntax damage in the current staged integration.',
+              'Repair only whitespace errors, malformed conflict resolutions, and syntax damage in the current Prij Clinic integration.',
               'Preserve all Sprint 1 Fix 3 and Feature 46 behavior.',
+              'Inspect both staged and unstaged changes.',
               'Do not weaken tests, commit, push, reset, clean, stash, stage, or switch branches.',
-              'Finish with git diff --check passing.'
+              'Finish with both git diff --check and git diff --cached --check passing.'
             ) -join "`n"
             Invoke-CodexRepair $whitespacePrompt 'conflict-whitespace-repair' | Out-Null
             git add --all
+            if ($LASTEXITCODE -ne 0) { throw 'Could not stage whitespace repairs.' }
             git diff --cached --check
             if ($LASTEXITCODE -ne 0) { throw 'Conflict resolution still has diff-check errors.' }
           }
@@ -151,10 +191,10 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force '.verification-logs' | Out-Null
+          New-Item -ItemType Directory -Force $env:PRIJ_VERIFY_LOG_DIR | Out-Null
 
           function Invoke-Check([string]$Name, [string]$Command) {
-            $log = ".verification-logs\$Name.log"
+            $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$Name.log"
             $output = cmd /d /s /c "$Command" 2>&1
             $code = $LASTEXITCODE
             $output | Tee-Object -FilePath $log | ForEach-Object { Write-Host $_ }
@@ -180,7 +220,8 @@ jobs:
             if ($attempt -eq 5) { break }
 
             $failureSummary = foreach ($entry in $failed) {
-              $tail = (Get-Content ".verification-logs\$($entry.Key).log" -Tail 180) -join "`n"
+              $log = Join-Path $env:PRIJ_VERIFY_LOG_DIR "$($entry.Key).log"
+              $tail = (Get-Content -LiteralPath $log -Tail 180) -join "`n"
               "### $($entry.Key)`n$tail"
             }
 
@@ -208,18 +249,21 @@ jobs:
               '- Keep repairs narrowly scoped and backward compatible.'
             ) -join "`n"
 
+            $repairLog = Join-Path $env:PRIJ_VERIFY_LOG_DIR "repair-attempt-$attempt.log"
             $repairOutput = $prompt | & codex -a never -s workspace-write exec --ephemeral 2>&1
             $repairCode = $LASTEXITCODE
-            $repairOutput | Tee-Object -FilePath ".verification-logs\repair-attempt-$attempt.log" | ForEach-Object { Write-Host $_ }
+            $repairOutput | Tee-Object -FilePath $repairLog | ForEach-Object { Write-Host $_ }
             Write-Host "Codex repair attempt $attempt exit: $repairCode"
             git diff --check
+            if ($LASTEXITCODE -ne 0) { throw 'Codex repair introduced diff-check errors.' }
           }
 
           if (-not $passed) {
-            Get-ChildItem '.verification-logs\*.log' | ForEach-Object {
-              Write-Host "===== $($_.Name) ====="
-              Get-Content $_.FullName -Tail 160
-            }
+            Get-ChildItem -LiteralPath $env:PRIJ_VERIFY_LOG_DIR -Filter '*.log' -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "===== $($_.Name) ====="
+                Get-Content -LiteralPath $_.FullName -Tail 160
+              }
             throw 'Required checks still fail after five repair attempts.'
           }
 
@@ -230,14 +274,17 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $paths = @(git status --porcelain | ForEach-Object { if ($_.Length -ge 4) { $_.Substring(3) } })
           $forbidden = @($paths | Where-Object {
-            $_ -match '(^|[\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\/]|$)' -or
-            $_ -match '(^|[\/])(reference|local-reference)([\/]|$)' -or
-            $_ -match 'prisma[\/]migrations'
+            $_ -match '(^|[\\/])(\.env|uploads|backups|datasets|secrets?|credentials?)([\\/]|$)' -or
+            $_ -match '(^|[\\/])(reference|local-reference)([\\/]|$)' -or
+            $_ -match 'prisma[\\/]migrations'
           })
           if ($forbidden.Count -gt 0) { throw "Forbidden paths changed: $($forbidden -join ', ')" }
           if (git grep -n -E '^(<<<<<<<|=======|>>>>>>>)' -- ':!package-lock.json') { throw 'Conflict markers remain.' }
+          if (git ls-files -u) { throw 'Unmerged index entries remain.' }
           git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Unstaged diff-check errors remain.' }
           git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Staged diff-check errors remain.' }
 
       - name: Write final verification report
         working-directory: workspace
@@ -264,9 +311,9 @@ jobs:
             '',
             'Sprint 1 Fix 3 and Feature 46 are integrated, repaired, and verified on an isolated branch.'
           ) | Set-Content 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md'
-          Remove-Item '.verification-logs' -Recurse -Force -ErrorAction SilentlyContinue
           git add --all
           git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification report introduced diff-check errors.' }
 
       - name: Commit and push verified result
         working-directory: workspace
@@ -278,5 +325,16 @@ jobs:
           git add --all
           if (-not (git diff --cached --name-only)) { throw 'No verified integration changes to commit.' }
           git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified integration.' }
           git push origin HEAD:integration/sprint1-fix3-feature46
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push verified integration branch.' }
           if (git status --porcelain) { throw 'Workspace is not clean after push.' }
+
+      - name: Upload verification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprint1-feature46-diagnostics-${{ github.run_id }}
+          path: ${{ runner.temp }}/prij-integration-${{ github.run_id }}
+          if-no-files-found: ignore
+          retention-days: 7
