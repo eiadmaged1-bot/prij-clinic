@@ -49,9 +49,11 @@ jobs:
           $ErrorActionPreference = 'Continue'
           git cherry-pick --no-commit 149c22dd7f3d91c82d184d7d4087403feb8506b3
           $exitCode = $LASTEXITCODE
-          if ($exitCode -ne 0 -and -not (git diff --name-only --diff-filter=U)) {
+          $conflicts = @(git diff --name-only --diff-filter=U)
+          if ($exitCode -ne 0 -and $conflicts.Count -eq 0) {
             throw "Feature 46 cherry-pick failed without resolvable conflicts. Exit $exitCode"
           }
+          exit 0
 
       - name: Resolve conflicts while preserving both plans
         working-directory: workspace
@@ -61,28 +63,29 @@ jobs:
           $conflicts = @(git diff --name-only --diff-filter=U)
           if ($conflicts.Count -gt 0) {
             $conflictList = $conflicts -join "`n- "
-            $prompt = @"
-Resolve every Git conflict in this isolated Prij Clinic integration.
-
-Conflicted files:
-- $conflictList
-
-Preserve both:
-1. Sprint 1 Fix 3 clinical-input, medication, and search work.
-2. Feature 46 refractory complaint lifecycle across DTO validation, persistence, signing idempotency, longitudinal history/provenance, patient overview, encounter UI, styling, and focused tests.
-
-Rules:
-- Do not weaken or remove tests.
-- No migrations, reset, delete, truncate, seed, PHI, secrets, datasets, reference/, or local-reference/.
-- Do not commit, push, reset, clean, stash, or switch branches.
-- Remove all conflict markers and run git diff --check.
-"@
-            $prompt | & codex -a never -s danger-full-access exec --ephemeral
+            $promptLines = @(
+              'Resolve every Git conflict in this isolated Prij Clinic integration.',
+              '',
+              'Conflicted files:',
+              "- $conflictList",
+              '',
+              'Preserve both:',
+              '1. Sprint 1 Fix 3 clinical-input, medication, and search work.',
+              '2. Feature 46 refractory complaint lifecycle across DTO validation, persistence, signing idempotency, longitudinal history/provenance, patient overview, encounter UI, styling, and focused tests.',
+              '',
+              'Rules:',
+              '- Do not weaken or remove tests.',
+              '- No migrations, reset, delete, truncate, seed, PHI, secrets, datasets, reference/, or local-reference/.',
+              '- Do not commit, push, reset, clean, stash, or switch branches.',
+              '- Remove all conflict markers and run git diff --check.'
+            )
+            $prompt = $promptLines -join "`n"
+            $prompt | & codex -a never -s workspace-write exec --ephemeral
             if ($LASTEXITCODE -ne 0) { throw "Codex conflict repair failed with exit code $LASTEXITCODE." }
           }
           if (git diff --name-only --diff-filter=U) { throw 'Unresolved conflicts remain.' }
           git add --all
-          git cherry-pick --quit 2>$null
+          if (Test-Path '.git\CHERRY_PICK_HEAD') { git cherry-pick --quit }
           git diff --cached --check
 
       - name: Install dependencies
@@ -102,11 +105,13 @@ Rules:
           function Invoke-Check([string]$Name, [string]$Command) {
             $log = ".verification-logs\$Name.log"
             cmd /d /s /c "$Command" 2>&1 | Tee-Object -FilePath $log
-            return $LASTEXITCODE
+            $code = $LASTEXITCODE
+            return $code
           }
 
           $passed = $false
           for ($attempt = 1; $attempt -le 5; $attempt++) {
+            Write-Host "Verification attempt $attempt of 5"
             $results = [ordered]@{}
             $results['clinical-workflow'] = Invoke-Check 'clinical-workflow' 'node scripts/clinical-workflow-unification-test.mjs'
             $results['fix3-medication'] = Invoke-Check 'fix3-medication' 'node scripts/recovery-fix3-medication-test.mjs'
@@ -127,30 +132,31 @@ Rules:
               "### $($entry.Key)`n$tail"
             }
 
-            $prompt = @"
-Repair this isolated Prij Clinic integration so all required checks pass.
-
-Failures:
-$($failureSummary -join "`n`n")
-
-Required checks:
-- node scripts/clinical-workflow-unification-test.mjs
-- node scripts/recovery-fix3-medication-test.mjs
-- node scripts/recovery-fix3-search-test.mjs
-- node scripts/feature-46-refractory-complaint-test.mjs
-- npm run typecheck
-- npm run build
-
-Rules:
-- Diagnose root causes; never weaken, skip, delete, or falsify tests.
-- Preserve Sprint 1 Fix 3 and Feature 46.
-- Refractory remains active, longitudinal, non-Resolved, provenance-preserving, and signing-idempotent.
-- Preserve medication/search governance and server-side search.
-- No reset, delete, truncate, seed, migration, production data, secrets, PHI, datasets, reference/, or local-reference/.
-- No commit, push, reset, clean, stash, or branch switch.
-- Keep repairs narrowly scoped and backward compatible.
-"@
-            $prompt | & codex -a never -s danger-full-access exec --ephemeral
+            $promptLines = @(
+              'Repair this isolated Prij Clinic integration so all required checks pass.',
+              '',
+              'Failures:',
+              ($failureSummary -join "`n`n"),
+              '',
+              'Required checks:',
+              '- node scripts/clinical-workflow-unification-test.mjs',
+              '- node scripts/recovery-fix3-medication-test.mjs',
+              '- node scripts/recovery-fix3-search-test.mjs',
+              '- node scripts/feature-46-refractory-complaint-test.mjs',
+              '- npm run typecheck',
+              '- npm run build',
+              '',
+              'Rules:',
+              '- Diagnose root causes; never weaken, skip, delete, or falsify tests.',
+              '- Preserve Sprint 1 Fix 3 and Feature 46.',
+              '- Refractory remains active, longitudinal, non-Resolved, provenance-preserving, and signing-idempotent.',
+              '- Preserve medication/search governance and server-side search.',
+              '- No reset, delete, truncate, seed, migration, production data, secrets, PHI, datasets, reference/, or local-reference/.',
+              '- No commit, push, reset, clean, stash, or branch switch.',
+              '- Keep repairs narrowly scoped and backward compatible.'
+            )
+            $prompt = $promptLines -join "`n"
+            $prompt | & codex -a never -s workspace-write exec --ephemeral
             if ($LASTEXITCODE -ne 0) { throw "Codex repair attempt $attempt failed with exit code $LASTEXITCODE." }
             git diff --check
           }
@@ -218,5 +224,5 @@ Rules:
           git add --all
           if (-not (git diff --cached --name-only)) { throw 'No verified integration changes to commit.' }
           git commit -m 'Integrate Sprint 1 Fix 3 with verified Feature 46'
-          git push --force-with-lease origin HEAD:integration/sprint1-fix3-feature46
+          git push origin HEAD:integration/sprint1-fix3-feature46
           if (git status --porcelain) { throw 'Workspace is not clean after push.' }
