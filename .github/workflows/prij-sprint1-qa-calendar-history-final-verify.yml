@@ -197,3 +197,5 @@ jobs:
           path: qa-calendar-history-final-diagnostics
           if-no-files-found: ignore
           retention-days: 7
+
+# rerun after restoring Previous and Next navigation contract
