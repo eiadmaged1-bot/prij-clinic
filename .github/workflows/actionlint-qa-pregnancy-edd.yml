@@ -1,0 +1,47 @@
+name: Actionlint QA Pregnancy EDD
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/actionlint-qa-pregnancy-edd.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+
+      - name: Install actionlint and record diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          go install github.com/rhysd/actionlint/cmd/actionlint@latest
+          mkdir -p docs/verification
+          set +e
+          "$(go env GOPATH)/bin/actionlint" -format '{{range $err := .}}{{$err.Filepath}}:{{$err.Line}}:{{$err.Column}}: {{$err.Message}} [{{$err.Kind}}]{{"\n"}}{{end}}' .github/workflows/prij-sprint1-qa-pregnancy-edd.yml > /tmp/actionlint.txt 2>&1
+          code=$?
+          set -e
+          {
+            echo '# QA Pregnancy EDD Workflow Actionlint'
+            echo
+            echo "- Exit code: \`$code\`"
+            echo
+            echo '```text'
+            cat /tmp/actionlint.txt
+            echo '```'
+          } > docs/verification/QA_PREGNANCY_EDD_ACTIONLINT.md
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/QA_PREGNANCY_EDD_ACTIONLINT.md
+          git commit -m 'ci: record pregnancy EDD actionlint diagnostics'
+          git push origin HEAD:security/rbac-scope-enforcement
