@@ -55,6 +55,75 @@ function assertClean(relative, content) {
   }
 }
 
+function cssBraceBalance(content) {
+  let balance = 0;
+  let quote = null;
+  let escaped = false;
+  let inComment = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+    const next = content[index + 1];
+
+    if (inComment) {
+      if (character === '*' && next === '/') {
+        inComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (character === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (character === quote) quote = null;
+      continue;
+    }
+
+    if (character === '/' && next === '*') {
+      inComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === '{') balance += 1;
+    if (character === '}') {
+      balance -= 1;
+      if (balance < 0) throw new Error('CSS has an unexpected extra closing brace.');
+    }
+  }
+
+  if (quote) throw new Error('CSS has an unterminated quoted value.');
+  if (inComment) throw new Error('CSS has an unterminated comment.');
+  return balance;
+}
+
+function ensureBalancedCss(relative, content) {
+  const balance = cssBraceBalance(content);
+  if (balance === 0) return content;
+
+  const expectedTail = '@media (max-width: 390px) {';
+  const tailIndex = content.lastIndexOf(expectedTail);
+  if (balance === 1 && tailIndex >= Math.max(0, content.length - 3000)) {
+    const repaired = `${content.trimEnd()}\n}\n`;
+    if (cssBraceBalance(repaired) !== 0) {
+      throw new Error(`Could not repair the final CSS block in ${relative}.`);
+    }
+    return repaired;
+  }
+
+  throw new Error(`Unexpected CSS brace balance ${balance} in ${relative}.`);
+}
+
 {
   const relative = 'apps/api/src/doctor-visit/dto.ts';
   let content = read(relative);
@@ -89,6 +158,7 @@ function assertClean(relative, content) {
   const relative = 'apps/web/app/globals.css';
   let content = read(relative);
   content = resolveNext(content, (ours, theirs) => `${ours}${ours.endsWith('\n') ? '' : '\n'}${theirs}`);
+  content = ensureBalancedCss(relative, content);
   assertClean(relative, content);
   write(relative, content);
 }
