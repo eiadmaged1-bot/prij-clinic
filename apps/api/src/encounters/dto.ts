@@ -1,5 +1,6 @@
 import { IsBoolean, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 import { EncounterStatus } from "@prisma/client";
+import { COMPLAINT_LIFECYCLE_STATUS, type ComplaintLifecycleStatus } from "../complaints/complaint-lifecycle";
 
 export class CreateEncounterDto {
   @IsUUID()
@@ -13,6 +14,10 @@ export class CreateEncounterDto {
   @IsString()
   @MaxLength(1000)
   chiefComplaint?: string;
+
+  @IsOptional()
+  @IsEnum(COMPLAINT_LIFECYCLE_STATUS)
+  complaintStatus?: ComplaintLifecycleStatus;
 
   @IsOptional()
   @IsString()
@@ -76,6 +81,10 @@ export class UpdateEncounterDto {
   @IsString()
   @MaxLength(1000)
   chiefComplaint?: string;
+
+  @IsOptional()
+  @IsEnum(COMPLAINT_LIFECYCLE_STATUS)
+  complaintStatus?: ComplaintLifecycleStatus;
 
   @IsOptional()
   @IsString()

@@ -16,6 +16,8 @@ import { DoctorVisitService } from "../doctor-visit/doctor-visit.service";
 import { ClinicalTagsService } from "../clinical-tags/clinical-tags.service";
 import { IdempotencyService } from "../idempotency/idempotency.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { randomUUID } from "node:crypto";
+import { mergeComplaintLifecycle } from "../complaints/complaint-lifecycle";
 import { toUtcDateOnly } from "../queue/queue-date";
 import { PatientLookupService } from "./services/patient-lookup.service";
 import {
@@ -969,13 +971,16 @@ export class PatientsService {
       throw new BadRequestException("Patient branch is required to create an encounter.");
     }
     await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId: id, requireDoctorScope: true });
+    const encounterId = randomUUID();
     const encounter = await this.prisma.encounter.create({
       data: {
+        id: encounterId,
         branchId,
         patientId: id,
         appointmentId: dto.appointmentId ?? null,
         doctorId: user.id,
         chiefComplaint: clean(dto.chiefComplaint),
+        ...(dto.complaintStatus ? { followUpJson: mergeComplaintLifecycle(undefined, dto.complaintStatus, { encounterId, recordedAt: new Date() }) } : {}),
         historyText: clean(dto.historyText),
         examText: clean(dto.examText),
         assessmentText: clean(dto.assessmentText),

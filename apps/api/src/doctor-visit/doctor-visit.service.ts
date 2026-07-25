@@ -5,6 +5,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { assertCanReferenceAppointment, assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
+import { mergeComplaintLifecycle } from "../complaints/complaint-lifecycle";
 import { ClinicTimeService } from "../clinic-time/clinic-time.service";
 import { IdempotencyService } from "../idempotency/idempotency.service";
 import { CreateFollowUpDto, StartDoctorVisitDto, UpdateDoctorVisitDto } from "./dto";
@@ -111,6 +112,12 @@ export class DoctorVisitService {
       where: { id: encounterId },
       data: {
         ...(dto.chiefComplaint !== undefined ? { chiefComplaint: clean(dto.chiefComplaint) } : {}),
+        ...(dto.complaintStatus !== undefined ? {
+          followUpJson: mergeComplaintLifecycle(encounter.followUpJson, dto.complaintStatus, {
+            encounterId,
+            recordedAt: encounter.createdAt
+          })
+        } : {}),
         ...(dto.historyText !== undefined ? { historyText: clean(dto.historyText) } : {}),
         ...(dto.examText !== undefined ? { examText: clean(dto.examText) } : {}),
         ...(dto.assessmentText !== undefined ? { assessmentText: clean(dto.assessmentText) } : {}),

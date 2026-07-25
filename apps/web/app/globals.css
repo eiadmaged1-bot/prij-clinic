@@ -7759,4 +7759,9 @@ button.patient-search-card-selectable { font:inherit; }
   .overview-pattern-fields,
   .overview-pregnancy-context { grid-template-columns: 1fr; }
   .overview-context-values { grid-template-columns: 1fr; }
+.complaint-status-badge.refractory {
+  border-color: color-mix(in srgb, #6d4aa2 38%, var(--border));
+  background: color-mix(in srgb, #6d4aa2 12%, var(--surface));
+  color: #60408f;
+}
 }

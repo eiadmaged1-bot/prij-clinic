@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
+import {
+  Action,
+  COMPLAINT_LIFECYCLE_STATUSES,
+  complaintLifecycleFromEncounter,
+  complaintStatusLabel,
+  hasAnyRolePermission
+} from "@prij-clinic/shared";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
 import InvestigationStationV3 from "@/components/investigations/InvestigationStationV3";
@@ -113,6 +119,29 @@ type ReproductiveSnapshot = {
 };
 const emptyStructuredInput: StructuredClinicalInput = { version: 2, complaints: [], history: [], examination: {} };
 
+const examinationChips = [
+  "General condition stable",
+  "Pallor absent",
+  "Pallor present",
+  "Abdomen soft",
+  "Abdominal tenderness",
+  "Fundal height recorded",
+  "Fetal heart heard",
+  "Speculum exam normal",
+  "Cervix closed",
+  "Cervix open",
+  "Cervix soft",
+  "Cervix dilated",
+  "Bleeding seen",
+  "Vaginal discharge seen",
+  "Uterus normal size",
+  "Uterus enlarged",
+  "Uterine tenderness",
+  "Adnexal tenderness",
+  "Cervical motion tenderness",
+  "Pelvic mass felt"
+];
+
 const investigationCategories = ["Common", "Pregnancy / Obstetric", "Gynecology", "Infertility", "Oncology / Screening", "Infection / STI", "Imaging / Radiology", "Emergency / Pre-op"];
 const scanTypes = ["Dating", "Anomaly", "Growth", "Doppler", "Follow-up"];
 
@@ -145,7 +174,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const roles = user?.roles ?? [];
   const canUseDoctorVisit = hasAnyRolePermission(roles, Action.VISIT_START) || roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
   const patient = visit?.patient as Record<string, string | null> | undefined;
-  const encounter = visit?.encounter as Record<string, string | null> | undefined;
+  const encounter = visit?.encounter as Record<string, unknown> | undefined;
   const signedVisit = encounter?.status === "signed";
   const contextReady = Boolean(patientId && visitId && patient?.id === patientId && encounter?.id === visitId);
 
@@ -156,8 +185,10 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         data = await getDoctorVisitPacket(patientId, visitId);
       }
       setVisit(data);
+      const complaintLifecycle = complaintLifecycleFromEncounter((data.encounter ?? {}) as Record<string, unknown>);
       const serverForm: Record<string, unknown> = {
         chiefComplaint: String(data.encounter?.chiefComplaint ?? ""),
+        complaintStatus: complaintLifecycle?.status ?? "ACTIVE",
         historyText: String(data.encounter?.historyText ?? ""),
         examText: String(data.encounter?.examText ?? ""),
         assessmentText: String(data.encounter?.assessmentText ?? ""),
@@ -272,7 +303,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         window.location.assign(`/patients/${patientId}`);
       }
     } catch {
-      setStatus("Finish failed — review required fields and retry.");
+      setStatus("Finish failed â€” review required fields and retry.");
       setFinishing(false);
     }
   }
@@ -345,7 +376,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
       <PatientVisitIdentityBar
         error={error}
         patient={patient ? { id: String(patient.id), name: String(patient.name ?? ""), medicalRecordNumber: String(patient.medicalRecordNumber ?? ""), dateOfBirth: patient.dateOfBirth, patientType: patient.patientType } : null}
-        visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt } : null}
+        visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt == null ? null : String(encounter.startedAt) } : null}
         actions={
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
             <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
@@ -388,7 +419,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
               <div className="modal-content" style={{ maxWidth: "480px" }}>
                 <div className="modal-header">
                   <h2>Void Encounter</h2>
-                  <button className="button-icon" onClick={() => setVoidModalOpen(false)} disabled={isVoiding} aria-label="Close">×</button>
+                  <button className="button-icon" onClick={() => setVoidModalOpen(false)} disabled={isVoiding} aria-label="Close">Ã—</button>
                 </div>
                 <div className="modal-body">
                   <p><strong>Patient:</strong> {patient?.name ?? patientId}</p>
@@ -487,7 +518,16 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
       {activeModule === "complaint" ? <StructuredTagPicker title="Smart complaint tags" groups={complaintGroups} selected={structured.complaints} lenses onChange={(complaints) => updateStructured({ complaints })} /> : null}
       {activeModule === "history" ? <><ReproductiveStatusEditor context={context} value={structured.reproductiveSnapshot} previous={previousSnapshot} pregnancyEpisode={pregnancyEpisode} infertilityEpisode={infertilityEpisode} onChange={(reproductiveSnapshot) => updateStructured({ reproductiveSnapshot, version: 2 })} /><StructuredTagPicker title="Structured History" groups={historyGroups} selected={structured.history} onChange={(history) => updateStructured({ history })} /></> : null}
       {activeModule === "examination" ? <StructuredExamination context={context} value={structured.examination} onChange={(examination) => updateStructured({ examination })} /> : null}
+      {activeModule === "examination" ? <ChipList labels={examinationChips} onPick={(label) => onChange({ ...form, examText: appendText(String(form.examText ?? ""), label) })} /> : null}
+      {activeModule === "complaint" ? (
+        <label>Lifecycle status
+          <select value={String(form.complaintStatus ?? "ACTIVE")} onChange={(event) => onChange({ ...form, complaintStatus: event.target.value })}>
+            {COMPLAINT_LIFECYCLE_STATUSES.map((status) => <option key={status} value={status}>{complaintStatusLabel(status)}</option>)}
+          </select>
+        </label>
+      ) : null}
       <label className="wide">{fieldLabel(field)}<textarea value={String(form[field] ?? "")} onChange={(event) => onChange({ ...form, [field]: event.target.value })} /></label>
+      {activeModule === "complaint" ? <span className={`badge complaint-status-badge ${form.complaintStatus === "REFRACTORY" ? "refractory" : ""}`}>{complaintStatusLabel(form.complaintStatus)}</span> : null}
       {activeModule === "encounter" ? (
         <>
           <label>Chief complaint<input value={String(form.chiefComplaint ?? "")} onChange={(event) => onChange({ ...form, chiefComplaint: event.target.value })} /></label>
@@ -496,7 +536,7 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
           <label>Impression<textarea value={String(form.assessmentText ?? "")} onChange={(event) => onChange({ ...form, assessmentText: event.target.value })} /></label>
         </>
       ) : null}
-      {!readOnly ? <button className="button" type="submit">Save draft</button> : <p className="notice wide">Signed encounter · read only</p>}
+      {!readOnly ? <button className="button" type="submit">Save draft</button> : <p className="notice wide">Signed encounter Â· read only</p>}
       </fieldset>
     </form>
   );
@@ -629,7 +669,7 @@ function ReproductiveStatusEditor({ context, value, previous, pregnancyEpisode, 
   return <section className="reproductive-status-editor wide">
     <div className="section-heading"><div><h3>{reproductiveTitle(context)}</h3><p className="muted">Visit-linked structured snapshot. Previous records remain unchanged.</p></div>{previous ? <button className="button secondary compact" type="button" onClick={noChange}>No change since previous visit</button> : null}</div>
     {previous ? <p className="reproductive-previous-summary">Previous: {snapshotSummary(previous)}</p> : null}
-    {context === "pregnancy" && (pregnancyLmp || pregnancyEdd) ? <div className="notice">Active pregnancy dating · LMP {dateOnly(pregnancyLmp) || "Not recorded"} · EDD {dateOnly(pregnancyEdd) || "Not recorded"} · {String(pregnancyEpisode?.datingMethod ?? "Dating method not recorded")}</div> : null}
+    {context === "pregnancy" && (pregnancyLmp || pregnancyEdd) ? <div className="notice">Active pregnancy dating Â· LMP {dateOnly(pregnancyLmp) || "Not recorded"} Â· EDD {dateOnly(pregnancyEdd) || "Not recorded"} Â· {String(pregnancyEpisode?.datingMethod ?? "Dating method not recorded")}</div> : null}
     <div className="form-grid reproductive-fields">
       {context !== "postpartum" && context !== "hysterectomy" ? <label>LMP<input type="date" value={dateOnly(current.lmp ?? (context === "pregnancy" ? pregnancyLmp : ""))} onChange={(event) => update({ lmp: event.target.value, changeStatus: "changed" })} /></label> : null}
       {context === "pregnancy" ? <>
@@ -723,7 +763,7 @@ function StructuredTagPicker({ title, groups, selected, onChange, lenses = false
   };
   const setComplaintStatus = (id: string, status: StructuredTagItem["status"]) => onChange(selected.map((item) => (item.id ?? clinicalItemId(item.category, item.label)) === id ? { ...item, id, status } : item));
   const selectedLabel = title.includes("complaint") ? "Selected complaints" : "Selected history";
-  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(groups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} ×</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
+  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(groups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} Ã—</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
 }
 
 const examinationGroups: Record<string, string[]> = {
@@ -740,14 +780,14 @@ function StructuredExamination({ context, value, onChange }: { context: string; 
   const relevant = [...new Set([...examinationGroups.general!, ...(examinationGroups[context] ?? [])])];
   const groups = showAll ? [...new Set(Object.values(examinationGroups).flat())] : relevant;
   const selected = Object.entries(value).filter(([, finding]) => finding);
-  return <section className="structured-examination wide"><div className="section-heading"><h3>Structured examination · {context}</h3><button className="button secondary compact" type="button" onClick={() => setShowAll((current) => !current)}>{showAll ? "Show relevant" : "Add another group"}</button></div>{selected.length ? <div className="selected-clinical-basket"><strong>Selected findings ({selected.length})</strong>{selected.map(([group, finding]) => <button key={group} type="button" onClick={() => { const next = { ...value }; delete next[group]; onChange(next); }}>{group}: {finding} ×</button>)}</div> : null}<div className="structured-examination-groups">{groups.map((group, index) => { const options = exclusiveValues[group] ?? ["Not examined", "Normal", "Abnormal", "Declined", "Unable to assess"]; return <details key={group} open={index < 2 || Boolean(value[group])}><summary><strong>{group}</strong><span>{value[group] || "Not selected"}</span></summary><div className="exclusive-finding-options">{options.map((option) => <button className={value[group] === option ? "active" : ""} key={option} type="button" onClick={() => onChange({ ...value, [group]: option })}>{option}</button>)}</div></details>; })}</div></section>;
+  return <section className="structured-examination wide"><div className="section-heading"><h3>Structured examination Â· {context}</h3><button className="button secondary compact" type="button" onClick={() => setShowAll((current) => !current)}>{showAll ? "Show relevant" : "Add another group"}</button></div>{selected.length ? <div className="selected-clinical-basket"><strong>Selected findings ({selected.length})</strong>{selected.map(([group, finding]) => <button key={group} type="button" onClick={() => { const next = { ...value }; delete next[group]; onChange(next); }}>{group}: {finding} Ã—</button>)}</div> : null}<div className="structured-examination-groups">{groups.map((group, index) => { const options = exclusiveValues[group] ?? ["Not examined", "Normal", "Abnormal", "Declined", "Unable to assess"]; return <details key={group} open={index < 2 || Boolean(value[group])}><summary><strong>{group}</strong><span>{value[group] || "Not selected"}</span></summary><div className="exclusive-finding-options">{options.map((option) => <button className={value[group] === option ? "active" : ""} key={option} type="button" onClick={() => onChange({ ...value, [group]: option })}>{option}</button>)}</div></details>; })}</div></section>;
 }
 
 function saveStateLabel(state: string) {
   if (state === "syncing") return "Syncing";
   if (state === "synced") return "Synced";
   if (state === "offline") return "Offline";
-  if (state === "failed") return "Save failed — Retry";
+  if (state === "failed") return "Save failed â€” Retry";
   if (state === "local") return `Saved locally at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   return "Unsaved changes";
 }
@@ -763,6 +803,10 @@ function readLocalVisitDraft(key: string) {
 
 function BlockedContext({ patientId }: { patientId: string }) {
   return <div className="form-actions"><Link className="button secondary" href="/doctor">Back to Doctor Mode</Link>{patientId ? <Link className="button secondary" href={`/patients/${patientId}`}>Open patient file</Link> : null}</div>;
+}
+
+function ChipList({ labels, onPick }: { labels: string[]; onPick: (label: string) => void }) {
+  return <div className="clinical-chip-cloud wide">{[...new Set(labels)].map((label) => <button className="clinical-chip" key={label} type="button" onClick={() => onPick(label)}><strong>{label}</strong><span>Examination</span></button>)}</div>;
 }
 
 function normalizeModule(value?: string) {
@@ -817,12 +861,16 @@ function snapshotSummary(snapshot: ReproductiveSnapshot) {
     snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : null,
     snapshot.flow,
     ...(snapshot.abnormalFlags ?? [])
-  ].filter(Boolean).join(" · ") || "Structured status recorded";
+  ].filter(Boolean).join(" Â· ") || "Structured status recorded";
 }
 
 function dateOnly(value: unknown) {
   const text = String(value ?? "");
   return /^\d{4}-\d{2}-\d{2}/.test(text) ? text.slice(0, 10) : "";
+}
+
+function appendText(existing = "", label: string) {
+  return [existing.trim(), label].filter(Boolean).join(existing.trim() ? "\n" : "");
 }
 
 function updateLine(lines: PrescriptionLine[], index: number, patch: Partial<PrescriptionLine>) {

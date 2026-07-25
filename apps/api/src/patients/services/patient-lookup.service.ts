@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuditService } from "../../audit/audit.service";
 import type { AuthUser } from "../../auth/auth.types";
 import { PrismaService } from "../../prisma/prisma.service";
+import { longitudinalComplaintsFromEncounters } from "../../complaints/complaint-lifecycle";
 
 @Injectable()
 export class PatientLookupService {
@@ -23,7 +24,7 @@ export class PatientLookupService {
       clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1, select: { phaseType: true, title: true } },
       appointments: { where: { startAt: { gte: todayStart }, status: { in: ["booked", "rescheduled"] } }, orderBy: { startAt: "asc" }, take: 2, select: { id: true, startAt: true, status: true, appointmentType: true } },
       queueTickets: { where: { queueDate: { gte: todayStart, lt: todayEnd }, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, queueNumber: true, status: true, priority: true, visitType: true } },
-      encounters: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true, status: true, startedAt: true, createdAt: true } },
+      encounters: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, status: true, startedAt: true, createdAt: true, chiefComplaint: true, followUpJson: true } },
       patientAllergies: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },
       patientMedications: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },
       investigationResults: { where: { reviewStatus: "pending_review" }, take: 100, select: { id: true } },
@@ -45,7 +46,9 @@ export class PatientLookupService {
       pendingResultCount: receptionistOnly ? undefined : patient.investigationResults.length, pendingFollowUp: patient.patientTasks[0] ?? null,
       balanceState: canReadFinance ? (patient.invoices[0] ? { status: patient.invoices[0].status, hasBalance: Number(patient.invoices[0].balanceAmount) > 0 } : { status: "clear", hasBalance: false }) : undefined,
       lastClinicalEvent: receptionistOnly ? undefined : patient.encounters[0] ? { type: "encounter", occurredAt: patient.encounters[0].startedAt ?? patient.encounters[0].createdAt, status: patient.encounters[0].status } : null,
-      nextAppointment, availableActions
+      nextAppointment,
+      availableActions,
+      complaints: receptionistOnly ? undefined : longitudinalComplaintsFromEncounters(patient.encounters)
     };
   }
 }

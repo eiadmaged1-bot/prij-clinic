@@ -1,4 +1,5 @@
-import { IsDateString, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsDateString, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { COMPLAINT_LIFECYCLE_STATUS, type ComplaintLifecycleStatus } from "../complaints/complaint-lifecycle";
 
 export class StartDoctorVisitDto {
   @IsOptional()
@@ -15,6 +16,10 @@ export class UpdateDoctorVisitDto {
   @IsString()
   @MaxLength(1000)
   chiefComplaint?: string;
+
+  @IsOptional()
+  @IsEnum(COMPLAINT_LIFECYCLE_STATUS)
+  complaintStatus?: ComplaintLifecycleStatus;
 
   @IsOptional()
   @IsString()

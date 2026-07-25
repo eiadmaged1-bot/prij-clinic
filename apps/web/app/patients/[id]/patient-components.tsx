@@ -788,6 +788,8 @@ export function Overview({ patient, related, timelineItems, workspaceContext, on
   workspaceContext: PatientWorkspaceContext;
   onNavigate: (tab: string) => void;
 }) {
+  const complaintHistory = related.complaints ?? [];
+  const activeComplaints = complaintHistory.filter((row) => row.active === true);
   const ultrasound = firstOverviewRow((related.ultrasound ?? related.ultrasounds ?? []).filter((row) => {
     const status = overviewValue(row, ["status", "reportStatus", "reviewStatus"]).toLowerCase();
     return ["completed", "signed", "final", "finalized", "reviewed"].includes(status) || Boolean(overviewValue(row, ["reportSummary", "findings", "impression"]));
@@ -802,7 +804,7 @@ export function Overview({ patient, related, timelineItems, workspaceContext, on
       if (!complaintById.has(id)) complaintById.set(id, { id, complaint: complaint.label, status: complaint.status || "Active", encounterDate: row.signedAt ?? row.startedAt ?? row.createdAt, sourceEncounterId: row.id });
     }
   }
-  const complaints = [...complaintById.values()].filter((row) => String(row.status).toLowerCase() !== "resolved").slice(0, overviewCardContracts.complaints.maxItems);
+  const legacyComplaints = [...complaintById.values()].filter((row) => String(row.status).toLowerCase() !== "resolved").slice(0, overviewCardContracts.complaints.maxItems);
   const labs = (related.results ?? []).filter((row) =>
     overviewValue(row, ["testName", "investigationName", "title", "name"])
   ).slice(0, overviewCardContracts.labs.maxItems);
@@ -821,12 +823,19 @@ export function Overview({ patient, related, timelineItems, workspaceContext, on
     overviewValue(row, ["label", "name", "title"])
   ).filter(Boolean).slice(0, overviewCardContracts.tags.maxItems);
   const recentTimeline = timelineItems.slice(0, overviewCardContracts.timeline.maxItems);
+  const complaints = activeComplaints.length
+    ? activeComplaints.slice(0, overviewCardContracts.complaints.maxItems)
+    : legacyComplaints;
 
   return (
     <section className="patient-clinical-overview" aria-label="Patient clinical overview">
+      <article className="panel compact-panel complaint-history-panel">
+        <div className="section-heading"><h2>Complaint history</h2><span className="badge">{complaintHistory.length}</span></div>
+        {complaintHistory.length ? <div className="dense-card-list">{complaintHistory.map((complaint, index) => <ComplaintLifecycleRow complaint={complaint} key={String(complaint.encounterId ?? index) + "-history"} />)}</div> : <p className="empty-state compact smart-empty-state">No longitudinal complaint history yet.</p>}
+      </article>
       <div className="patient-approved-overview-grid">
         <OverviewCard className="overview-card-complaints overview-span-4" icon={overviewCardContracts.complaints.icon} tone="red" title={overviewCardContracts.complaints.title} action={overviewCardContracts.complaints.action} onAction={() => onNavigate("doctor-visit")}>
-          {complaints.length ? <div className="overview-data-rows">{complaints.map((row) => <article key={String(row.id)}><div><strong>{String(row.complaint)}</strong><p>{overviewDate(String(row.encounterDate ?? ""))} · {String(row.status)}</p></div><Link href={`/patients/${patient.id}/visits/${String(row.sourceEncounterId)}/complaint`}>Source visit</Link></article>)}</div> : <OverviewEmpty label={overviewCardContracts.complaints.emptyAction} onClick={() => onNavigate("doctor-visit")} />}
+          {complaints.length ? <div className="overview-data-rows">{complaints.map((row, index) => "text" in row ? <ComplaintLifecycleRow complaint={row} key={String(row.encounterId ?? index) + "-active"} /> : <article key={String(row.id)}><div><strong>{String(row.complaint)}</strong><p>{overviewDate(String(row.encounterDate ?? ""))} · {String(row.status)}</p></div><Link href={`/patients/${patient.id}/visits/${String(row.sourceEncounterId)}/complaint`}>Source visit</Link></article>)}</div> : <OverviewEmpty label={overviewCardContracts.complaints.emptyAction} onClick={() => onNavigate("doctor-visit")} />}
         </OverviewCard>
 
         <WorkspaceContextOverviewCard patient={patient} context={workspaceContext} related={related} onNavigate={onNavigate} />
@@ -1209,6 +1218,17 @@ function overviewDate(value: string) {
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date.toLocaleDateString() : value;
 }
+function ComplaintLifecycleRow({ complaint }: { complaint: Record<string, unknown> }) {
+    const label = typeof complaint.label === "string" && complaint.label.trim() ? complaint.label : "Unknown";
+    const refractory = complaint.status === "REFRACTORY";
+    return (
+      <article className="data-row dense">
+        <div className="data-row-header"><strong>{String(complaint.text ?? "Complaint")}</strong><span className={`badge complaint-status-badge ${refractory ? "refractory" : ""}`}>{label}</span></div>
+        <p className="muted">{String(complaint.recordedAt ?? "Date unavailable")} · {String(complaint.source ?? "Source unavailable")}</p>
+      </article>
+    );
+}
+
 export function MiniCount({ label, value, tone = "" }: { label: string; value: number; tone?: string }) {
     return (
     <div className={`mini-metric-card ${tone}`}>

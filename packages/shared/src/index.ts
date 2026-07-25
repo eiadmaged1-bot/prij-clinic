@@ -1,6 +1,9 @@
+import type { LongitudinalComplaint } from "./complaint-lifecycle";
+
 export const appName = "Dr Maged Attia Clinics";
 export * from "./permissions";
 export * from "./app-actions";
+export * from "./complaint-lifecycle";
 
 export type PatientWorkspaceSummary = {
   patient: { id: string; displayName: string; medicalRecordNumber: string; dateOfBirth: string | null; ageSummary: string | null; contactSummary: string | null; patientType: string };
@@ -16,4 +19,5 @@ export type PatientWorkspaceSummary = {
   lastClinicalEvent?: { type: "encounter"; occurredAt: string; status: string } | null;
   nextAppointment: { id: string; startAt: string; status: string; appointmentType: string | null } | null;
   availableActions: string[];
+  complaints?: LongitudinalComplaint[];
 };
