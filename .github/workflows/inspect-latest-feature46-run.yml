@@ -1,0 +1,96 @@
+name: Inspect Latest Feature 46 Integration Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/inspect-latest-feature46-run.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    name: Inspect latest Feature 46 integration
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 10
+
+    steps:
+      - name: Verify SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+
+      - name: Record latest integration run
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+
+          $workflow = 'sprint1-feature46-integration-repair.yml'
+          $runsUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/workflows/$workflow/runs?branch=docs%2F200-feature-architecture-and-sprint-a&per_page=10"
+          $runs = Invoke-RestMethod -Method Get -Uri $runsUri -Headers $headers
+          $run = $runs.workflow_runs | Select-Object -First 1
+          if (-not $run) { throw 'No Feature 46 integration workflow run was found.' }
+
+          $jobsUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/runs/$($run.id)/jobs?filter=latest&per_page=100"
+          $jobs = Invoke-RestMethod -Method Get -Uri $jobsUri -Headers $headers
+
+          $lines = @(
+            '# Latest Sprint 1 Fix 3 + Feature 46 Integration Run',
+            '',
+            "- Run ID: $($run.id)",
+            "- URL: $($run.html_url)",
+            "- Event: $($run.event)",
+            "- Branch: $($run.head_branch)",
+            "- Head SHA: $($run.head_sha)",
+            "- Status: $($run.status)",
+            "- Conclusion: $($run.conclusion)",
+            "- Created: $($run.created_at)",
+            "- Updated: $($run.updated_at)",
+            '',
+            '## Jobs'
+          )
+
+          foreach ($job in $jobs.jobs) {
+            $lines += ''
+            $lines += "### $($job.name)"
+            $lines += "- Job ID: $($job.id)"
+            $lines += "- Status: $($job.status)"
+            $lines += "- Conclusion: $($job.conclusion)"
+            $lines += "- URL: $($job.html_url)"
+            $lines += '- Steps:'
+            foreach ($step in $job.steps) {
+              $lines += "  - $($step.number). $($step.name): $($step.status) / $($step.conclusion)"
+            }
+          }
+
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $report = 'docs/verification/LATEST_FEATURE46_RUN_STATUS.md'
+          $lines | Set-Content -LiteralPath $report -Encoding utf8
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $report
+          git commit -m "ci: record Feature 46 run $($run.id) status"
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit latest run report.' }
+          git push origin HEAD:security/rbac-scope-enforcement
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push latest run report.' }
