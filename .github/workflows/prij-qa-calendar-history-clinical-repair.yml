@@ -1,0 +1,115 @@
+name: Prij QA Calendar History Clinical Repair
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-qa-calendar-history-clinical-repair.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-qa-calendar-history-clinical-repair
+  cancel-in-progress: false
+
+jobs:
+  repair-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          path: controls
+
+      - name: Checkout QA repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Apply compact Previous and Next control repair
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ../controls/scripts/runner/apply-qa-calendar-history-clinical-fix.mjs
+          node ../controls/scripts/runner/apply-qa-calendar-history-clinical-fix.mjs "$PWD"
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all)"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | sed -E 's/^...//' | grep -Ev '^(apps/web/app/patients/\[id\]/patient-components\.tsx|apps/web/app/globals\.css)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope files changed:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Run compact calendar and History contract
+        working-directory: workspace
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Run pregnancy and EDD regression
+        working-directory: workspace
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Run Feature 46 regression
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Verify legacy calendar navigation contract statically
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -F '>Previous<' 'apps/web/app/patients/[id]/patient-components.tsx'
+          grep -F '>Next<' 'apps/web/app/patients/[id]/patient-components.tsx'
+
+      - name: Run typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Run production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Commit verified navigation repair
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'apps/web/app/patients/[id]/patient-components.tsx' apps/web/app/globals.css
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/web/app/patients/\[id\]/patient-components\.tsx|apps/web/app/globals\.css)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git diff --cached --check
+          git commit -m 'Restore compact calendar navigation contract'
+          git push origin HEAD:work/sprint1-qa-repair-batch
