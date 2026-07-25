@@ -1,0 +1,174 @@
+name: Prij Sprint 1 QA Pregnancy EDD Final Verify
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-pregnancy-edd-final-verify.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-pregnancy-edd-final-verify
+  cancel-in-progress: false
+
+jobs:
+  final-verify:
+    name: Final verify pregnancy context and EDD package
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+
+    steps:
+      - name: Prepare isolated SECTRA workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('qa-preg-edd-final-workspace', 'qa-preg-edd-final-diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'qa-preg-edd-final-diagnostics') | Out-Null
+
+      - name: Checkout QA repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          clean: true
+          path: qa-preg-edd-final-workspace
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qa-preg-edd-final-workspace/package-lock.json
+
+      - name: Load local development configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL was not loaded.' }
+          Write-Host 'Local environment loaded without printing secret values.'
+
+      - name: Install and prepare verification prerequisites
+        working-directory: qa-preg-edd-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceTarget = 'local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force $referenceTarget | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination $referenceTarget -Recurse -Force
+          if (-not (Test-Path -LiteralPath (Join-Path $referenceTarget 'egyptian-drugs.csv'))) { throw 'Medication reference copy failed.' }
+
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild for search verification failed.' }
+
+      - name: Run all seven mandatory checks
+        working-directory: qa-preg-edd-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'qa-preg-edd-final-diagnostics'
+          $checks = [ordered]@{
+            'qa-pregnancy-edd' = 'node scripts/qa-pregnancy-edd-contract-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - name: Record verified QA Package 1
+        working-directory: qa-preg-edd-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          @(
+            '# QA Pregnancy Context and EDD Verification',
+            '',
+            '- Tickets: `QA-PREG-001`, `QA-EDD-001`',
+            '- Pregnancy ordinary menstrual-cycle UI: SUPPRESSED',
+            '- Pre-pregnancy menstrual baseline: PRESERVED',
+            '- Pregnancy-specific bleeding fields: PASS',
+            '- EDD manual mode: PASS',
+            '- EDD calculated candidates (LMP, ultrasound, IVF/ET, known conception): PASS',
+            '- Clinician confirmation and no-silent-overwrite guard: PASS',
+            '- Correction reason and dating history: PASS',
+            '- Locked contract test: PASS',
+            '- Feature 46 regression: PASS',
+            '- Clinical workflow regression: PASS',
+            '- Medication regression: PASS',
+            '- Search regression: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          ) | Set-Content -LiteralPath 'docs/verification/QA_PREGNANCY_EDD_RESULT.md' -Encoding utf8
+
+          $batchPath = 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md'
+          $batch = Get-Content -LiteralPath $batchPath -Raw
+          if (-not $batch.Contains('QA-PREG-001: VERIFIED')) {
+            Add-Content -LiteralPath $batchPath -Value "`n## Verified packages`n`n- QA-PREG-001: VERIFIED`n- QA-EDD-001: VERIFIED`n"
+          }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/QA_PREGNANCY_EDD_RESULT.md' 'docs/verification/SPRINT1_QA_REPAIR_BATCH.md'
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verification documents have diff-check errors.' }
+          if (git diff --cached --quiet) {
+            Write-Host 'Verification documents already current; no commit needed.'
+            exit 0
+          }
+          git commit -m 'Verify pregnancy context guard and EDD provenance'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit final QA verification.' }
+          git push origin HEAD:work/sprint1-qa-repair-batch
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push final QA verification.' }
+
+      - name: Upload final diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-pregnancy-edd-final-${{ github.run_id }}
+          path: qa-preg-edd-final-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
