@@ -1,0 +1,72 @@
+name: Repair Feature 46 V2 Publish
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/repair-feature46-v2-publish.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    name: Repair verified integration publish step
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Verify SECTRA
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout workflow controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+
+      - name: Patch V2 publish staging
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = '.github/workflows/prij-sprint1-feature46-final-integration-v2.yml'
+          $text = Get-Content -LiteralPath $path -Raw
+          $marker = '      - id: push'
+          $markerIndex = $text.IndexOf($marker)
+          if ($markerIndex -lt 0) { throw 'Could not locate V2 push step.' }
+
+          $head = $text.Substring(0, $markerIndex)
+          $tail = $text.Substring($markerIndex)
+          $old = '          git add --all'
+          $targetCount = ([regex]::Matches($tail, [regex]::Escape($old))).Count
+          if ($targetCount -ne 1) { throw "Expected one git-add-all inside the V2 push section, found $targetCount." }
+
+          $new = "          git add -- 'docs/verification/SPRINT1_FIX3_FEATURE46_INTEGRATION.md'"
+          $tail = [regex]::Replace($tail, [regex]::Escape($old), $new, 1)
+          $text = $head + $tail
+
+          $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::WriteAllText((Resolve-Path $path), $text, $utf8NoBom)
+
+          $updated = Get-Content -LiteralPath $path -Raw
+          $updatedTail = $updated.Substring($updated.IndexOf($marker))
+          if ($updatedTail -notmatch [regex]::Escape($new)) { throw 'Selective verification-report staging was not inserted.' }
+          if ($updatedTail -match [regex]::Escape($old)) { throw 'Broad git add remains in the V2 push section.' }
+
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'V2 publish repair has diff-check errors.' }
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- $path
+          git commit -m 'ci: publish verified Feature 46 without local reference data'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit V2 publish repair.' }
+          git push origin HEAD:security/rbac-scope-enforcement
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push V2 publish repair.' }
