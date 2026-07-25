@@ -23,7 +23,7 @@
 
 <w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|javascript/auto|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\next-flight-css-loader.js??ruleSet[1].rules[14].oneOf[5].use[0]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[1]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\components\investigations\investigation-station-v3.module.css|ssr': No serializer registered for Warning
 <w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
- âš  Compiled with warnings in 17.4s
+ âš  Compiled with warnings in 17.5s
 
 ./components/investigations/investigation-station-v3.module.css
 Warning
@@ -47,7 +47,7 @@ Import trace for requested module:
 <w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
 <w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[2]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[5].use[3]!C:\Users\SuperUser\actions-runner\_work\prij-clinic\prij-clinic\workspace-cont\apps\web\components\investigations\investigation-station-v3.module.css': No serializer registered for Warning
 <w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 2 items } -> webpack/lib/ModuleWarning -> Warning
- âš  Compiled with warnings in 5.9s
+ âš  Compiled with warnings in 5.8s
 
 ./components/investigations/investigation-station-v3.module.css.webpack[javascript/auto]!=!../../node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[2]!../../node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[5].use[3]!./components/investigations/investigation-station-v3.module.css
 Warning
@@ -89,16 +89,16 @@ Import trace for requested module:
 
 Failed to compile.
 
-./components/clinic/ActiveVisitWorkspace.tsx:498:42
-Type error: Cannot find name 'ChipList'.
+./components/clinic/ActiveVisitWorkspace.tsx:521:137
+Type error: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
 
-[0m [90m 496 |[39m       {activeModule [33m===[39m [32m"history"[39m [33m?[39m [33m<[39m[33m>[39m[33m<[39m[33mReproductiveStatusEditor[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mreproductiveSnapshot} previous[33m=[39m{previousSnapshot} pregnancyEpisode[33m=[39m{pregnancyEpisode} infertilityEpisode[33m=[39m{infertilityEpisode} onChange[33m=[39m{(reproductiveSnapshot) [33m=>[39m updateStructured({ reproductiveSnapshot[33m,[39m version[33m:[39m [35m2[39m })} [35m/><StructuredTagPicker title="Structured History" groups={historyGroups} selected={structured.history} onChange={(history) => updateStructured({ history })} /[39m[33m>[39m[33m<[39m[33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
- [90m 497 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mStructuredExamination[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mexamination} onChange[33m=[39m{(examination) [33m=>[39m updateStructured({ examination })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
-[31m[1m>[22m[39m[90m 498 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mChipList[39m labels[33m=[39m{examinationChips} onPick[33m=[39m{(label) [33m=>[39m onChange({ [33m...[39mform[33m,[39m examText[33m:[39m appendText(form[33m.[39mexamText[33m,[39m label) })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
- [90m     |[39m                                          [31m[1m^[22m[39m
- [90m 499 |[39m       {activeModule [33m===[39m [32m"complaint"[39m [33m?[39m (
- [90m 500 |[39m         [33m<[39m[33mlabel[39m[33m>[39m[33mLifecycle[39m status
- [90m 501 |[39m           [33m<[39m[33mselect[39m value[33m=[39m{form[33m.[39mcomplaintStatus [33m?[39m[33m?[39m [32m"ACTIVE"[39m} onChange[33m=[39m{(event) [33m=>[39m onChange({ [33m...[39mform[33m,[39m complaintStatus[33m:[39m event[33m.[39mtarget[33m.[39mvalue })}[33m>[39m[0m
+[0m [90m 519 |[39m       {activeModule [33m===[39m [32m"history"[39m [33m?[39m [33m<[39m[33m>[39m[33m<[39m[33mReproductiveStatusEditor[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mreproductiveSnapshot} previous[33m=[39m{previousSnapshot} pregnancyEpisode[33m=[39m{pregnancyEpisode} infertilityEpisode[33m=[39m{infertilityEpisode} onChange[33m=[39m{(reproductiveSnapshot) [33m=>[39m updateStructured({ reproductiveSnapshot[33m,[39m version[33m:[39m [35m2[39m })} [35m/><StructuredTagPicker title="Structured History" groups={historyGroups} selected={structured.history} onChange={(history) => updateStructured({ history })} /[39m[33m>[39m[33m<[39m[33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+ [90m 520 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mStructuredExamination[39m context[33m=[39m{context} value[33m=[39m{structured[33m.[39mexamination} onChange[33m=[39m{(examination) [33m=>[39m updateStructured({ examination })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+[31m[1m>[22m[39m[90m 521 |[39m       {activeModule [33m===[39m [32m"examination"[39m [33m?[39m [33m<[39m[33mChipList[39m labels[33m=[39m{examinationChips} onPick[33m=[39m{(label) [33m=>[39m onChange({ [33m...[39mform[33m,[39m examText[33m:[39m appendText(form[33m.[39mexamText[33m,[39m label) })} [33m/[39m[33m>[39m [33m:[39m [36mnull[39m}
+ [90m     |[39m                                                                                                                                         [31m[1m^[22m[39m
+ [90m 522 |[39m       {activeModule [33m===[39m [32m"complaint"[39m [33m?[39m (
+ [90m 523 |[39m         [33m<[39m[33mlabel[39m[33m>[39m[33mLifecycle[39m status
+ [90m 524 |[39m           [33m<[39m[33mselect[39m value[33m=[39m{form[33m.[39mcomplaintStatus [33m?[39m[33m?[39m [32m"ACTIVE"[39m} onChange[33m=[39m{(event) [33m=>[39m onChange({ [33m...[39mform[33m,[39m complaintStatus[33m:[39m event[33m.[39mtarget[33m.[39mvalue })}[33m>[39m[0m
 Next.js build worker exited with code: 1 and signal: null
 npm error Lifecycle script `build` failed with error:
 npm error code 1
@@ -152,6 +152,18 @@ Clinical workflow unification and medication-count guard PASS
 
 ### feature46.stderr.log
 ```text
+    '  "Uterine tenderness",\n' +
+    '  "Adnexal tenderness",\n' +
+    '  "Cervical motion tenderness",\n' +
+    '  "Pelvic mass felt"\n' +
+    '];\n' +
+    '\n' +
+    'const investigationCategories = ["Common", "Pregnancy / Obstetric", "Gynecology", "Infertility", "Oncology / Screening", "Infection / STI", "Imaging / Radiology", "Emergency / Pre-op"];\n' +
+    'const scanTypes = ["Dating", "Anomaly", "Growth", "Doppler", "Follow-up"];\n' +
+    '\n' +
+    'export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patientId: string; visitId: string; moduleKey?: string }) {\n' +
+    '  const activeModule = normalizeModule(moduleKey);\n' +
+    '  const { user, status: sessionStatus } = useSession();\n' +
     '  const [visit, setVisit] = useState<DoctorVisitState | null>(null);\n' +
     '  const [status, setStatus] = useState("Loading locked visit context.");\n' +
     '  const [error, setError] = useState("");\n' +
@@ -253,19 +265,7 @@ Clinical workflow unification and medication-count guard PASS
     '      });\n' +
     '    }, 220);\n' +
     '    return () => window.clearTimeout(timer);\n' +
-    '  }, [activeModule, medicationQuery]);\n' +
-    '\n' +
-    '  useEffect(() => {\n' +
-    '    if (activeModule !== "investigations") return;\n' +
-    '    const params = new URLSearchParams();\n' +
-    '    if (investigationQuery.trim()) params.set("q", investigationQuery.trim());\n' +
-    '    if (investigationCategory) params.set("category", investigationCategory);\n' +
-    '    if (!params.toString()) {\n' +
-    '      setCatalog([]);\n' +
-    '      return;\n' +
-    '    }\n' +
-    '    const timer = window.setTimeout(() => {\n' +
-    '      void apiGet(`/investigations/catalog?${params.toString()}`).then((data) '... 52323 more characters,
+    '  }, [activeModul'... 53293 more characters,
   expected: /complaint-status-badge \$\{form\.complaintStatus === "REFRACTORY"/,
   operator: 'match',
   diff: 'simple'
@@ -359,11 +359,8 @@ npm error command C:\WINDOWS\system32\cmd.exe /d /s /c tsc --noEmit -p tsconfig.
 > @prij-clinic/web@0.1.0 typecheck
 > tsc --noEmit -p tsconfig.json
 
-components/clinic/ActiveVisitWorkspace.tsx(498,42): error TS2304: Cannot find name 'ChipList'.
-components/clinic/ActiveVisitWorkspace.tsx(498,59): error TS2304: Cannot find name 'examinationChips'.
-components/clinic/ActiveVisitWorkspace.tsx(498,86): error TS7006: Parameter 'label' implicitly has an 'any' type.
-components/clinic/ActiveVisitWorkspace.tsx(498,126): error TS2304: Cannot find name 'appendText'.
-components/clinic/ActiveVisitWorkspace.tsx(501,19): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
+components/clinic/ActiveVisitWorkspace.tsx(521,137): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string | undefined'.
+components/clinic/ActiveVisitWorkspace.tsx(524,19): error TS2322: Type '{}' is not assignable to type 'string | number | readonly string[] | undefined'.
 
 > @prij-clinic/shared@0.1.0 typecheck
 > tsc --noEmit -p tsconfig.json
