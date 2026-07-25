@@ -59,15 +59,11 @@ jobs:
           $tempRoot = Join-Path $env:RUNNER_TEMP "feature46-log-$($run.id)"
           Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force $tempRoot | Out-Null
-          $zipPath = Join-Path $tempRoot 'job-logs.zip'
-          $extractPath = Join-Path $tempRoot 'logs'
+          $logPath = Join-Path $tempRoot 'job-log.txt'
 
           $logUri = "https://api.github.com/repos/$env:GITHUB_REPOSITORY/actions/jobs/$($job.id)/logs"
-          Invoke-WebRequest -Uri $logUri -Headers $headers -OutFile $zipPath -UseBasicParsing
-          Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
-
-          $logFiles = @(Get-ChildItem -LiteralPath $extractPath -File -Recurse | Sort-Object FullName)
-          if ($logFiles.Count -eq 0) { throw 'Downloaded job log archive contained no files.' }
+          Invoke-WebRequest -Uri $logUri -Headers $headers -OutFile $logPath -UseBasicParsing
+          if (-not (Test-Path -LiteralPath $logPath)) { throw 'Job log was not downloaded.' }
 
           $patterns = @(
             '##\[error\]',
@@ -77,11 +73,12 @@ jobs:
             'needs merge',
             'index.lock',
             'could not stage',
-            'throw',
+            'NativeCommandError',
             'fatal:',
             'error:'
           )
 
+          $matches = @(Select-String -LiteralPath $logPath -Pattern $patterns -CaseSensitive:$false -ErrorAction SilentlyContinue)
           $lines = @(
             '# Latest Feature 46 Integration Failure Details',
             '',
@@ -95,27 +92,16 @@ jobs:
             '## Error matches'
           )
 
-          foreach ($file in $logFiles) {
-            $matches = @(Select-String -LiteralPath $file.FullName -Pattern $patterns -CaseSensitive:$false -ErrorAction SilentlyContinue)
-            if ($matches.Count -gt 0) {
-              $lines += ''
-              $lines += "### $($file.Name)"
-              foreach ($match in $matches | Select-Object -Last 120) {
-                $safeLine = [string]$match.Line
-                $lines += "- L$($match.LineNumber): $safeLine"
-              }
-            }
+          foreach ($match in $matches | Select-Object -Last 180) {
+            $safeLine = [string]$match.Line
+            $lines += "- L$($match.LineNumber): $safeLine"
           }
 
           $lines += ''
-          $lines += '## Log tails'
-          foreach ($file in $logFiles) {
-            $lines += ''
-            $lines += "### $($file.Name)"
-            $lines += '```text'
-            $lines += @(Get-Content -LiteralPath $file.FullName -Tail 220)
-            $lines += '```'
-          }
+          $lines += '## Final 320 log lines'
+          $lines += '```text'
+          $lines += @(Get-Content -LiteralPath $logPath -Tail 320)
+          $lines += '```'
 
           New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
           $report = 'docs/verification/LATEST_FEATURE46_FAILURE_DETAILS.md'
