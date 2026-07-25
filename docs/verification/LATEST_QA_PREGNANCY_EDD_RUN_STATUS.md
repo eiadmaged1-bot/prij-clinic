@@ -1,35 +1,37 @@
-# Latest QA Pregnancy and EDD Run Status
+# Latest QA Pregnancy and EDD V2 Run Status
 
-- Run ID: `30176699068`
-- Status: `completed`
-- Conclusion: `failure`
+- Run ID: `30176841313`
+- Status: `queued`
+- Conclusion: `pending`
 - Event: `push`
-- Head SHA: `4f1818a5657149cc5a5f2ec4a20ade56618ee195`
-- Created: `2026-07-25T21:59:39Z`
-- Updated: `2026-07-25T21:59:39Z`
-- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30176699068
+- Head SHA: `37278f25fe06e70776921e09b1ef27308014cc1f`
+- Created: `2026-07-25T22:03:44Z`
+- Updated: `2026-07-25T22:03:44Z`
+- URL: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30176841313
 
 ## gh run view
 ```text
 
-X security/rbac-scope-enforcement .github/workflows/prij-sprint1-qa-pregnancy-edd.yml · 30176699068
+* security/rbac-scope-enforcement Prij Sprint 1 QA Pregnancy and EDD V2 · 30176841313
 Triggered via push less than a minute ago
 
-X This run likely failed because of a workflow file issue.
+JOBS
+* Run pregnancy context and EDD controller (ID 89726889513)
 
-For more information, see: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30176699068
+For more information about the job, try: gh run view --job=89726889513
+View this run on GitHub: https://github.com/eiadmaged1-bot/prij-clinic/actions/runs/30176841313
 ```
 
 ## Check runs
 ```text
-name=inspect
-status=in_progress
+name=build
+status=queued
 conclusion=pending
 title=
 summary=
 text=
 ---
-name=build
+name=Run pregnancy context and EDD controller
 status=queued
 conclusion=pending
 title=
