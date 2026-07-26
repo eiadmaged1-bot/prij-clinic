@@ -1,3 +1,10 @@
-# Hosted Feature 48 and 49 Normalization Trigger Contract
+# Hosted Feature 48 and 49 Registry Normalization Trigger
 
-This path is reserved for no-code pull-request triggers after the normalization controller is merged.
+- Trigger sequence: 1
+- Target branch: `work/feature48-49-registry-normalization`
+- Feature 48: Compact Medication Result Cards
+- Feature 49: Structured Arabic Prescription Controls
+- Runtime scope: Features 46–49, pregnancy/EDD, medication regressions, typecheck, build, and diff safety
+- Database mutation: none
+- Production data mutation: none
+- Secret changes: none
