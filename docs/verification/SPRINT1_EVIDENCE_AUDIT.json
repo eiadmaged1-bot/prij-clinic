@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T15:36:49.836Z",
+  "generatedAt": "2026-07-26T15:49:10.141Z",
   "sourceBranch": "work/sprint1-qa-repair-batch",
   "methodology": "Explicit Feature/F-number references only; raw numeric matches are excluded.",
   "currentGates": {
@@ -152,13 +152,14 @@
     {
       "feature": 48,
       "status": "VERIFIED",
-      "traceCount": 4,
+      "traceCount": 5,
       "sourceCount": 0,
       "testCount": 1,
-      "evidenceCount": 3,
+      "evidenceCount": 4,
       "paths": [
         "docs/verification/FEATURE_48_49_REGISTRY.md",
         "docs/verification/FEATURE_48_VERIFICATION.md",
+        "docs/verification/SPRINT1_EVIDENCE_AUDIT.json",
         "docs/verification/SPRINT1_EVIDENCE_AUDIT.md",
         "scripts/feature-48-compact-medication-cards-test.mjs"
       ]
@@ -166,13 +167,15 @@
     {
       "feature": 49,
       "status": "VERIFIED",
-      "traceCount": 3,
+      "traceCount": 5,
       "sourceCount": 0,
       "testCount": 1,
-      "evidenceCount": 2,
+      "evidenceCount": 4,
       "paths": [
         "docs/verification/FEATURE_48_49_REGISTRY.md",
         "docs/verification/FEATURE_49_VERIFICATION.md",
+        "docs/verification/SPRINT1_EVIDENCE_AUDIT.json",
+        "docs/verification/SPRINT1_EVIDENCE_AUDIT.md",
         "scripts/feature-49-structured-arabic-prescription-test.mjs"
       ]
     },
