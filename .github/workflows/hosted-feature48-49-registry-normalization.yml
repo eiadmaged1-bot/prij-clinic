@@ -14,6 +14,10 @@ permissions:
 env:
   TARGET_BRANCH: work/feature48-49-registry-normalization
 
+concurrency:
+  group: hosted-feature48-49-registry-normalization
+  cancel-in-progress: false
+
 jobs:
   verify-normalize:
     name: Verify and register Feature 48 and Feature 49
@@ -149,9 +153,28 @@ jobs:
           - No new clinical automation, diagnosis, prescribing decision, or database behavior was introduced by this normalization step.
           EOF
 
-      - name: Generate refreshed Sprint 1 evidence audit
+      - name: Generate stable refreshed Sprint 1 evidence audit
         working-directory: workspace
-        run: node ../controls/scripts/runner/generate-sprint1-evidence-audit.mjs .
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp docs/verification/SPRINT1_EVIDENCE_AUDIT.json /tmp/sprint1-audit-old.json
+          cp docs/verification/SPRINT1_EVIDENCE_AUDIT.md /tmp/sprint1-audit-old.md
+          node ../controls/scripts/runner/generate-sprint1-evidence-audit.mjs .
+          node <<'NODE'
+          const fs = require('node:fs');
+          const oldAudit = JSON.parse(fs.readFileSync('/tmp/sprint1-audit-old.json', 'utf8'));
+          const newAudit = JSON.parse(fs.readFileSync('docs/verification/SPRINT1_EVIDENCE_AUDIT.json', 'utf8'));
+          delete oldAudit.generatedAt;
+          delete newAudit.generatedAt;
+          if (JSON.stringify(oldAudit) === JSON.stringify(newAudit)) {
+            fs.copyFileSync('/tmp/sprint1-audit-old.json', 'docs/verification/SPRINT1_EVIDENCE_AUDIT.json');
+            fs.copyFileSync('/tmp/sprint1-audit-old.md', 'docs/verification/SPRINT1_EVIDENCE_AUDIT.md');
+            console.log('Audit semantics unchanged; preserved stable evidence files.');
+          } else {
+            console.log('Audit semantics changed; keeping refreshed evidence files.');
+          }
+          NODE
 
       - name: Require Feature 48 and Feature 49 verified audit state
         working-directory: workspace
@@ -198,6 +221,9 @@ jobs:
             docs/verification/SPRINT1_EVIDENCE_AUDIT.md \
             docs/verification/SPRINT1_EVIDENCE_AUDIT.json
           git diff --cached --check
-          git diff --cached --quiet && { echo 'No normalization changes to commit'; exit 0; }
+          if git diff --cached --quiet; then
+            echo 'No normalization changes to commit'
+            exit 0
+          fi
           git commit -m 'docs: verify and register Feature 48 and Feature 49'
           git push origin HEAD:${TARGET_BRANCH}
