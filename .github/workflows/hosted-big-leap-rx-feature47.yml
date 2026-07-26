@@ -1,0 +1,168 @@
+name: Hosted Big Leap RX and Feature 47
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_BIG_LEAP_RX_FEATURE47_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CI: "true"
+
+jobs:
+  clean-structured-rx:
+    name: Clean structured Arabic RX integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout clean RX branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/structured-arabic-prescription-v1
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Apply structured Arabic prescription package
+        run: node scripts/runner/apply-structured-arabic-prescription.mjs
+
+      - name: Verify structured Arabic prescription contract
+        run: node scripts/qa-structured-arabic-prescription-contract-test.mjs
+
+      - name: Run medication regressions
+        run: |
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+          node scripts/qa-medication-cards-contract-test.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Write RX verification evidence
+        shell: bash
+        run: |
+          cat > docs/verification/QA_STRUCTURED_ARABIC_PRESCRIPTION_CLEAN_INTEGRATION.md <<'EOF'
+          # Structured Arabic Prescription Clean Integration
+
+          Status: PASS
+
+          - Runner: GitHub-hosted ubuntu-latest
+          - Clean baseline: security/rbac-scope-enforcement
+          - Isolated branch: work/structured-arabic-prescription-v1
+          - Structured bilingual dose controls: PASS
+          - Structured bilingual frequency controls: PASS
+          - Structured bilingual duration controls: PASS
+          - Structured bilingual instruction controls: PASS
+          - Custom text fallback: PASS
+          - Medication regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          EOF
+
+      - name: Commit clean verified RX package
+        shell: bash
+        run: |
+          git config user.name "eiadmaged1-bot"
+          git config user.email "eiadmaged1-bot@users.noreply.github.com"
+          git add apps/web/components/clinic/ActiveVisitWorkspace.tsx apps/web/app/globals.css scripts/runner/apply-structured-arabic-prescription.mjs scripts/qa-structured-arabic-prescription-contract-test.mjs docs/verification/QA_STRUCTURED_ARABIC_PRESCRIPTION_CLEAN_INTEGRATION.md
+          git diff --cached --quiet && { echo "No RX changes to commit"; exit 0; }
+          git commit -m "feat: clean integrate verified structured Arabic prescription [rx-ar-clean]"
+          git push origin HEAD:work/structured-arabic-prescription-v1
+
+  feature47-calendar-history:
+    name: Feature 47 compact calendars and reproductive history
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout isolated Feature 47 branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Feature 47 calendar and history contract
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Pregnancy and EDD regression
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Feature 46 refractory complaint regression
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Write Feature 47 verification evidence
+        shell: bash
+        run: |
+          cat > docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md <<'EOF'
+          # Feature 47 Hosted Verification
+
+          Status: PASS
+
+          Feature 47 scope: compact Patient Overview and Current Visit calendars plus clean reproductive/pregnancy history and EDD provenance presentation.
+
+          - Runner: GitHub-hosted ubuntu-latest
+          - Isolated branch: work/sprint1-qa-repair-batch
+          - QA-CAL-001 compact calendar contract: PASS
+          - QA-HIST-001 reproductive history contract: PASS
+          - Pregnancy and EDD regression: PASS
+          - Feature 46 refractory complaint regression: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          EOF
+
+      - name: Commit Feature 47 verification evidence
+        shell: bash
+        run: |
+          git config user.name "eiadmaged1-bot"
+          git config user.email "eiadmaged1-bot@users.noreply.github.com"
+          git add docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md
+          git diff --cached --quiet && { echo "No Feature 47 evidence changes to commit"; exit 0; }
+          git commit -m "test: verify Feature 47 calendars and reproductive history [feature47-verified]"
+          git push origin HEAD:work/sprint1-qa-repair-batch
