@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify idempotent shared visit actions
         working-directory: workspace
-        run: node scripts/v146-shared-visit-action-persistence-test.mjs
+        run: node ../controls/scripts/runner/verify-sprint1-idempotent-visit-actions.mjs "$PWD"
 
       - name: Verify Feature 46 regression
         working-directory: workspace
