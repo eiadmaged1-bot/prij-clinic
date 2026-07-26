@@ -15,6 +15,13 @@ for (const [needle, replacement] of [
   source = source.split(needle).join(replacement);
 }
 
+const noOpStart = source.indexOf('replaceOnce(\n  operationsPath,\n  `        {error ?');
+if (noOpStart >= 0) {
+  const nextBlock = source.indexOf("replaceOnce(", noOpStart + 20);
+  if (nextBlock < 0) throw new Error("Could not isolate the obsolete no-op template block.");
+  source = source.slice(0, noOpStart) + source.slice(nextBlock);
+}
+
 const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "prij-reception-queue-"));
 const executablePath = path.join(tempDirectory, "apply.mjs");
 fs.writeFileSync(executablePath, source, "utf8");
