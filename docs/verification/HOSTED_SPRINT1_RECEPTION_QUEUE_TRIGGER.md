@@ -1,3 +1,9 @@
-# Hosted Sprint 1 Reception and Queue Core Trigger Contract
+# Hosted Sprint 1 Reception and Queue Core Trigger
 
-This path is reserved for no-code pull-request triggers after the hosted controller is merged.
+- Trigger sequence: 1
+- Target branch: `work/sprint1-reception-queue-core-v1`
+- Package: receptionist-only shell isolation, one reception workspace, live doctor status, single-called-patient queue reliability, doctor Open/Continue/Complete/Pick-next actions
+- Regression scope: reception, queue recovery, authorization, role visibility, patient safety, Features 46–49, medication UI, typecheck, production build
+- Database migrations, seeds, reset, deletion, and truncation: none
+- Production-data mutation: none
+- Secret changes: none
