@@ -1,9 +1,9 @@
 # Hosted Sprint 1 Reception and Queue Core Trigger
 
-- Trigger sequence: 3
+- Trigger sequence: 4
 - Target branch: `work/sprint1-reception-queue-core-v1`
 - Package: receptionist-only shell isolation, one reception workspace, live doctor status, single-called-patient queue reliability, doctor Open/Continue/Complete/Pick-next actions
-- Diagnostic mode: upload exact deterministic apply output
+- Controller repair: parse-safe generated contract tests
 - Regression scope: reception, queue recovery, authorization, role visibility, patient safety, Features 46–49, medication UI, typecheck, production build
 - Database migrations, seeds, reset, deletion, and truncation: none
 - Production-data mutation: none
