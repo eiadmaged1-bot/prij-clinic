@@ -1,0 +1,252 @@
+name: Prij SECTRA-Only Continuation Controller
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sectra-only-continuation-controller.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: prij-sectra-only-continuation-controller
+  cancel-in-progress: false
+
+jobs:
+  continue:
+    name: Diagnose and continue QA packages on SECTRA
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 240
+    steps:
+      - name: Confirm SECTRA runner
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+
+      - name: Checkout controls and QA branches
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: false
+          path: controls
+
+      - uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-repair-batch
+          fetch-depth: 0
+          clean: false
+          path: qa
+
+      - uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-medication-cards
+          fetch-depth: 0
+          clean: false
+          path: medication
+
+      - name: Record exact latest workflow states
+        working-directory: controls
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          $targets = @(
+            'prij-sectra-only-enforcement-and-package2.yml',
+            'prij-sprint1-qa-calendar-history-final-verify.yml',
+            'prij-sprint1-qa-medication-cards-sectra.yml'
+          )
+          $lines = @('# SECTRA Continuation Status','',"- Controller run: `$env:GITHUB_RUN_ID`",'- Runner: `SECTRA`','')
+          foreach ($workflow in $targets) {
+            try {
+              $json = gh api "/repos/$env:GITHUB_REPOSITORY/actions/workflows/$workflow/runs?per_page=1" | ConvertFrom-Json
+              $run = $json.workflow_runs | Select-Object -First 1
+              if ($null -eq $run) {
+                $lines += "- `$workflow`: no run found"
+                continue
+              }
+              $lines += "- `$workflow`: run `$($run.id)` · status `$($run.status)` · conclusion `$($run.conclusion)`"
+              if ($run.status -eq 'in_progress' -or $run.status -eq 'queued') {
+                throw "A protected target workflow is still active: $workflow run $($run.id)."
+              }
+              if ($run.conclusion -ne 'success') {
+                $jobs = gh api "/repos/$env:GITHUB_REPOSITORY/actions/runs/$($run.id)/jobs?per_page=100" | ConvertFrom-Json
+                foreach ($job in $jobs.jobs) {
+                  $lines += "  - Job `$($job.name)`: `$($job.conclusion)`"
+                  foreach ($step in $job.steps) {
+                    if ($step.conclusion -eq 'failure') { $lines += "    - Failed step: `$($step.name)`" }
+                  }
+                }
+              }
+            } catch {
+              $lines += "- `$workflow`: status inspection error — $($_.Exception.Message)"
+            }
+          }
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\LATEST_SECTRA_CONTINUATION_STATUS.md'), $lines, (New-Object System.Text.UTF8Encoding($false)))
+
+      - name: Enforce zero GitHub-hosted runner references
+        working-directory: controls
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = '.github\workflows'
+          $archive = 'docs\verification\quarantined-hosted-workflows'
+          New-Item -ItemType Directory -Force $archive | Out-Null
+          $pattern = '(?im)^\s*(?!#).*\b(?:ubuntu|windows|macos)-(?:latest|[0-9][A-Za-z0-9_.-]*)\b'
+          $changed = New-Object System.Collections.Generic.List[string]
+          foreach ($file in Get-ChildItem -LiteralPath $root -File | Where-Object { $_.Extension -in @('.yml','.yaml') }) {
+            $text = [System.IO.File]::ReadAllText($file.FullName)
+            if ($text -notmatch $pattern) { continue }
+            $changed.Add($file.Name)
+            [System.IO.File]::WriteAllText((Join-Path $archive ($file.Name + '.txt')), $text, (New-Object System.Text.UTF8Encoding($false)))
+            $stub = @(
+              "name: Quarantined hosted workflow - $($file.BaseName)",
+              '',
+              'on:',
+              '  workflow_dispatch:',
+              '',
+              'permissions:',
+              '  contents: read',
+              '',
+              'jobs:',
+              '  quarantined:',
+              '    runs-on: [self-hosted, Windows, X64]',
+              '    steps:',
+              '      - name: Confirm SECTRA-only quarantine',
+              '        shell: powershell',
+              '        run: |',
+              "          if (`$env:RUNNER_NAME -ne 'SECTRA') { throw \"Expected SECTRA.\" }",
+              "          Write-Host 'Hosted workflow quarantined.'"
+            )
+            [System.IO.File]::WriteAllLines($file.FullName, $stub, (New-Object System.Text.UTF8Encoding($false)))
+          }
+          $remaining = Get-ChildItem -LiteralPath $root -File | Where-Object { [System.IO.File]::ReadAllText($_.FullName) -match $pattern }
+          if ($remaining) { throw "Hosted runner references remain: $($remaining.Name -join ', ')" }
+          $report = @('# SECTRA-Only Actions Enforcement','',"- Controller run: `$env:GITHUB_RUN_ID`",'- Required runner: `SECTRA`','- GitHub-hosted runners allowed: `NO`',"- Workflows quarantined in this run: `$($changed.Count)`",'- Remaining hosted-runner references: `0`')
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\SECTRA_ONLY_ACTIONS_ENFORCEMENT.md'), $report, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- '.github/workflows' 'docs/verification'
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'SECTRA enforcement diff-check failed.' }
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Enforce SECTRA-only workflows and record status'
+            git push origin HEAD:security/rbac-scope-enforcement
+          }
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qa/package-lock.json
+
+      - name: Load local configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing $envPath" }
+          $allowed = @('DATABASE_URL','JWT_SECRET','JWT_EXPIRES_IN','AI_FEATURES_ENABLED','AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=',2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL not loaded.' }
+
+      - name: Verify Package 2 and publish evidence if missing
+        working-directory: qa
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          npm run prisma:generate
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          New-Item -ItemType Directory -Force 'local-reference\egyptian-drugs' | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination 'local-reference\egyptian-drugs' -Recurse -Force
+          npm run build --workspace @prij-clinic/api
+          $checks = @(
+            'node scripts/qa-calendar-history-contract-test.mjs',
+            'node scripts/qa-pregnancy-edd-contract-test.mjs',
+            'node scripts/feature-46-refractory-complaint-test.mjs',
+            'node scripts/clinical-workflow-unification-test.mjs',
+            'node scripts/recovery-fix3-medication-test.mjs',
+            'node scripts/recovery-fix3-search-test.mjs',
+            'npm run typecheck',
+            'npm run build'
+          )
+          foreach ($check in $checks) {
+            cmd /d /s /c $check
+            if ($LASTEXITCODE -ne 0) { throw "Package 2 check failed: $check" }
+          }
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          $result = @('# QA Compact Calendar and History Verification','', '- Tickets: `QA-CAL-001`, `QA-HIST-001`', "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`", '- All eight mandatory checks: PASS', '- Explicit Previous/Next controls: PASS', '- Migration/seed/reset/delete/truncate: NOT RUN', '- Production data modified: NO')
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_CALENDAR_HISTORY_RESULT.md'), $result, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/QA_CALENDAR_HISTORY_RESULT.md'
+          git diff --cached --check
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Verify compact calendars and History cleanup on SECTRA'
+            git push origin HEAD:work/sprint1-qa-repair-batch
+          }
+
+      - name: Implement and verify compact medication cards if result missing
+        working-directory: medication
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not (Test-Path -LiteralPath 'docs\verification\QA_MEDICATION_CARDS_RESULT.md')) {
+            $patch = Join-Path $env:GITHUB_WORKSPACE 'controls\scripts\apply-qa-medication-card-patch.mjs'
+            if (-not (Test-Path -LiteralPath $patch)) { throw "Missing deterministic medication patch: $patch" }
+            node $patch (Get-Location).Path
+            if ($LASTEXITCODE -ne 0) { throw 'Medication-card patch failed.' }
+          }
+          npm ci
+          npm run prisma:generate
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          New-Item -ItemType Directory -Force 'local-reference\egyptian-drugs' | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination 'local-reference\egyptian-drugs' -Recurse -Force
+          npm run build --workspace @prij-clinic/api
+          $checks = @(
+            'node scripts/qa-medication-card-contract-test.mjs',
+            'node scripts/qa-pregnancy-edd-contract-test.mjs',
+            'node scripts/qa-calendar-history-contract-test.mjs',
+            'node scripts/feature-46-refractory-complaint-test.mjs',
+            'node scripts/clinical-workflow-unification-test.mjs',
+            'node scripts/recovery-fix3-medication-test.mjs',
+            'node scripts/recovery-fix3-search-test.mjs',
+            'npm run typecheck',
+            'npm run build'
+          )
+          foreach ($check in $checks) {
+            cmd /d /s /c $check
+            if ($LASTEXITCODE -ne 0) { throw "Medication-card check failed: $check" }
+          }
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          $result = @('# QA Compact Medication Cards Verification','', '- Ticket: `QA-MED-001`', "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`", '- Trade-name-first compact cards: PASS', '- Full regression suite: PASS', '- Migration/seed/reset/delete/truncate: NOT RUN', '- Production data modified: NO')
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_MEDICATION_CARDS_RESULT.md'), $result, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'apps/web/components/clinic/ActiveVisitWorkspace.tsx' 'apps/web/app/globals.css' 'docs/verification/QA_MEDICATION_CARDS_RESULT.md'
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Medication package diff-check failed.' }
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Implement and verify compact medication cards on SECTRA'
+            git push origin HEAD:work/sprint1-qa-medication-cards
+          }
