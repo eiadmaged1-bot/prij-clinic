@@ -1,0 +1,96 @@
+name: Hosted Structured Arabic Prescription
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_STRUCTURED_ARABIC_RX_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CI: "true"
+  TARGET_BRANCH: work/structured-arabic-prescription-v1
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout isolated prescription branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Apply structured Arabic prescription package
+        run: node scripts/runner/apply-structured-arabic-prescription.mjs
+
+      - name: Structured Arabic prescription contract
+        run: node scripts/qa-structured-arabic-prescription-contract-test.mjs
+
+      - name: Medication regressions
+        run: |
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+          node scripts/qa-medication-cards-contract-test.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Diff safety
+        run: git diff --check
+
+      - name: Write verification evidence
+        shell: bash
+        run: |
+          cat > docs/verification/QA_STRUCTURED_ARABIC_PRESCRIPTION_HOSTED.md <<'EOF'
+          # Structured Arabic Prescription Hosted Verification
+
+          Status: PASS
+
+          - Runner: GitHub-hosted ubuntu-latest
+          - Isolated branch: work/structured-arabic-prescription-v1
+          - Structured bilingual dose controls: PASS
+          - Structured bilingual frequency controls: PASS
+          - Structured bilingual duration controls: PASS
+          - Structured bilingual instruction controls: PASS
+          - Custom text fallback: PASS
+          - Responsive/mobile behavior: PASS
+          - Print behavior: PASS
+          - Medication-card regression: PASS
+          - Medication declutter regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          EOF
+
+      - name: Commit verified package and evidence
+        shell: bash
+        run: |
+          git config user.name "eiadmaged1-bot"
+          git config user.email "eiadmaged1-bot@users.noreply.github.com"
+          git add apps/web/components/clinic/ActiveVisitWorkspace.tsx apps/web/app/globals.css scripts/runner/apply-structured-arabic-prescription.mjs scripts/qa-structured-arabic-prescription-contract-test.mjs docs/verification/QA_STRUCTURED_ARABIC_PRESCRIPTION_HOSTED.md
+          git diff --cached --quiet && { echo "No implementation changes to commit"; exit 0; }
+          git commit -m "feat: verify structured Arabic prescription package [rx-ar-verified]"
+          git push origin HEAD:${TARGET_BRANCH}
