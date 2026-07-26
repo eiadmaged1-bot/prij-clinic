@@ -84,7 +84,7 @@ jobs:
 
       - name: Verify patient-context clinical modules
         working-directory: workspace
-        run: node scripts/v142-patient-context-modules-test.mjs
+        run: node ../controls/scripts/runner/verify-sprint1-patient-context-modules.mjs "$PWD"
 
       - name: Verify idempotent shared visit actions
         working-directory: workspace
