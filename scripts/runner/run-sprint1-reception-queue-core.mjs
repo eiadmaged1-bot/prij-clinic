@@ -1,0 +1,23 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const templatePath = new URL("./apply-sprint1-reception-queue-core.mjs", import.meta.url);
+let source = fs.readFileSync(templatePath, "utf8");
+
+for (const [needle, replacement] of [
+  ["${getApiBaseUrl()}", "\\${getApiBaseUrl()}"],
+  ["${action}", "\\${action}"],
+  ["${forbidden}", "\\${forbidden}"],
+  ["${needle}", "\\${needle}"]
+]) {
+  source = source.split(needle).join(replacement);
+}
+
+const tempDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "prij-reception-queue-"));
+const executablePath = path.join(tempDirectory, "apply.mjs");
+fs.writeFileSync(executablePath, source, "utf8");
+
+process.argv[2] = process.argv[2] ?? process.cwd();
+await import(pathToFileURL(executablePath).href);
