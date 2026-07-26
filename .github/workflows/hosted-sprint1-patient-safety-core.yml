@@ -53,7 +53,9 @@ jobs:
         run: |
           set -euo pipefail
           node --check ../controls/scripts/runner/apply-sprint1-patient-safety-core.mjs
+          node --check ../controls/scripts/runner/apply-sprint1-patient-safety-test-fix.mjs
           node ../controls/scripts/runner/apply-sprint1-patient-safety-core.mjs "$PWD"
+          node ../controls/scripts/runner/apply-sprint1-patient-safety-test-fix.mjs "$PWD"
           git diff --check
 
       - name: Install dependencies
