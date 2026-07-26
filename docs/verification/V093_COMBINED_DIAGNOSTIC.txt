@@ -2,5 +2,9 @@
 > prij-clinic@0.1.0 test:v093:medication-ui
 > node scripts/v093-medication-declutter-check.mjs
 
-V093-MED-UI FAIL normal medication source missing expected safety/trust wording: /No auto-prescribing/i
-V093-MED-UI SUMMARY PASS 0 WARN 0 FAIL 1
+V093-MED-UI PASS normal medication source avoids technical, price, commerce, and dosing clutter
+V093-MED-UI WARN /medications runtime page check unavailable: fetch failed
+V093-MED-UI WARN /medications/search runtime page check unavailable: fetch failed
+V093-MED-UI WARN /drug-market runtime page check unavailable: fetch failed
+V093-MED-UI WARN /drug-market/search runtime page check unavailable: fetch failed
+V093-MED-UI SUMMARY PASS 1 WARN 4 FAIL 0
