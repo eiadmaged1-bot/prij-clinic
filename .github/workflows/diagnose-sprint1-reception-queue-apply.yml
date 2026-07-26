@@ -17,7 +17,7 @@ concurrency:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout controls
         uses: actions/checkout@v4
@@ -54,22 +54,22 @@ jobs:
         working-directory: workspace
         run: npm run prisma:generate
 
-      - name: Capture route-authorization output
+      - name: Capture production-build output
         id: diagnose
         working-directory: workspace
         shell: bash
         run: |
           set +e
-          node scripts/route-authorization-test.mjs > reception-queue-diagnostic.log 2>&1
-          route_status=$?
+          npm run build > reception-queue-diagnostic.log 2>&1
+          build_status=$?
           cat reception-queue-diagnostic.log
-          echo "exit_code=$route_status" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$build_status" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: reception-queue-route-auth-diagnostic
+          name: reception-queue-build-diagnostic
           path: workspace/reception-queue-diagnostic.log
           if-no-files-found: error
           retention-days: 3
