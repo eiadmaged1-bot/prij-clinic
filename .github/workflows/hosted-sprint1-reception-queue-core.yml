@@ -54,8 +54,10 @@ jobs:
           set -euo pipefail
           node --check ../controls/scripts/runner/run-sprint1-reception-queue-core.mjs
           node --check ../controls/scripts/runner/apply-sprint1-reception-queue-test-fix.mjs
+          node --check ../controls/scripts/runner/apply-sprint1-reception-queue-build-fix.mjs
           node ../controls/scripts/runner/run-sprint1-reception-queue-core.mjs "$PWD"
           node ../controls/scripts/runner/apply-sprint1-reception-queue-test-fix.mjs "$PWD"
+          node ../controls/scripts/runner/apply-sprint1-reception-queue-build-fix.mjs "$PWD"
           git diff --check
 
       - name: Install dependencies
