@@ -1,6 +1,6 @@
 # Sprint 1 Evidence Audit
 
-- Generated: `2026-07-26T15:26:54.600Z`
+- Generated: `2026-07-26T15:36:49.836Z`
 - Source branch: `work/sprint1-qa-repair-batch`
 - Method: explicit `Feature N` or `FN` references only; ordinary numeric matches are excluded.
 - Runtime verification before report generation: Feature 46, pregnancy/EDD, Feature 47, medication UI, typecheck, production build, and diff safety.
@@ -36,10 +36,10 @@
 | 23 | UNMAPPED | 0 | 0 | 0 | 0 | — |
 | 28 | UNMAPPED | 0 | 0 | 0 | 0 | — |
 | 45 | UNMAPPED | 0 | 0 | 0 | 0 | — |
-| 46 | VERIFIED | 12 | 0 | 1 | 11 | `docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md`<br>`docs/verification/FEATURE_46_VERIFICATION.md`<br>`docs/verification/QA_CALENDAR_HISTORY_IMPLEMENTATION_SPEC.md`<br>`docs/verification/QA_CALENDAR_HISTORY_PURE_VERIFY.md`<br>`docs/verification/QA_PREGNANCY_EDD_IMPLEMENTATION_SPEC.md`<br>`docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md`<br>`docs/verification/QA_PREGNANCY_EDD_RESULT.md`<br>`docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md` |
-| 47 | VERIFIED | 2 | 0 | 0 | 2 | `docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md`<br>`docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md` |
-| 48 | UNMAPPED | 0 | 0 | 0 | 0 | — |
-| 49 | UNMAPPED | 0 | 0 | 0 | 0 | — |
+| 46 | VERIFIED | 15 | 0 | 1 | 14 | `docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md`<br>`docs/verification/FEATURE_46_VERIFICATION.md`<br>`docs/verification/FEATURE_48_VERIFICATION.md`<br>`docs/verification/FEATURE_49_VERIFICATION.md`<br>`docs/verification/QA_CALENDAR_HISTORY_IMPLEMENTATION_SPEC.md`<br>`docs/verification/QA_CALENDAR_HISTORY_PURE_VERIFY.md`<br>`docs/verification/QA_PREGNANCY_EDD_IMPLEMENTATION_SPEC.md`<br>`docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md` |
+| 47 | VERIFIED | 5 | 0 | 0 | 5 | `docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md`<br>`docs/verification/FEATURE_48_VERIFICATION.md`<br>`docs/verification/FEATURE_49_VERIFICATION.md`<br>`docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md`<br>`docs/verification/SPRINT1_EVIDENCE_AUDIT.md` |
+| 48 | VERIFIED | 4 | 0 | 1 | 3 | `docs/verification/FEATURE_48_49_REGISTRY.md`<br>`docs/verification/FEATURE_48_VERIFICATION.md`<br>`docs/verification/SPRINT1_EVIDENCE_AUDIT.md`<br>`scripts/feature-48-compact-medication-cards-test.mjs` |
+| 49 | VERIFIED | 3 | 0 | 1 | 2 | `docs/verification/FEATURE_48_49_REGISTRY.md`<br>`docs/verification/FEATURE_49_VERIFICATION.md`<br>`scripts/feature-49-structured-arabic-prescription-test.mjs` |
 | 101 | UNMAPPED | 0 | 0 | 0 | 0 | — |
 | 102 | UNMAPPED | 0 | 0 | 0 | 0 | — |
 | 106 | UNMAPPED | 0 | 0 | 0 | 0 | — |
@@ -55,8 +55,8 @@
 
 ## Status Totals
 
-- UNMAPPED: 25
-- VERIFIED: 2
+- UNMAPPED: 23
+- VERIFIED: 4
 
 ## Interpretation
 
@@ -67,4 +67,4 @@
 
 ## Next Roadmap Gate
 
-Feature 48 audit status: **UNMAPPED**. Scope its clinical purpose, UI surface, data contract, RBAC, and acceptance tests before code.
+Feature 48 already has verified explicit evidence; select the next unmapped roadmap item.

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-26T15:26:54.600Z",
+  "generatedAt": "2026-07-26T15:36:49.836Z",
   "sourceBranch": "work/sprint1-qa-repair-batch",
   "methodology": "Explicit Feature/F-number references only; raw numeric matches are excluded.",
   "currentGates": {
@@ -13,8 +13,8 @@
     "compactCalendarAndHistory": true
   },
   "counts": {
-    "UNMAPPED": 25,
-    "VERIFIED": 2
+    "UNMAPPED": 23,
+    "VERIFIED": 4
   },
   "features": [
     {
@@ -119,50 +119,62 @@
     {
       "feature": 46,
       "status": "VERIFIED",
-      "traceCount": 12,
+      "traceCount": 15,
       "sourceCount": 0,
       "testCount": 1,
-      "evidenceCount": 11,
+      "evidenceCount": 14,
       "paths": [
         "docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md",
         "docs/verification/FEATURE_46_VERIFICATION.md",
+        "docs/verification/FEATURE_48_VERIFICATION.md",
+        "docs/verification/FEATURE_49_VERIFICATION.md",
         "docs/verification/QA_CALENDAR_HISTORY_IMPLEMENTATION_SPEC.md",
         "docs/verification/QA_CALENDAR_HISTORY_PURE_VERIFY.md",
         "docs/verification/QA_PREGNANCY_EDD_IMPLEMENTATION_SPEC.md",
-        "docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md",
-        "docs/verification/QA_PREGNANCY_EDD_RESULT.md",
-        "docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md"
+        "docs/verification/QA_PREGNANCY_EDD_PURE_VERIFY.md"
       ]
     },
     {
       "feature": 47,
       "status": "VERIFIED",
-      "traceCount": 2,
+      "traceCount": 5,
       "sourceCount": 0,
       "testCount": 0,
-      "evidenceCount": 2,
+      "evidenceCount": 5,
       "paths": [
         "docs/verification/FEATURE47_CALENDAR_HISTORY_HOSTED_VERIFICATION.md",
-        "docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md"
+        "docs/verification/FEATURE_48_VERIFICATION.md",
+        "docs/verification/FEATURE_49_VERIFICATION.md",
+        "docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md",
+        "docs/verification/SPRINT1_EVIDENCE_AUDIT.md"
       ]
     },
     {
       "feature": 48,
-      "status": "UNMAPPED",
-      "traceCount": 0,
+      "status": "VERIFIED",
+      "traceCount": 4,
       "sourceCount": 0,
-      "testCount": 0,
-      "evidenceCount": 0,
-      "paths": []
+      "testCount": 1,
+      "evidenceCount": 3,
+      "paths": [
+        "docs/verification/FEATURE_48_49_REGISTRY.md",
+        "docs/verification/FEATURE_48_VERIFICATION.md",
+        "docs/verification/SPRINT1_EVIDENCE_AUDIT.md",
+        "scripts/feature-48-compact-medication-cards-test.mjs"
+      ]
     },
     {
       "feature": 49,
-      "status": "UNMAPPED",
-      "traceCount": 0,
+      "status": "VERIFIED",
+      "traceCount": 3,
       "sourceCount": 0,
-      "testCount": 0,
-      "evidenceCount": 0,
-      "paths": []
+      "testCount": 1,
+      "evidenceCount": 2,
+      "paths": [
+        "docs/verification/FEATURE_48_49_REGISTRY.md",
+        "docs/verification/FEATURE_49_VERIFICATION.md",
+        "scripts/feature-49-structured-arabic-prescription-test.mjs"
+      ]
     },
     {
       "feature": 101,
