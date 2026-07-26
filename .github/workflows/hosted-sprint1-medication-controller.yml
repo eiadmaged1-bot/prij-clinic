@@ -1,6 +1,11 @@
 name: Hosted Sprint 1 Medication Controller
 
 on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_CONTROLLER_TRIGGER.md
   push:
     branches:
       - security/rbac-scope-enforcement
