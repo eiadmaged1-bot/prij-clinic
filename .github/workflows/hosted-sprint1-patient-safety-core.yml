@@ -76,7 +76,7 @@ jobs:
 
       - name: Verify core visit workspace
         working-directory: workspace
-        run: node scripts/v142-core-visit-workspace-test.mjs
+        run: node ../controls/scripts/runner/verify-sprint1-core-visit-workspace.mjs "$PWD"
 
       - name: Verify clinical RBAC boundaries
         working-directory: workspace
