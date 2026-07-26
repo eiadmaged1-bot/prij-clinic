@@ -1,0 +1,211 @@
+name: Hosted Sprint 1 Reception and Queue Core
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_RECEPTION_QUEUE_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: work/sprint1-reception-queue-core-v1
+  CONTROLS_BRANCH: security/rbac-scope-enforcement
+
+concurrency:
+  group: hosted-sprint1-reception-queue-core-v1
+  cancel-in-progress: false
+
+jobs:
+  implement-verify:
+    name: Implement and verify receptionist isolation and queue reliability
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CONTROLS_BRANCH }}
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout isolated reception and queue branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Apply deterministic reception and queue package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ../controls/scripts/runner/run-sprint1-reception-queue-core.mjs
+          node ../controls/scripts/runner/run-sprint1-reception-queue-core.mjs "$PWD"
+          git diff --check
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Verify Sprint 1 reception and queue core
+        working-directory: workspace
+        run: node scripts/sprint1-reception-queue-core-test.mjs
+
+      - name: Verify receptionist single-workspace isolation
+        working-directory: workspace
+        run: node scripts/v1444-reception-shell-test.mjs
+
+      - name: Verify reception patient and queue workflow
+        working-directory: workspace
+        run: node scripts/v148-reception-patient-queue-test.mjs
+
+      - name: Verify queue recovery workflow
+        working-directory: workspace
+        run: node scripts/v149-patient-search-queue-recovery-test.mjs
+
+      - name: Verify route authorization
+        working-directory: workspace
+        run: npm run test:routes:auth
+
+      - name: Verify role visibility
+        working-directory: workspace
+        run: npm run test:v093:roles
+
+      - name: Verify patient safety core regression
+        working-directory: workspace
+        run: node scripts/sprint1-patient-safety-core-test.mjs
+
+      - name: Verify Features 46 through 49
+        working-directory: workspace
+        run: |
+          node scripts/feature-46-refractory-complaint-test.mjs
+          node scripts/qa-calendar-history-contract-test.mjs
+          node scripts/feature-48-compact-medication-cards-test.mjs
+          node scripts/feature-49-structured-arabic-prescription-test.mjs
+
+      - name: Verify medication regressions
+        working-directory: workspace
+        run: |
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Verify exact application scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope application changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Write verification evidence
+        working-directory: workspace
+        shell: bash
+        run: |
+          cat > docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT.md <<'EOF'
+          # Sprint 1 Reception and Queue Core
+
+          Status: PASS
+
+          ## Receptionist isolation
+
+          - Receptionist desktop and mobile shells have no full sidebar or bottom navigation.
+          - The top bar exposes Reception Home, language switching, and Logout.
+          - Global clinical search is hidden from receptionist-only accounts.
+          - Reception Home is one workspace with New Patient, Returning Patient, Waiting Line, and live clinic status.
+          - The live status displays the current patient name only.
+          - Doctor, owner, prescription, and encounter actions are not exposed on Reception Home.
+
+          ## Queue reliability
+
+          - Only one patient can hold the called state for a working branch and clinic day.
+          - Selecting another waiting patient safely returns an unstarted called ticket to waiting.
+          - A patient already in the doctor room blocks another selection with `DOCTOR_ROOM_OCCUPIED`.
+          - Concurrent queue selection conflicts return `QUEUE_SELECTION_CONFLICT`.
+          - Every waiting row has a unique ticket-bound Open and Start action.
+          - Pick next follows urgent-first, then check-in and queue order.
+          - Doctor actions are Open, Continue, and Complete.
+          - Complete opens the governed visit finish/sign workflow and never bypasses signing.
+
+          ## Verification
+
+          - Reception and queue core contract: PASS
+          - Receptionist isolation regression: PASS
+          - Reception patient/queue workflow: PASS
+          - Queue recovery workflow: PASS
+          - Route authorization: PASS
+          - Role visibility: PASS
+          - Patient safety core regression: PASS
+          - Features 46–49 regressions: PASS
+          - Medication regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+
+          ## Data safety
+
+          - Database migration: NOT RUN
+          - Database seed: NOT RUN
+          - Database reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets changed or exposed: NONE
+          EOF
+
+      - name: Commit verified reception and queue package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps/api/src/queue/queue.service.ts \
+            apps/web/app/mvp-page.tsx \
+            apps/web/app/reception/page.tsx \
+            apps/web/app/reception/reception-copy.ts \
+            apps/web/app/clinic-operations-page.tsx \
+            apps/web/app/globals.css \
+            scripts/v1444-reception-shell-test.mjs \
+            scripts/sprint1-reception-queue-core-test.mjs \
+            docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT.md
+          git diff --cached --check
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs|docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT\.md)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git commit -m 'Complete Sprint 1 reception and queue reliability core'
+          git push origin HEAD:${TARGET_BRANCH}
