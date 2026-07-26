@@ -49,10 +49,11 @@ jobs:
       - name: Medication-card contract
         run: node scripts/qa-medication-cards-contract-test.mjs
 
-      - name: Medication UI regressions
-        run: |
-          npm run test:medication-ui-clean
-          npm run test:v093:medication-ui
+      - name: Medication UI clean regression
+        run: npm run test:medication-ui-clean
+
+      - name: v0.9.3 medication declutter regression
+        run: npm run test:v093:medication-ui
 
       - name: Typecheck
         run: npm run typecheck
