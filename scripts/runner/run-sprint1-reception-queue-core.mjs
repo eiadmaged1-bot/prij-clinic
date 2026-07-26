@@ -7,10 +7,13 @@ const templatePath = new URL("./apply-sprint1-reception-queue-core.mjs", import.
 let source = fs.readFileSync(templatePath, "utf8");
 
 for (const [needle, replacement] of [
-  ["${getApiBaseUrl()}", "\\${getApiBaseUrl()}"],
-  ["${action}", "\\${action}"],
-  ["${forbidden}", "\\${forbidden}"],
-  ["${needle}", "\\${needle}"]
+  ["`Reception workspace must expose ${action}`", '"Reception workspace must expose " + action'],
+  ["`Reception workspace must not expose ${forbidden}`", '"Reception workspace must not expose " + forbidden'],
+  ["`Reception shell missing ${needle}`", '"Reception shell missing " + needle'],
+  ["`Reception workspace missing ${needle}`", '"Reception workspace missing " + needle'],
+  ["`Queue reliability missing ${needle}`", '"Queue reliability missing " + needle'],
+  ["`Doctor queue workflow missing ${needle}`", '"Doctor queue workflow missing " + needle'],
+  ["${getApiBaseUrl()}", "\\${getApiBaseUrl()}"]
 ]) {
   source = source.split(needle).join(replacement);
 }
