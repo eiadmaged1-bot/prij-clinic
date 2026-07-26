@@ -30,7 +30,7 @@ for (const [source, label] of [[patientsController, "patients"], [encountersCont
   if (!source.includes("@Permissions(")) throw new Error(label + " controller must declare route permissions.");
 }
 
-for (const needle of ["Reflector", "requiredPermissions", "user.permissions", "ForbiddenException"]) {
+for (const needle of ["Reflector", "REQUIRED_PERMISSIONS_KEY", "const required =", "request.user?.permissions", "required.every", "ForbiddenException"]) {
   if (!permissionsGuard.includes(needle)) throw new Error("Permission guard contract missing: " + needle);
 }
 
