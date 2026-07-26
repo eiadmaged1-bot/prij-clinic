@@ -147,6 +147,11 @@ export class UpdateEncounterDto {
   status?: EncounterStatus;
 }
 
+export class SignEncounterDto {
+  @IsUUID()
+  patientId!: string;
+}
+
 export class VoidEncounterDto {
   @IsString()
   @MaxLength(1000)

@@ -11,7 +11,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { ...authHeaders(), ...(init?.headers ?? {}) }
   });
-  if (!response.ok) throw new Error("Could not update the doctor visit workflow.");
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { code?: string; message?: string | string[]; error?: { code?: string; message?: string } };
+    const message = Array.isArray(payload.message) ? payload.message.join(" ") : payload.message ?? payload.error?.message ?? "Could not update the doctor visit workflow.";
+    const error = new Error(message);
+    Object.assign(error, { status: response.status, code: payload.code ?? payload.error?.code });
+    throw error;
+  }
   return (await response.json()) as T;
 }
 
@@ -38,8 +44,8 @@ export function getCurrentDoctorVisit(patientId: string) {
   return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/current`);
 }
 
-export function updateDoctorVisit(patientId: string, encounterId: string, input: Record<string, unknown>) {
-  return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}`, { method: "PATCH", body: JSON.stringify(input) });
+export function updateDoctorVisit(patientId: string, encounterId: string, input: Record<string, unknown>, expectedUpdatedAt?: string) {
+  return request<Record<string, unknown>>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}`, { method: "PATCH", body: JSON.stringify({ ...input, ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) }) });
 }
 
 export function createDoctorVisitFollowUp(patientId: string, encounterId: string, input: { dueAt?: string; title?: string; note?: string }, idempotencyKey?: string) {
@@ -50,6 +56,6 @@ export function getDoctorVisitPacket(patientId: string, encounterId: string) {
   return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/${encodeURIComponent(encounterId)}/packet`);
 }
 
-export function completeDoctorVisit(encounterId: string) {
-  return request<Record<string, unknown>>(`/encounters/${encodeURIComponent(encounterId)}/sign`, { method: "PATCH", body: JSON.stringify({}) });
+export function completeDoctorVisit(patientId: string, encounterId: string) {
+  return request<Record<string, unknown>>(`/encounters/${encodeURIComponent(encounterId)}/sign`, { method: "PATCH", body: JSON.stringify({ patientId }) });
 }
