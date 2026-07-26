@@ -1,0 +1,203 @@
+name: Hosted Feature 48 and 49 Registry Normalization
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_FEATURE48_49_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: work/feature48-49-registry-normalization
+
+jobs:
+  verify-normalize:
+    name: Verify and register Feature 48 and Feature 49
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout audit controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout Feature 48 and 49 branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Verify Feature 48 compact medication cards
+        working-directory: workspace
+        run: node scripts/feature-48-compact-medication-cards-test.mjs
+
+      - name: Verify Feature 49 structured Arabic prescription
+        working-directory: workspace
+        run: node scripts/feature-49-structured-arabic-prescription-test.mjs
+
+      - name: Feature 46 refractory complaint regression
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Pregnancy and EDD regression
+        working-directory: workspace
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Feature 47 calendar and reproductive history regression
+        working-directory: workspace
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Medication UI clean regression
+        working-directory: workspace
+        run: npm run test:medication-ui-clean
+
+      - name: v0.9.3 medication declutter regression
+        working-directory: workspace
+        run: npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Write Feature 48 and 49 evidence
+        working-directory: workspace
+        shell: bash
+        run: |
+          cat > docs/verification/FEATURE_48_VERIFICATION.md <<'EOF'
+          # Feature 48 Verification — Compact Medication Result Cards
+
+          Status: PASS
+
+          - Feature 48 purpose: compact medication search results for the active doctor visit.
+          - Trade name, generic name, strength/form/route, classification, pregnancy review, and lactation review remain visible.
+          - Add-to-prescription action remains directly available.
+          - Desktop results use a compact responsive grid with bounded height.
+          - Mobile results collapse to one column with touch-safe action sizing.
+          - Technical trade-match clutter is removed.
+          - Feature 46 regression: PASS
+          - Pregnancy/EDD regression: PASS
+          - Feature 47 regression: PASS
+          - Medication UI regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets changed or exposed: NONE
+          EOF
+
+          cat > docs/verification/FEATURE_49_VERIFICATION.md <<'EOF'
+          # Feature 49 Verification — Structured Arabic Prescription Controls
+
+          Status: PASS
+
+          - Feature 49 purpose: structured prescription entry with Arabic quick choices and custom-entry fallback.
+          - Dose / الجرعة: PASS
+          - Frequency / عدد المرات: PASS
+          - Duration / المدة: PASS
+          - Instructions / التعليمات: PASS
+          - RTL prescription preview: PASS
+          - Responsive mobile layout: PASS
+          - Print layout hides editing controls while preserving prescription content: PASS
+          - No auto-prescribing safety boundary: PASS
+          - Doctor approval requirement: PASS
+          - Feature 46 regression: PASS
+          - Pregnancy/EDD regression: PASS
+          - Feature 47 regression: PASS
+          - Medication UI regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets changed or exposed: NONE
+          EOF
+
+          cat > docs/verification/FEATURE_48_49_REGISTRY.md <<'EOF'
+          # Feature 48 and 49 Registry Normalization
+
+          - Feature 48: Compact Medication Result Cards — VERIFIED
+          - Feature 49: Structured Arabic Prescription Controls — VERIFIED
+          - Source branch: `work/feature48-49-registry-normalization`
+          - Parent app branch: `work/sprint1-qa-repair-batch`
+          - These numbers formalize already integrated and fully tested Sprint 1 packages.
+          - No new clinical automation, diagnosis, prescribing decision, or database behavior was introduced by this normalization step.
+          EOF
+
+      - name: Generate refreshed Sprint 1 evidence audit
+        working-directory: workspace
+        run: node ../controls/scripts/runner/generate-sprint1-evidence-audit.mjs .
+
+      - name: Require Feature 48 and Feature 49 verified audit state
+        working-directory: workspace
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const audit = JSON.parse(fs.readFileSync('docs/verification/SPRINT1_EVIDENCE_AUDIT.json', 'utf8'));
+          for (const feature of [48, 49]) {
+            const row = audit.features.find((item) => item.feature === feature);
+            if (!row || row.status !== 'VERIFIED') throw new Error(`Feature ${feature} audit status is ${row?.status ?? 'missing'}`);
+          }
+          console.log('Feature 48 and Feature 49 audit registry PASS');
+          NODE
+
+      - name: Verify exact normalization scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(docs/verification/FEATURE_48_VERIFICATION\.md|docs/verification/FEATURE_49_VERIFICATION\.md|docs/verification/FEATURE_48_49_REGISTRY\.md|docs/verification/SPRINT1_EVIDENCE_AUDIT\.(md|json))$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope normalization changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Commit verified Feature 48 and 49 registry
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            scripts/feature-48-compact-medication-cards-test.mjs \
+            scripts/feature-49-structured-arabic-prescription-test.mjs \
+            docs/verification/FEATURE_48_VERIFICATION.md \
+            docs/verification/FEATURE_49_VERIFICATION.md \
+            docs/verification/FEATURE_48_49_REGISTRY.md \
+            docs/verification/SPRINT1_EVIDENCE_AUDIT.md \
+            docs/verification/SPRINT1_EVIDENCE_AUDIT.json
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No normalization changes to commit'; exit 0; }
+          git commit -m 'docs: verify and register Feature 48 and Feature 49'
+          git push origin HEAD:${TARGET_BRANCH}
