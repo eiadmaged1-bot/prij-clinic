@@ -1,0 +1,207 @@
+name: Hosted Sprint 1 Patient Safety Core
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_PATIENT_SAFETY_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: work/sprint1-patient-safety-core-v1
+  CONTROLS_BRANCH: security/rbac-scope-enforcement
+
+concurrency:
+  group: hosted-sprint1-patient-safety-core-v1
+  cancel-in-progress: false
+
+jobs:
+  repair-verify:
+    name: Implement and verify patient-context save and signing safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CONTROLS_BRANCH }}
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout isolated Sprint 1 safety branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Apply deterministic patient safety package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ../controls/scripts/runner/apply-sprint1-patient-safety-core.mjs
+          node ../controls/scripts/runner/apply-sprint1-patient-safety-core.mjs "$PWD"
+          git diff --check
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Verify Sprint 1 patient safety core
+        working-directory: workspace
+        run: node scripts/sprint1-patient-safety-core-test.mjs
+
+      - name: Verify locked patient visit context
+        working-directory: workspace
+        run: node scripts/v142-start-visit-context-test.mjs
+
+      - name: Verify core visit workspace
+        working-directory: workspace
+        run: node scripts/v142-core-visit-workspace-test.mjs
+
+      - name: Verify clinical RBAC boundaries
+        working-directory: workspace
+        run: node scripts/v142-permissions-rbac-test.mjs
+
+      - name: Verify patient-context clinical modules
+        working-directory: workspace
+        run: node scripts/v142-patient-context-modules-test.mjs
+
+      - name: Verify idempotent shared visit actions
+        working-directory: workspace
+        run: node scripts/v146-shared-visit-action-persistence-test.mjs
+
+      - name: Verify Feature 46 regression
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Verify Feature 47 regression
+        working-directory: workspace
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Verify Feature 48 compact medication cards
+        working-directory: workspace
+        run: node scripts/feature-48-compact-medication-cards-test.mjs
+
+      - name: Verify Feature 49 structured Arabic prescription
+        working-directory: workspace
+        run: node scripts/feature-49-structured-arabic-prescription-test.mjs
+
+      - name: Verify medication UI regressions
+        working-directory: workspace
+        run: |
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Verify exact application scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/api/src/doctor-visit/dto\.ts|apps/api/src/doctor-visit/doctor-visit\.service\.ts|apps/api/src/encounters/dto\.ts|apps/api/src/encounters/encounters\.controller\.ts|apps/api/src/encounters/encounters\.service\.ts|apps/web/lib/doctor-visit\.ts|apps/web/components/clinic/ActiveVisitWorkspace\.tsx|scripts/sprint1-patient-safety-core-test\.mjs)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope application changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Write verification evidence
+        working-directory: workspace
+        shell: bash
+        run: |
+          cat > docs/verification/SPRINT1_PATIENT_SAFETY_CORE_RESULT.md <<'EOF'
+          # Sprint 1 Patient Safety Core
+
+          Status: PASS
+
+          ## Verified clinical safety boundaries
+
+          - Locked patient ID and encounter ID must agree before documentation loads.
+          - Draft saves use optimistic concurrency with the encounter `updatedAt` version.
+          - Stale-tab or stale-device saves are rejected with `VISIT_DRAFT_STALE`.
+          - Encounter signing requires the explicit patient ID in the signed request.
+          - Patient, branch, doctor, and encounter scopes are checked before signing.
+          - Signing uses one atomic draft-to-signed claim.
+          - Concurrent signing replays an already signed encounter without duplicating queue, pregnancy, tag, or audit side effects.
+          - Conflicting signing is rejected with `ENCOUNTER_SIGN_CONFLICT`.
+          - The doctor must confirm patient name, MRN, and visit ID before signing.
+          - Signed visits present an explicit read-only boundary.
+
+          ## Verification
+
+          - Sprint 1 patient safety contract: PASS
+          - Locked visit context regression: PASS
+          - Core visit workspace regression: PASS
+          - Clinical RBAC regression: PASS
+          - Patient-context module regression: PASS
+          - Shared action idempotency regression: PASS
+          - Features 46–49 regressions: PASS
+          - Medication regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+
+          ## Data safety
+
+          - Database migration: NOT RUN
+          - Database seed: NOT RUN
+          - Database reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets changed or exposed: NONE
+          EOF
+
+      - name: Commit verified patient safety package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps/api/src/doctor-visit/dto.ts \
+            apps/api/src/doctor-visit/doctor-visit.service.ts \
+            apps/api/src/encounters/dto.ts \
+            apps/api/src/encounters/encounters.controller.ts \
+            apps/api/src/encounters/encounters.service.ts \
+            apps/web/lib/doctor-visit.ts \
+            apps/web/components/clinic/ActiveVisitWorkspace.tsx \
+            scripts/sprint1-patient-safety-core-test.mjs \
+            docs/verification/SPRINT1_PATIENT_SAFETY_CORE_RESULT.md
+          git diff --cached --check
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/api/src/doctor-visit/dto\.ts|apps/api/src/doctor-visit/doctor-visit\.service\.ts|apps/api/src/encounters/dto\.ts|apps/api/src/encounters/encounters\.controller\.ts|apps/api/src/encounters/encounters\.service\.ts|apps/web/lib/doctor-visit\.ts|apps/web/components/clinic/ActiveVisitWorkspace\.tsx|scripts/sprint1-patient-safety-core-test\.mjs|docs/verification/SPRINT1_PATIENT_SAFETY_CORE_RESULT\.md)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git commit -m 'Harden patient-context saves and atomic visit signing'
+          git push origin HEAD:${TARGET_BRANCH}
