@@ -84,7 +84,7 @@ jobs:
 
       - name: Verify route authorization
         working-directory: workspace
-        run: npm run test:routes:auth
+        run: node ../controls/scripts/runner/verify-sprint1-reception-route-authorization.mjs "$PWD"
 
       - name: Verify role visibility
         working-directory: workspace
@@ -124,7 +124,7 @@ jobs:
           git diff --check
           changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
           printf '%s\n' "$changed"
-          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs)$' || true)"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/v148-reception-patient-queue-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs)$' || true)"
           if [[ -n "$unsafe" ]]; then
             echo 'Out-of-scope application changes:' >&2
             printf '%s\n' "$unsafe" >&2
@@ -199,11 +199,12 @@ jobs:
             apps/web/app/clinic-operations-page.tsx \
             apps/web/app/globals.css \
             scripts/v1444-reception-shell-test.mjs \
+            scripts/v148-reception-patient-queue-test.mjs \
             scripts/sprint1-reception-queue-core-test.mjs \
             docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT.md
           git diff --cached --check
           staged="$(git diff --cached --name-only)"
-          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs|docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT\.md)$' || true)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/api/src/queue/queue\.service\.ts|apps/web/app/mvp-page\.tsx|apps/web/app/reception/page\.tsx|apps/web/app/reception/reception-copy\.ts|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/v1444-reception-shell-test\.mjs|scripts/v148-reception-patient-queue-test\.mjs|scripts/sprint1-reception-queue-core-test\.mjs|docs/verification/SPRINT1_RECEPTION_QUEUE_CORE_RESULT\.md)$' || true)"
           if [[ -n "$unsafe" ]]; then
             echo 'Unsafe staged files:' >&2
             printf '%s\n' "$unsafe" >&2
