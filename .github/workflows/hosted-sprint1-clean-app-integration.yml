@@ -1,0 +1,172 @@
+name: Hosted Sprint 1 Clean App Integration
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_CLEAN_APP_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: work/sprint1-feature47-rx-med-final
+  VERIFIED_TOOLS_BRANCH: work/sprint1-feature47-rx-med-combined
+
+jobs:
+  integrate-verify-publish:
+    name: Cleanly integrate Feature 47, medication cards, and Arabic RX
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout verified deterministic tools
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VERIFIED_TOOLS_BRANCH }}
+          fetch-depth: 1
+          path: verified
+
+      - name: Checkout clean target app branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Apply compact medication cards
+        working-directory: workspace
+        run: node ../verified/scripts/runner/apply-hosted-medication-cards.mjs
+
+      - name: Apply structured Arabic prescription controls
+        working-directory: workspace
+        run: node ../verified/scripts/runner/apply-structured-arabic-prescription.mjs
+
+      - name: Add explicit medication safety boundary
+        working-directory: workspace
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/web/app/medications/page.tsx';
+          const oldText = 'Market product data and clinical safety guidance are separate.';
+          const newText = 'Market product data and clinical safety guidance are separate. No auto-prescribing. Doctor approval required.';
+          let source = fs.readFileSync(path, 'utf8');
+          if (!source.includes('No auto-prescribing')) {
+            const count = source.split(oldText).length - 1;
+            if (count !== 1) throw new Error(`Medication safety boundary target count ${count}`);
+            source = source.replace(oldText, newText);
+            fs.writeFileSync(path, source, 'utf8');
+          }
+          NODE
+
+      - name: Verify medication-card contract
+        working-directory: workspace
+        run: node ../verified/scripts/qa-medication-cards-contract-test.mjs
+
+      - name: Verify structured Arabic prescription contract
+        working-directory: workspace
+        run: node ../verified/scripts/qa-structured-arabic-prescription-contract-test.mjs
+
+      - name: Verify Feature 47 calendar and reproductive history
+        working-directory: workspace
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Pregnancy and EDD regression
+        working-directory: workspace
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Feature 46 refractory complaint regression
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Medication UI clean regression
+        working-directory: workspace
+        run: npm run test:medication-ui-clean
+
+      - name: v0.9.3 medication declutter regression
+        working-directory: workspace
+        run: npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Verify exact application scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/web/components/clinic/ActiveVisitWorkspace\.tsx|apps/web/app/globals\.css|apps/web/app/medications/page\.tsx)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope application changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Write clean integration evidence
+        working-directory: workspace
+        shell: bash
+        run: |
+          cat > docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md <<'EOF'
+          # Sprint 1 Clean App Integration
+
+          Status: PASS
+
+          - Base app branch: work/sprint1-qa-repair-batch
+          - Integration branch: work/sprint1-feature47-rx-med-final
+          - Feature 46 refractory complaint regression: PASS
+          - Pregnancy workflow and EDD provenance regression: PASS
+          - Feature 47 compact calendar and reproductive history: PASS
+          - Compact medication cards: PASS
+          - Structured Arabic prescription controls: PASS
+          - Medication safety boundary: PASS
+          - Medication UI clean regression: PASS
+          - v0.9.3 medication declutter regression: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - git diff --check: PASS
+          - Database migration/seed/reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets printed or exposed: NONE
+          EOF
+
+      - name: Commit verified clean application package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps/web/components/clinic/ActiveVisitWorkspace.tsx \
+            apps/web/app/globals.css \
+            apps/web/app/medications/page.tsx \
+            docs/verification/SPRINT1_CLEAN_APP_INTEGRATION.md
+          git diff --cached --check
+          git commit -m 'feat: cleanly integrate Feature 47 medication cards and Arabic RX'
+          git push origin HEAD:${TARGET_BRANCH}
