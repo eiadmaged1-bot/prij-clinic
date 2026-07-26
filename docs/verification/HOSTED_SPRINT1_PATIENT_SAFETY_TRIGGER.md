@@ -1,3 +1,9 @@
-# Hosted Sprint 1 Patient Safety Core Trigger Contract
+# Hosted Sprint 1 Patient Safety Core Trigger
 
-This path is reserved for no-code pull-request triggers after the hosted patient safety controller is merged.
+- Trigger sequence: 1
+- Target branch: `work/sprint1-patient-safety-core-v1`
+- Package: locked patient context, stale-save protection, atomic signing, explicit identity confirmation, signed-record read-only boundary
+- Regression scope: visit context, core workspace, RBAC, patient-context modules, idempotency, Features 46–49, medication UI, typecheck, production build
+- Database migrations/seeds/destructive actions: none
+- Production data mutation: none
+- Secret changes: none
