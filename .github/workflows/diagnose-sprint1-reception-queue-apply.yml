@@ -1,0 +1,58 @@
+name: Diagnose Sprint 1 Reception Queue Apply
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_RECEPTION_QUEUE_TRIGGER.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnose-sprint1-reception-queue-apply
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout isolated application branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-reception-queue-core-v1
+          fetch-depth: 1
+          path: workspace
+
+      - name: Capture deterministic apply output
+        id: apply
+        working-directory: workspace
+        shell: bash
+        run: |
+          set +e
+          node ../controls/scripts/runner/run-sprint1-reception-queue-core.mjs "$PWD" > reception-queue-apply.log 2>&1
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          cat reception-queue-apply.log
+          exit 0
+
+      - name: Upload apply diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: reception-queue-apply-diagnostic
+          path: workspace/reception-queue-apply.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Preserve failure conclusion
+        if: steps.apply.outputs.exit_code != '0'
+        run: exit 1
