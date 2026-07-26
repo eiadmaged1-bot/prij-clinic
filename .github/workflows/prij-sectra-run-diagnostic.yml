@@ -1,0 +1,129 @@
+name: Prij SECTRA Run Diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sectra-run-diagnostic.yml
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: prij-sectra-run-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    name: Capture exact SECTRA workflow failures
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 20
+
+    steps:
+      - name: Confirm SECTRA and prepare isolated directory
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          $target = Join-Path $env:GITHUB_WORKSPACE 'sectra-run-diagnostic'
+          if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+
+      - name: Checkout controls branch
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: false
+          path: sectra-run-diagnostic
+
+      - name: Query exact workflow and job conclusions
+        working-directory: sectra-run-diagnostic
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = 'application/vnd.github+json'
+            'X-GitHub-Api-Version' = '2022-11-28'
+          }
+          $apiBase = "https://api.github.com/repos/$env:GITHUB_REPOSITORY"
+          $targets = @(
+            'prij-sectra-only-enforcement-and-package2.yml',
+            'prij-sprint1-qa-calendar-history-final-verify.yml',
+            'prij-sprint1-qa-medication-cards-sectra.yml',
+            'prij-sectra-only-continuation-controller.yml'
+          )
+          $lines = New-Object System.Collections.Generic.List[string]
+          $lines.Add('# Latest SECTRA Workflow Diagnostic')
+          $lines.Add('')
+          $lines.Add("- Diagnostic run: `$env:GITHUB_RUN_ID`")
+          $lines.Add('- Runner: `SECTRA`')
+          $lines.Add('- Database operation: `NONE`')
+          $lines.Add('')
+
+          foreach ($workflow in $targets) {
+            $encoded = [System.Uri]::EscapeDataString($workflow)
+            try {
+              $runs = Invoke-RestMethod -Headers $headers -Uri "$apiBase/actions/workflows/$encoded/runs?per_page=1" -Method Get
+              $run = $runs.workflow_runs | Select-Object -First 1
+              if ($null -eq $run) {
+                $lines.Add("## $workflow")
+                $lines.Add('- No run found.')
+                $lines.Add('')
+                continue
+              }
+              $lines.Add("## $workflow")
+              $lines.Add("- Run ID: `$($run.id)`")
+              $lines.Add("- Status: `$($run.status)`")
+              $lines.Add("- Conclusion: `$($run.conclusion)`")
+              $lines.Add("- Head SHA: `$($run.head_sha)`")
+              $jobs = Invoke-RestMethod -Headers $headers -Uri "$apiBase/actions/runs/$($run.id)/jobs?per_page=100" -Method Get
+              if (-not $jobs.jobs) {
+                $lines.Add('- Jobs: none returned.')
+              } else {
+                foreach ($job in $jobs.jobs) {
+                  $lines.Add("- Job: `$($job.name)` — `$($job.status)` / `$($job.conclusion)`")
+                  foreach ($step in $job.steps) {
+                    if ($step.conclusion -eq 'failure') {
+                      $lines.Add("  - Failed step: `$($step.name)`")
+                    }
+                  }
+                }
+              }
+              $lines.Add('')
+            } catch {
+              $lines.Add("## $workflow")
+              $lines.Add("- API inspection failed: $($_.Exception.Message)")
+              $lines.Add('')
+            }
+          }
+
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          [System.IO.File]::WriteAllLines(
+            (Join-Path (Get-Location) 'docs\verification\LATEST_SECTRA_RUN_DIAGNOSTIC.md'),
+            $lines,
+            (New-Object System.Text.UTF8Encoding($false))
+          )
+
+      - name: Publish diagnostic evidence only
+        working-directory: sectra-run-diagnostic
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'docs/verification/LATEST_SECTRA_RUN_DIAGNOSTIC.md'
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Diagnostic report failed diff-check.' }
+          if (-not (git diff --cached --quiet)) {
+            git commit -m 'Record exact SECTRA workflow diagnostic'
+            if ($LASTEXITCODE -ne 0) { throw 'Could not commit SECTRA diagnostic.' }
+            git push origin HEAD:security/rbac-scope-enforcement
+            if ($LASTEXITCODE -ne 0) { throw 'Could not push SECTRA diagnostic.' }
+          }
