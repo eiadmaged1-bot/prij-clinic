@@ -212,7 +212,7 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if (-not (Test-Path -LiteralPath 'docs\verification\QA_MEDICATION_CARDS_RESULT.md')) {
-            $patch = Join-Path $env:GITHUB_WORKSPACE 'controls\scripts\apply-qa-medication-card-patch.mjs'
+            $patch = Join-Path $env:GITHUB_WORKSPACE 'controls\scripts\runner\apply-qa-medication-cards.mjs'
             if (-not (Test-Path -LiteralPath $patch)) { throw "Missing deterministic medication patch: $patch" }
             node $patch (Get-Location).Path
             if ($LASTEXITCODE -ne 0) { throw 'Medication-card patch failed.' }
@@ -224,7 +224,7 @@ jobs:
           Copy-Item -Path (Join-Path $referenceSource '*') -Destination 'local-reference\egyptian-drugs' -Recurse -Force
           npm run build --workspace @prij-clinic/api
           $checks = @(
-            'node scripts/qa-medication-card-contract-test.mjs',
+            'node scripts/qa-medication-cards-contract-test.mjs',
             'node scripts/qa-pregnancy-edd-contract-test.mjs',
             'node scripts/qa-calendar-history-contract-test.mjs',
             'node scripts/feature-46-refractory-complaint-test.mjs',
