@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { AuditService } from "../audit/audit.service";
 import type { AuthUser } from "../auth/auth.types";
-import { assertCanReferenceAppointment, assertCanReferencePatient } from "../auth/reference-scope";
+import { assertCanReferenceAppointment, assertCanReferenceEncounter, assertCanReferencePatient } from "../auth/reference-scope";
 import { doctorScope, patientBranchScope } from "../auth/scope";
 import { PrismaService } from "../prisma/prisma.service";
 import { complaintLifecycleFromJson, complaintStatusFromJson, mergeComplaintLifecycle } from "../complaints/complaint-lifecycle";
@@ -163,8 +163,9 @@ export class EncountersService {
     return encounter;
   }
 
-  async sign(id: string, user: AuthUser) {
-    const existing = await this.get(id, user);
+  async sign(id: string, patientId: string, user: AuthUser) {
+    const existing = await assertCanReferenceEncounter(this.prisma, id, user, { patientId, requireDoctorScope: true });
+    if (!existing) throw new NotFoundException("Encounter not found.");
 
     if (existing.status === "signed") {
       // Signed clinical records are immutable and replay safely.
@@ -175,9 +176,9 @@ export class EncountersService {
     }
 
     const completedAt = new Date();
-    const { encounter, queueTicketId } = await this.prisma.$transaction(async (tx) => {
-      const signed = await tx.encounter.update({
-        where: { id },
+    const { encounter, queueTicketId, replayed } = await this.prisma.$transaction(async (tx) => {
+      const claim = await tx.encounter.updateMany({
+        where: { id, patientId, status: "draft", updatedAt: existing.updatedAt },
         data: {
           status: "signed",
           signedAt: completedAt,
@@ -191,6 +192,21 @@ export class EncountersService {
           } : {})
         }
       });
+
+      if (claim.count !== 1) {
+        const replay = await tx.encounter.findUnique({ where: { id } });
+        if (replay?.patientId === patientId && replay.status === "signed") {
+          return { encounter: replay, queueTicketId: null, replayed: true };
+        }
+        throw new ConflictException({
+          code: "ENCOUNTER_SIGN_CONFLICT",
+          message: "This visit changed before signing. Reload the locked patient visit and review it again."
+        });
+      }
+
+      const signed = await tx.encounter.findUnique({ where: { id } });
+      if (!signed || signed.patientId !== patientId) throw new NotFoundException("Signed encounter could not be reloaded.");
+
       const queueTicket = await tx.queueTicket.findFirst({ where: { patientId: signed.patientId, branchId: signed.branchId, status: "in_room" }, orderBy: { checkedInAt: "desc" } });
       if (queueTicket) {
         await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });
@@ -279,18 +295,20 @@ export class EncountersService {
           });
         }
       }
-      return { encounter: signed, queueTicketId: queueTicket?.id ?? null };
+      return { encounter: signed, queueTicketId: queueTicket?.id ?? null, replayed: false };
     });
 
-    await this.audit.record({
-      actorUserId: user.id,
-      action: "encounter.signed",
-      resourceType: "encounter",
-      resourceId: encounter.id,
-      branchId: encounter.branchId,
-      severity: "high",
-      metadataJson: { patientId: encounter.patientId, queueTicketId }
-    });
+    if (!replayed) {
+      await this.audit.record({
+        actorUserId: user.id,
+        action: "encounter.signed",
+        resourceType: "encounter",
+        resourceId: encounter.id,
+        branchId: encounter.branchId,
+        severity: "high",
+        metadataJson: { patientId, queueTicketId, atomicClaim: true }
+      });
+    }
 
     return encounter;
   }

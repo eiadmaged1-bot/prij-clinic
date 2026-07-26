@@ -108,23 +108,38 @@ export class DoctorVisitService {
     const encounter = await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
     if (!encounter) throw new NotFoundException("Doctor visit not found.");
     if (encounter.status !== "draft") throw new BadRequestException("Only draft visits can be edited.");
-    const updated = await this.prisma.encounter.update({
-      where: { id: encounterId },
-      data: {
-        ...(dto.chiefComplaint !== undefined ? { chiefComplaint: clean(dto.chiefComplaint) } : {}),
-        ...(dto.complaintStatus !== undefined ? {
-          followUpJson: mergeComplaintLifecycle(encounter.followUpJson, dto.complaintStatus, {
-            encounterId,
-            recordedAt: encounter.createdAt
-          })
-        } : {}),
-        ...(dto.historyText !== undefined ? { historyText: clean(dto.historyText) } : {}),
-        ...(dto.examText !== undefined ? { examText: clean(dto.examText) } : {}),
-        ...(dto.assessmentText !== undefined ? { assessmentText: clean(dto.assessmentText) } : {}),
-        ...(dto.planText !== undefined ? { planText: clean(dto.planText) } : {}),
-        ...(dto.examinationJson !== undefined ? { examinationJson: stampStructuredInput(dto.examinationJson, encounterId, user.id) } : {})
-      }
+
+    const changedFields = Object.keys(dto).filter((field) => field !== "expectedUpdatedAt");
+    if (!changedFields.length) return encounter;
+
+    const data: Prisma.EncounterUpdateManyMutationInput = {};
+    if (dto.chiefComplaint !== undefined) data.chiefComplaint = clean(dto.chiefComplaint);
+    if (dto.complaintStatus !== undefined) {
+      data.followUpJson = mergeComplaintLifecycle(encounter.followUpJson, dto.complaintStatus, {
+        encounterId,
+        recordedAt: encounter.createdAt
+      });
+    }
+    if (dto.historyText !== undefined) data.historyText = clean(dto.historyText);
+    if (dto.examText !== undefined) data.examText = clean(dto.examText);
+    if (dto.assessmentText !== undefined) data.assessmentText = clean(dto.assessmentText);
+    if (dto.planText !== undefined) data.planText = clean(dto.planText);
+    if (dto.examinationJson !== undefined) data.examinationJson = stampStructuredInput(dto.examinationJson, encounterId, user.id);
+
+    const expectedUpdatedAt = dto.expectedUpdatedAt ? new Date(dto.expectedUpdatedAt) : encounter.updatedAt;
+    const claimed = await this.prisma.encounter.updateMany({
+      where: { id: encounterId, patientId, status: "draft", updatedAt: expectedUpdatedAt },
+      data
     });
+    if (claimed.count !== 1) {
+      throw new ConflictException({
+        code: "VISIT_DRAFT_STALE",
+        message: "This visit changed in another tab or device. Reload the locked patient visit before saving again."
+      });
+    }
+
+    const updated = await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
+    if (!updated) throw new NotFoundException("Doctor visit not found after saving.");
 
     await this.audit.record({
       actorUserId: user.id,
@@ -133,7 +148,7 @@ export class DoctorVisitService {
       resourceId: encounterId,
       branchId: updated.branchId,
       severity: "high",
-      metadataJson: { patientId, changedFields: Object.keys(dto) }
+      metadataJson: { patientId, changedFields, expectedUpdatedAt: expectedUpdatedAt.toISOString(), savedUpdatedAt: updated.updatedAt.toISOString() }
     });
 
     return updated;

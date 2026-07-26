@@ -191,6 +191,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const [voidError, setVoidError] = useState("");
   const [saveState, setSaveState] = useState<"synced" | "unsaved" | "local" | "syncing" | "failed" | "offline">("synced");
   const [finishing, setFinishing] = useState(false);
+  const [finishIntent, setFinishIntent] = useState<"finish" | "print" | null>(null);
   const draftKey = `prij:unsigned-visit:${patientId}:${visitId}`;
 
   const roles = user?.roles ?? [];
@@ -198,13 +199,19 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const patient = visit?.patient as Record<string, string | null> | undefined;
   const encounter = visit?.encounter as Record<string, unknown> | undefined;
   const signedVisit = encounter?.status === "signed";
-  const contextReady = Boolean(patientId && visitId && patient?.id === patientId && encounter?.id === visitId);
+  const contextReady = Boolean(patientId && visitId && patient?.id === patientId && encounter?.id === visitId && encounter?.patientId === patientId);
 
   const loadVisit = useCallback(async () => {
     try {
       let data = await getCurrentDoctorVisit(patientId);
       if (String(data.encounter?.id ?? "") !== visitId) {
         data = await getDoctorVisitPacket(patientId, visitId);
+      }
+      const loadedPatientId = String(data.patient?.id ?? "");
+      const loadedEncounterId = String(data.encounter?.id ?? "");
+      const loadedEncounterPatientId = String(data.encounter?.patientId ?? "");
+      if (loadedPatientId !== patientId || loadedEncounterId !== visitId || loadedEncounterPatientId !== patientId) {
+        throw new Error("Locked patient and visit context mismatch.");
       }
       setVisit(data);
       const complaintLifecycle = complaintLifecycleFromEncounter((data.encounter ?? {}) as Record<string, unknown>);
@@ -293,14 +300,15 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
     if (!contextReady) return;
     setSaveState("syncing");
     try {
-      await updateDoctorVisit(patientId, visitId, encounterForm);
+      await updateDoctorVisit(patientId, visitId, encounterForm, String(encounter?.updatedAt ?? ""));
       localStorage.removeItem(draftKey);
       setSaveState("synced");
       setStatus("Draft synced.");
       await loadVisit();
       window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
-    } catch {
+    } catch (saveError) {
       setSaveState(navigator.onLine ? "failed" : "offline");
+      setStatus(saveError instanceof Error ? saveError.message : "Draft save failed.");
     }
   }
 
@@ -310,11 +318,13 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   }
 
   async function finishVisit(printAfter = false) {
-    if (!contextReady || finishing) return;
+    if (!contextReady || finishing || signedVisit) return;
     setFinishing(true);
     try {
-      if (saveState !== "synced") await updateDoctorVisit(patientId, visitId, encounterForm);
-      await completeDoctorVisit(visitId);
+      if (saveState !== "synced") {
+        await updateDoctorVisit(patientId, visitId, encounterForm, String(encounter?.updatedAt ?? ""));
+      }
+      await completeDoctorVisit(patientId, visitId);
       localStorage.removeItem(draftKey);
       setSaveState("synced");
       window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
@@ -324,10 +334,15 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
       } else {
         window.location.assign(`/patients/${patientId}`);
       }
-    } catch {
-      setStatus("Finish failed â€” review required fields and retry.");
+    } catch (finishError) {
+      setStatus(finishError instanceof Error ? finishError.message : "Finish failed — reload the locked patient visit and retry.");
       setFinishing(false);
     }
+  }
+
+  function requestFinish(printAfter = false) {
+    if (!contextReady || signedVisit || finishing) return;
+    setFinishIntent(printAfter ? "print" : "finish");
   }
 
   function addMedication(result: MedicationResult) {
@@ -399,7 +414,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         error={error}
         patient={patient ? { id: String(patient.id), name: String(patient.name ?? ""), medicalRecordNumber: String(patient.medicalRecordNumber ?? ""), dateOfBirth: patient.dateOfBirth, patientType: patient.patientType } : null}
         visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt == null ? null : String(encounter.startedAt) } : null}
-        actions={
+        actions={signedVisit ? <span className="badge lock-badge">Signed · read only</span> : (
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
             <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
             <div className="dense-card-list" style={{ position: "absolute", zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "0.5rem", borderRadius: "0.5rem", right: "0", minWidth: "180px", marginTop: "0.25rem" }}>
@@ -412,7 +427,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
               </AppActionButton>
             </div>
           </details>
-        }
+        )}
       />
       {error ? <BlockedContext patientId={patientId} /> : null}
       {!error ? (
@@ -425,15 +440,35 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           <div className="visit-persistent-actions no-print" aria-label="Visit actions">
             <span className={`badge visit-save-state ${saveState}`}>{saveStateLabel(saveState)}</span>
             <Link className="button secondary compact" href={`/patients/${patientId}/visits/${visitId}/finish`}>Review visit</Link>
-            <button className="button compact" disabled={finishing} type="button" onClick={() => void finishVisit(false)}>Finish visit</button>
+            <button className="button compact" disabled={finishing || signedVisit || !contextReady} type="button" onClick={() => requestFinish(false)}>Finish visit</button>
             <details className="visit-more-actions">
               <summary className="button secondary compact">More</summary>
               <div>
                 <Link className="button secondary compact" href={`/patients/${patientId}`}>Save and continue later</Link>
-                <button className="button secondary compact" disabled={finishing} type="button" onClick={() => void finishVisit(true)}>Finish and print</button>
+                <button className="button secondary compact" disabled={finishing || signedVisit || !contextReady} type="button" onClick={() => requestFinish(true)}>Finish and print</button>
               </div>
             </details>
           </div>
+
+          {finishIntent && (
+            <dialog open className="patient-modal" aria-label="Sign and lock visit confirmation">
+              <div className="modal-backdrop" onClick={() => !finishing && setFinishIntent(null)} />
+              <div className="modal-content" style={{ maxWidth: "520px" }}>
+                <div className="modal-header"><h2>Sign and lock this visit?</h2><button className="button-icon" type="button" disabled={finishing} onClick={() => setFinishIntent(null)} aria-label="Close">×</button></div>
+                <div className="modal-body">
+                  <p><strong>Patient:</strong> {String(patient?.name ?? "Patient")}</p>
+                  <p><strong>MRN:</strong> {String(patient?.medicalRecordNumber ?? "not recorded")}</p>
+                  <p><strong>Visit ID:</strong> {visitId}</p>
+                  <p><strong>Save state:</strong> {saveStateLabel(saveState)}</p>
+                  <div className="warning-callout" style={{ color: "var(--rose)", background: "var(--rose-light)", padding: "0.75rem", borderRadius: "0.5rem" }}><strong>Clinical record lock:</strong> Signing completes the queue visit and makes this encounter read only. Confirm the patient identity before continuing.</div>
+                </div>
+                <div className="modal-actions form-actions">
+                  <button className="button secondary" type="button" disabled={finishing} onClick={() => setFinishIntent(null)}>Cancel</button>
+                  <button className="button" type="button" disabled={finishing || !contextReady || signedVisit} onClick={() => { const printAfter = finishIntent === "print"; setFinishIntent(null); void finishVisit(printAfter); }}>{finishing ? "Signing..." : finishIntent === "print" ? "Confirm, sign and print" : "Confirm sign and lock"}</button>
+                </div>
+              </div>
+            </dialog>
+          )}
 
           {voidModalOpen && (
             <dialog open className="patient-modal" aria-label="Void Encounter Confirmation">
@@ -497,11 +532,11 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
             {activeModule === "encounter" || activeModule === "complaint" || activeModule === "history" || activeModule === "examination" || activeModule === "impression" ? (
               <EncounterModule activeModule={activeModule} patientType={String(patient?.patientType ?? "")} form={encounterForm} previousEncounters={visit?.recentEncounters ?? []} pregnancyEpisode={visit?.pregnancyEpisode ?? null} infertilityEpisode={visit?.infertilityEpisode ?? null} readOnly={signedVisit} onChange={changeEncounterForm} onSubmit={saveEncounter} />
             ) : null}
-            {activeModule === "prescription" ? <PrescriptionModule query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
-            {activeModule === "investigations" ? <InvestigationStationV3 lockedPatientId={patientId} lockedEncounterId={visitId} embedded onSaved={() => void loadVisit()} /> : null}
-            {activeModule === "ultrasound" ? <UltrasoundModule patientType={String(patient?.patientType ?? "")} pregnancyEpisode={visit?.pregnancyEpisode ?? null} infertilityEpisode={visit?.infertilityEpisode ?? null} /> : null}
-            {activeModule === "follow-up" ? <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
-            {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} saveState={saveState} finishing={finishing} onRefresh={refreshPacket} onFinish={finishVisit} /> : null}
+            {activeModule === "prescription" ? <PrescriptionModule readOnly={signedVisit} query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
+            {activeModule === "investigations" ? signedVisit ? <SignedVisitReadOnlyNotice /> : <InvestigationStationV3 lockedPatientId={patientId} lockedEncounterId={visitId} embedded onSaved={() => void loadVisit()} /> : null}
+            {activeModule === "ultrasound" ? <UltrasoundModule readOnly={signedVisit} patientType={String(patient?.patientType ?? "")} pregnancyEpisode={visit?.pregnancyEpisode ?? null} infertilityEpisode={visit?.infertilityEpisode ?? null} /> : null}
+            {activeModule === "follow-up" ? signedVisit ? <SignedVisitReadOnlyNotice /> : <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
+            {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} saveState={saveState} finishing={finishing} signedVisit={signedVisit} onRefresh={refreshPacket} onRequestFinish={requestFinish} /> : null}
           </section>
         </>
       ) : null}
@@ -581,9 +616,9 @@ function StructuredPrescriptionField({ label, arabicLabel, value, options, onCha
   );
 }
 
-function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, onSave, onSafety, safety, templates, shortcuts }: { query: string; setQuery: (value: string) => void; results: MedicationResult[]; lines: PrescriptionLine[]; setLines: (updater: (current: PrescriptionLine[]) => PrescriptionLine[]) => void; onAdd: (result: MedicationResult) => void; onSave: () => void; onSafety: () => void; safety: Record<string, unknown> | null; templates: Record<string, unknown>[]; shortcuts: Record<string, unknown>[] }) {
+function PrescriptionModule({ readOnly, query, setQuery, results, lines, setLines, onAdd, onSave, onSafety, safety, templates, shortcuts }: { readOnly: boolean; query: string; setQuery: (value: string) => void; results: MedicationResult[]; lines: PrescriptionLine[]; setLines: (updater: (current: PrescriptionLine[]) => PrescriptionLine[]) => void; onAdd: (result: MedicationResult) => void; onSave: () => void; onSafety: () => void; safety: Record<string, unknown> | null; templates: Record<string, unknown>[]; shortcuts: Record<string, unknown>[] }) {
   return (
-    <div className="form-grid structured-rx-workspace">
+    <fieldset className="form-grid structured-rx-workspace" disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <label className="wide">Medication search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
       <div className="medication-result-grid wide">
         {results.map((result) => <MedicationCard key={`${result.type}-${result.id}`} result={result} onAdd={() => onAdd(result)} />)}
@@ -612,7 +647,7 @@ function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, 
         <button className="button" type="button" disabled={!lines.length} onClick={onSave}>Save draft</button>
         <button className="button secondary" type="button" disabled={!lines.length} onClick={() => window.print()}>Print</button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -663,18 +698,18 @@ function SafetyPanel({ safety }: { safety: Record<string, unknown> | null }) {
   );
 }
 
-function UltrasoundModule({ patientType, pregnancyEpisode, infertilityEpisode }: { patientType: string; pregnancyEpisode: Record<string, unknown> | null; infertilityEpisode: Record<string, unknown> | null }) {
+function UltrasoundModule({ readOnly, patientType, pregnancyEpisode, infertilityEpisode }: { readOnly: boolean; patientType: string; pregnancyEpisode: Record<string, unknown> | null; infertilityEpisode: Record<string, unknown> | null }) {
   const context = visitContext(patientType, pregnancyEpisode, infertilityEpisode);
   const title = context === "pregnancy" ? "Obstetric Ultrasound" : context === "infertility" ? "Fertility Ultrasound / Folliculometry" : context === "postpartum" ? "Postpartum Ultrasound" : "Pelvic Ultrasound";
   return (
-    <div className="form-grid">
+    <fieldset className="form-grid" disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <h3 className="wide">{title}</h3>
       <label>Scan type<select>{scanTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
       <label>Fetus selector<select><option>Baby</option><option>Baby A</option><option>Baby B</option></select></label>
       <label>GA<input placeholder="From reviewed/locked EDD when available" /></label>
       <label className="wide">Report note<textarea placeholder="Doctor-written report. No automatic FGR, anomaly, or treatment labels." /></label>
       <p className="empty-state compact smart-empty-state wide">No ultrasound reports yet.</p>
-    </div>
+    </fieldset>
   );
 }
 
@@ -859,7 +894,7 @@ function ReproductiveStatusEditor({ context, value, previous, pregnancyEpisode, 
   </section>;
 }
 
-function FinishModule({ visit, patientName, saveState, finishing, onRefresh, onFinish }: { visit: DoctorVisitState | null; patientName: string; saveState: string; finishing: boolean; onRefresh: () => void; onFinish: (printAfter?: boolean) => Promise<void> }) {
+function FinishModule({ visit, patientName, saveState, finishing, signedVisit, onRefresh, onRequestFinish }: { visit: DoctorVisitState | null; patientName: string; saveState: string; finishing: boolean; signedVisit: boolean; onRefresh: () => void; onRequestFinish: (printAfter?: boolean) => void }) {
   const encounter = visit?.encounter;
   const structured = structuredInput(encounter?.examinationJson);
   const context = visitContext(String(visit?.patient?.patientType ?? ""), visit?.pregnancyEpisode ?? null, visit?.infertilityEpisode ?? null);
@@ -875,8 +910,9 @@ function FinishModule({ visit, patientName, saveState, finishing, onRefresh, onF
   const recommendedMissing = [["History", encounter?.historyText], ["Examination", encounter?.examText], ["Impression", encounter?.assessmentText], ["Follow-up", (visit?.followUps ?? []).length]].filter(([, value]) => !value).map(([label]) => String(label));
   return (
     <div className="print-packet">
-      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" disabled={finishing || requiredMissing.length > 0} type="button" onClick={() => void onFinish(false)}>Finish visit</button><button className="button secondary" disabled={finishing || requiredMissing.length > 0} type="button" onClick={() => void onFinish(true)}>Finish and print</button></div>
+      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" disabled={finishing || signedVisit || requiredMissing.length > 0} type="button" onClick={() => onRequestFinish(false)}>Finish visit</button><button className="button secondary" disabled={finishing || signedVisit || requiredMissing.length > 0} type="button" onClick={() => onRequestFinish(true)}>Finish and print</button></div>
       <h2>{patientName}</h2>
+      {signedVisit ? <p className="notice">Signed visit · read only. The clinical record is locked.</p> : null}
       {requiredMissing.length ? <p className="alert danger">Required to finish: {requiredMissing.join(", ")}.</p> : <p className="notice">Required fields complete.</p>}
       {recommendedMissing.length ? <p className="notice">Recommended, nonblocking: {recommendedMissing.join(", ")}.</p> : null}
       {saveState !== "synced" ? <p className="alert warning">Unsaved local changes must sync before completion.</p> : null}
@@ -886,6 +922,10 @@ function FinishModule({ visit, patientName, saveState, finishing, onRefresh, onF
       <section><h3>Follow-up</h3><p>{(visit?.followUps ?? []).length} follow-up task(s)</p></section>
     </div>
   );
+}
+
+function SignedVisitReadOnlyNotice() {
+  return <p className="notice">Signed visit · read only. Create a governed correction or a new visit instead of changing the signed record.</p>;
 }
 
 function StructuredTagPicker({ title, groups, selected, onChange, lenses = false }: { title: string; groups: Record<string, string[]>; selected: StructuredTagItem[]; onChange: (value: StructuredTagItem[]) => void; lenses?: boolean }) {

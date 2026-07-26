@@ -9,6 +9,10 @@ export class StartDoctorVisitDto {
 
 export class UpdateDoctorVisitDto {
   @IsOptional()
+  @IsDateString()
+  expectedUpdatedAt?: string;
+
+  @IsOptional()
   @IsObject()
   examinationJson?: Record<string, unknown>;
 

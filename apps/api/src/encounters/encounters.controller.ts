@@ -4,7 +4,7 @@ import type { AuthUser } from "../auth/auth.types";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { PermissionsGuard } from "../rbac/permissions.guard";
 import { Permissions } from "../rbac/require-permissions.decorator";
-import { CreateEncounterDto, UpdateEncounterDto, VoidEncounterDto } from "./dto";
+import { CreateEncounterDto, SignEncounterDto, UpdateEncounterDto, VoidEncounterDto } from "./dto";
 import { EncountersService } from "./encounters.service";
 
 @Controller("encounters")
@@ -38,8 +38,8 @@ export class EncountersController {
 
   @Patch(":id/sign")
   @Permissions("encounter.sign")
-  sign(@Param("id") id: string, @CurrentUser() user: AuthUser) {
-    return this.encounters.sign(id, user);
+  sign(@Param("id") id: string, @Body() dto: SignEncounterDto, @CurrentUser() user: AuthUser) {
+    return this.encounters.sign(id, dto.patientId, user);
   }
 
   @Patch(":id/void")
