@@ -1,0 +1,294 @@
+name: Prij Sprint 1 QA Medication Cards SECTRA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-medication-cards-sectra.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-medication-cards-sectra
+  cancel-in-progress: false
+
+jobs:
+  implement-verify:
+    name: Implement and verify compact medication cards
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 180
+
+    steps:
+      - name: Prepare isolated SECTRA directories
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('qa-medication-cards-controls', 'qa-medication-cards-workspace', 'qa-medication-cards-diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'qa-medication-cards-diagnostics') | Out-Null
+
+      - name: Checkout controls and isolated feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: true
+          path: qa-medication-cards-controls
+
+      - name: Checkout medication cards branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-medication-cards
+          fetch-depth: 0
+          clean: true
+          path: qa-medication-cards-workspace
+
+      - name: Confirm pre-repair backup evidence
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $receipt = Join-Path $env:GITHUB_WORKSPACE 'qa-medication-cards-controls\docs\verification\SPRINT1_RECOVERY_V2_BACKUP_RECEIPT.md'
+          if (-not (Test-Path -LiteralPath $receipt)) { throw "Missing pre-repair backup receipt: $receipt" }
+          $receiptText = Get-Content -LiteralPath $receipt -Raw
+          if ($receiptText -notmatch 'Database mutation performed:\s*NO' -and $receiptText -notmatch 'Production data modified:\s*NO') {
+            throw 'Backup receipt does not contain the expected no-mutation safeguard.'
+          }
+          $localBackupRoot = 'C:\Newfolder\prij-clinic\backups'
+          if (-not (Test-Path -LiteralPath $localBackupRoot)) { throw "Missing local-only backup directory: $localBackupRoot" }
+          $backupFiles = Get-ChildItem -LiteralPath $localBackupRoot -File -Recurse -ErrorAction Stop
+          if (-not $backupFiles.Count) { throw 'No local-only backup artifacts were found.' }
+          Write-Host "Backup evidence confirmed. Local artifacts: $($backupFiles.Count)."
+
+      - name: Apply guarded compact trade-name-first card patch
+        working-directory: qa-medication-cards-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tsxPath = 'apps/web/components/clinic/ActiveVisitWorkspace.tsx'
+          $cssPath = 'apps/web/app/globals.css'
+          $source = Get-Content -LiteralPath $tsxPath -Raw
+          $old = @'
+function MedicationCard({ result, onAdd }: { result: MedicationResult; onAdd: () => void }) {
+  return (
+    <article className="data-row medication-result-card">
+      <div className="data-row-header"><strong>{result.genericName ?? result.tradeName ?? result.brandName}</strong><span className="badge">{result.family ?? result.therapeuticClass ?? result.pharmacologicClass ?? "Medication"}</span></div>
+      {result.tradeName || result.brandName ? <p className="muted">Trade match: {result.tradeName ?? result.brandName}</p> : null}
+      <p className="muted">{[result.dosageForm, result.strengthText, result.route].filter(Boolean).join(" | ") || "Form/strength metadata not recorded."}</p>
+      <div className="form-actions">
+        <span className="badge">Pregnancy: {reviewLabel(result.reviewFlags?.pregnancy)}</span>
+        <span className="badge">Lactation: {reviewLabel(result.reviewFlags?.lactation)}</span>
+        <button className="button compact" type="button" onClick={onAdd}>Add to prescription</button>
+      </div>
+    </article>
+  );
+}
+'@
+          $new = @'
+function MedicationCard({ result, onAdd }: { result: MedicationResult; onAdd: () => void }) {
+  const tradeName = result.tradeName ?? result.brandName ?? result.genericName ?? "Medication";
+  const genericName = result.genericName && result.genericName !== tradeName ? result.genericName : "Generic not linked";
+  const classification = result.family ?? result.therapeuticClass ?? result.pharmacologicClass ?? "Medication";
+  const formulation = [result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Strength / form not recorded";
+  return (
+    <article className="medication-result-card compact-medication-card">
+      <div className="compact-medication-card-main">
+        <div className="compact-medication-card-title">
+          <strong>{tradeName}</strong>
+          <span>{genericName}</span>
+        </div>
+        <div className="compact-medication-card-meta">
+          <span>{formulation}</span>
+          <span>{classification}</span>
+        </div>
+        <div className="compact-medication-card-safety" aria-label="Medication safety summary">
+          <span className="badge">Pregnancy: {reviewLabel(result.reviewFlags?.pregnancy)}</span>
+          <span className="badge">Lactation: {reviewLabel(result.reviewFlags?.lactation)}</span>
+        </div>
+      </div>
+      <button className="button compact compact-medication-card-add" type="button" onClick={onAdd}>Add</button>
+    </article>
+  );
+}
+'@
+          $count = ([regex]::Matches($source, [regex]::Escape($old))).Count
+          if ($count -ne 1) { throw "Expected exactly one MedicationCard block, found $count." }
+          $source = $source.Replace($old, $new)
+          [System.IO.File]::WriteAllText((Resolve-Path $tsxPath), $source, (New-Object System.Text.UTF8Encoding($false)))
+
+          $css = Get-Content -LiteralPath $cssPath -Raw
+          if ($css -notmatch '\.compact-medication-card\s*\{') {
+            $css += @'
+
+/* QA-MED-001 compact trade-name-first medication results */
+.compact-medication-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  min-height: 0;
+  padding: .55rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+.compact-medication-card-main { display: grid; gap: .3rem; min-width: 0; }
+.compact-medication-card-title { display: flex; align-items: baseline; gap: .5rem; min-width: 0; }
+.compact-medication-card-title strong { overflow: hidden; color: var(--foreground); font-size: 1rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.compact-medication-card-title span { overflow: hidden; color: var(--muted); font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
+.compact-medication-card-meta { display: flex; flex-wrap: wrap; gap: .25rem .6rem; color: var(--muted); font-size: .75rem; }
+.compact-medication-card-safety { display: flex; flex-wrap: wrap; gap: .3rem; }
+.compact-medication-card-safety .badge { min-height: 0; padding: .16rem .38rem; font-size: .68rem; }
+.compact-medication-card-add { min-width: 3.8rem; min-height: 2.1rem; padding: .35rem .55rem; }
+@media (max-width: 640px) {
+  .compact-medication-card { grid-template-columns: minmax(0, 1fr); }
+  .compact-medication-card-add { width: 100%; }
+}
+'@
+          }
+          [System.IO.File]::WriteAllText((Resolve-Path $cssPath), $css, (New-Object System.Text.UTF8Encoding($false)))
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Medication-card patch has diff-check errors.' }
+
+      - name: Verify locked medication-card contract
+        working-directory: qa-medication-cards-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Get-Content -LiteralPath 'apps/web/components/clinic/ActiveVisitWorkspace.tsx' -Raw
+          $css = Get-Content -LiteralPath 'apps/web/app/globals.css' -Raw
+          foreach ($required in @('const tradeName = result.tradeName ?? result.brandName', 'compact-medication-card-title', 'compact-medication-card-meta', 'compact-medication-card-safety', '>Add</button>')) {
+            if ($source -notlike "*$required*") { throw "Missing medication-card contract: $required" }
+          }
+          if ($source -like '*Trade match:*') { throw 'Legacy stacked Trade match row remains.' }
+          foreach ($requiredCss in @('.compact-medication-card {', 'grid-template-columns: minmax(0, 1fr) auto', '.compact-medication-card-title strong', '@media (max-width: 640px)')) {
+            if ($css -notlike "*$requiredCss*") { throw "Missing medication-card CSS contract: $requiredCss" }
+          }
+          Write-Host 'QA-MED-001 compact medication-card contract PASS.'
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: qa-medication-cards-workspace/package-lock.json
+
+      - name: Load local configuration without exposing secrets
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing local environment file: $envPath" }
+          $allowed = @('DATABASE_URL', 'JWT_SECRET', 'JWT_EXPIRES_IN', 'AI_FEATURES_ENABLED', 'AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL was not loaded.' }
+          Write-Host 'Allowed local configuration loaded without printing values.'
+
+      - name: Install and prepare local verification prerequisites
+        working-directory: qa-medication-cards-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceTarget = 'local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force $referenceTarget | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination $referenceTarget -Recurse -Force
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild failed.' }
+
+      - name: Run full required verification suite
+        working-directory: qa-medication-cards-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'qa-medication-cards-diagnostics'
+          $checks = [ordered]@{
+            'qa-pregnancy-edd' = 'node scripts/qa-pregnancy-edd-contract-test.mjs'
+            'qa-calendar-history' = 'node scripts/qa-calendar-history-contract-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d', '/s', '/c', $entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - name: Commit verified medication-card package
+        working-directory: qa-medication-cards-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs/verification' | Out-Null
+          $lines = @(
+            '# QA Compact Medication Cards Verification',
+            '',
+            '- Ticket: `QA-MED-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Trade-name-first compact cards: PASS',
+            '- Generic, strength, form, route, classification: PASS',
+            '- Pregnancy and lactation chips: PASS',
+            '- Mobile stacking: PASS',
+            '- Pregnancy/EDD regression: PASS',
+            '- Calendar/History regression: PASS',
+            '- Feature 46 regression: PASS',
+            '- Clinical workflow regression: PASS',
+            '- Medication regression: PASS',
+            '- Search regression: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs/verification/QA_MEDICATION_CARDS_RESULT.md'), $lines, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'apps/web/components/clinic/ActiveVisitWorkspace.tsx' 'apps/web/app/globals.css' 'docs/verification/QA_MEDICATION_CARDS_RESULT.md'
+          $staged = git diff --cached --name-only
+          $unsafe = $staged | Where-Object { $_ -notin @('apps/web/components/clinic/ActiveVisitWorkspace.tsx', 'apps/web/app/globals.css', 'docs/verification/QA_MEDICATION_CARDS_RESULT.md') }
+          if ($unsafe) { throw "Unsafe staged files: $($unsafe -join ', ')" }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Staged medication-card package has diff-check errors.' }
+          git commit -m 'Implement and verify compact medication cards'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit medication-card package.' }
+          git push origin HEAD:work/sprint1-qa-medication-cards
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push medication-card package.' }
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-medication-cards-${{ github.run_id }}
+          path: qa-medication-cards-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
