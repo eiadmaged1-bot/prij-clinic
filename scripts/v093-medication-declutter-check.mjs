@@ -38,9 +38,9 @@ const forbidden = [
 ];
 
 const required = [
-  /Doctor approval required/i,
-  /No auto-prescribing/i,
-  /not patient instructions/i,
+  /Doctor approval required|Doctor review required/i,
+  /No auto-prescribing|do not auto-prescribe/i,
+  /not patient instructions|reference metadata only/i,
   /Verified/i,
   /Needs review/i,
   /Source-tracked/i
