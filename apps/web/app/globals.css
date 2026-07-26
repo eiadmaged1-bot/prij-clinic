@@ -7843,3 +7843,18 @@ button.patient-search-card-selectable { font:inherit; }
   .compact-medication-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "class" "safety" "action"; }
   .compact-medication-card > .button { min-height: 42px; }
 }
+
+
+/* RX-AR-001 structured Arabic prescription controls */
+.structured-rx-lines { display: grid; gap: .7rem; }
+.structured-rx-line { padding: .8rem; }
+.structured-rx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.structured-rx-field { min-width: 0; margin: 0; padding: .55rem; border: 1px solid var(--border); border-radius: 10px; }
+.structured-rx-field legend { display: flex; justify-content: space-between; gap: .5rem; width: 100%; padding: 0 .25rem; font-size: .78rem; font-weight: 800; }
+.structured-rx-options { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .45rem; }
+.rx-option { min-height: 34px; padding: .32rem .5rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; font: inherit; font-size: .76rem; }
+.rx-option.active { border-color: var(--navy, #0f2744); background: var(--navy, #0f2744); color: white; }
+.structured-rx-field input { width: 100%; }
+.structured-rx-preview { margin: .5rem 0 0; text-align: right; font-weight: 700; }
+@media (max-width: 760px) { .structured-rx-grid { grid-template-columns: minmax(0, 1fr); } .rx-option { min-height: 42px; } }
+@media print { .structured-rx-options, .structured-rx-field input, .structured-rx-line .button { display: none !important; } .structured-rx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
