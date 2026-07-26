@@ -1,0 +1,215 @@
+name: Prij Sprint 1 QA Medication and Structured Rx SECTRA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-medication-structured-rx-sectra.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-medication-structured-rx-sectra
+  cancel-in-progress: false
+
+jobs:
+  implement-and-verify:
+    name: Implement medication cards and structured prescriptions
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 240
+
+    steps:
+      - name: Confirm SECTRA and prepare isolated workspaces
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('rx-controls', 'rx-workspace', 'rx-diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'rx-diagnostics') | Out-Null
+
+      - name: Checkout controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: false
+          path: rx-controls
+
+      - name: Checkout structured prescription branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-structured-rx
+          fetch-depth: 0
+          clean: false
+          path: rx-workspace
+
+      - name: Confirm backup checkpoint
+        working-directory: rx-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git ls-remote --exit-code --heads origin backup/pre-qa-structured-rx-20260726
+          if ($LASTEXITCODE -ne 0) { throw 'Missing structured prescription backup branch.' }
+
+      - name: Apply deterministic medication and prescription patches
+        working-directory: rx-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $controls = Join-Path $env:GITHUB_WORKSPACE 'rx-controls\scripts\runner'
+          $medicationPatch = Join-Path $controls 'apply-qa-medication-cards.mjs'
+          $rxTsxPatch = Join-Path $controls 'apply-qa-structured-rx-tsx.mjs'
+          $rxCssPatch = Join-Path $controls 'apply-qa-structured-rx-css.mjs'
+          foreach ($file in @($medicationPatch, $rxTsxPatch, $rxCssPatch)) {
+            if (-not (Test-Path -LiteralPath $file)) { throw "Missing deterministic patch: $file" }
+            node $file (Get-Location).Path
+            if ($LASTEXITCODE -ne 0) { throw "Patch failed: $file" }
+          }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Combined medication/prescription patch failed diff-check.' }
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rx-workspace/package-lock.json
+
+      - name: Load local configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing $envPath" }
+          $allowed = @('DATABASE_URL','JWT_SECRET','JWT_EXPIRES_IN','AI_FEATURES_ENABLED','AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL not loaded.' }
+          Write-Host 'Allowed local configuration loaded without printing values.'
+
+      - name: Install and prepare verification prerequisites
+        working-directory: rx-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force 'local-reference\egyptian-drugs' | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination 'local-reference\egyptian-drugs' -Recurse -Force
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild failed.' }
+
+      - name: Run ten mandatory checks
+        working-directory: rx-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'rx-diagnostics'
+          $medContract = Join-Path $env:GITHUB_WORKSPACE 'rx-controls\scripts\qa-medication-cards-contract-test.mjs'
+          $rxContract = Join-Path $env:GITHUB_WORKSPACE 'rx-controls\scripts\qa-structured-rx-contract-test.mjs'
+          $checks = [ordered]@{
+            'qa-medication-cards' = "node `"$medContract`""
+            'qa-structured-rx' = "node `"$rxContract`""
+            'qa-calendar-history' = 'node scripts/qa-calendar-history-contract-test.mjs'
+            'qa-pregnancy-edd' = 'node scripts/qa-pregnancy-edd-contract-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - name: Commit verified QA package
+        working-directory: rx-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          $calendar = @(
+            '# QA Compact Calendar and History Verification','',
+            '- Tickets: `QA-CAL-001`, `QA-HIST-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Complete regression suite: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          $medication = @(
+            '# QA Compact Medication Cards Verification','',
+            '- Ticket: `QA-MED-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Trade-name-first compact cards: PASS',
+            '- Full regression suite: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          $prescription = @(
+            '# QA Structured Prescription Controls Verification','',
+            '- Tickets: `QA-RX-001`, `QA-RX-002`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Quantity per intake: STRUCTURED',
+            '- Canonical timing: `q24h`, `q12h`, `q8h`',
+            '- Arabic timing labels: PASS',
+            '- Two tablets together q24h preset: PASS',
+            '- Numeric duration with day/week units: PASS',
+            '- Only one optional free-text Note: PASS',
+            '- API compatibility normalisation: PASS',
+            '- Full regression suite: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_CALENDAR_HISTORY_RESULT.md'), $calendar, (New-Object System.Text.UTF8Encoding($false)))
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_MEDICATION_CARDS_RESULT.md'), $medication, (New-Object System.Text.UTF8Encoding($false)))
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_STRUCTURED_RX_RESULT.md'), $prescription, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'apps/web/components/clinic/ActiveVisitWorkspace.tsx' 'apps/web/app/globals.css' 'docs/verification/QA_CALENDAR_HISTORY_RESULT.md' 'docs/verification/QA_MEDICATION_CARDS_RESULT.md' 'docs/verification/QA_STRUCTURED_RX_RESULT.md'
+          $allowed = @('apps/web/components/clinic/ActiveVisitWorkspace.tsx','apps/web/app/globals.css','docs/verification/QA_CALENDAR_HISTORY_RESULT.md','docs/verification/QA_MEDICATION_CARDS_RESULT.md','docs/verification/QA_STRUCTURED_RX_RESULT.md')
+          $staged = git diff --cached --name-only
+          $unsafe = $staged | Where-Object { $_ -notin $allowed }
+          if ($unsafe) { throw "Unsafe staged files: $($unsafe -join ', ')" }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verified QA package failed diff-check.' }
+          git commit -m 'Implement and verify medication cards and structured prescriptions'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified QA package.' }
+          git push origin HEAD:work/sprint1-qa-structured-rx
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push verified structured prescription branch.' }
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-medication-structured-rx-${{ github.run_id }}
+          path: rx-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
