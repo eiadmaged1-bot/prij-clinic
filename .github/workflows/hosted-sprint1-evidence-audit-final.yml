@@ -1,0 +1,127 @@
+name: Hosted Final Sprint 1 Evidence Audit
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_EVIDENCE_AUDIT_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: audit/sprint1-evidence-final-20260726
+  VERIFIED_TOOLS_BRANCH: work/sprint1-feature47-rx-med-combined
+
+jobs:
+  audit:
+    name: Verify merged Sprint 1 state and generate evidence map
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout audit controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout verified medication and RX contracts
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.VERIFIED_TOOLS_BRANCH }}
+          fetch-depth: 1
+          path: verified
+
+      - name: Checkout Sprint 1 audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Verify Feature 46 refractory complaint
+        working-directory: workspace
+        run: node scripts/feature-46-refractory-complaint-test.mjs
+
+      - name: Verify pregnancy and EDD provenance
+        working-directory: workspace
+        run: node scripts/qa-pregnancy-edd-contract-test.mjs
+
+      - name: Verify Feature 47 calendar and reproductive history
+        working-directory: workspace
+        run: node scripts/qa-calendar-history-contract-test.mjs
+
+      - name: Verify compact medication cards
+        working-directory: workspace
+        run: node ../verified/scripts/qa-medication-cards-contract-test.mjs
+
+      - name: Verify structured Arabic prescription
+        working-directory: workspace
+        run: node ../verified/scripts/qa-structured-arabic-prescription-contract-test.mjs
+
+      - name: Medication UI clean regression
+        working-directory: workspace
+        run: npm run test:medication-ui-clean
+
+      - name: v0.9.3 medication declutter regression
+        working-directory: workspace
+        run: npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Generate deterministic evidence audit
+        working-directory: workspace
+        run: node ../controls/scripts/runner/generate-sprint1-evidence-audit.mjs .
+
+      - name: Verify audit-only scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^docs/verification/SPRINT1_EVIDENCE_AUDIT\.(md|json)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope audit changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Commit final Sprint 1 evidence audit
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/verification/SPRINT1_EVIDENCE_AUDIT.md docs/verification/SPRINT1_EVIDENCE_AUDIT.json
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'No audit changes to commit'; exit 0; }
+          git commit -m 'docs: complete final Sprint 1 evidence audit'
+          git push origin HEAD:${TARGET_BRANCH}
