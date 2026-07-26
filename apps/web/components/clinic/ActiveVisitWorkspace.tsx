@@ -564,25 +564,43 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
   );
 }
 
+const prescriptionDoseOptions = ["نصف قرص", "قرص", "قرصان", "5 مل", "10 مل", "تحميلة", "أمبول", "كبسولة"];
+const prescriptionFrequencyOptions = ["مرة يوميًا", "مرتين يوميًا", "3 مرات يوميًا", "كل 6 ساعات", "كل 8 ساعات", "كل 12 ساعة", "عند اللزوم"];
+const prescriptionDurationOptions = ["3 أيام", "5 أيام", "7 أيام", "10 أيام", "14 يومًا", "شهر", "حتى المراجعة"];
+const prescriptionInstructionOptions = ["بعد الأكل", "قبل الأكل", "مع الأكل", "صباحًا", "مساءً", "قبل النوم", "عند اللزوم"];
+
+function StructuredPrescriptionField({ label, arabicLabel, value, options, onChange }: { label: string; arabicLabel: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return (
+    <fieldset className="structured-rx-field">
+      <legend><span>{label}</span><span dir="rtl">{arabicLabel}</span></legend>
+      <div className="structured-rx-options" role="group" aria-label={label}>
+        {options.map((option) => <button className={value === option ? "rx-option active" : "rx-option"} key={option} type="button" onClick={() => onChange(option)}>{option}</button>)}
+      </div>
+      <input aria-label={`Custom ${label}`} dir="auto" value={value} onChange={(event) => onChange(event.target.value)} placeholder={`Custom ${label} / إدخال مخصص`} />
+    </fieldset>
+  );
+}
+
 function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, onSave, onSafety, safety, templates, shortcuts }: { query: string; setQuery: (value: string) => void; results: MedicationResult[]; lines: PrescriptionLine[]; setLines: (updater: (current: PrescriptionLine[]) => PrescriptionLine[]) => void; onAdd: (result: MedicationResult) => void; onSave: () => void; onSafety: () => void; safety: Record<string, unknown> | null; templates: Record<string, unknown>[]; shortcuts: Record<string, unknown>[] }) {
   return (
-    <div className="form-grid">
+    <div className="form-grid structured-rx-workspace">
       <label className="wide">Medication search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
-      <div className="data-list wide">
+      <div className="medication-result-grid wide">
         {results.map((result) => <MedicationCard key={`${result.type}-${result.id}`} result={result} onAdd={() => onAdd(result)} />)}
         {query.trim().length < 2 ? <p className="empty-state compact smart-empty-state">Search medication catalog first.</p> : null}
       </div>
       <TemplateStrip templates={templates} shortcuts={shortcuts} setLines={setLines} />
-      <div className="wide data-list">
+      <div className="wide data-list structured-rx-lines">
         {lines.map((line, index) => (
-          <article className="data-row" key={`${line.medicationName}-${index}`}>
+          <article className="data-row structured-rx-line" key={`${line.medicationName}-${index}`}>
             <div className="data-row-header"><strong>{line.medicationName}</strong><button className="button secondary compact" type="button" onClick={() => setLines((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></div>
-            <div className="form-grid">
-              <label>Dose text<input value={line.dose ?? ""} onChange={(event) => setLines((current) => updateLine(current, index, { dose: event.target.value }))} /></label>
-              <label>Timing<input value={line.frequency ?? ""} onChange={(event) => setLines((current) => updateLine(current, index, { frequency: event.target.value }))} /></label>
-              <label>Duration<input value={line.duration ?? ""} onChange={(event) => setLines((current) => updateLine(current, index, { duration: event.target.value }))} /></label>
-              <label>Instructions<input value={line.instructions ?? ""} onChange={(event) => setLines((current) => updateLine(current, index, { instructions: event.target.value }))} /></label>
+            <div className="structured-rx-grid">
+              <StructuredPrescriptionField label="Dose" arabicLabel="الجرعة" value={line.dose ?? ""} options={prescriptionDoseOptions} onChange={(value) => setLines((current) => updateLine(current, index, { dose: value }))} />
+              <StructuredPrescriptionField label="Frequency" arabicLabel="عدد المرات" value={line.frequency ?? ""} options={prescriptionFrequencyOptions} onChange={(value) => setLines((current) => updateLine(current, index, { frequency: value }))} />
+              <StructuredPrescriptionField label="Duration" arabicLabel="المدة" value={line.duration ?? ""} options={prescriptionDurationOptions} onChange={(value) => setLines((current) => updateLine(current, index, { duration: value }))} />
+              <StructuredPrescriptionField label="Instructions" arabicLabel="التعليمات" value={line.instructions ?? ""} options={prescriptionInstructionOptions} onChange={(value) => setLines((current) => updateLine(current, index, { instructions: value }))} />
             </div>
+            <p className="muted structured-rx-preview" dir="rtl">{[line.dose, line.frequency, line.duration, line.instructions].filter(Boolean).join(" · ") || "اختر الجرعة وعدد المرات والمدة والتعليمات"}</p>
           </article>
         ))}
         {!lines.length ? <p className="empty-state compact smart-empty-state">No medication lines yet.</p> : null}
@@ -599,16 +617,25 @@ function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, 
 }
 
 function MedicationCard({ result, onAdd }: { result: MedicationResult; onAdd: () => void }) {
+  const tradeName = result.tradeName ?? result.brandName ?? result.genericName ?? "Medication";
+  const genericName = result.genericName ?? "Generic not recorded";
+  const coreMeta = [result.strengthText, result.dosageForm, result.route].filter(Boolean).join(" · ") || "Strength, form, and route not recorded";
+  const classifications = [result.family, result.therapeuticClass, result.pharmacologicClass].filter((value, index, values) => Boolean(value) && values.indexOf(value) === index);
   return (
-    <article className="data-row medication-result-card">
-      <div className="data-row-header"><strong>{result.genericName ?? result.tradeName ?? result.brandName}</strong><span className="badge">{result.family ?? result.therapeuticClass ?? result.pharmacologicClass ?? "Medication"}</span></div>
-      {result.tradeName || result.brandName ? <p className="muted">Trade match: {result.tradeName ?? result.brandName}</p> : null}
-      <p className="muted">{[result.dosageForm, result.strengthText, result.route].filter(Boolean).join(" | ") || "Form/strength metadata not recorded."}</p>
-      <div className="form-actions">
+    <article className="medication-result-card compact-medication-card">
+      <div className="compact-medication-card-main">
+        <strong className="medication-trade-name">{tradeName}</strong>
+        <span className="medication-generic-name">{genericName}</span>
+        <span className="medication-core-meta">{coreMeta}</span>
+      </div>
+      <div className="medication-classification-chips" aria-label="Medication classification">
+        {classifications.length ? classifications.slice(0, 3).map((value) => <span className="badge" key={String(value)}>{value}</span>) : <span className="badge">Medication</span>}
+      </div>
+      <div className="medication-safety-chips" aria-label="Medication safety review">
         <span className="badge">Pregnancy: {reviewLabel(result.reviewFlags?.pregnancy)}</span>
         <span className="badge">Lactation: {reviewLabel(result.reviewFlags?.lactation)}</span>
-        <button className="button compact" type="button" onClick={onAdd}>Add to prescription</button>
       </div>
+      <button className="button compact" type="button" onClick={onAdd}>Add to prescription</button>
     </article>
   );
 }
