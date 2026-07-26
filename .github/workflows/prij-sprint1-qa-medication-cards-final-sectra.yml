@@ -1,0 +1,199 @@
+name: Prij Sprint 1 QA Medication Cards Final SECTRA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - .github/workflows/prij-sprint1-qa-medication-cards-final-sectra.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prij-sprint1-qa-medication-cards-final-sectra
+  cancel-in-progress: false
+
+jobs:
+  implement-and-verify:
+    name: Implement and verify compact medication cards on SECTRA
+    runs-on: [self-hosted, Windows, X64]
+    timeout-minutes: 240
+
+    steps:
+      - name: Confirm SECTRA and prepare isolated workspaces
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:RUNNER_NAME -ne 'SECTRA') { throw "Expected SECTRA, got '$env:RUNNER_NAME'." }
+          if ($env:RUNNER_OS -ne 'Windows') { throw "Expected Windows, got '$env:RUNNER_OS'." }
+          foreach ($name in @('med-final-controls', 'med-final-workspace', 'med-final-diagnostics')) {
+            $target = Join-Path $env:GITHUB_WORKSPACE $name
+            if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          }
+          New-Item -ItemType Directory -Force (Join-Path $env:GITHUB_WORKSPACE 'med-final-diagnostics') | Out-Null
+
+      - name: Checkout controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 0
+          clean: false
+          path: med-final-controls
+
+      - name: Checkout medication branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/sprint1-qa-medication-cards
+          fetch-depth: 0
+          clean: false
+          path: med-final-workspace
+
+      - name: Apply deterministic medication-card patch
+        working-directory: med-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $patch = Join-Path $env:GITHUB_WORKSPACE 'med-final-controls\scripts\runner\apply-qa-medication-cards.mjs'
+          if (-not (Test-Path -LiteralPath $patch)) { throw "Missing patch: $patch" }
+          node $patch (Get-Location).Path
+          if ($LASTEXITCODE -ne 0) { throw 'Medication-card patch failed.' }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'Medication-card patch failed diff-check.' }
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: med-final-workspace/package-lock.json
+
+      - name: Load local configuration safely
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $envPath = 'C:\Newfolder\prij-clinic\.env'
+          if (-not (Test-Path -LiteralPath $envPath)) { throw "Missing $envPath" }
+          $allowed = @('DATABASE_URL','JWT_SECRET','JWT_EXPIRES_IN','AI_FEATURES_ENABLED','AI_PROVIDER')
+          $databaseFound = $false
+          foreach ($line in Get-Content -LiteralPath $envPath) {
+            $trimmed = $line.Trim()
+            if (-not $trimmed -or $trimmed.StartsWith('#') -or -not $trimmed.Contains('=')) { continue }
+            $parts = $trimmed.Split('=', 2)
+            $key = $parts[0].Trim()
+            if ($allowed -notcontains $key) { continue }
+            $value = $parts[1].Trim().Trim('"').Trim("'")
+            if ($key -eq 'DATABASE_URL' -and $value) { $databaseFound = $true }
+            "$key=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+          if (-not $databaseFound) { throw 'DATABASE_URL not loaded.' }
+          Write-Host 'Allowed local configuration loaded without printing values.'
+
+      - name: Install and prepare verification prerequisites
+        working-directory: med-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed.' }
+          npm run prisma:generate
+          if ($LASTEXITCODE -ne 0) { throw 'Prisma Client generation failed.' }
+          $referenceSource = 'C:\Newfolder\prij-clinic\local-reference\egyptian-drugs'
+          $referenceFile = Join-Path $referenceSource 'egyptian-drugs.csv'
+          if (-not (Test-Path -LiteralPath $referenceFile)) { throw "Missing local medication reference: $referenceFile" }
+          New-Item -ItemType Directory -Force 'local-reference\egyptian-drugs' | Out-Null
+          Copy-Item -Path (Join-Path $referenceSource '*') -Destination 'local-reference\egyptian-drugs' -Recurse -Force
+          npm run build --workspace @prij-clinic/api
+          if ($LASTEXITCODE -ne 0) { throw 'API prebuild failed.' }
+
+      - name: Run complete mandatory verification suite
+        working-directory: med-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $diag = Join-Path $env:GITHUB_WORKSPACE 'med-final-diagnostics'
+          $contract = Join-Path $env:GITHUB_WORKSPACE 'med-final-controls\scripts\qa-medication-cards-contract-test.mjs'
+          if (-not (Test-Path -LiteralPath $contract)) { throw "Missing medication contract: $contract" }
+          $checks = [ordered]@{
+            'qa-medication-cards' = "node `"$contract`""
+            'qa-calendar-history' = 'node scripts/qa-calendar-history-contract-test.mjs'
+            'qa-pregnancy-edd' = 'node scripts/qa-pregnancy-edd-contract-test.mjs'
+            'feature46' = 'node scripts/feature-46-refractory-complaint-test.mjs'
+            'clinical-workflow' = 'node scripts/clinical-workflow-unification-test.mjs'
+            'fix3-medication' = 'node scripts/recovery-fix3-medication-test.mjs'
+            'fix3-search' = 'node scripts/recovery-fix3-search-test.mjs'
+            'typecheck' = 'npm run typecheck'
+            'build' = 'npm run build'
+          }
+          foreach ($entry in $checks.GetEnumerator()) {
+            Write-Host "===== $($entry.Key) ====="
+            $stdout = Join-Path $diag "$($entry.Key).stdout.log"
+            $stderr = Join-Path $diag "$($entry.Key).stderr.log"
+            $process = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/d','/s','/c',$entry.Value) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (Test-Path -LiteralPath $stdout) { Get-Content -LiteralPath $stdout | ForEach-Object { Write-Host $_ } }
+            if (Test-Path -LiteralPath $stderr) { Get-Content -LiteralPath $stderr | ForEach-Object { Write-Host $_ } }
+            if ($process.ExitCode -ne 0) { throw "Mandatory check failed: $($entry.Key), exit $($process.ExitCode)." }
+          }
+
+      - name: Commit verified Package 2 and medication evidence
+        working-directory: med-final-workspace
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force 'docs\verification' | Out-Null
+          $calendar = @(
+            '# QA Compact Calendar and History Verification',
+            '',
+            '- Tickets: `QA-CAL-001`, `QA-HIST-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Calendar/History contract: PASS',
+            '- Pregnancy/EDD regression: PASS',
+            '- Feature 46 regression: PASS',
+            '- Clinical workflow regression: PASS',
+            '- Medication regression: PASS',
+            '- Search regression: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          $medication = @(
+            '# QA Compact Medication Cards Verification',
+            '',
+            '- Ticket: `QA-MED-001`',
+            "- Verification source: SECTRA run `$env:GITHUB_RUN_ID`",
+            '- Trade-name-first compact cards: PASS',
+            '- Generic, strength, form, route and classification: PASS',
+            '- Pregnancy and lactation chips: PASS',
+            '- Mobile stacking: PASS',
+            '- Full regression suite: PASS',
+            '- Typecheck: PASS',
+            '- Production build: PASS',
+            '- Migration/seed/reset/delete/truncate: NOT RUN',
+            '- Production data modified: NO'
+          )
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_CALENDAR_HISTORY_RESULT.md'), $calendar, (New-Object System.Text.UTF8Encoding($false)))
+          [System.IO.File]::WriteAllLines((Join-Path (Get-Location) 'docs\verification\QA_MEDICATION_CARDS_RESULT.md'), $medication, (New-Object System.Text.UTF8Encoding($false)))
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'apps/web/components/clinic/ActiveVisitWorkspace.tsx' 'apps/web/app/globals.css' 'docs/verification/QA_CALENDAR_HISTORY_RESULT.md' 'docs/verification/QA_MEDICATION_CARDS_RESULT.md'
+          $staged = git diff --cached --name-only
+          $allowed = @('apps/web/components/clinic/ActiveVisitWorkspace.tsx','apps/web/app/globals.css','docs/verification/QA_CALENDAR_HISTORY_RESULT.md','docs/verification/QA_MEDICATION_CARDS_RESULT.md')
+          $unsafe = $staged | Where-Object { $_ -notin $allowed }
+          if ($unsafe) { throw "Unsafe staged files: $($unsafe -join ', ')" }
+          git diff --cached --check
+          if ($LASTEXITCODE -ne 0) { throw 'Verified package failed diff-check.' }
+          git commit -m 'Implement and verify compact medication cards on SECTRA'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not commit verified medication package.' }
+          git push origin HEAD:work/sprint1-qa-medication-cards
+          if ($LASTEXITCODE -ne 0) { throw 'Could not push verified medication branch.' }
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-medication-cards-final-${{ github.run_id }}
+          path: med-final-diagnostics
+          if-no-files-found: ignore
+          retention-days: 7
