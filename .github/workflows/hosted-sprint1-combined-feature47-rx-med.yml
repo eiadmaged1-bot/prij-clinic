@@ -67,10 +67,10 @@ jobs:
         shell: bash
         run: |
           set +e
-          npm run test:v093:medication-ui > /tmp/v093-medication.log 2>&1
+          npm run test:v093:medication-ui > /tmp/v093-medication.txt 2>&1
           code=$?
-          cat /tmp/v093-medication.log
-          cp /tmp/v093-medication.log docs/verification/V093_COMBINED_DIAGNOSTIC.log
+          cat /tmp/v093-medication.txt
+          cp /tmp/v093-medication.txt docs/verification/V093_COMBINED_DIAGNOSTIC.txt
           printf '%s\n' "$code" > docs/verification/V093_COMBINED_EXIT_CODE.txt
           exit 0
 
@@ -79,7 +79,7 @@ jobs:
         run: |
           git config user.name "eiadmaged1-bot"
           git config user.email "eiadmaged1-bot@users.noreply.github.com"
-          git add docs/verification/V093_COMBINED_DIAGNOSTIC.log docs/verification/V093_COMBINED_EXIT_CODE.txt
+          git add -f docs/verification/V093_COMBINED_DIAGNOSTIC.txt docs/verification/V093_COMBINED_EXIT_CODE.txt
           git diff --cached --quiet && exit 0
           git commit -m "test: capture combined v0.9.3 medication diagnostic"
           git push origin HEAD:${TARGET_BRANCH}
