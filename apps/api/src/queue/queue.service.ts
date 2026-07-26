@@ -245,11 +245,74 @@ export class QueueService {
   }
 
   async call(id: string, user: AuthUser) {
-    return this.transition(id, user, "queue.called", { status: "called", calledAt: new Date() }, "waiting");
+    return this.activateForDoctor(id, user, "queue.called");
   }
 
   async selectForDoctor(id: string, user: AuthUser) {
-    return this.transition(id, user, "doctor_queue.patient_selected", { status: "called", calledAt: new Date() }, "waiting");
+    return this.activateForDoctor(id, user, "doctor_queue.patient_selected");
+  }
+
+  private async activateForDoctor(id: string, user: AuthUser, action: "queue.called" | "doctor_queue.patient_selected") {
+    const dateString = this.clinicTime.getClinicDate();
+    const { start: queueDate } = this.clinicTime.getClinicDayBounds(dateString);
+
+    return this.prisma.$transaction(async (tx) => {
+      const target = await tx.queueTicket.findFirst({
+        where: { id, queueDate, ...branchScope(user) },
+        include: { patient: true, appointment: true }
+      });
+      if (!target) throw new NotFoundException("Queue ticket not found.");
+      if (target.status === "in_room") return target;
+      if (!["waiting", "called"].includes(target.status)) {
+        throw new BadRequestException({ code: "QUEUE_INVALID_TRANSITION", message: "Only a waiting or called patient can be selected for the doctor." });
+      }
+
+      const occupiedRoom = await tx.queueTicket.findFirst({
+        where: { queueDate, status: "in_room", id: { not: id }, ...branchScope(user) },
+        select: { id: true, patientId: true, queueNumber: true }
+      });
+      if (occupiedRoom) {
+        throw new ConflictException({ code: "DOCTOR_ROOM_OCCUPIED", message: "Complete or sign the current visit before selecting another patient." });
+      }
+
+      const displaced = await tx.queueTicket.findMany({
+        where: { queueDate, status: "called", id: { not: id }, ...branchScope(user) },
+        select: { id: true }
+      });
+      if (displaced.length) {
+        await tx.queueTicket.updateMany({
+          where: { id: { in: displaced.map((ticket) => ticket.id) }, status: "called", ...branchScope(user) },
+          data: { status: "waiting", calledAt: null }
+        });
+      }
+
+      if (target.status === "waiting") {
+        const claim = await tx.queueTicket.updateMany({
+          where: { id, queueDate, status: "waiting", ...branchScope(user) },
+          data: { status: "called", calledAt: new Date() }
+        });
+        if (claim.count !== 1) {
+          throw new ConflictException({ code: "QUEUE_SELECTION_CONFLICT", message: "The waiting line changed. Refresh and select the patient again." });
+        }
+      }
+
+      const selected = await tx.queueTicket.findUniqueOrThrow({
+        where: { id },
+        include: { patient: true, appointment: true }
+      });
+
+      await this.audit.record({
+        actorUserId: user.id,
+        action,
+        resourceType: "queue_ticket",
+        resourceId: selected.id,
+        branchId: selected.branchId,
+        severity: "high",
+        metadataJson: { patientId: selected.patientId, queueNumber: selected.queueNumber, displacedCalledTicketIds: displaced.map((ticket) => ticket.id), singleCalledPatient: true }
+      });
+
+      return selected;
+    });
   }
 
   async complete(id: string, user: AuthUser) {
