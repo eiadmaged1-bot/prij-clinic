@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 1
           path: workspace
 
-      - name: Capture deterministic apply and v148 output
+      - name: Capture deterministic apply and route-authorization output
         id: diagnose
         working-directory: workspace
         shell: bash
@@ -47,21 +47,21 @@ jobs:
               node ../controls/scripts/runner/apply-sprint1-reception-queue-test-fix.mjs "$PWD"
               test_fix_status=$?
               echo "TEST_FIX_EXIT=$test_fix_status"
-              node scripts/v148-reception-patient-queue-test.mjs
-              v148_status=$?
-              echo "V148_EXIT=$v148_status"
+              node scripts/route-authorization-test.mjs
+              route_status=$?
+              echo "ROUTE_AUTH_EXIT=$route_status"
             else
-              v148_status=$apply_status
+              route_status=$apply_status
             fi
           } > reception-queue-diagnostic.log 2>&1
           cat reception-queue-diagnostic.log
-          echo "exit_code=${v148_status:-1}" >> "$GITHUB_OUTPUT"
+          echo "exit_code=${route_status:-1}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: reception-queue-v148-diagnostic
+          name: reception-queue-route-auth-diagnostic
           path: workspace/reception-queue-diagnostic.log
           if-no-files-found: error
           retention-days: 3
