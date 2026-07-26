@@ -72,7 +72,7 @@ jobs:
 
       - name: Verify locked patient visit context
         working-directory: workspace
-        run: node scripts/v142-start-visit-context-test.mjs
+        run: node ../controls/scripts/runner/verify-sprint1-locked-context.mjs "$PWD"
 
       - name: Verify core visit workspace
         working-directory: workspace
