@@ -60,10 +60,11 @@ jobs:
       - name: Feature 46 refractory complaint regression
         run: node scripts/feature-46-refractory-complaint-test.mjs
 
-      - name: Medication UI regressions
-        run: |
-          npm run test:medication-ui-clean
-          npm run test:v093:medication-ui
+      - name: Medication UI clean regression
+        run: npm run test:medication-ui-clean
+
+      - name: v0.9.3 medication declutter regression
+        run: npm run test:v093:medication-ui
 
       - name: Typecheck
         run: npm run typecheck
@@ -91,7 +92,8 @@ jobs:
           - Feature 47 QA-HIST-001 reproductive/pregnancy history: PASS
           - QA-MED-001 compact medication cards: PASS
           - QA-RX-001/002 structured Arabic prescription: PASS
-          - Medication UI regressions: PASS
+          - Medication UI clean regression: PASS
+          - v0.9.3 medication declutter regression: PASS
           - Typecheck: PASS
           - Production build: PASS
           - git diff --check: PASS
