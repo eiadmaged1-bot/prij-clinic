@@ -38,7 +38,7 @@ type MvpPageProps = {
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { useInterfaceMode } from "@/lib/interface-mode";
-import { MobileBottomNav, doctorMinimalisticNav, receptionistMinimalisticNav } from "@/components/layout/MobileBottomNav";
+import { MobileBottomNav, doctorMinimalisticNav } from "@/components/layout/MobileBottomNav";
 import { canAccessWorkspace, roleLandingPath } from "@/lib/role-routing";
 
 const navGroupOrder: NavItem["group"][] = [
@@ -341,7 +341,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
   const isOwnerAdmin = hasRole(roles, ["Owner", "Admin"]);
   const isDoctorOnly = hasRole(roles, ["Doctor"]) && !isOwnerAdmin;
-  const shellNavGroups = buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly, isReceptionistOnly });
+  const shellNavGroups = isReceptionistOnly ? [] : buildShellNavGroups({ roles, permissions, canOpenAdmin, canUseStaffChat, isOwnerAdmin, isDoctorOnly, isReceptionistOnly });
   const activeNavHref = shellNavGroups
     .flatMap((group) => (group.links ?? []).map(([href]) => href))
     .concat(shellNavGroups.flatMap((group) => group.href ? [group.href] : []))
@@ -351,7 +351,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const [openNavGroup, setOpenNavGroup] = useState<string | null>(routeGroupTitle);
 
   useEffect(() => {
-    setSidebarCollapsed(isReceptionistOnly ? false : localStorage.getItem("prijSidebarCollapsed") === "true");
+    setSidebarCollapsed(isReceptionistOnly ? true : localStorage.getItem("prijSidebarCollapsed") === "true");
   }, [isReceptionistOnly]);
 
   useEffect(() => {
@@ -429,8 +429,8 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   }
 
   return (
-    <main className={`app-shell theme-${theme} interface-${interfaceMode.toLowerCase()} comfort-${densityMode.toLowerCase()} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "receptionist-shell" : ""}`} data-interface-mode={interfaceMode} data-density={doctorComfortMode ? "large" : densityMode.toLowerCase()}>
-      {user ? (
+    <main className={`app-shell theme-${theme} interface-${interfaceMode.toLowerCase()} comfort-${densityMode.toLowerCase()} ${doctorComfortMode ? "doctor-comfort-mode" : ""} ${sidebarCollapsed ? "sidebar-collapsed" : ""} ${isReceptionistOnly ? "receptionist-shell no-sidebar" : ""}`} data-interface-mode={interfaceMode} data-density={doctorComfortMode ? "large" : densityMode.toLowerCase()}>
+      {user && !isReceptionistOnly ? (
         <>
           <button
             aria-label="Close navigation"
@@ -490,7 +490,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-title">
-            {user ? (
+            {user && !isReceptionistOnly ? (
               <button
                 aria-controls="clinic-mobile-navigation"
                 aria-expanded={mobileNavOpen || !sidebarCollapsed}
@@ -509,12 +509,18 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               <p className="muted">{t("clinicOperationsSubtitle")}</p>
             </div>
           </div>
-          <UniversalSearchBox />
-          <UserMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />
+          {!isReceptionistOnly ? <UniversalSearchBox /> : null}
+          {isReceptionistOnly ? (
+            <div className="receptionist-topbar-actions" aria-label="Reception account actions">
+              <Link className="button secondary compact" href="/reception"><ThreeDMedicalIcon name="reception" size="sm" />{t("home")}</Link>
+              <LanguageSwitcher />
+              <button className="button secondary compact" onClick={() => void signOut()} type="button"><ThreeDMedicalIcon name="settings" size="sm" tone="slate" />{t("logout")}</button>
+            </div>
+          ) : <UserMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />}
         </header>
         {children}
       </div>
-      {user && interfaceMode === "MINIMALISTIC" && (isDoctorOnly || isReceptionistOnly) ? <MobileBottomNav items={isDoctorOnly ? doctorMinimalisticNav : receptionistMinimalisticNav} /> : null}
+      {user && interfaceMode === "MINIMALISTIC" && isDoctorOnly ? <MobileBottomNav items={doctorMinimalisticNav} /> : null}
     </main>
   );
 }

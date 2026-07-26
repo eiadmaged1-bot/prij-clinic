@@ -119,7 +119,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
           <Metric icon="investigations" label="Follow-up" value={pendingRequests.length} />
         </section>
       )}
-      {mode === "doctor" ? <DoctorHandoff queue={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status))} orders={orders} invoices={invoices} /> : null}
+      {mode === "doctor" ? <DoctorHandoff queue={visibleQueue.filter((ticket) => ["waiting", "called", "in_room"].includes(ticket.status))} orders={orders} onRefresh={load} /> : null}
       {mode === "calendar" ? <CalendarLoop appointments={visibleAppointments} queue={visibleQueue} invoices={invoices} isReceptionistOnly={isReceptionistOnly} /> : null}
       {mode === "investigations" ? <InvestigationLoop orders={orders} /> : null}
       {mode === "documents" ? <DocumentTimelinePlaceholder /> : null}
@@ -137,6 +137,7 @@ function CalendarLoop({ appointments, queue, invoices, isReceptionistOnly }: { a
 }
 
 function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: OperationsCopy; onRefresh(): Promise<void> }) {
+  const [actionError, setActionError] = useState("");
   const waiting = queue
     .filter((ticket) => ticket.status === "waiting")
     .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime());
@@ -146,9 +147,17 @@ function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: Op
   const urgent = activeQueue.filter((ticket) => ticket.visitType === "urgent_kashf" || ticket.priority === "priority");
   const rows = [...waiting, ...activeQueue.filter((ticket) => ticket.status !== "waiting")];
   async function callPatient(ticketId: string) {
+    setActionError("");
     const token = sessionStorage.getItem("prijClinicToken");
     const response = await fetch(`${getApiBaseUrl()}/queue/${ticketId}/call`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
-    if (response?.ok) { publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"]); await onRefresh(); }
+    if (!response?.ok) {
+      const payload = await response?.json().catch(() => ({})) as { message?: string } | undefined;
+      setActionError(payload?.message ?? "The waiting line changed. Refresh and try again.");
+      await onRefresh();
+      return;
+    }
+    publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"]);
+    await onRefresh();
   }
   return (
     <section className="queue-board-compact">
@@ -156,6 +165,7 @@ function QueueBoard({ queue, copy, onRefresh }: { queue: QueueTicket[]; copy: Op
         <div className="section-heading compact-section-heading"><h2>{copy.queueList}</h2></div>
         <p className="queue-compact-line">{copy.waiting}: {waiting.length} · {copy.urgent}: {urgent.length}</p>
         <p className="queue-compact-line"><strong>{copy.next}:</strong> {nextTicket ? patient(nextTicket.patient) : copy.noPatientsWaiting}</p>
+        {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
       </section>
       <article className="panel compact-panel">
         <div className="section-heading"><h2>{copy.queueList}</h2><span className="badge">{rows.length}</span></div>
@@ -204,9 +214,62 @@ function waitingDuration(value: string) {
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m waiting`;
 }
 
-function DoctorHandoff({ queue, orders, invoices }: { queue: QueueTicket[]; orders: InvestigationOrder[]; invoices: Invoice[] }) {
-  const current = queue.find((ticket) => ticket.status === "called");
-  return <section className="content-grid"><DailyList title="Current in-room patient" actionLabel="Open profile" rows={current ? [row(current.id, current.patientId, patient(current.patient), current.status, [current.appointment?.appointmentType, `Follow-up hints ${orders.filter((order) => order.patientId === current.patientId && order.status !== "reviewed").length}`].join(" | "), invoices)] : []} doctorSelect currentPatientCompact /><DailyList title="Waiting patients" actionLabel="Open profile" rows={queue.filter((ticket) => ticket.id !== current?.id).map((ticket) => row(ticket.id, ticket.patientId, patient(ticket.patient), ticket.status, [ticket.appointment?.appointmentType, `Follow-up hints ${orders.filter((order) => order.patientId === ticket.patientId && order.status !== "reviewed").length}`].join(" | "), invoices))} doctorSelect previewMode /><article className="panel"><div className="section-heading"><h2>Doctor handoff notes</h2><span className="badge">Doctor review</span></div><ul className="feature-list"><li>Open profile or Preview history lets the doctor prepare without changing queue status.</li><li>Only Start Visit marks the patient with the doctor.</li><li>Visit reason, queue status, requested investigations, and result follow-up hints are visible for workflow.</li></ul></article></section>;
+function DoctorHandoff({ queue, orders, onRefresh }: { queue: QueueTicket[]; orders: InvestigationOrder[]; onRefresh(): Promise<void> }) {
+  const [actionError, setActionError] = useState("");
+  const current = queue.find((ticket) => ticket.status === "in_room") ?? queue.find((ticket) => ticket.status === "called") ?? null;
+  const waiting = queue
+    .filter((ticket) => ticket.status === "waiting")
+    .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime() || Number(left.queueNumber ?? 0) - Number(right.queueNumber ?? 0));
+  const next = waiting[0] ?? null;
+
+  async function openVisit(ticket: QueueTicket, moduleKey: "encounter" | "finish", selectFirst: boolean) {
+    setActionError("");
+    const token = sessionStorage.getItem("prijClinicToken");
+    if (selectFirst) {
+      const response = await fetch(`${getApiBaseUrl()}/queue/${ticket.id}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
+      if (!response?.ok) {
+        const payload = await response?.json().catch(() => ({})) as { message?: string } | undefined;
+        setActionError(payload?.message ?? "The queue changed. Refresh and select the patient again.");
+        await onRefresh();
+        return;
+      }
+    }
+    const visit = await startDoctorVisit(ticket.patientId).catch(() => null);
+    const encounterId = String(visit?.encounter?.id ?? "");
+    if (!encounterId) { setActionError("The locked visit could not be opened."); return; }
+    publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], ticket.patientId);
+    window.location.href = `/patients/${ticket.patientId}/visits/${encounterId}/${moduleKey}`;
+  }
+
+  return <section className="content-grid doctor-handoff-workspace" data-doctor-handoff-workspace>
+    <article className="panel compact-panel current-in-room-patient-compact">
+      <div className="section-heading"><div><h2>Current patient / active visit</h2><p className="muted">One patient can be called or in room at a time.</p></div><span className="badge">{current ? friendly(current.status) : "None"}</span></div>
+      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {current ? <div className="data-row dense" data-queue-ticket-id={current.id}>
+        <div className="data-row-header"><strong>{patient(current.patient)}</strong><span className="badge">#{current.queueNumber ?? "—"}</span></div>
+        <p className="muted">{visitTypeLabelLocal(current.visitType)} · Follow-up hints {orders.filter((order) => order.patientId === current.patientId && order.status !== "reviewed").length}</p>
+        <div className="form-actions">
+          <Link className="button secondary compact" href={`/patients/${current.patientId}`}>Open</Link>
+          <button className="button compact" type="button" onClick={() => void openVisit(current, "encounter", false)}>Continue</button>
+          <button className="button secondary compact" type="button" onClick={() => void openVisit(current, "finish", false)}>Complete</button>
+        </div>
+      </div> : <p className="empty-state compact smart-empty-state">No patient with doctor.</p>}
+    </article>
+
+    <article className="panel compact-panel">
+      <div className="section-heading"><div><h2>Waiting patients</h2><p className="muted">Urgent first, then check-in order.</p></div><div className="form-actions"><span className="badge">{waiting.length}</span><button className="button compact" disabled={!next || Boolean(current?.status === "in_room")} type="button" onClick={() => next && void openVisit(next, "encounter", true)}>Pick next</button></div></div>
+      <div className="dense-card-list">
+        {waiting.map((ticket, index) => <article className="data-row dense" data-queue-ticket-id={ticket.id} key={ticket.id}>
+          <div className="data-row-header"><strong>{index + 1}. {patient(ticket.patient)}</strong><span className="badge">#{ticket.queueNumber ?? "—"}</span></div>
+          <p className="muted">{visitTypeLabelLocal(ticket.visitType)} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "Waiting time not recorded"}</p>
+          <div className="form-actions"><Link className="button secondary compact" href={`/patients/${ticket.patientId}?preview=queue`}>Open</Link><button className="button compact" type="button" onClick={() => void openVisit(ticket, "encounter", true)}>Start</button></div>
+        </article>)}
+        {!waiting.length ? <p className="empty-state compact smart-empty-state">No patients waiting.</p> : null}
+      </div>
+    </article>
+
+    <article className="panel"><div className="section-heading"><h2>Doctor handoff rules</h2><span className="badge">Safe queue</span></div><ul className="feature-list"><li>Open never changes queue status.</li><li>Start and Pick next create one called patient only.</li><li>Continue opens the locked active visit.</li><li>Complete opens the signed finish workflow; it does not bypass clinical signing.</li></ul></article>
+  </section>;
 }
 
 function InvestigationLoop({ orders }: { orders: InvestigationOrder[] }) {
