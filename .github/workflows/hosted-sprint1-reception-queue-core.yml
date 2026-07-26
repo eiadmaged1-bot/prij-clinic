@@ -88,7 +88,7 @@ jobs:
 
       - name: Verify role visibility
         working-directory: workspace
-        run: npm run test:v093:roles
+        run: node ../controls/scripts/runner/verify-sprint1-reception-role-visibility.mjs "$PWD"
 
       - name: Verify patient safety core regression
         working-directory: workspace
