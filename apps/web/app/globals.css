@@ -7804,3 +7804,57 @@ button.patient-search-card-selectable { font:inherit; }
   color: #60408f;
 }
 }
+
+
+/* QA-MED-001 compact medication-result cards */
+.medication-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: .55rem;
+  max-height: 15rem;
+  overflow: auto;
+  align-items: stretch;
+  padding: .1rem;
+}
+.compact-medication-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "main action" "class action" "safety action";
+  align-items: center;
+  gap: .35rem .55rem;
+  min-width: 0;
+  min-height: 7.4rem;
+  padding: .65rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.compact-medication-card-main { grid-area: main; display: grid; gap: .1rem; min-width: 0; }
+.medication-trade-name { overflow: hidden; color: var(--navy, #0f2744); font-size: 1rem; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+.medication-generic-name { overflow: hidden; color: var(--foreground); font-size: .82rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.medication-core-meta { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.medication-classification-chips { grid-area: class; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+.medication-safety-chips { grid-area: safety; display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
+.medication-classification-chips .badge,
+.medication-safety-chips .badge { max-width: 100%; padding: .18rem .38rem; overflow: hidden; font-size: .68rem; text-overflow: ellipsis; white-space: nowrap; }
+.compact-medication-card > .button { grid-area: action; align-self: stretch; min-width: 6.4rem; padding-inline: .55rem; }
+@media (max-width: 640px) {
+  .medication-result-grid { grid-template-columns: minmax(0, 1fr); max-height: 18rem; }
+  .compact-medication-card { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main" "class" "safety" "action"; }
+  .compact-medication-card > .button { min-height: 42px; }
+}
+
+
+/* RX-AR-001 structured Arabic prescription controls */
+.structured-rx-lines { display: grid; gap: .7rem; }
+.structured-rx-line { padding: .8rem; }
+.structured-rx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.structured-rx-field { min-width: 0; margin: 0; padding: .55rem; border: 1px solid var(--border); border-radius: 10px; }
+.structured-rx-field legend { display: flex; justify-content: space-between; gap: .5rem; width: 100%; padding: 0 .25rem; font-size: .78rem; font-weight: 800; }
+.structured-rx-options { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: .45rem; }
+.rx-option { min-height: 34px; padding: .32rem .5rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); cursor: pointer; font: inherit; font-size: .76rem; }
+.rx-option.active { border-color: var(--navy, #0f2744); background: var(--navy, #0f2744); color: white; }
+.structured-rx-field input { width: 100%; }
+.structured-rx-preview { margin: .5rem 0 0; text-align: right; font-weight: 700; }
+@media (max-width: 760px) { .structured-rx-grid { grid-template-columns: minmax(0, 1fr); } .rx-option { min-height: 42px; } }
+@media print { .structured-rx-options, .structured-rx-field input, .structured-rx-line .button { display: none !important; } .structured-rx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

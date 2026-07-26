@@ -25,7 +25,7 @@ export default function MedicationCenterPage() {
         <p className="eyebrow">Doctor reference and reusable prescribing tools</p>
         <h1>Medication Center</h1>
       </section>
-      <p className="notice medication-center-notice">Market product data and clinical safety guidance are separate.</p>
+      <p className="notice medication-center-notice">Market product data and clinical safety guidance are separate. No auto-prescribing. Doctor approval required.</p>
       <nav className="patient-tabs simple medication-center-tabs" aria-label="Medication Center sections">
         <button className={`tab-button ${activeTab === "search" ? "active" : ""}`} type="button" onClick={() => setActiveTab("search")}>Search &amp; Reference</button>
         <button className={`tab-button ${activeTab === "templates" ? "active" : ""}`} type="button" onClick={() => setActiveTab("templates")}>Templates</button>
