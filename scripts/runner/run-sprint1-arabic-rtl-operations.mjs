@@ -38,6 +38,14 @@ try {
   testSource = testSource.replace('"عيادات", ', "");
   fs.writeFileSync(testPath, testSource, "utf8");
 
+  const i18nPath = path.join(workspaceRoot, "apps/web/i18n/useI18n.tsx");
+  let i18nSource = fs.readFileSync(i18nPath, "utf8");
+  i18nSource = i18nSource.replace(
+    '  const locale = language === "ar" ? "ar-EG" : "en-US";',
+    '  const locale: "ar-EG" | "en-US" = language === "ar" ? "ar-EG" : "en-US";'
+  );
+  fs.writeFileSync(i18nPath, i18nSource, "utf8");
+
   const healthPath = path.join(workspaceRoot, "apps/web/components/system/OfflineSyncHealth.tsx");
   let healthSource = fs.readFileSync(healthPath, "utf8");
   const healthMarker = "Legacy offline regression vocabulary";
