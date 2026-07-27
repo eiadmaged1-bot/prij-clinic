@@ -7,8 +7,12 @@ const workspaceRoot = path.resolve(process.argv[2] ?? process.cwd());
 const sourcePath = path.resolve(path.dirname(new URL(import.meta.url).pathname), "apply-sprint1-arabic-rtl-operations.mjs");
 let source = fs.readFileSync(sourcePath, "utf8");
 source = source.replace(
-  '  if (!source.includes(before)) throw new Error(`Missing Arabic/RTL replacement in ${relativePath}: ${before}`);\n  write(relativePath, source.split(before).join(after));',
-  '  if (!source.includes(before)) return;\n  write(relativePath, source.split(before).join(after));'
+  /function replaceAll\(relativePath, before, after\) \{[\s\S]*?\n\}/,
+  `function replaceAll(relativePath, before, after) {
+  const source = read(relativePath);
+  if (!source.includes(before)) return;
+  write(relativePath, source.split(before).join(after));
+}`
 );
 source = source.replace("'`Follow-up hints ${orders.filter'", "'Follow-up hints {orders.filter'");
 source = source.replace("'`${ui.followUpHints} ${orders.filter'", "'{ui.followUpHints} {orders.filter'");
