@@ -43,6 +43,21 @@ export type PregnancyRecord = {
       edd?: string | null;
       estimatedDueDate?: string | null;
       datingMethod?: string | null;
+      datingStatus?: "UNCONFIRMED" | "CONFIRMED" | string | null;
+      cycleReliability?: string | null;
+      ivfTransferDate?: string | null;
+      embryoAgeDays?: number | null;
+      fetusCount?: number | null;
+      datingConfirmedAt?: string | null;
+      datingHistory?: Array<{
+        id?: string;
+        previousEdd?: string | null;
+        previousDatingMethod?: string | null;
+        replacementEdd?: string | null;
+        replacementSource?: string | null;
+        replacementReason?: string | null;
+        replacedAt?: string | null;
+      }>;
       datingScanDate?: string | null;
       status?: string | null;
       notes?: string | null;

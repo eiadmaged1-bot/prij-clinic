@@ -647,7 +647,7 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
   return (
     <form className="form-grid" onSubmit={onSubmit}>
       <fieldset className="encounter-module-fields wide" disabled={readOnly}>
-      {activeModule === "complaint" ? <StructuredTagPicker title="Smart complaint tags" groups={complaintGroups} selected={structured.complaints} lenses onChange={(complaints) => updateStructured({ complaints })} /> : null}
+      {activeModule === "complaint" ? <StructuredTagPicker title="Smart complaint tags" groups={complaintGroups} context={context} selected={structured.complaints} lenses onChange={(complaints) => updateStructured({ complaints })} /> : null}
       {activeModule === "history" ? <><ReproductiveStatusEditor context={context} value={structured.reproductiveSnapshot} previous={previousSnapshot} pregnancyEpisode={pregnancyEpisode} infertilityEpisode={infertilityEpisode} onChange={(reproductiveSnapshot) => updateStructured({ reproductiveSnapshot, version: 2 })} /><StructuredTagPicker title="Structured History" groups={historyGroups} selected={structured.history} onChange={(history) => updateStructured({ history })} /></> : null}
       {activeModule === "examination" ? <StructuredExamination context={context} value={structured.examination} onChange={(examination) => updateStructured({ examination })} /> : null}
       {activeModule === "examination" ? <ChipList labels={examinationChips} onPick={(label) => onChange({ ...form, examText: appendText(String(form.examText ?? ""), label) })} /> : null}
@@ -1010,11 +1010,14 @@ function SignedVisitReadOnlyNotice() {
   return <p className="notice">{operationsUiCopy[language].signedReadOnly}</p>;
 }
 
-function StructuredTagPicker({ title, groups, selected, onChange, lenses = false }: { title: string; groups: Record<string, string[]>; selected: StructuredTagItem[]; onChange: (value: StructuredTagItem[]) => void; lenses?: boolean }) {
+function StructuredTagPicker({ title, groups, context, selected, onChange, lenses = false }: { title: string; groups: Record<string, string[]>; context?: string; selected: StructuredTagItem[]; onChange: (value: StructuredTagItem[]) => void; lenses?: boolean }) {
   const [category, setCategory] = useState(Object.keys(groups)[0] ?? "");
   const [view, setView] = useState("Common");
-  const [search, setSearch] = useState("");
-  const all = Object.entries(groups).flatMap(([group, labels]) => labels.map((label) => ({ label, category: group })));
+  const [search, setSearch] = useState("");  const [showAllComplaints, setShowAllComplaints] = useState(false);
+  const contextualGroups = isPregnancyContext(context) && !showAllComplaints
+    ? Object.fromEntries(Object.entries(groups).filter(([group]) => ["Pain", "Bleeding", "Vaginal / vulval", "Urinary / pelvic floor", "Pregnancy concerns", "Breast", "Postoperative"].includes(group)))
+    : groups;
+  const all = Object.entries(contextualGroups).flatMap(([group, labels]) => labels.map((label) => ({ label, category: group })));
   const visible = view === "Search All" ? all.filter((item) => item.label.toLowerCase().includes(search.toLowerCase())) : all.filter((item) => item.category === category);
   const isComplaint = title.toLowerCase().includes("complaint");
   const toggle = (item: { label: string; category: string }) => {
@@ -1025,7 +1028,7 @@ function StructuredTagPicker({ title, groups, selected, onChange, lenses = false
   };
   const setComplaintStatus = (id: string, status: StructuredTagItem["status"]) => onChange(selected.map((item) => (item.id ?? clinicalItemId(item.category, item.label)) === id ? { ...item, id, status } : item));
   const selectedLabel = title.includes("complaint") ? "Selected complaints" : "Selected history";
-  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(groups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} ×</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
+  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(contextualGroups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}{isComplaint && isPregnancyContext(context) ? <button className="button secondary compact" type="button" onClick={() => setShowAllComplaints((value) => !value)}>{showAllComplaints ? "Show pregnancy complaints" : "Show all complaints"}</button> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} ×</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
 }
 
 const examinationGroups: Record<string, string[]> = {
@@ -1104,6 +1107,8 @@ function visitContext(patientType: string, pregnancyEpisode?: Record<string, unk
   if (normalized.includes("gyn")) return "gynecology";
   return "general";
 }
+
+function isPregnancyContext(context?: string) { return context === "pregnancy"; }
 
 function clinicalItemId(category: string, label: string) {
   return `${category}:${label}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

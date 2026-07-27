@@ -199,3 +199,14 @@ function parseIsoDate(value: string) {
   if (Number.isNaN(date.getTime())) throw new Error("Invalid date.");
   return date;
 }
+
+export function derivePregnancyDisplay(eddValue: string, todayValue = new Date().toISOString().slice(0, 10)) {
+  const edd = parseIsoDate(requireIsoDate(eddValue, "EDD"));
+  const today = parseIsoDate(requireIsoDate(todayValue, "current date"));
+  const daysRemaining = Math.ceil((edd.getTime() - today.getTime()) / 86400000);
+  const gestationalDays = 280 - daysRemaining;
+  const weeks = Math.max(0, Math.floor(gestationalDays / 7));
+  const days = Math.max(0, gestationalDays % 7);
+  const trimester = gestationalDays < 98 ? 1 : gestationalDays < 196 ? 2 : 3;
+  return { gestationalDays, weeks, days, display: `${weeks}w ${days}d`, trimester, daysRemaining };
+}

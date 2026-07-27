@@ -70,7 +70,7 @@ export class PatientWorkspaceLayoutService {
 
   async missingInformation(patientId: string) {
     const patient = await this.prisma.patient.findUnique({ where: { id: patientId }, select: {
-      id: true, dateOfBirth: true,
+      id: true, dateOfBirth: true, yearOfBirth: true,
       patientAllergies: { take: 1, select: { id: true } },
       encounters: { where: { status: "draft" }, orderBy: { createdAt: "desc" }, take: 1, select: { id: true, status: true, signedAt: true } },
       pregnancies: { where: { status: "active" }, orderBy: { createdAt: "desc" }, take: 1, select: { id: true, estimatedDueDate: true, antenatalVisits: { orderBy: { visitDate: "desc" }, take: 1, select: { bloodPressure: true } } } },
@@ -82,7 +82,7 @@ export class PatientWorkspaceLayoutService {
     if (!patient) throw new NotFoundException("Patient not found.");
     const findings: Array<Record<string, unknown>> = [];
     const add = (key: string, missingItem: string, context: string, reason: string, severity: string, requirement: string, actionLink: string, state = "Not recorded") => findings.push({ key, missingItem, context, reason, severity, requirement, actionLink, state, ruleSource: "PRIJ_WORKSPACE_MISSING_INFORMATION", ruleVersion: "1.0.0" });
-    if (!patient.dateOfBirth) add("DOB_ABSENT", "Date of birth", "patient", "Age-dependent context cannot be displayed without a recorded date of birth.", "medium", "recommended", `/patients/${patientId}?module=overview`);
+    if (!patient.dateOfBirth && !patient.yearOfBirth) add("DOB_ABSENT", "Date of birth", "patient", "Age-dependent context cannot be displayed without a recorded date of birth.", "medium", "recommended", `/patients/${patientId}?module=overview`);
     if (!patient.patientAllergies.length) add("ALLERGY_STATUS_UNKNOWN", "Allergy status", "patient", "No allergy status has been recorded.", "high", "required", `/patients/${patientId}?module=allergies`, "Needs doctor review");
     const encounter = patient.encounters[0];
     if (encounter && !encounter.signedAt) add("UNSIGNED_ENCOUNTER", "Encounter signature", "visit", "The active encounter remains unsigned.", "high", "required", `/patients/${patientId}?module=doctor-visit`, "Needs doctor review");

@@ -1,9 +1,79 @@
 import Link from "next/link";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { Patient, PregnancyRecord, FetusRecord, formPayload, requestPatientWorkspaceRefresh, previousPregnancyOutcomeOptions } from "./patient-components";
 
+function dateInputValue(value?: string | null) {
+    return value ? value.slice(0, 10) : "";
+}
+
+export function PregnancyContextEditor({ patient, pregnancies }: { patient: Patient; pregnancies: PregnancyRecord[] }) {
+    const active = pregnancies.find((row) => String(row.status ?? "").toLowerCase() === "active") ?? pregnancies[0];
+    const [status, setStatus] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [estimatedDueDate, setEstimatedDueDate] = useState(dateInputValue(active?.estimatedDueDate));
+    const confirmedEddChanged = active?.datingStatus === "CONFIRMED" && Boolean(estimatedDueDate) && dateInputValue(active.estimatedDueDate) !== estimatedDueDate;
+
+    useEffect(() => {
+      setEstimatedDueDate(dateInputValue(active?.estimatedDueDate));
+      setStatus("");
+    }, [active?.id, active?.estimatedDueDate]);
+
+    async function save(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!active?.id) { setStatus("Create a pregnancy episode before editing pregnancy context."); return; }
+        const raw = formPayload(event.currentTarget, { embryoAgeDays: "number", fetusCount: "number" });
+        const payload = Object.fromEntries(Object.entries(raw).filter(([, value]) => value !== ""));
+        if (confirmedEddChanged && !String(payload.eddReplacementReason ?? "").trim()) { setStatus("Enter a reason before replacing the confirmed EDD."); return; }
+        setSaving(true);
+        setStatus("");
+        const token = sessionStorage.getItem("prijClinicToken");
+        const response = await fetch(`${getApiBaseUrl()}/pregnancies/${active.id}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify(payload)
+        }).catch(() => null);
+        setSaving(false);
+        if (!response?.ok) {
+          const problem = await response?.json().catch(() => null) as { message?: string } | null;
+          setStatus(problem?.message ?? "Could not save pregnancy context. Check your role and try again.");
+          return;
+        }
+        setStatus("Pregnancy context saved. Dating changes remain clinician-reviewed.");
+        requestPatientWorkspaceRefresh();
+    }
+
+    if (!active?.id) return <CreatePregnancyEpisodeCard patient={patient} />;
+
+    return (
+      <article className="panel printable-summary" aria-label="Pregnancy Context editor">
+        <div className="section-heading"><div><p className="eyebrow">Pregnancy Context</p><h2>Edit authoritative pregnancy context</h2><p className="muted">Records clinician-entered dating context only. It does not diagnose or recommend treatment.</p></div><span className="badge">{active.datingStatus === "CONFIRMED" ? "Confirmed dating" : "Dating under review"}</span></div>
+        <form className="obgyn-form-grid grouped" onSubmit={save}>
+          <fieldset className="obgyn-fieldset"><legend>Authoritative dating</legend>
+            <label>LMP<input name="lmpDate" type="date" defaultValue={dateInputValue(active.lmpDate)} /></label>
+            <label>EDD<input name="estimatedDueDate" type="date" value={estimatedDueDate} onChange={(event) => setEstimatedDueDate(event.target.value)} /></label>
+            <label>Dating source<select name="datingSource" defaultValue={active.datingMethod ?? "LMP"}><option value="LMP">LMP</option><option value="IVF_ET">IVF / embryo transfer</option><option value="ULTRASOUND">Ultrasound</option><option value="MANUAL">Clinician-entered</option></select></label>
+            <label>Dating status<select name="datingStatus" defaultValue={active.datingStatus ?? "UNCONFIRMED"}><option value="UNCONFIRMED">Unconfirmed</option><option value="CONFIRMED">Confirmed</option></select></label>
+            <label>Cycle reliability<input name="cycleReliability" defaultValue={active.cycleReliability ?? ""} placeholder="Clinician-entered context" /></label>
+          </fieldset>
+          <fieldset className="obgyn-fieldset"><legend>IVF dating context</legend>
+            <label>Transfer date<input name="ivfTransferDate" type="date" defaultValue={dateInputValue(active.ivfTransferDate)} /></label>
+            <label>Embryo age<select name="embryoAgeDays" defaultValue={active.embryoAgeDays ?? ""}><option value="">Not recorded</option><option value="3">Day 3</option><option value="5">Day 5</option></select></label>
+            <label>Fetus count<input name="fetusCount" type="number" min="1" max="8" defaultValue={active.fetusCount ?? ""} /></label>
+          </fieldset>
+          {confirmedEddChanged ? <fieldset className="obgyn-fieldset wide"><legend>Confirmed EDD replacement</legend><label>Reason for replacement<textarea name="eddReplacementReason" required placeholder="Required audit context for changing a confirmed EDD" /></label></fieldset> : null}
+          <fieldset className="obgyn-fieldset wide"><legend>Pregnancy notes</legend><label>Clinician notes<textarea name="notes" defaultValue={active.notes ?? ""} /></label></fieldset>
+          {status ? <p className="notice wide" role="status">{status}</p> : null}
+          <button className="button" type="submit" disabled={saving}>{saving ? "Saving…" : "Save pregnancy context"}</button>
+        </form>
+        <div className="data-list"><div className="data-row-header"><strong>Dating history</strong><span className="badge">{active.datingHistory?.length ?? 0}</span></div>
+          {(active.datingHistory ?? []).map((entry, index) => <article className="data-row" key={entry.id ?? `${entry.replacedAt ?? "dating"}-${index}`}><div className="data-row-header"><strong>{dateInputValue(entry.previousEdd) || "No prior EDD"} → {dateInputValue(entry.replacementEdd)}</strong><span className="badge">{entry.replacementSource ?? "Recorded source"}</span></div><p>{entry.replacementReason || "No replacement reason recorded."}</p><p className="muted">{entry.replacedAt ? new Date(entry.replacedAt).toLocaleString() : "Replacement time unavailable"}{entry.previousDatingMethod ? ` · Previous method: ${entry.previousDatingMethod}` : ""}</p></article>)}
+          {!active.datingHistory?.length ? <p className="empty-state compact">No confirmed EDD replacements recorded.</p> : null}
+        </div>
+      </article>
+    );
+}
 export function MotherBabyWorkspace({ pregnancies, reports, orders }: { pregnancies: PregnancyRecord[]; reports: Record<string, unknown>[]; orders: Record<string, unknown>[] }) {
     const active = pregnancies.find((row) => String(row.status ?? "").toLowerCase() === "active") ?? pregnancies[0];
     const fetusCount = Math.max(1, active?.fetuses?.length ?? 2);

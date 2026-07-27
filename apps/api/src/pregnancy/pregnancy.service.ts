@@ -116,15 +116,22 @@ export class PregnancyService {
     if (dto.abortions !== undefined) data.abortions = dto.abortions;
     if (dto.lmpDate !== undefined) data.lmpDate = parseDate(dto.lmpDate, "lmpDate");
     if (dto.estimatedDueDate !== undefined) data.estimatedDueDate = parseDate(dto.estimatedDueDate, "estimatedDueDate");
-    if (dto.datingMethod !== undefined) data.datingMethod = clean(dto.datingMethod);
+    if (dto.datingMethod !== undefined || dto.datingSource !== undefined) data.datingMethod = clean(dto.datingSource ?? dto.datingMethod);
+    if (dto.datingStatus !== undefined) data.datingStatus = dto.datingStatus;
+    if (dto.cycleReliability !== undefined) data.cycleReliability = clean(dto.cycleReliability);
+    if (dto.ivfTransferDate !== undefined) data.ivfTransferDate = parseDate(dto.ivfTransferDate, "ivfTransferDate");
+    if (dto.embryoAgeDays !== undefined) data.embryoAgeDays = dto.embryoAgeDays;
+    if (dto.fetusCount !== undefined) data.fetusCount = dto.fetusCount;
+    const replacingConfirmedEdd = existing.datingStatus === "CONFIRMED" && dto.estimatedDueDate !== undefined && existing.estimatedDueDate?.toISOString().slice(0, 10) !== dto.estimatedDueDate;
+    if (replacingConfirmedEdd && !dto.eddReplacementReason?.trim()) throw new BadRequestException("A reason is required before replacing a confirmed EDD.");
+    if (dto.datingStatus === "CONFIRMED") { data.datingConfirmedAt = new Date(); data.datingConfirmedByUserId = user.id; }
     if (dto.riskLevel !== undefined) data.riskLevel = clean(dto.riskLevel);
     if (dto.riskFlags !== undefined) data.riskFlags = clean(dto.riskFlags);
     if (dto.notes !== undefined) data.notes = clean(dto.notes);
 
-    const pregnancy = await this.prisma.pregnancy.update({
-      where: { id },
-      data,
-      include: pregnancyIncludes
+    const pregnancy = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      if (replacingConfirmedEdd && existing.estimatedDueDate && dto.estimatedDueDate) await tx.pregnancyDatingHistory.create({ data: { pregnancyId: id, previousEdd: existing.estimatedDueDate, previousDatingMethod: existing.datingMethod, replacementEdd: new Date(dto.estimatedDueDate), replacementSource: dto.datingSource ?? dto.datingMethod ?? "MANUAL", replacementReason: dto.eddReplacementReason!.trim(), actorUserId: user.id } });
+      return tx.pregnancy.update({ where: { id }, data, include: pregnancyIncludes });
     });
 
     await this.audit.record({
@@ -696,7 +703,8 @@ const pregnancyIncludes = {
   fetuses: true,
   previousPregnancies: true,
   antenatalVisits: true,
-  obUltrasounds: true
+  obUltrasounds: true,
+  datingHistory: { orderBy: { replacedAt: "desc" as const } }
 } satisfies Prisma.PregnancyInclude;
 
 const previousPregnancyIncludes = {

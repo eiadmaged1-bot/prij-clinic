@@ -476,6 +476,33 @@ export class UpdatePatientDto {
   email?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  secondaryPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(8)
+  bloodGroup?: string;
+
+  @IsOptional()
+  @IsIn(["NOT_ASSESSED", "NO_KNOWN_ALLERGIES", "KNOWN_ALLERGIES"])
+  allergyStatus?: string;
+
+  @IsOptional()
+  @IsDateString()
+  contextEffectiveAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  contextChangeReason?: string;
+  @IsOptional()
   @IsEnum(PatientStatus)
   status?: PatientStatus;
 

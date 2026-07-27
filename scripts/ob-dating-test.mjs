@@ -6,15 +6,15 @@ async function main() {
   const owner = await login("eyad", process.env.DEMO_ADMIN_PASSWORD || "eyad");
   const doctor = owner;
 
-  const obPatient = await api("POST", "/patients", fakePatient("OB", "OB"), owner.token);
-  const pregnancy = await api("POST", "/pregnancies", { patientId: obPatient.id, status: "active", gravida: 1, para: 0, notes: "Fake OB dating test pregnancy." }, doctor.token);
+  const obPatient = await api("POST", "/patients", fakePatient("OB", "OB"), owner.session);
+  const pregnancy = await api("POST", "/pregnancies", { patientId: obPatient.id, status: "active", gravida: 1, para: 0, notes: "Fake OB dating test pregnancy." }, doctor.session);
 
   const lmp = await api("POST", "/calculators/ob/dating/calculate", {
     patientId: obPatient.id,
     pregnancyEpisodeId: pregnancy.id,
     datingSource: "LMP",
     lmpDate: "2026-01-01"
-  }, doctor.token);
+  }, doctor.session);
   assert("OB LMP calculates EDD", lmp.calculatedEdd?.slice(0, 10) === "2026-10-08");
 
   const cycle = await api("POST", "/calculators/ob/dating/calculate", {
@@ -23,7 +23,7 @@ async function main() {
     datingSource: "LMP_CYCLE_ADJUSTED",
     lmpDate: "2026-01-01",
     cycleLengthDays: 35
-  }, doctor.token);
+  }, doctor.session);
   assert("LMP cycle length adjusts EDD", cycle.calculatedEdd?.slice(0, 10) === "2026-10-15");
 
   const known = await api("POST", "/calculators/ob/dating/calculate", {
@@ -31,7 +31,7 @@ async function main() {
     pregnancyEpisodeId: pregnancy.id,
     datingSource: "KNOWN_EDD",
     knownEdd: "2026-10-08"
-  }, doctor.token);
+  }, doctor.session);
   assert("known EDD saves dating candidate", known.confidenceStatus === "confirmed");
 
   const ga = await api("POST", "/calculators/ob/dating/calculate", {
@@ -41,7 +41,7 @@ async function main() {
     assessmentDate: "2026-06-01",
     gaWeeks: 10,
     gaDays: 0
-  }, doctor.token);
+  }, doctor.session);
   assert("GA on date calculates EDD", Boolean(ga.calculatedEdd));
 
   const us = await api("POST", "/calculators/ob/dating/calculate", {
@@ -51,7 +51,7 @@ async function main() {
     scanDate: "2026-06-01",
     gaWeeks: 10,
     gaDays: 0
-  }, doctor.token);
+  }, doctor.session);
   assert("ultrasound GA on date calculates EDD", Boolean(us.calculatedEdd));
 
   const ivfDay3 = await api("POST", "/calculators/ob/dating/calculate", {
@@ -60,7 +60,7 @@ async function main() {
     datingSource: "IVF",
     embryoTransferDate: "2026-01-01",
     embryoAgeDays: 3
-  }, doctor.token);
+  }, doctor.session);
   assert("IVF day 3 transfer adds 263 days", ivfDay3.calculatedEdd?.slice(0, 10) === "2026-09-21");
 
   const ivfDay5 = await api("POST", "/calculators/ob/dating/calculate", {
@@ -69,7 +69,7 @@ async function main() {
     datingSource: "IVF",
     embryoTransferDate: "2026-01-01",
     embryoAgeDays: 5
-  }, doctor.token);
+  }, doctor.session);
   assert("IVF day 5 transfer adds 261 days", ivfDay5.calculatedEdd?.slice(0, 10) === "2026-09-19");
 
   const ivfDay6 = await api("POST", "/calculators/ob/dating/calculate", {
@@ -78,7 +78,7 @@ async function main() {
     datingSource: "IVF",
     embryoTransferDate: "2026-01-01",
     embryoAgeDays: 6
-  }, doctor.token);
+  }, doctor.session);
   assert("IVF day 6 transfer adds 260 days", ivfDay6.calculatedEdd?.slice(0, 10) === "2026-09-18");
 
   const raw = await api("POST", "/calculators/ob/dating/calculate", {
@@ -86,29 +86,29 @@ async function main() {
     pregnancyEpisodeId: pregnancy.id,
     datingSource: "ULTRASOUND_BIOMETRY",
     measurements: { crlMm: 55 }
-  }, doctor.token);
+  }, doctor.session);
   assert("raw biometry unverified does not calculate", raw.clinicalResultGenerated !== true && raw.message);
 
-  const best = await api("POST", `/calculators/ob/dating/${lmp.id}/set-best`, { reason: "Fake test review." }, doctor.token);
+  const best = await api("POST", `/calculators/ob/dating/${lmp.id}/set-best`, { reason: "Fake test review." }, doctor.session);
   assert("doctor can set best EDD", best.isBestObstetricEstimate === true);
 
-  const locked = await api("POST", `/calculators/ob/dating/${lmp.id}/lock`, { reason: "Fake test lock." }, doctor.token);
+  const locked = await api("POST", `/calculators/ob/dating/${lmp.id}/lock`, { reason: "Fake test lock." }, doctor.session);
   assert("doctor can lock EDD", locked.isLocked === true);
 
-  const missingReason = await api("POST", `/calculators/ob/dating/${lmp.id}/change-locked`, {}, doctor.token, [400]);
+  const missingReason = await api("POST", `/calculators/ob/dating/${lmp.id}/change-locked`, {}, doctor.session, [400]);
   assert("locked EDD change requires reason", missingReason.status === 400);
 
-  const changed = await api("POST", `/calculators/ob/dating/${lmp.id}/change-locked`, { reason: "Fake test locked EDD change." }, doctor.token);
+  const changed = await api("POST", `/calculators/ob/dating/${lmp.id}/change-locked`, { reason: "Fake test locked EDD change." }, doctor.session);
   assert("locked EDD change audited workflow creates replacement", changed.isBestObstetricEstimate === true && changed.isLocked === true);
 
   const denied = await api("POST", `/calculators/ob/dating/${known.id}/set-best`, { reason: "No clinical role." }, undefined, [401, 403]);
   assert("unauthenticated user cannot modify OB dating", [401, 403].includes(denied.status));
 
-  const current = await api("GET", `/calculators/ob/patient/${obPatient.id}/current`, null, doctor.token);
+  const current = await api("GET", `/calculators/ob/patient/${obPatient.id}/current`, null, doctor.session);
   assert("OB patient current dating returns card data", Boolean(current.dating?.calculatedEdd));
 
-  const gynPatient = await api("POST", "/patients", fakePatient("GYN", "GYN"), owner.token);
-  const gynCurrent = await api("GET", `/calculators/ob/patient/${gynPatient.id}/current`, null, doctor.token);
+  const gynPatient = await api("POST", "/patients", fakePatient("GYN", "GYN"), owner.session);
+  const gynCurrent = await api("GET", `/calculators/ob/patient/${gynPatient.id}/current`, null, doctor.session);
   assert("GYN patient without pregnancy has no live OB dating", gynCurrent.dating === null);
 
   summary();
@@ -144,12 +144,15 @@ function fakePatient(prefix, patientType) {
   };
 }
 
-async function api(method, path, body, token, expected = [200, 201]) {
+async function api(method, path, body, session, expected = [200, 201]) {
+  const csrf = /(?:^|;\s*)csrf-token=([^;]+)/.exec(session ?? "")?.[1];
   const response = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
+      accept: "application/json",
       "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {})
+      ...(session ? { cookie: session } : {}),
+      ...(csrf ? { "x-csrf-token": decodeURIComponent(csrf) } : {})
     },
     body: body ? JSON.stringify(body) : undefined
   });
@@ -157,7 +160,10 @@ async function api(method, path, body, token, expected = [200, 201]) {
   if (!expected.includes(response.status)) {
     throw new Error(`${method} ${path} expected ${expected.join("/")} got ${response.status}: ${JSON.stringify(data)}`);
   }
-  return { status: response.status, ...data };
+  const responseSession = (response.headers.getSetCookie?.() ?? [])
+    .map((value) => value.split(";", 1)[0])
+    .join("; ");
+  return { status: response.status, ...data, ...(responseSession ? { session: responseSession } : {}) };
 }
 
 function assert(name, condition) {
