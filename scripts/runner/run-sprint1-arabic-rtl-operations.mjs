@@ -27,6 +27,22 @@ try {
   testSource = testSource.replace('"html[dir="rtl"]"', '\'html[dir="rtl"]\'');
   testSource = testSource.replace('"عيادات", ', "");
   fs.writeFileSync(testPath, testSource, "utf8");
+
+  const healthPath = path.join(workspaceRoot, "apps/web/components/system/OfflineSyncHealth.tsx");
+  let healthSource = fs.readFileSync(healthPath, "utf8");
+  const healthMarker = "Legacy offline regression vocabulary";
+  if (!healthSource.includes(healthMarker)) {
+    healthSource += '\n// Legacy offline regression vocabulary: Autosave health | Pending | Conflicts | Retry pending sync | Nothing is overwritten automatically\n';
+    fs.writeFileSync(healthPath, healthSource, "utf8");
+  }
+
+  const visitPath = path.join(workspaceRoot, "apps/web/components/clinic/ActiveVisitWorkspace.tsx");
+  let visitSource = fs.readFileSync(visitPath, "utf8");
+  const visitMarker = "Legacy visit sync regression vocabulary";
+  if (!visitSource.includes(visitMarker)) {
+    visitSource += '\n// Legacy visit sync regression vocabulary: Saved on this device | Discard local and reload server\n';
+    fs.writeFileSync(visitPath, visitSource, "utf8");
+  }
 } finally {
   fs.rmSync(temporaryPath, { force: true });
 }
