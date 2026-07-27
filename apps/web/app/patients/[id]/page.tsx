@@ -451,7 +451,7 @@ export default function PatientFilePage() {
 
           {activeTab === "overview" ? <PatientRecentActivity timelineItems={timelineItems} onViewTimeline={() => setActiveTab("timeline")} /> : null}
           <details className="patient-record-completeness">
-            <summary><span>Visit readiness — review items</span><span className="badge">Open</span></summary>
+            <summary><span>Visit readiness â€” review items</span><span className="badge">Open</span></summary>
             <div className="patient-secondary-review-grid">
               <MissingInformationCenter patientId={patientId} canUpdate={permissions.includes("patient.update")} />
               <ImportantPatientBanner patient={patient} related={related} />

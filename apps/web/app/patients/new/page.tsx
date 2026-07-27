@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../../mvp-page";
 import { useSession } from "../../session";
-import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 import { VisitTypeSelector } from "../../../components/clinic/VisitTypeSelector";
 import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
@@ -59,7 +58,6 @@ function NewPatientContent() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [createdPatientId, setCreatedPatientId] = useState("");
-  const [queueRetryPending, setQueueRetryPending] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visitType, setVisitType] = useState<VisitTypeValue | "">("");
   const [existingPatients, setExistingPatients] = useState<ExistingPatient[]>([]);
@@ -96,23 +94,6 @@ function NewPatientContent() {
     return { kind: "failed" as const };
   }
 
-  async function retryQueue() {
-    if (!createdPatientId || isSubmitting) return;
-    setIsSubmitting(true);
-    setError("");
-    const result = await addCreatedPatientToQueue(createdPatientId);
-    if (result.kind === "queued") {
-      setQueueRetryPending(false);
-      setSuccess(`${copy.addedToQueue} ${result.queueNumber ?? "—"}.`);
-    } else if (result.kind === "already") {
-      setQueueRetryPending(false);
-      setSuccess(copy.patientAlreadyQueued);
-    } else {
-      setError(result.kind === "permission" ? copy.queuePermissionDenied : result.kind === "network" ? copy.queueUnavailable : copy.queueRetryFailed);
-    }
-    setIsSubmitting(false);
-  }
-
   useEffect(() => {
     const query = form.fullName.trim() || form.phone.trim();
     if (query.length < 2) { setExistingPatients([]); return; }
@@ -144,7 +125,6 @@ function NewPatientContent() {
       const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "Patient";
-      const formData = new FormData(event.currentTarget);
       const saveIntent: string = "file";
       if (!firstName) throw new Error(copy.fullNameRequired);
       if (saveIntent === "queue" && !visitType) throw new Error(copy.visitTypeRequired);
@@ -223,7 +203,6 @@ function NewPatientContent() {
       } else if (saveIntent === "queue" && queueResult?.kind === "already") {
         setSuccess(copy.patientAlreadyQueued);
       } else if (saveIntent === "queue") {
-        setQueueRetryPending(true);
         setSuccess(copy.patientCreatedQueueFailed);
         setError(queueResult?.kind === "permission" ? copy.queuePermissionDenied : queueResult?.kind === "network" ? copy.queueUnavailable : copy.queueRetryFailed);
       } else {
