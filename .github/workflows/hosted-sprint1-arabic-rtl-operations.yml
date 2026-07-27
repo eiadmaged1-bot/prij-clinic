@@ -1,0 +1,203 @@
+name: Hosted Sprint 1 Arabic RTL Operations
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_ARABIC_RTL_OPERATIONS_TRIGGER.md
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  TARGET_BRANCH: work/arabic-rtl-operations-v1
+  CONTROLS_BRANCH: security/rbac-scope-enforcement
+
+concurrency:
+  group: hosted-sprint1-arabic-rtl-operations-v1
+  cancel-in-progress: false
+
+jobs:
+  implement-verify:
+    name: Implement and verify Arabic and RTL critical operations
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout deterministic controls
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CONTROLS_BRANCH }}
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout isolated application branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TARGET_BRANCH }}
+          fetch-depth: 0
+          path: workspace
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Apply Arabic and RTL operations package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check ../controls/scripts/runner/apply-sprint1-arabic-rtl-operations.mjs
+          node ../controls/scripts/runner/apply-sprint1-arabic-rtl-operations.mjs "$PWD"
+          git diff --check
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Verify Arabic and RTL operations contract
+        working-directory: workspace
+        run: node scripts/sprint1-arabic-rtl-operations-test.mjs
+
+      - name: Verify offline sync health
+        working-directory: workspace
+        run: node scripts/sprint1-offline-sync-health-test.mjs
+
+      - name: Verify patient safety core
+        working-directory: workspace
+        run: node scripts/sprint1-patient-safety-core-test.mjs
+
+      - name: Verify receptionist and queue core
+        working-directory: workspace
+        run: |
+          node scripts/sprint1-reception-queue-core-test.mjs
+          node scripts/v1444-reception-shell-test.mjs
+          node scripts/v148-reception-patient-queue-test.mjs
+          node scripts/v149-patient-search-queue-recovery-test.mjs
+
+      - name: Verify Features 46 through 49
+        working-directory: workspace
+        run: |
+          node scripts/feature-46-refractory-complaint-test.mjs
+          node scripts/qa-calendar-history-contract-test.mjs
+          node scripts/feature-48-compact-medication-cards-test.mjs
+          node scripts/feature-49-structured-arabic-prescription-test.mjs
+
+      - name: Verify medication regressions
+        working-directory: workspace
+        run: |
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+
+      - name: Typecheck
+        working-directory: workspace
+        run: npm run typecheck
+
+      - name: Production build
+        working-directory: workspace
+        run: npm run build
+
+      - name: Verify exact application scope
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(apps/web/i18n/operations-copy\.ts|apps/web/i18n/useI18n\.tsx|apps/web/i18n/ar\.ts|apps/web/app/layout\.tsx|apps/web/components/system/OfflineSyncHealth\.tsx|apps/web/components/clinic/ActiveVisitWorkspace\.tsx|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/sprint1-arabic-rtl-operations-test\.mjs)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope application changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Write verification evidence
+        working-directory: workspace
+        shell: bash
+        run: |
+          cat > docs/verification/SPRINT1_ARABIC_RTL_OPERATIONS_RESULT.md <<'EOF'
+          # Sprint 1 Arabic and RTL Critical Operations
+
+          Status: PASS
+
+          ## Language foundation
+
+          - Arabic and English dictionaries have matching keys.
+          - The stored language is applied to `<html lang>` and `<html dir>` before the app paints.
+          - Language changes synchronize across tabs and update the document immediately.
+          - The Arabic clinic name is visible in Arabic mode.
+          - Critical bilingual sources are free from mojibake.
+
+          ## Critical operations translated
+
+          - Offline/autosave health states and recovery actions are bilingual.
+          - Active-visit tabs, persistent actions, synchronization recovery, signing confirmation, voiding confirmation, core encounter fields, medication actions, ultrasound labels, and follow-up actions are bilingual.
+          - Doctor handoff, queue selection, current patient, waiting patients, and safe-queue rules are bilingual.
+          - Reception Home remains bilingual and isolated.
+
+          ## RTL behavior
+
+          - Arabic mode uses document-level RTL.
+          - Top bars, cards, forms, dialogs, action rows, active-visit tabs, and sync-health popovers use logical alignment.
+          - MRNs, visit IDs, queue numbers, dates, telephone numbers, and numeric inputs remain isolated left-to-right.
+          - Desktop and mobile layouts preserve usable actions in RTL.
+
+          ## Verification
+
+          - Arabic/RTL operations contract: PASS
+          - Offline Sync Health regression: PASS
+          - Patient Safety Core regression: PASS
+          - Reception and Queue Core regressions: PASS
+          - Features 46–49 regressions: PASS
+          - Medication regressions: PASS
+          - Typecheck: PASS
+          - Production build: PASS
+          - Exact scope and git diff check: PASS
+
+          ## Data safety
+
+          - Database migration: NOT RUN
+          - Database seed: NOT RUN
+          - Database reset/delete/truncate: NOT RUN
+          - Production data mutation: NONE
+          - Secrets changed or exposed: NONE
+          EOF
+
+      - name: Commit verified Arabic and RTL package
+        working-directory: workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps/web/i18n/operations-copy.ts \
+            apps/web/i18n/useI18n.tsx \
+            apps/web/i18n/ar.ts \
+            apps/web/app/layout.tsx \
+            apps/web/components/system/OfflineSyncHealth.tsx \
+            apps/web/components/clinic/ActiveVisitWorkspace.tsx \
+            apps/web/app/clinic-operations-page.tsx \
+            apps/web/app/globals.css \
+            scripts/sprint1-arabic-rtl-operations-test.mjs \
+            docs/verification/SPRINT1_ARABIC_RTL_OPERATIONS_RESULT.md
+          git diff --cached --check
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/web/i18n/operations-copy\.ts|apps/web/i18n/useI18n\.tsx|apps/web/i18n/ar\.ts|apps/web/app/layout\.tsx|apps/web/components/system/OfflineSyncHealth\.tsx|apps/web/components/clinic/ActiveVisitWorkspace\.tsx|apps/web/app/clinic-operations-page\.tsx|apps/web/app/globals\.css|scripts/sprint1-arabic-rtl-operations-test\.mjs|docs/verification/SPRINT1_ARABIC_RTL_OPERATIONS_RESULT\.md)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git commit -m 'Complete Sprint 1 Arabic and RTL critical operations'
+          git push origin HEAD:${TARGET_BRANCH}
