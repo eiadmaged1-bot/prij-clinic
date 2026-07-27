@@ -16,6 +16,10 @@ source = source.replace(
 );
 source = source.replace("'`Follow-up hints ${orders.filter'", "'Follow-up hints {orders.filter'");
 source = source.replace("'`${ui.followUpHints} ${orders.filter'", "'{ui.followUpHints} {orders.filter'");
+source = source.replace(
+  '  const locale = language === "ar" ? "ar-EG" : "en-US";',
+  '  const locale: "en-US" | "ar-EG" = language === "ar" ? "ar-EG" : "en-US";'
+);
 const temporaryPath = path.join(os.tmpdir(), `prij-arabic-rtl-apply-${process.pid}.mjs`);
 fs.writeFileSync(temporaryPath, source, "utf8");
 
