@@ -7,7 +7,7 @@ export * from "./complaint-lifecycle";
 export * from "./pregnancy-dating";
 
 export type PatientWorkspaceSummary = {
-  patient: { id: string; displayName: string; medicalRecordNumber: string; dateOfBirth: string | null; ageSummary: string | null; contactSummary: string | null; patientType: string };
+  patient: { id: string; displayName: string; medicalRecordNumber: string; dateOfBirth: string | null; yearOfBirth: number | null; ageSummary: string | null; contactSummary: string | null; patientType: string };
   activeClinicalPhase: { phaseType: string; title: string } | null;
   todayAppointment: { id: string; startAt: string; status: string; appointmentType: string | null } | null;
   currentQueueTicket: { id: string; queueNumber: number; status: string; priority: string; visitType: string } | null;

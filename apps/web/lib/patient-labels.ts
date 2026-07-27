@@ -17,6 +17,15 @@ export const patientTypeOptions: Array<{ value: CanonicalPatientType; label: str
   { value: "OTHER", label: "Other", labelAr: "أخرى" }
 ];
 
+export type PatientCreationContext = "OBSTETRIC" | "GYNECOLOGY" | "INFERTILITY" | "OTHER";
+
+export const patientCreationContextOptions: Array<{ value: PatientCreationContext; label: string; labelAr: string }> = [
+  { value: "OBSTETRIC", label: "Pregnancy / Obstetric", labelAr: "الحمل / التوليد" },
+  { value: "GYNECOLOGY", label: "Gynecology", labelAr: "أمراض النساء" },
+  { value: "INFERTILITY", label: "Fertility", labelAr: "الخصوبة" },
+  { value: "OTHER", label: "Undetermined", labelAr: "غير محدد بعد" }
+];
+
 const legacyPatientTypeMap: Record<string, CanonicalPatientType> = {
   OB: "OBSTETRIC",
   PREGNANCY: "OBSTETRIC",
@@ -53,9 +62,11 @@ export function phaseTypeLabel(value?: string | null) {
   return labels[String(value ?? "")] ?? "No active phase";
 }
 
-export function ageLabel(dateOfBirth?: string | null) {
-  if (!dateOfBirth) return "Age not set";
-  const year = Number(dateOfBirth.slice(0, 4));
-  if (!year) return "Age not set";
-  return `${new Date().getFullYear() - year} years`;
+export function ageLabel(dateOfBirth?: string | null, yearOfBirth?: number | string | null) {
+  const dateYear = dateOfBirth ? Number(dateOfBirth.slice(0, 4)) : 0;
+  const fallbackYear = Number(yearOfBirth ?? 0);
+  const year = dateYear || fallbackYear;
+  const currentYear = new Date().getFullYear();
+  if (!Number.isInteger(year) || year < 1900 || year > currentYear) return "Age not set";
+  return `${currentYear - year} years`;
 }
