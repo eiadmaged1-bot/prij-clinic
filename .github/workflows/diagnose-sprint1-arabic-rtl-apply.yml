@@ -1,4 +1,4 @@
-name: Diagnose Sprint 1 Arabic RTL Contract
+name: Diagnose Sprint 1 Arabic RTL Regressions
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: diagnose-sprint1-arabic-rtl-contract
+  group: diagnose-sprint1-arabic-rtl-regressions
   cancel-in-progress: true
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 1
           path: workspace
 
-      - name: Capture prepared apply and focused contract output
+      - name: Capture prepared apply and focused regression output
         id: diagnose
         working-directory: workspace
         shell: bash
@@ -53,20 +53,27 @@ jobs:
             if [[ $apply_status -eq 0 ]]; then
               node scripts/sprint1-arabic-rtl-operations-test.mjs
               contract_status=$?
-              echo "CONTRACT_EXIT=$contract_status"
+              echo "ARABIC_CONTRACT_EXIT=$contract_status"
             else
               contract_status=$apply_status
             fi
-          } > arabic-rtl-contract-diagnostic.log 2>&1
-          cat arabic-rtl-contract-diagnostic.log
-          echo "exit_code=${contract_status:-1}" >> "$GITHUB_OUTPUT"
+            if [[ $contract_status -eq 0 ]]; then
+              node scripts/sprint1-offline-sync-health-test.mjs
+              offline_status=$?
+              echo "OFFLINE_REGRESSION_EXIT=$offline_status"
+            else
+              offline_status=$contract_status
+            fi
+          } > arabic-rtl-regression-diagnostic.log 2>&1
+          cat arabic-rtl-regression-diagnostic.log
+          echo "exit_code=${offline_status:-1}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: arabic-rtl-contract-diagnostic
-          path: workspace/arabic-rtl-contract-diagnostic.log
+          name: arabic-rtl-regression-diagnostic
+          path: workspace/arabic-rtl-regression-diagnostic.log
           if-no-files-found: error
           retention-days: 3
 
