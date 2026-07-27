@@ -63,10 +63,16 @@ export function phaseTypeLabel(value?: string | null) {
 }
 
 export function ageLabel(dateOfBirth?: string | null, yearOfBirth?: number | string | null) {
-  const dateYear = dateOfBirth ? Number(dateOfBirth.slice(0, 4)) : 0;
-  const fallbackYear = Number(yearOfBirth ?? 0);
-  const year = dateYear || fallbackYear;
-  const currentYear = new Date().getFullYear();
-  if (!Number.isInteger(year) || year < 1900 || year > currentYear) return "Age not set";
-  return `${currentYear - year} years`;
+  const now = new Date();
+  if (dateOfBirth) {
+    const dob = new Date(`${dateOfBirth.slice(0, 10)}T00:00:00.000Z`);
+    if (!Number.isNaN(dob.getTime())) {
+      let age = now.getUTCFullYear() - dob.getUTCFullYear();
+      if (now.getUTCMonth() < dob.getUTCMonth() || (now.getUTCMonth() === dob.getUTCMonth() && now.getUTCDate() < dob.getUTCDate())) age -= 1;
+      return `${Math.max(age, 0)} years`;
+    }
+  }
+  const year = Number(yearOfBirth ?? 0);
+  if (!Number.isInteger(year) || year < 1900 || year > now.getUTCFullYear()) return "Age not set";
+  return `${now.getUTCFullYear() - year} years`;
 }

@@ -145,7 +145,7 @@ function NewPatientContent() {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "Patient";
       const formData = new FormData(event.currentTarget);
-      const saveIntent = String(formData.get("saveIntent") ?? (isDoctor ? "open" : "queue"));
+      const saveIntent: string = "file";
       if (!firstName) throw new Error(copy.fullNameRequired);
       if (saveIntent === "queue" && !visitType) throw new Error(copy.visitTypeRequired);
       if (!canCreatePatient) throw new Error("Patient registration is handled by reception.");
@@ -175,7 +175,7 @@ function NewPatientContent() {
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
       );
-      const creationEndpoint = saveIntent === "open" ? "/patients/create-and-start-visit" : "/patients";
+      const creationEndpoint = "/patients";
       const response = await fetch(`${getApiBaseUrl()}${creationEndpoint}`, {
         method: "POST",
         credentials: "include",
@@ -229,7 +229,7 @@ function NewPatientContent() {
       } else {
         setSuccess(copy.patientFileSaved);
         if (saveIntent === "open") {
-          router.push(patient.visitId ? `/patients/${patient.id}/visits/${patient.visitId}/encounter` : `/patients/${patient.id}`);
+          router.push(`/patients/${patient.id}`);
         }
       }
     } catch (submitError) {
@@ -331,13 +331,7 @@ function NewPatientContent() {
           {success ? <p className="success-message wide">{success}</p> : null}
 
           <div className="form-actions wide">
-            {!isDoctor && canManageQueue ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey || !queueIdempotencyKey} name="saveIntent" value="queue" type="submit">
-              <ThreeDMedicalIcon name="patients" size="sm" />
-              {isSubmitting ? copy.saving : copy.saveAndAddToQueue}
-            </button> : null}
-            {isDoctor ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="open" type="submit">{isSubmitting ? copy.saving : copy.createAndStartVisit}</button> : null}
-            <button className="button secondary" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="file" type="submit">{isDoctor ? "Create file only" : copy.saveFileOnly}</button>
-            {queueRetryPending ? <button className="button" disabled={isSubmitting || !queueIdempotencyKey} type="button" onClick={() => void retryQueue()}>{copy.retryAddToQueue}</button> : null}
+            <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="file" type="submit">{isSubmitting ? copy.saving : "Create patient file"}</button>
             {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>{isDoctor ? "Open clinical file" : copy.openReceptionProfile}</Link> : null}
           </div>
         </form> : null}

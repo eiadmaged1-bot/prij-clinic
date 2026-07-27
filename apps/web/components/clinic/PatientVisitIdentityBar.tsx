@@ -10,6 +10,7 @@ export type PatientVisitIdentity = {
   lastName?: string | null;
   medicalRecordNumber?: string | null;
   dateOfBirth?: string | null;
+  yearOfBirth?: number | null;
   patientType?: string | null;
   pregnancyStatus?: string | null;
 };
@@ -45,7 +46,7 @@ export function PatientVisitIdentityBar({
   }
 
   const displayName = patient.name || `${patient.firstName ?? ""} ${patient.lastName ?? ""}`.trim() || "Patient";
-  const age = patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)}y` : "YOB not recorded";
+  const age = patient.dateOfBirth ? `${calculateAge(patient.dateOfBirth)}y` : patient.yearOfBirth ? `${Math.max(new Date().getFullYear() - patient.yearOfBirth, 0)}y` : "Age not recorded";
   const initials = displayName
     .split(" ")
     .map((part) => part[0])
@@ -82,9 +83,9 @@ function calculateAge(dateOfBirth: string) {
 }
 
 function patientTypeLabel(value?: string | null) {
-  if (value === "OB") return "Obstetric / Pregnancy";
-  if (value === "GYN") return "Gynecology";
-  if (value === "INFERTILITY") return "Infertility";
-  if (value === "WOMEN_HEALTH") return "Women's Health";
-  return value || "Unclassified";
+  const normalized = String(value ?? "").toUpperCase();
+  if (["OB", "OBSTETRIC", "HIGH_RISK_OBSTETRIC", "POSTPARTUM"].includes(normalized)) return "Pregnancy / Obstetric";
+  if (["GYN", "GYNECOLOGY", "WOMEN_HEALTH", "PREVENTIVE_WELL_WOMAN"].includes(normalized)) return "Gynecology";
+  if (["INFERTILITY", "FERTILITY"].includes(normalized)) return "Fertility";
+  return "Undetermined";
 }

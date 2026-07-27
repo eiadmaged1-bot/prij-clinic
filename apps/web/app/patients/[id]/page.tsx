@@ -22,6 +22,7 @@ import type { WorkspacePanelPlacement } from "../../../components/patients/Patie
 import { PatientPanelErrorBoundary } from "../../../components/patients/PatientPanelErrorBoundary";
 import { PatientSmartIdentityBar } from "../../../components/patients/PatientSmartIdentityBar";
 import { MissingInformationCenter } from "../../../components/patients/MissingInformationCenter";
+import { PatientDetailsDrawer } from "../../../components/patients/PatientDetailsDrawer";
 
 const legacyTabDefinitions: TabConfig[] = [
   { key: "overview", label: "Overview", icon: "patients", empty: "Start with the patient summary and next best action." },
@@ -69,13 +70,10 @@ const relatedLoaders: TabConfig[] = [
 const patientWorkspaceTabs = new Set(["overview", "timeline", "visits", "prescriptions", "investigations", "pregnancy", "gynecology", "infertility", "documents", "billing", "consents"]);
 const approvedEncounterTabs = [
   ["overview", "Overview"],
-  ["history", "History"],
   ["doctor-visit", "Current Visit"],
-  ["ultrasound", "Ultrasound"],
-  ["investigations", "Labs"],
-  ["medications", "Medications"],
-  ["case-boards", "Care Plan"],
-  ["follow-up-hints", "Follow-up"]
+  ["history", "Clinical Record"],
+  ["investigations", "Results & Imaging"],
+  ["case-boards", "Treatment & Follow-up"]
 ] as const;
 
 void legacyTabDefinitions;
@@ -107,6 +105,7 @@ export default function PatientFilePage() {
   const [errorKind, setErrorKind] = useState<"none" | "network" | "timeout" | "session">("none");
   const [actionStatus, setActionStatus] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [draftFields, setDraftFields] = useState<Record<string, string>>({});
   const [workspacePanels, setWorkspacePanels] = useState<WorkspacePanelPlacement[]>([]);
@@ -240,7 +239,8 @@ export default function PatientFilePage() {
           results: Array.from({ length: summary.pendingResultCount ?? 0 }, () => ({ reviewStatus: "pending_review" })),
           tasks: summary.pendingFollowUp ? [summary.pendingFollowUp as unknown as Record<string, unknown>] : [],
           billing: summary.balanceState ? [summary.balanceState as unknown as Record<string, unknown>] : [],
-          complaints: (summary.complaints ?? []) as unknown as Record<string, unknown>[]
+          complaints: (summary.complaints ?? []) as unknown as Record<string, unknown>[],
+          pregnancy: summary.activePregnancy ? [summary.activePregnancy as unknown as Record<string, unknown>] : []
         });
       })
       .catch((loadError) => {
@@ -375,6 +375,7 @@ export default function PatientFilePage() {
     return (
       <AppShell>
         {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
+          <PatientDetailsDrawer patientId={patientId} open={detailsOpen} onClose={() => setDetailsOpen(false)} onSaved={() => setRefreshVersion((value) => value + 1)} />
         <ReceptionPatientProfile
           patient={patient}
           ageLabel={ageLabel}
@@ -404,13 +405,15 @@ export default function PatientFilePage() {
       {patient ? (
         <>
           {qrOpen ? <PatientQrModal patient={patient} onClose={() => setQrOpen(false)} /> : null}
+          <PatientDetailsDrawer patientId={patientId} open={detailsOpen} onClose={() => setDetailsOpen(false)} onSaved={() => setRefreshVersion((value) => value + 1)} />
           {/* Approved Patient Workspace Shell. Do not change navigation, grid areas, card order, or responsive sequence without explicit product approval. */}
           <div className="approved-patient-profile-shell">
           <Link className="patient-back-link" href="/patients">← Back to patient search</Link>
+          <button className="button secondary compact patient-details-edit" type="button" aria-label="Edit patient details" onClick={() => setDetailsOpen(true)}>Edit patient details</button>
           <PatientSmartIdentityBar patient={patient} currentPhase={currentPhase} related={related} infertility={infertilityWorkspace} workspaceContext={workspaceContext!} autosaveStatus={autosaveStatus} />
           <section className="patient-active-record-strip patient-actionbar" data-testid={isPreviewMode ? "doctor-queue-preview-mode" : undefined}>
-            <div><strong>Single active record · {patient.firstName} {patient.lastName} · {patient.medicalRecordNumber}</strong><span>History, visits, results and plans use the same patient identity.</span></div>
-            <div className="patient-actionbar-buttons"><button className="button secondary compact" type="button" onClick={() => setActiveTab("history")}>History taking</button><ActiveVisitLauncher className="button compact" patientId={patientId}><><ThreeDMedicalIcon name="encounter" size="sm" />Start / continue visit</></ActiveVisitLauncher></div>
+            <div><strong>Connected patient workspace</strong><span>One patient identity across visits, results, and treatment.</span></div>
+            <div className="patient-actionbar-buttons"><button className="button secondary compact" type="button" onClick={() => setDetailsOpen(true)}>Edit patient details</button><ActiveVisitLauncher className="button compact" patientId={patientId}><><ThreeDMedicalIcon name="encounter" size="sm" />Start / continue visit</></ActiveVisitLauncher></div>
           </section>
 
           <section className="patient-tabs simple hybrid-workspace-tabs" aria-label="Patient file sections">
@@ -448,7 +451,7 @@ export default function PatientFilePage() {
 
           {activeTab === "overview" ? <PatientRecentActivity timelineItems={timelineItems} onViewTimeline={() => setActiveTab("timeline")} /> : null}
           <details className="patient-record-completeness">
-            <summary><span>Record completeness</span><span className="badge">Review</span></summary>
+            <summary><span>Visit readiness � review items</span><span className="badge">Open</span></summary>
             <div className="patient-secondary-review-grid">
               <MissingInformationCenter patientId={patientId} canUpdate={permissions.includes("patient.update")} />
               <ImportantPatientBanner patient={patient} related={related} />
