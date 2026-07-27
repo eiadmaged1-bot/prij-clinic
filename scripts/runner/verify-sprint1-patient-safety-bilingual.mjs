@@ -42,7 +42,7 @@ const checks = [
   ["bilingual visit ID confirmation", workspace, "ui.visitId"],
   ["context-bound client sign call", workspace, "completeDoctorVisit(patientId, visitId)"],
   ["versioned save call", workspace, 'String(encounter?.updatedAt ?? "")'],
-  ["bilingual signed read-only boundary", workspace, "ui.signedReadOnly"],
+  ["bilingual signed read-only boundary", workspace, "operationsUiCopy[language].signedReadOnly"],
   ["signed module notice", workspace, "SignedVisitReadOnlyNotice"],
   ["locked identity bar", identity, "data-locked-patient-bar"],
   ["English sign copy", copy, 'signLockTitle: "Sign and lock this visit?"'],
