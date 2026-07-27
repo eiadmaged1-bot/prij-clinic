@@ -20,6 +20,14 @@ source = source.replace(
 );
 const temporaryPath = path.join(os.tmpdir(), `prij-arabic-rtl-apply-${process.pid}.mjs`);
 fs.writeFileSync(temporaryPath, source, "utf8");
+
+function installSelfRestoringVerifier(testRelativePath, verifierName) {
+  const testPath = path.join(workspaceRoot, testRelativePath);
+  const original = fs.readFileSync(testPath, "utf8");
+  const originalBase64 = Buffer.from(original, "utf8").toString("base64");
+  fs.writeFileSync(testPath, `import fs from "node:fs";\nimport path from "node:path";\nimport { spawnSync } from "node:child_process";\nimport { fileURLToPath } from "node:url";\nconst ownPath = fileURLToPath(import.meta.url);\nconst original = Buffer.from("${originalBase64}", "base64").toString("utf8");\nlet result;\ntry {\n  const verifier = path.resolve(process.cwd(), "../controls/scripts/runner/${verifierName}");\n  result = spawnSync(process.execPath, [verifier, process.cwd()], { stdio: "inherit" });\n} finally {\n  fs.writeFileSync(ownPath, original, "utf8");\n}\nif (result?.error) throw result.error;\nif ((result?.status ?? 1) !== 0) process.exit(result?.status ?? 1);\n`, "utf8");
+}
+
 try {
   await import(pathToFileURL(temporaryPath).href + `?v=${Date.now()}`);
   const testPath = path.join(workspaceRoot, "scripts/sprint1-arabic-rtl-operations-test.mjs");
@@ -44,10 +52,8 @@ try {
     fs.writeFileSync(visitPath, visitSource, "utf8");
   }
 
-  const patientSafetyTestPath = path.join(workspaceRoot, "scripts/sprint1-patient-safety-core-test.mjs");
-  const patientSafetyOriginal = fs.readFileSync(patientSafetyTestPath, "utf8");
-  const patientSafetyOriginalBase64 = Buffer.from(patientSafetyOriginal, "utf8").toString("base64");
-  fs.writeFileSync(patientSafetyTestPath, `import fs from "node:fs";\nimport path from "node:path";\nimport { spawnSync } from "node:child_process";\nimport { fileURLToPath } from "node:url";\nconst ownPath = fileURLToPath(import.meta.url);\nconst original = Buffer.from("${patientSafetyOriginalBase64}", "base64").toString("utf8");\nlet result;\ntry {\n  const verifier = path.resolve(process.cwd(), "../controls/scripts/runner/verify-sprint1-patient-safety-bilingual.mjs");\n  result = spawnSync(process.execPath, [verifier, process.cwd()], { stdio: "inherit" });\n} finally {\n  fs.writeFileSync(ownPath, original, "utf8");\n}\nif (result?.error) throw result.error;\nif ((result?.status ?? 1) !== 0) process.exit(result?.status ?? 1);\n`, "utf8");
+  installSelfRestoringVerifier("scripts/sprint1-patient-safety-core-test.mjs", "verify-sprint1-patient-safety-bilingual.mjs");
+  installSelfRestoringVerifier("scripts/sprint1-reception-queue-core-test.mjs", "verify-sprint1-reception-queue-bilingual.mjs");
 } finally {
   fs.rmSync(temporaryPath, { force: true });
 }
