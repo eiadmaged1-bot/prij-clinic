@@ -2,7 +2,7 @@
 
 Triggers the GitHub-hosted medication-card repair against the isolated Sprint 1 application branch.
 
-- Trigger sequence: 2
+- Trigger sequence: 3
 - Runner: GitHub-hosted ubuntu-latest
 - Production data changes: none
 - Database migrations/seeds/resets/deletions/truncations: none
