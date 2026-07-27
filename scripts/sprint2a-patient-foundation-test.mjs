@@ -21,12 +21,12 @@ const shared = read("packages/shared/src/index.ts");
 requireAll(form, "patient creation", [
   'patientType: "OBSTETRIC"',
   "patientCreationContextOptions",
-  'creationEndpoint = saveIntent === "open" ? "/patients/create-and-start-visit" : "/patients"',
+  'const creationEndpoint = "/patients"',
   "patientCreateErrorMessage",
   "copy.invalidCareContext",
   "copy.invalidYearOfBirth",
   "copy.duplicateReviewRequired",
-  "Create patient and start visit"
+  "Create patient file"
 ]);
 rejectAll(form, "patient creation", ['patientType: "WOMEN_HEALTH"', 'form.patientType || "WOMEN_HEALTH"', "patientTypeOptions.map"]);
 
