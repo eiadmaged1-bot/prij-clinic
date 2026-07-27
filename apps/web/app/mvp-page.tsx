@@ -40,6 +40,7 @@ import { OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { useInterfaceMode } from "@/lib/interface-mode";
 import { MobileBottomNav, doctorMinimalisticNav } from "@/components/layout/MobileBottomNav";
 import { canAccessWorkspace, roleLandingPath } from "@/lib/role-routing";
+import { OfflineSyncHealth } from "@/components/system/OfflineSyncHealth";
 
 const navGroupOrder: NavItem["group"][] = [
   "Home",
@@ -512,11 +513,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           {!isReceptionistOnly ? <UniversalSearchBox /> : null}
           {isReceptionistOnly ? (
             <div className="receptionist-topbar-actions" aria-label="Reception account actions">
+              <OfflineSyncHealth />
               <Link className="button secondary compact" href="/reception"><ThreeDMedicalIcon name="reception" size="sm" />{t("home")}</Link>
               <LanguageSwitcher />
               <button className="button secondary compact" onClick={() => void signOut()} type="button"><ThreeDMedicalIcon name="settings" size="sm" tone="slate" />{t("logout")}</button>
             </div>
-          ) : <UserMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} />}
+          ) : <div className="topbar-account-actions"><OfflineSyncHealth /><UserMenu user={user} canOpenAdmin={canOpenAdmin} onLogout={signOut} /></div>}
         </header>
         {children}
       </div>
