@@ -1,0 +1,58 @@
+name: Diagnose Sprint 1 Arabic RTL Apply
+
+on:
+  pull_request:
+    branches:
+      - security/rbac-scope-enforcement
+    paths:
+      - docs/verification/HOSTED_SPRINT1_ARABIC_RTL_OPERATIONS_TRIGGER.md
+
+permissions:
+  contents: read
+
+concurrency:
+  group: diagnose-sprint1-arabic-rtl-apply
+  cancel-in-progress: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout controls
+        uses: actions/checkout@v4
+        with:
+          ref: security/rbac-scope-enforcement
+          fetch-depth: 1
+          path: controls
+
+      - name: Checkout isolated application branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/arabic-rtl-operations-v1
+          fetch-depth: 1
+          path: workspace
+
+      - name: Capture apply output
+        id: diagnose
+        working-directory: workspace
+        shell: bash
+        run: |
+          set +e
+          node ../controls/scripts/runner/apply-sprint1-arabic-rtl-operations.mjs "$PWD" > arabic-rtl-apply-diagnostic.log 2>&1
+          apply_status=$?
+          cat arabic-rtl-apply-diagnostic.log
+          echo "exit_code=$apply_status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: arabic-rtl-apply-diagnostic
+          path: workspace/arabic-rtl-apply-diagnostic.log
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Preserve failure conclusion
+        if: steps.diagnose.outputs.exit_code != '0'
+        run: exit 1
