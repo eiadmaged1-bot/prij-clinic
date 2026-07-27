@@ -7905,3 +7905,21 @@ button.patient-search-card-selectable { font:inherit; }
   .visit-sync-recovery .form-actions { width: 100%; }
   .visit-sync-recovery .button { flex: 1; }
 }
+
+/* Sprint 1 Arabic RTL operations closure */
+html[dir="rtl"] body { direction: rtl; font-family: Tahoma, Arial, sans-serif; text-align: start; }
+html[dir="rtl"] .app-shell, html[dir="rtl"] .patient-modal, html[dir="rtl"] .offline-sync-popover { direction: rtl; }
+html[dir="rtl"] .sidebar { border-inline-end: 1px solid var(--border); border-inline-start: 0; }
+html[dir="rtl"] .topbar, html[dir="rtl"] .header-row, html[dir="rtl"] .section-heading, html[dir="rtl"] .data-row-header, html[dir="rtl"] .visit-persistent-actions, html[dir="rtl"] .form-actions { text-align: start; }
+html[dir="rtl"] label, html[dir="rtl"] .panel, html[dir="rtl"] .data-row, html[dir="rtl"] .modal-content { text-align: start; }
+html[dir="rtl"] .offline-sync-popover { inset-inline-end: 0; inset-inline-start: auto; }
+html[dir="rtl"] .active-visit-tabs, html[dir="rtl"] .clinical-chip-cloud, html[dir="rtl"] .language-switcher { direction: rtl; }
+html[dir="rtl"] input, html[dir="rtl"] textarea, html[dir="rtl"] select { text-align: start; }
+html[dir="rtl"] input[type="number"], html[dir="rtl"] input[type="tel"], html[dir="rtl"] input[type="date"], html[dir="rtl"] input[type="datetime-local"], html[dir="rtl"] bdi, html[dir="rtl"] .queue-daily-ticket, html[dir="rtl"] .medical-record-number { direction: ltr; text-align: left; unicode-bidi: isolate; }
+html[dir="rtl"] .button .medical-icon, html[dir="rtl"] .nav-item .medical-icon { margin-inline-start: 0; margin-inline-end: 0; }
+html[dir="rtl"] .visit-sync-recovery { border-inline-start: 4px solid #c98b20; border-inline-end: 1px solid var(--border); }
+html[dir="rtl"] .visit-sync-recovery.conflict { border-inline-start-color: #b84b4b; }
+@media (max-width: 720px) {
+  html[dir="rtl"] .receptionist-topbar-actions, html[dir="rtl"] .topbar-account-actions { justify-content: flex-start; }
+  html[dir="rtl"] .modal-actions, html[dir="rtl"] .visit-persistent-actions { align-items: stretch; }
+}

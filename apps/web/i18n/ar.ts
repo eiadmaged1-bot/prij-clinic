@@ -1,6 +1,6 @@
 export const ar = {
   accountPreferences: "الحساب والتفضيلات",
-  appName: "Dr Maged Attia Clinics",
+  appName: "عيادات د. ماجد عطية",
   appSubtitle: "صحة المرأة",
   clinicOperations: "تشغيل العيادة",
   clinicOperationsSubtitle: "ملفات المريضات، قائمة الانتظار، عمل الطبيب، الحسابات، وإدارة المالك.",
