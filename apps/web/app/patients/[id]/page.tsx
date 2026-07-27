@@ -198,7 +198,7 @@ export default function PatientFilePage() {
   const activeWorkspaceTab = useMemo(() => approvedEncounterTabs.some(([key]) => key === activeTab)
     ? patientWorkspaceRegistry.find((tab) => tab.key === activeTab) ?? legacyTabDefinitions.find((tab) => tab.key === activeTab)
     : visibleTabs.find((tab) => tab.key === activeTab), [activeTab, visibleTabs]);
-  const ageLabel = patientAgeLabel(patient?.dateOfBirth);
+  const ageLabel = patientAgeLabel(patient?.dateOfBirth, patient?.yearOfBirth);
   const openFollowUpCount = (related.tasks ?? []).filter((row) => String(row.taskType ?? "") === "schedule_follow_up" && ["open", "in_progress"].includes(String(row.status ?? ""))).length;
   const unpaidInvoiceCount = (related.billing ?? related.invoices ?? []).filter((row) => ["draft", "issued", "partially_paid"].includes(String(row.status ?? ""))).length;
   const currentPhase = clinicalPhases.find((phase) => phase.status === "active") ?? null;
@@ -232,7 +232,7 @@ export default function PatientFilePage() {
         if (!response.ok) throw new Error("Could not open this patient file.");
         const summary = await response.json() as PatientWorkspaceSummary;
         const names = summary.patient.displayName.trim().split(/\s+/);
-        setPatient({ id: summary.patient.id, medicalRecordNumber: summary.patient.medicalRecordNumber, firstName: names.shift() ?? summary.patient.displayName, lastName: names.join(" "), dateOfBirth: summary.patient.dateOfBirth, phone: summary.patient.contactSummary, status: "active", patientType: summary.patient.patientType });
+        setPatient({ id: summary.patient.id, medicalRecordNumber: summary.patient.medicalRecordNumber, firstName: names.shift() ?? summary.patient.displayName, lastName: names.join(" "), dateOfBirth: summary.patient.dateOfBirth, yearOfBirth: summary.patient.yearOfBirth, phone: summary.patient.contactSummary, status: "active", patientType: summary.patient.patientType });
         setClinicalPhases(summary.activeClinicalPhase ? [{ id: "summary", status: "active", ...summary.activeClinicalPhase }] : []);
         setRelated({
           appointments: [summary.todayAppointment, summary.nextAppointment].filter(Boolean) as unknown as Record<string, unknown>[],

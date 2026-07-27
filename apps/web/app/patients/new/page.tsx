@@ -11,7 +11,7 @@ import { useI18n } from "@/i18n/useI18n";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { useIdempotencyKey } from "@/lib/idempotency-key";
 import { publishClinicDataChange } from "@/lib/clinic-data-events";
-import { patientTypeOptions } from "@/lib/patient-labels";
+import { patientCreationContextOptions } from "@/lib/patient-labels";
 import type { VisitTypeValue } from "@/lib/visit-types";
 import { PatientSearchResult, type PatientPickerPatient } from "@/components/clinic/PatientPicker";
 
@@ -31,7 +31,7 @@ type ExistingPatient = PatientPickerPatient;
 const initialState: FormState = {
   medicalRecordNumber: "",
   fullName: "",
-  patientType: "WOMEN_HEALTH",
+  patientType: "OBSTETRIC",
   sexualActivityStatus: "unknown",
   yearOfBirth: "",
   phone: "",
@@ -149,6 +149,12 @@ function NewPatientContent() {
       if (!firstName) throw new Error(copy.fullNameRequired);
       if (saveIntent === "queue" && !visitType) throw new Error(copy.visitTypeRequired);
       if (!canCreatePatient) throw new Error("Patient registration is handled by reception.");
+      if (!patientCreationContextOptions.some((option) => option.value === form.patientType)) throw new Error(copy.invalidCareContext);
+      if (form.yearOfBirth) {
+        const year = Number(form.yearOfBirth);
+        const currentYear = new Date().getFullYear();
+        if (!/^\d{4}$/.test(form.yearOfBirth) || !Number.isInteger(year) || year < 1900 || year > currentYear) throw new Error(copy.invalidYearOfBirth);
+      }
 
       const noteParts = [
         isDoctor ? "Created by Doctor. Needs reception details review." : "",
@@ -162,14 +168,15 @@ function NewPatientContent() {
           firstName,
           lastName,
           sex: "female",
-          patientType: form.patientType || "WOMEN_HEALTH",
+          patientType: form.patientType,
           sexualActivityStatus: form.sexualActivityStatus,
           yearOfBirth: form.yearOfBirth ? Number(form.yearOfBirth) : undefined,
           phone: form.phone,
           notes: noteParts.join("\n")
         }).filter(([, value]) => String(value).trim() !== "")
       );
-      const response = await fetch(`${getApiBaseUrl()}/patients`, {
+      const creationEndpoint = saveIntent === "open" ? "/patients/create-and-start-visit" : "/patients";
+      const response = await fetch(`${getApiBaseUrl()}${creationEndpoint}`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -179,15 +186,14 @@ function NewPatientContent() {
         },
         body: JSON.stringify(payload)
       });
+      const responseBody = await response.json().catch(() => null) as PatientCreateResponse | null;
 
       if (response.status === 401) throw new Error(copy.signInRequired);
+      if (response.status === 403) throw new Error(copy.permissionDenied);
+      if (!response.ok) throw new Error(patientCreateErrorMessage(responseBody, copy));
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => null) as { message?: string } | null;
-        throw new Error(body?.message || copy.createFailed);
-      }
-
-      const patient = (await response.json()) as { id: string };
+      const patient = responseBody;
+      if (!patient?.id) throw new Error(copy.createFailed);
       setCreatedPatientId(patient.id);
       let queueResult: Awaited<ReturnType<typeof addCreatedPatientToQueue>> | null = null;
       if (saveIntent === "queue" && canManageQueue) {
@@ -222,7 +228,9 @@ function NewPatientContent() {
         setError(queueResult?.kind === "permission" ? copy.queuePermissionDenied : queueResult?.kind === "network" ? copy.queueUnavailable : copy.queueRetryFailed);
       } else {
         setSuccess(copy.patientFileSaved);
-        if (saveIntent === "open") router.push(`/patients/${patient.id}`);
+        if (saveIntent === "open") {
+          router.push(patient.visitId ? `/patients/${patient.id}/visits/${patient.visitId}/encounter` : `/patients/${patient.id}`);
+        }
       }
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : copy.createFailed);
@@ -279,7 +287,7 @@ function NewPatientContent() {
           <label>
             {copy.patientType}
             <select onChange={(event) => update("patientType", event.target.value)} value={form.patientType}>
-              {patientTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              {patientCreationContextOptions.map((option) => <option key={option.value} value={option.value}>{language === "ar" ? option.labelAr : option.label}</option>)}
             </select>
           </label>
           <label>
@@ -327,7 +335,7 @@ function NewPatientContent() {
               <ThreeDMedicalIcon name="patients" size="sm" />
               {isSubmitting ? copy.saving : copy.saveAndAddToQueue}
             </button> : null}
-            {isDoctor ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="open" type="submit">Create and open clinical file</button> : null}
+            {isDoctor ? <button className="button" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="open" type="submit">{isSubmitting ? copy.saving : copy.createAndStartVisit}</button> : null}
             <button className="button secondary" disabled={isSubmitting || Boolean(createdPatientId) || !patientIdempotencyKey} name="saveIntent" value="file" type="submit">{isDoctor ? "Create file only" : copy.saveFileOnly}</button>
             {queueRetryPending ? <button className="button" disabled={isSubmitting || !queueIdempotencyKey} type="button" onClick={() => void retryQueue()}>{copy.retryAddToQueue}</button> : null}
             {createdPatientId ? <Link className="button secondary" href={`/patients/${createdPatientId}`}>{isDoctor ? "Open clinical file" : copy.openReceptionProfile}</Link> : null}
@@ -343,6 +351,31 @@ function makeMrn() {
 }
 
 type NewPatientCopy = (typeof newPatientCopy)[keyof typeof newPatientCopy];
+
+type PatientCreateResponse = {
+  id?: string;
+  visitId?: string;
+  patientCreated?: boolean;
+  visitStarted?: boolean;
+  message?: string | string[];
+  code?: string;
+  candidates?: unknown[];
+  error?: string | { message?: string | string[]; code?: string };
+};
+
+function patientCreateErrorMessage(body: PatientCreateResponse | null, copy: NewPatientCopy) {
+  const nested = body?.error && typeof body.error === "object" ? body.error : null;
+  const raw = body?.message ?? nested?.message ?? (typeof body?.error === "string" ? body.error : "");
+  const messages = (Array.isArray(raw) ? raw : [raw]).map((message) => String(message ?? "").trim()).filter(Boolean);
+  const joined = messages.join(" ");
+  const code = String(body?.code ?? nested?.code ?? "").toUpperCase();
+  if (code === "PATIENT_DUPLICATE_REVIEW_REQUIRED") return copy.duplicateReviewRequired;
+  const normalized = joined.toLowerCase();
+  if (normalized.includes("patienttype") || normalized.includes("patient type")) return copy.invalidCareContext;
+  if (normalized.includes("yearofbirth") || normalized.includes("year of birth")) return copy.invalidYearOfBirth;
+  if (normalized.includes("medical record number already exists")) return copy.mrnAlreadyExists;
+  return joined || copy.createFailed;
+}
 
 function ageFromYear(year: string, copy: NewPatientCopy) {
   if (!/^\d{4}$/.test(year)) return copy.unknown;
@@ -387,7 +420,7 @@ const newPatientCopy = {
     phone: "Phone number",
     phonePlaceholder: "Phone number",
     phoneHelper: "Recommended for follow-up and duplicate check.",
-    patientType: "Patient type",
+    patientType: "Initial care context",
     yearOfBirth: "Year of birth",
     age: "Age",
     areaAddress: "Area/address",
@@ -405,6 +438,12 @@ const newPatientCopy = {
     fullNameRequired: "Enter the patient full name before creating the file.",
     visitTypeRequired: "Select visit type before saving and adding to queue.",
     signInRequired: "Please sign in before creating a patient file.",
+    permissionDenied: "You do not have permission to create this patient and start a visit.",
+    invalidCareContext: "Select a valid initial care context.",
+    invalidYearOfBirth: "Enter a four-digit year of birth between 1900 and the current year.",
+    duplicateReviewRequired: "Possible duplicate patient found. Review the existing patient matches before creating another file.",
+    mrnAlreadyExists: "This medical record number already exists. Generate another file number and try again.",
+    createAndStartVisit: "Create patient and start visit",
     createFailed: "Could not create this patient file. Please review the required fields and try again.",
     addedToQueue: "Added to queue - Position",
     patientAlreadyQueued: "Patient is already queued today.",
@@ -432,7 +471,7 @@ const newPatientCopy = {
     phone: "رقم الهاتف",
     phonePlaceholder: "رقم الهاتف",
     phoneHelper: "يفضل إدخال رقم الهاتف للمتابعة ومنع التكرار.",
-    patientType: "نوع المريضة",
+    patientType: "سياق الرعاية الأولي",
     yearOfBirth: "سنة الميلاد",
     age: "العمر",
     areaAddress: "المنطقة/العنوان",
@@ -450,6 +489,12 @@ const newPatientCopy = {
     fullNameRequired: "أدخل اسم المريضة قبل إنشاء الملف.",
     visitTypeRequired: "اختر نوع الزيارة قبل الحفظ والإضافة للانتظار.",
     signInRequired: "يرجى تسجيل الدخول قبل إنشاء ملف المريضة.",
+    permissionDenied: "لا توجد صلاحية لإنشاء المريضة وبدء الزيارة.",
+    invalidCareContext: "اختر سياق رعاية أولي صحيحاً.",
+    invalidYearOfBirth: "أدخل سنة ميلاد من أربعة أرقام بين 1900 والسنة الحالية.",
+    duplicateReviewRequired: "يوجد احتمال قوي لملف مكرر. راجع الملفات المطابقة قبل إنشاء ملف آخر.",
+    mrnAlreadyExists: "رقم الملف موجود بالفعل. أنشئ رقم ملف آخر وحاول مرة أخرى.",
+    createAndStartVisit: "إنشاء المريضة وبدء الزيارة",
     createFailed: "تعذر إنشاء ملف المريضة. راجع الحقول المطلوبة وحاول مرة أخرى.",
     addedToQueue: "تمت الإضافة للانتظار - رقم",
     patientAlreadyQueued: "المريضة موجودة بالفعل في قائمة انتظار اليوم.",

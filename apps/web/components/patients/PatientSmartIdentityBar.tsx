@@ -45,7 +45,7 @@ export function PatientSmartIdentityBar({ patient, currentPhase, related, worksp
           <strong>{patient.firstName} {patient.lastName}</strong>
           <span className="patient-type-badge">{currentPhase ? currentPhase.phaseType.replaceAll("_", " ") : patientTypeLabel(patient.patientType)}</span>
         </div>
-        <p><span>{ageLabel(patient.dateOfBirth)}</span> · <span>MRN {patient.medicalRecordNumber}</span><br /><span>{patient.phone || "Not recorded"}</span></p>
+        <p><span>{ageLabel(patient.dateOfBirth, patient.yearOfBirth)}</span> · <span>MRN {patient.medicalRecordNumber}</span><br /><span>{patient.phone || "Not recorded"}</span></p>
       </div>
     </div>
     <div className="patient-smart-signals">

@@ -20,7 +20,7 @@ export class PatientLookupService {
     const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(todayStart); todayEnd.setDate(todayEnd.getDate() + 1);
     const patient = await this.prisma.patient.findUnique({ where: { id }, select: {
-      id: true, medicalRecordNumber: true, firstName: true, lastName: true, dateOfBirth: true, phone: true, patientType: true, branchId: true,
+      id: true, medicalRecordNumber: true, firstName: true, lastName: true, dateOfBirth: true, yearOfBirth: true, phone: true, patientType: true, branchId: true,
       clinicalPhases: { where: { status: "active" }, orderBy: { startDate: "desc" }, take: 1, select: { phaseType: true, title: true } },
       appointments: { where: { startAt: { gte: todayStart }, status: { in: ["booked", "rescheduled"] } }, orderBy: { startAt: "asc" }, take: 2, select: { id: true, startAt: true, status: true, appointmentType: true } },
       queueTickets: { where: { queueDate: { gte: todayStart, lt: todayEnd }, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, queueNumber: true, status: true, priority: true, visitType: true } },
@@ -39,7 +39,7 @@ export class PatientLookupService {
     const todayAppointment = patient.appointments.find(appointment => appointment.startAt < todayEnd) ?? null;
     const nextAppointment = patient.appointments.find(appointment => appointment.startAt >= todayEnd) ?? null;
     return {
-      patient: { id: patient.id, displayName: `${patient.firstName} ${patient.lastName}`, medicalRecordNumber: patient.medicalRecordNumber, dateOfBirth: patient.dateOfBirth, ageSummary: ageSummary(patient.dateOfBirth, now), contactSummary: patient.phone ? `••••${patient.phone.replace(/\D/g, "").slice(-4)}` : null, patientType: patient.patientType },
+      patient: { id: patient.id, displayName: `${patient.firstName} ${patient.lastName}`, medicalRecordNumber: patient.medicalRecordNumber, dateOfBirth: patient.dateOfBirth, yearOfBirth: patient.yearOfBirth, ageSummary: ageSummary(patient.dateOfBirth, patient.yearOfBirth, now), contactSummary: patient.phone ? `••••${patient.phone.replace(/\D/g, "").slice(-4)}` : null, patientType: patient.patientType },
       activeClinicalPhase: patient.clinicalPhases[0] ?? null, todayAppointment, currentQueueTicket: patient.queueTickets[0] ?? null, activeVisit: patient.encounters[0] ?? null,
       allergyReviewState: receptionistOnly ? undefined : patient.patientAllergies.length ? "recorded" : "review_required",
       medicationReconciliationState: receptionistOnly ? undefined : patient.patientMedications.length ? "recorded" : "review_required",
@@ -53,9 +53,12 @@ export class PatientLookupService {
   }
 }
 
-function ageSummary(date: Date | null, now: Date) {
-  if (!date) return null;
-  let age = now.getUTCFullYear() - date.getUTCFullYear();
-  if (now.getUTCMonth() < date.getUTCMonth() || (now.getUTCMonth() === date.getUTCMonth() && now.getUTCDate() < date.getUTCDate())) age -= 1;
-  return `${Math.max(age, 0)}y`;
+function ageSummary(date: Date | null, yearOfBirth: number | null, now: Date) {
+  if (date) {
+    let age = now.getUTCFullYear() - date.getUTCFullYear();
+    if (now.getUTCMonth() < date.getUTCMonth() || (now.getUTCMonth() === date.getUTCMonth() && now.getUTCDate() < date.getUTCDate())) age -= 1;
+    return `${Math.max(age, 0)}y`;
+  }
+  if (!yearOfBirth || yearOfBirth < 1900 || yearOfBirth > now.getUTCFullYear()) return null;
+  return `${Math.max(now.getUTCFullYear() - yearOfBirth, 0)}y`;
 }

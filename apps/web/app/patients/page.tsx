@@ -6,7 +6,7 @@ import { AppShell, SafetyAlert } from "../mvp-page";
 import { ThreeDMedicalIcon } from "../../components/ThreeDMedicalIcon";
 
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { ageLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
+import { ageLabel, patientTypeLabel, patientTypeOptions, phaseTypeLabel } from "@/lib/patient-labels";
 import { useSession } from "../session";
 import { useI18n } from "@/i18n/useI18n";
 
@@ -237,10 +237,5 @@ function compactAge(patient: Patient) {
 }
 
 function patientTypeDisplay(value: string | null | undefined, language: "en" | "ar") {
-  const normalized = String(value ?? "OTHER").toUpperCase();
-  const canonical = ["OB", "PREGNANCY"].includes(normalized) ? "OBSTETRIC" : ["GYN", "WOMEN_HEALTH"].includes(normalized) ? "GYNECOLOGY" : normalized === "FERTILITY" ? "INFERTILITY" : normalized;
-  const labels: Record<string, [string, string]> = {
-    OBSTETRIC: ["Obstetric", "حمل وولادة"], HIGH_RISK_OBSTETRIC: ["High-risk obstetric", "حمل عالي الخطورة"], GYNECOLOGY: ["Gynecology", "أمراض النساء"], INFERTILITY: ["Infertility", "تأخر الإنجاب"], POSTPARTUM: ["Postpartum", "ما بعد الولادة"], PREVENTIVE_WELL_WOMAN: ["Preventive", "رعاية وقائية"], OTHER: ["Other", "أخرى"], GENERAL: ["Other", "أخرى"]
-  };
-  return (labels[canonical] ?? labels.OTHER)![language === "ar" ? 1 : 0];
+  return patientTypeLabel(value, language);
 }

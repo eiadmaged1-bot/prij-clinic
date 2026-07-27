@@ -23,6 +23,7 @@ export type Patient = {
       firstName: string;
       lastName: string;
       dateOfBirth?: string | null;
+      yearOfBirth?: number | null;
       sex?: string | null;
       phone?: string | null;
       email?: string | null;
