@@ -1,4 +1,4 @@
-name: Diagnose Sprint 1 Arabic RTL Apply
+name: Diagnose Sprint 1 Arabic RTL Contract
 
 on:
   pull_request:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: diagnose-sprint1-arabic-rtl-apply
+  group: diagnose-sprint1-arabic-rtl-contract
   cancel-in-progress: true
 
 jobs:
@@ -33,15 +33,22 @@ jobs:
           fetch-depth: 1
           path: workspace
 
-      - name: Capture apply and focused contract output
+      - name: Capture prepared apply and focused contract output
         id: diagnose
         working-directory: workspace
         shell: bash
         run: |
           set +e
           {
-            node ../controls/scripts/runner/run-sprint1-arabic-rtl-operations.mjs "$PWD"
-            apply_status=$?
+            node ../controls/scripts/runner/prepare-arabic-rtl-controller.mjs ../controls
+            prepare_status=$?
+            echo "PREPARE_EXIT=$prepare_status"
+            if [[ $prepare_status -eq 0 ]]; then
+              node ../controls/scripts/runner/run-sprint1-arabic-rtl-operations.mjs "$PWD"
+              apply_status=$?
+            else
+              apply_status=$prepare_status
+            fi
             echo "APPLY_EXIT=$apply_status"
             if [[ $apply_status -eq 0 ]]; then
               node scripts/sprint1-arabic-rtl-operations-test.mjs
@@ -50,16 +57,16 @@ jobs:
             else
               contract_status=$apply_status
             fi
-          } > arabic-rtl-apply-diagnostic.log 2>&1
-          cat arabic-rtl-apply-diagnostic.log
+          } > arabic-rtl-contract-diagnostic.log 2>&1
+          cat arabic-rtl-contract-diagnostic.log
           echo "exit_code=${contract_status:-1}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: arabic-rtl-apply-diagnostic
-          path: workspace/arabic-rtl-apply-diagnostic.log
+          name: arabic-rtl-contract-diagnostic
+          path: workspace/arabic-rtl-contract-diagnostic.log
           if-no-files-found: error
           retention-days: 3
 
