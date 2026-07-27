@@ -15,7 +15,7 @@ import { operationsUiCopy } from "@/i18n/operations-copy";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; source?: string | null; notes?: string | null; cancellationReason?: string | null; noShowReason?: string | null; patient?: Patient };
-type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string; visitType?: string | null; checkedInAt?: string | null; receptionistDisplayNameSnapshot?: string | null; patient?: Patient; appointment?: Appointment | null; cancellationReason?: string | null };
+type QueueTicket = { id: string; patientId: string; queueNumber?: number; status: string; priority?: string; visitType?: string | null; checkedInAt?: string | null; receptionistDisplayNameSnapshot?: string | null; patient?: Patient; appointment?: Appointment | null; cancellationReason?: string | null; activeEncounter?: { id: string } | null };
 type Invoice = { id: string; patientId: string; invoiceNumber?: string; status?: string; balanceAmount?: string | number };
 type InvestigationOrder = { id: string; patientId: string; status: string; priority?: string; notes?: string | null; items?: Array<{ testName?: string; category?: string; status?: string }>; patient?: Patient };
 type DashboardSummary = {
@@ -220,7 +220,7 @@ function DoctorHandoff({ queue, orders, onRefresh }: { queue: QueueTicket[]; ord
   const { language } = useI18n();
   const ui = operationsUiCopy[language];
   const [actionError, setActionError] = useState("");
-  const current = queue.find((ticket) => ticket.status === "in_room") ?? queue.find((ticket) => ticket.status === "called") ?? null;
+  const current = queue.find((ticket) => ticket.status === "in_room" && ticket.activeEncounter) ?? null;
   const waiting = queue
     .filter((ticket) => ticket.status === "waiting")
     .sort((left, right) => urgentRank(right) - urgentRank(left) || new Date(left.checkedInAt ?? 0).getTime() - new Date(right.checkedInAt ?? 0).getTime() || Number(left.queueNumber ?? 0) - Number(right.queueNumber ?? 0));

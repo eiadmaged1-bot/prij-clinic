@@ -38,16 +38,21 @@ export class DoctorVisitService {
       if (linkedEncounter && linkedEncounter.status !== "draft") throw new ConflictException("The linked visit is no longer active.");
       if (linkedEncounter && linkedEncounter.doctorId !== user.id) throw new ConflictException("This visit is active with another doctor.");
 
-      const occupied = ticket ? await tx.queueTicket.findFirst({
-        where: { branchId, queueDate: ticket.queueDate, status: "in_room", id: { not: ticket.id } },
+      const occupied = ticket ? await tx.encounter.findFirst({
+        where: {
+          doctorId: user.id,
+          status: "draft",
+          queueTicket: { is: { branchId, queueDate: ticket.queueDate, status: "in_room", id: { not: ticket.id } } }
+        },
         select: { id: true }
       }) : null;
       if (occupied) throw new ConflictException({ code: "DOCTOR_ROOM_OCCUPIED", message: "Resume or complete the current visit before starting another patient." });
 
-      let encounter = linkedEncounter ?? await tx.encounter.findFirst({
+      const unlinkedDraft = linkedEncounter ? null : await tx.encounter.findFirst({
         where: { patientId, status: "draft", ...doctorScope(user), ...patientBranchScope(user) },
         orderBy: { createdAt: "desc" }
       });
+      let encounter = linkedEncounter ?? unlinkedDraft;
       if (ticket && encounter?.queueTicketId && encounter.queueTicketId !== ticket.id) throw new ConflictException("This draft visit belongs to another queue ticket.");
 
       encounter = encounter ? await tx.encounter.update({
@@ -68,12 +73,18 @@ export class DoctorVisitService {
         const claimed = await tx.queueTicket.updateMany({ where: { id: ticket.id, status: { in: ["waiting", "called"] } }, data: { status: "in_room", calledAt: ticket.calledAt ?? now } });
         if (claimed.count !== 1) throw new ConflictException({ code: "QUEUE_SELECTION_CONFLICT", message: "The waiting line changed. Refresh and try again." });
       }
-      return { encounter, ticket, reusedDraft: Boolean(linkedEncounter || encounter.createdAt < now) };
+      const draftDisposition = linkedEncounter
+        ? "linked_encounter_reused"
+        : unlinkedDraft
+          ? "unlinked_draft_reused"
+          : "new_encounter_created";
+      return { encounter, ticket, draftDisposition };
     });
 
     if (!doctorProfile.doctorColor) await this.prisma.user.update({ where: { id: user.id }, data: { doctorColor } });
     if (result.ticket) await this.audit.record({ actorUserId: user.id, action: "queue.patient_entered_room", resourceType: "queue_ticket", resourceId: result.ticket.id, branchId, severity: "high", metadataJson: { patientId, encounterId: result.encounter.id, from: result.ticket.status, to: "in_room" } });
-    await this.audit.record({ actorUserId: user.id, action: result.reusedDraft ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "doctor_visit.started", resourceType: "encounter", resourceId: result.encounter.id, branchId, severity: "high", metadataJson: { patientId, queueTicketId: result.ticket?.id ?? null, visitType: result.ticket?.visitType ?? null, reusedDraft: result.reusedDraft } });
+    const reusedDraft = result.draftDisposition !== "new_encounter_created";
+    await this.audit.record({ actorUserId: user.id, action: reusedDraft ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "doctor_visit.started", resourceType: "encounter", resourceId: result.encounter.id, branchId, severity: "high", metadataJson: { patientId, queueTicketId: result.ticket?.id ?? null, visitType: result.ticket?.visitType ?? null, reusedDraft, draftDisposition: result.draftDisposition } });
     return this.visitState(patientId, result.encounter.id, user);
   }
   async current(patientId: string, user: AuthUser) {

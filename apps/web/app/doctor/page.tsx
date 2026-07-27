@@ -13,7 +13,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { PatientSearchMobile } from "@/components/patients/PatientSearchMobile";
 
 type PatientSummary = { id?: string; firstName?: string | null; lastName?: string | null; medicalRecordNumber?: string | null };
-type QueueTicket = { id: string; patientId?: string; queueNumber?: number | string; status?: string; priority?: string; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: PatientSummary | null };
+type QueueTicket = { id: string; patientId?: string; queueNumber?: number | string; status?: string; priority?: string; visitType?: VisitTypeValue | null; checkedInAt?: string | null; patient?: PatientSummary | null; activeEncounter?: { id: string } | null };
 type Appointment = { id: string; patientId?: string; appointmentType?: string; status?: string; startAt?: string; patient?: PatientSummary | null };
 type InvestigationResult = { id: string; patientId?: string; title?: string; reviewStatus?: string; createdAt?: string };
 type PatientTask = { id: string; patientId?: string; title?: string; taskType?: string; status?: string; dueAt?: string | null };
@@ -48,7 +48,7 @@ export default function DoctorModePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const current = queue.find((ticket) => ticket.status === "in_room") ?? queue.find((ticket) => ticket.status === "called");
+  const current = queue.find((ticket) => ticket.status === "in_room" && ticket.activeEncounter);
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
   const todayAppointments = appointments.filter((appointment) => isToday(appointment.startAt));
   const resultsToReview = results.filter((result) => result.reviewStatus === "pending_review");
