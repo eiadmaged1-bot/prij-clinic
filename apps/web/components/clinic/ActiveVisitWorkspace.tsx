@@ -23,6 +23,8 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { completeDoctorVisit, createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
 import { clearOfflineVisitDraft, enqueueOfflineVisitDraft, getOfflineVisitDraft, retryOfflineVisitDraft, subscribeOfflineSync, syncOfflineVisitDraft, type OfflineSyncOutcome } from "@/lib/offline-sync";
 import { useSession } from "@/app/session";
+import { useI18n } from "@/i18n/useI18n";
+import { operationsUiCopy } from "@/i18n/operations-copy";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 import { complaintGroups, historyGroups } from "@/components/patients/ClinicalInputFoundation";
 
@@ -171,6 +173,8 @@ const scanTypes = ["Dating", "Anomaly", "Growth", "Doppler", "Follow-up"];
 export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patientId: string; visitId: string; moduleKey?: string }) {
   const activeModule = normalizeModule(moduleKey);
   const { user, status: sessionStatus } = useSession();
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   const [visit, setVisit] = useState<DoctorVisitState | null>(null);
   const [status, setStatus] = useState("Loading locked visit context.");
   const [error, setError] = useState("");
@@ -477,14 +481,14 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         visit={encounter ? { id: String(encounter.id), status: String(encounter.status ?? "draft"), visitType: String(encounter.visitType ?? "Doctor visit"), startedAt: encounter.startedAt == null ? null : String(encounter.startedAt) } : null}
         actions={signedVisit ? <span className="badge lock-badge">Signed · read only</span> : (
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
-            <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
+            <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> {ui.options}</summary>
             <div className="dense-card-list" style={{ position: "absolute", zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "0.5rem", borderRadius: "0.5rem", right: "0", minWidth: "180px", marginTop: "0.25rem" }}>
               <AppActionButton actionId="encounter.void" userPermissions={user?.permissions ?? []} userRoles={roles} className="button secondary compact danger" type="button" onClick={() => {
                 setVoidModalOpen(true);
                 setVoidReason("");
                 setVoidError("");
               }} style={{ width: "100%", justifyContent: "flex-start" }}>
-                <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> Void encounter
+                <ThreeDMedicalIcon name="encounter" size="sm" tone="rose" /> {ui.voidEncounter}
               </AppActionButton>
             </div>
           </details>
@@ -493,79 +497,79 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
       {error ? <BlockedContext patientId={patientId} /> : null}
       {!error ? (
         <>
-          <nav className="active-visit-tabs" aria-label="Active visit modules">
-            {modules.map(([key, label]) => (
-              <Link className={activeModule === key ? "active" : ""} href={`/patients/${patientId}/visits/${visitId}/${key}`} key={key}>{label}</Link>
+          <nav className="active-visit-tabs" aria-label={ui.activeVisitModules}>
+            {modules.map(([key]) => (
+              <Link className={activeModule === key ? "active" : ""} href={`/patients/${patientId}/visits/${visitId}/${key}`} key={key}>{ui.modules[key]}</Link>
             ))}
           </nav>
-          <div className="visit-persistent-actions no-print" aria-label="Visit actions">
-            <span className={`badge visit-save-state ${saveState}`}>{saveStateLabel(saveState)}</span>
-            <Link className="button secondary compact" href={`/patients/${patientId}/visits/${visitId}/finish`}>Review visit</Link>
-            <button className="button compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(false)}>Finish visit</button>
+          <div className="visit-persistent-actions no-print" aria-label={ui.visitActions}>
+            <span className={`badge visit-save-state ${saveState}`}>{saveStateLabel(saveState, ui)}</span>
+            <Link className="button secondary compact" href={`/patients/${patientId}/visits/${visitId}/finish`}>{ui.reviewVisit}</Link>
+            <button className="button compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(false)}>{ui.finishVisit}</button>
             <details className="visit-more-actions">
-              <summary className="button secondary compact">More</summary>
+              <summary className="button secondary compact">{ui.more}</summary>
               <div>
-                <Link className="button secondary compact" href={`/patients/${patientId}`}>Save and continue later</Link>
-                <button className="button secondary compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(true)}>Finish and print</button>
+                <Link className="button secondary compact" href={`/patients/${patientId}`}>{ui.saveContinueLater}</Link>
+                <button className="button secondary compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(true)}>{ui.finishPrint}</button>
               </div>
             </details>
           </div>
           {["offline", "queued", "failed", "conflict"].includes(saveState) ? (
             <section className={"visit-sync-recovery no-print " + saveState} aria-live="polite" data-visit-sync-recovery>
-              <div><strong>{saveState === "conflict" ? "Sync conflict" : saveState === "offline" ? "Working offline" : "Draft waiting to sync"}</strong><p>{saveState === "conflict" ? "A newer server copy exists. This device copy is preserved and will not overwrite it automatically." : "Your draft is saved on this device and remains locked to this patient and visit."}</p></div>
-              <div className="form-actions"><button className="button secondary compact" type="button" disabled={!navigator.onLine || saveState === "conflict"} onClick={() => void retryCurrentVisitSync()}>Retry sync</button>{saveState === "conflict" ? <button className="button secondary compact danger" type="button" onClick={() => void discardLocalVisitCopy()}>Discard local and reload server</button> : null}</div>
+              <div><strong>{saveState === "conflict" ? ui.syncConflict : saveState === "offline" ? ui.workingOffline : ui.draftWaitingSync}</strong><p>{saveState === "conflict" ? ui.conflictVisitHelp : ui.queuedVisitHelp}</p></div>
+              <div className="form-actions"><button className="button secondary compact" type="button" disabled={!navigator.onLine || saveState === "conflict"} onClick={() => void retryCurrentVisitSync()}>{ui.retrySync}</button>{saveState === "conflict" ? <button className="button secondary compact danger" type="button" onClick={() => void discardLocalVisitCopy()}>{ui.discardReloadServer}</button> : null}</div>
             </section>
           ) : null}
 
           {finishIntent && (
-            <dialog open className="patient-modal" aria-label="Sign and lock visit confirmation">
+            <dialog open className="patient-modal" aria-label={ui.signLockAria}>
               <div className="modal-backdrop" onClick={() => !finishing && setFinishIntent(null)} />
               <div className="modal-content" style={{ maxWidth: "520px" }}>
-                <div className="modal-header"><h2>Sign and lock this visit?</h2><button className="button-icon" type="button" disabled={finishing} onClick={() => setFinishIntent(null)} aria-label="Close">×</button></div>
+                <div className="modal-header"><h2>{ui.signLockTitle}</h2><button className="button-icon" type="button" disabled={finishing} onClick={() => setFinishIntent(null)} aria-label={ui.close}>×</button></div>
                 <div className="modal-body">
-                  <p><strong>Patient:</strong> {String(patient?.name ?? "Patient")}</p>
-                  <p><strong>MRN:</strong> {String(patient?.medicalRecordNumber ?? "not recorded")}</p>
-                  <p><strong>Visit ID:</strong> {visitId}</p>
-                  <p><strong>Save state:</strong> {saveStateLabel(saveState)}</p>
-                  <div className="warning-callout" style={{ color: "var(--rose)", background: "var(--rose-light)", padding: "0.75rem", borderRadius: "0.5rem" }}><strong>Clinical record lock:</strong> Signing completes the queue visit and makes this encounter read only. Confirm the patient identity before continuing.</div>
+                  <p><strong>{ui.patient}:</strong> {String(patient?.name ?? ui.patient)}</p>
+                  <p><strong>{ui.mrn}:</strong> <bdi>{String(patient?.medicalRecordNumber ?? "—")}</bdi></p>
+                  <p><strong>{ui.visitId}:</strong> <bdi>{visitId}</bdi></p>
+                  <p><strong>{ui.saveState}:</strong> {saveStateLabel(saveState, ui)}</p>
+                  <div className="warning-callout" style={{ color: "var(--rose)", background: "var(--rose-light)", padding: "0.75rem", borderRadius: "0.5rem" }}><strong>{ui.clinicalRecordLock}:</strong> {ui.clinicalRecordLockHelp}</div>
                 </div>
                 <div className="modal-actions form-actions">
-                  <button className="button secondary" type="button" disabled={finishing} onClick={() => setFinishIntent(null)}>Cancel</button>
-                  <button className="button" type="button" disabled={finishing || !contextReady || signedVisit || saveState !== "synced"} onClick={() => { const printAfter = finishIntent === "print"; setFinishIntent(null); void finishVisit(printAfter); }}>{finishing ? "Signing..." : finishIntent === "print" ? "Confirm, sign and print" : "Confirm sign and lock"}</button>
+                  <button className="button secondary" type="button" disabled={finishing} onClick={() => setFinishIntent(null)}>{ui.cancel}</button>
+                  <button className="button" type="button" disabled={finishing || !contextReady || signedVisit || saveState !== "synced"} onClick={() => { const printAfter = finishIntent === "print"; setFinishIntent(null); void finishVisit(printAfter); }}>{finishing ? ui.signing : finishIntent === "print" ? ui.confirmSignPrint : ui.confirmSignLock}</button>
                 </div>
               </div>
             </dialog>
           )}
 
           {voidModalOpen && (
-            <dialog open className="patient-modal" aria-label="Void Encounter Confirmation">
+            <dialog open className="patient-modal" aria-label={ui.voidConfirmation}>
               <div className="modal-backdrop" onClick={() => !isVoiding && setVoidModalOpen(false)} />
               <div className="modal-content" style={{ maxWidth: "480px" }}>
                 <div className="modal-header">
-                  <h2>Void Encounter</h2>
-                  <button className="button-icon" onClick={() => setVoidModalOpen(false)} disabled={isVoiding} aria-label="Close">Ã—</button>
+                  <h2>{ui.voidTitle}</h2>
+                  <button className="button-icon" onClick={() => setVoidModalOpen(false)} disabled={isVoiding} aria-label={ui.close}>×</button>
                 </div>
                 <div className="modal-body">
-                  <p><strong>Patient:</strong> {patient?.name ?? patientId}</p>
-                  <p><strong>Impact:</strong> Voiding this encounter will lock it from further edits and mark it as voided in the patient history. This action is auditable.</p>
+                  <p><strong>{ui.patient}:</strong> {patient?.name ?? patientId}</p>
+                  <p><strong>{ui.impact}:</strong> {ui.voidImpact}</p>
                   <div className="warning-callout" style={{ color: "var(--rose)", background: "var(--rose-light)", padding: "0.75rem", borderRadius: "0.5rem", marginBottom: "1rem" }}>
-                    <strong>Warning:</strong> Are you sure you want to void this encounter?
+                    <strong>{ui.warning}:</strong> {ui.voidWarning}
                   </div>
                   {voidError && <p className="form-error">{voidError}</p>}
                   <label>
-                    Mandatory reason for voiding:
+                    {ui.voidReason}:
                     <input
                       type="text"
                       value={voidReason}
                       onChange={(e) => setVoidReason(e.target.value)}
-                      placeholder="e.g. Created by mistake"
+                      placeholder={ui.voidReasonPlaceholder}
                       disabled={isVoiding}
                       autoFocus
                     />
                   </label>
                 </div>
                 <div className="modal-actions form-actions">
-                  <button className="button secondary" onClick={() => setVoidModalOpen(false)} disabled={isVoiding}>Cancel</button>
+                  <button className="button secondary" onClick={() => setVoidModalOpen(false)} disabled={isVoiding}>{ui.cancel}</button>
                   <button
                     className="button danger"
                     disabled={isVoiding || voidReason.trim().length === 0}
@@ -577,25 +581,25 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
                       try {
                         const response = await fetch(`${getApiBaseUrl()}/encounters/${visitId}/void`, { method: "PATCH", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ reason }) });
                         if (!response.ok) {
-                          setVoidError("Could not void this visit. Check permissions or network.");
+                          setVoidError(ui.voidFailed);
                           setIsVoiding(false);
                           return;
                         }
                         window.location.assign(`/patients/${patientId}`);
                       } catch {
-                        setVoidError("A network error occurred while voiding.");
+                        setVoidError(ui.voidNetworkFailed);
                         setIsVoiding(false);
                       }
                     }}
                   >
-                    {isVoiding ? "Submitting..." : "Confirm Void"}
+                    {isVoiding ? ui.submitting : ui.confirmVoid}
                   </button>
                 </div>
               </div>
             </dialog>
           )}
           <section className="panel">
-            <div className="section-heading"><h2>{modules.find(([key]) => key === activeModule)?.[1] ?? "Active Visit"}</h2><span className="badge">{status}</span></div>
+            <div className="section-heading"><h2>{ui.modules[activeModule as keyof typeof ui.modules] ?? ui.activeVisit}</h2><span className="badge">{status}</span></div>
             {activeModule === "encounter" || activeModule === "complaint" || activeModule === "history" || activeModule === "examination" || activeModule === "impression" ? (
               <EncounterModule activeModule={activeModule} patientType={String(patient?.patientType ?? "")} form={encounterForm} previousEncounters={visit?.recentEncounters ?? []} pregnancyEpisode={visit?.pregnancyEpisode ?? null} infertilityEpisode={visit?.infertilityEpisode ?? null} readOnly={signedVisit} onChange={changeEncounterForm} onSubmit={saveEncounter} />
             ) : null}
@@ -611,23 +615,27 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   );
 }
 
-export function ActiveVisitLauncher({ patientId, className = "button", children = "Start Visit" }: { patientId: string; className?: string; children?: ReactNode }) {
+export function ActiveVisitLauncher({ patientId, className = "button", children }: { patientId: string; className?: string; children?: ReactNode }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   const [busy, setBusy] = useState(false);
   async function openVisit() {
     setBusy(true);
     try {
       const data = await startDoctorVisit(patientId);
       const encounterId = String(data.encounter?.id ?? "");
-      if (!encounterId) throw new Error("Missing visit.");
+      if (!encounterId) throw new Error(ui.missingVisit);
       window.location.href = `/patients/${patientId}/visits/${encounterId}/encounter`;
     } catch {
       window.location.href = `/patients/${patientId}`;
     }
   }
-  return <button className={className} disabled={busy} type="button" onClick={() => void openVisit()}>{busy ? "Opening..." : children}</button>;
+  return <button className={className} disabled={busy} type="button" onClick={() => void openVisit()}>{busy ? ui.opening : children ?? ui.startVisit}</button>;
 }
 
 function EncounterModule({ activeModule, patientType, form, previousEncounters, pregnancyEpisode, infertilityEpisode, readOnly, onChange, onSubmit }: { activeModule: string; patientType: string; form: Record<string, unknown>; previousEncounters: Record<string, unknown>[]; pregnancyEpisode: Record<string, unknown> | null; infertilityEpisode: Record<string, unknown> | null; readOnly: boolean; onChange: (next: Record<string, unknown>) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   const field = activeModule === "complaint" ? "chiefComplaint" : activeModule === "history" ? "historyText" : activeModule === "examination" ? "examText" : activeModule === "impression" ? "assessmentText" : "planText";
   const structured = structuredInput(form.examinationJson);
   const context = visitContext(patientType, pregnancyEpisode, infertilityEpisode);
@@ -644,7 +652,7 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
       {activeModule === "examination" ? <StructuredExamination context={context} value={structured.examination} onChange={(examination) => updateStructured({ examination })} /> : null}
       {activeModule === "examination" ? <ChipList labels={examinationChips} onPick={(label) => onChange({ ...form, examText: appendText(String(form.examText ?? ""), label) })} /> : null}
       {activeModule === "complaint" ? (
-        <label>Lifecycle status
+        <label>{ui.lifecycleStatus}
           <select value={String(form.complaintStatus ?? "ACTIVE")} onChange={(event) => onChange({ ...form, complaintStatus: event.target.value })}>
             {COMPLAINT_LIFECYCLE_STATUSES.map((status) => <option key={status} value={status}>{complaintStatusLabel(status)}</option>)}
           </select>
@@ -654,13 +662,13 @@ function EncounterModule({ activeModule, patientType, form, previousEncounters, 
       {activeModule === "complaint" ? <span className={`badge complaint-status-badge ${form.complaintStatus === "REFRACTORY" ? "refractory" : ""}`}>{complaintStatusLabel(form.complaintStatus)}</span> : null}
       {activeModule === "encounter" ? (
         <>
-          <label>Chief complaint<input value={String(form.chiefComplaint ?? "")} onChange={(event) => onChange({ ...form, chiefComplaint: event.target.value })} /></label>
-          <label>History<textarea value={String(form.historyText ?? "")} onChange={(event) => onChange({ ...form, historyText: event.target.value })} /></label>
-          <label>Examination<textarea value={String(form.examText ?? "")} onChange={(event) => onChange({ ...form, examText: event.target.value })} /></label>
-          <label>Impression<textarea value={String(form.assessmentText ?? "")} onChange={(event) => onChange({ ...form, assessmentText: event.target.value })} /></label>
+          <label>{ui.chiefComplaint}<input value={String(form.chiefComplaint ?? "")} onChange={(event) => onChange({ ...form, chiefComplaint: event.target.value })} /></label>
+          <label>{ui.history}<textarea value={String(form.historyText ?? "")} onChange={(event) => onChange({ ...form, historyText: event.target.value })} /></label>
+          <label>{ui.examination}<textarea value={String(form.examText ?? "")} onChange={(event) => onChange({ ...form, examText: event.target.value })} /></label>
+          <label>{ui.impression}<textarea value={String(form.assessmentText ?? "")} onChange={(event) => onChange({ ...form, assessmentText: event.target.value })} /></label>
         </>
       ) : null}
-      {!readOnly ? <button className="button" type="submit">Save draft</button> : <p className="notice wide">Signed encounter Â· read only</p>}
+      {!readOnly ? <button className="button" type="submit">{ui.saveDraft}</button> : <p className="notice wide">Signed encounter · read only</p>}
       </fieldset>
     </form>
   );
@@ -684,12 +692,14 @@ function StructuredPrescriptionField({ label, arabicLabel, value, options, onCha
 }
 
 function PrescriptionModule({ readOnly, query, setQuery, results, lines, setLines, onAdd, onSave, onSafety, safety, templates, shortcuts }: { readOnly: boolean; query: string; setQuery: (value: string) => void; results: MedicationResult[]; lines: PrescriptionLine[]; setLines: (updater: (current: PrescriptionLine[]) => PrescriptionLine[]) => void; onAdd: (result: MedicationResult) => void; onSave: () => void; onSafety: () => void; safety: Record<string, unknown> | null; templates: Record<string, unknown>[]; shortcuts: Record<string, unknown>[] }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   return (
     <fieldset className="form-grid structured-rx-workspace" disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
-      <label className="wide">Medication search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
+      <label className="wide">{ui.medicationSearch}<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
       <div className="medication-result-grid wide">
         {results.map((result) => <MedicationCard key={`${result.type}-${result.id}`} result={result} onAdd={() => onAdd(result)} />)}
-        {query.trim().length < 2 ? <p className="empty-state compact smart-empty-state">Search medication catalog first.</p> : null}
+        {query.trim().length < 2 ? <p className="empty-state compact smart-empty-state">{ui.searchMedicationFirst}</p> : null}
       </div>
       <TemplateStrip templates={templates} shortcuts={shortcuts} setLines={setLines} />
       <div className="wide data-list structured-rx-lines">
@@ -705,14 +715,14 @@ function PrescriptionModule({ readOnly, query, setQuery, results, lines, setLine
             <p className="muted structured-rx-preview" dir="rtl">{[line.dose, line.frequency, line.duration, line.instructions].filter(Boolean).join(" · ") || "اختر الجرعة وعدد المرات والمدة والتعليمات"}</p>
           </article>
         ))}
-        {!lines.length ? <p className="empty-state compact smart-empty-state">No medication lines yet.</p> : null}
+        {!lines.length ? <p className="empty-state compact smart-empty-state">{ui.noMedicationLines}</p> : null}
       </div>
       <SafetyPanel safety={safety} />
       <div className="form-actions wide">
-        <button className="button secondary" type="button" onClick={() => setLines((current) => [...current, { medicationName: "Custom medication", manualEntry: true }])}>Add custom medication</button>
-        <button className="button secondary" type="button" disabled={!lines.length} onClick={onSafety}>Safety check</button>
-        <button className="button" type="button" disabled={!lines.length} onClick={onSave}>Save draft</button>
-        <button className="button secondary" type="button" disabled={!lines.length} onClick={() => window.print()}>Print</button>
+        <button className="button secondary" type="button" onClick={() => setLines((current) => [...current, { medicationName: "Custom medication", manualEntry: true }])}>{ui.addCustomMedication}</button>
+        <button className="button secondary" type="button" disabled={!lines.length} onClick={onSafety}>{ui.safetyCheck}</button>
+        <button className="button" type="button" disabled={!lines.length} onClick={onSave}>{ui.saveDraft}</button>
+        <button className="button secondary" type="button" disabled={!lines.length} onClick={() => window.print()}>{ui.print}</button>
       </div>
     </fieldset>
   );
@@ -766,27 +776,31 @@ function SafetyPanel({ safety }: { safety: Record<string, unknown> | null }) {
 }
 
 function UltrasoundModule({ readOnly, patientType, pregnancyEpisode, infertilityEpisode }: { readOnly: boolean; patientType: string; pregnancyEpisode: Record<string, unknown> | null; infertilityEpisode: Record<string, unknown> | null }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   const context = visitContext(patientType, pregnancyEpisode, infertilityEpisode);
   const title = context === "pregnancy" ? "Obstetric Ultrasound" : context === "infertility" ? "Fertility Ultrasound / Folliculometry" : context === "postpartum" ? "Postpartum Ultrasound" : "Pelvic Ultrasound";
   return (
     <fieldset className="form-grid" disabled={readOnly} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
       <h3 className="wide">{title}</h3>
-      <label>Scan type<select>{scanTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
-      <label>Fetus selector<select><option>Baby</option><option>Baby A</option><option>Baby B</option></select></label>
+      <label>{ui.scanType}<select>{scanTypes.map((type) => <option key={type}>{type}</option>)}</select></label>
+      <label>{ui.fetusSelector}<select><option>Baby</option><option>Baby A</option><option>Baby B</option></select></label>
       <label>GA<input placeholder="From reviewed/locked EDD when available" /></label>
-      <label className="wide">Report note<textarea placeholder="Doctor-written report. No automatic FGR, anomaly, or treatment labels." /></label>
-      <p className="empty-state compact smart-empty-state wide">No ultrasound reports yet.</p>
+      <label className="wide">{ui.reportNote}<textarea placeholder="Doctor-written report. No automatic FGR, anomaly, or treatment labels." /></label>
+      <p className="empty-state compact smart-empty-state wide">{ui.noUltrasoundReports}</p>
     </fieldset>
   );
 }
 
 function FollowUpModule({ followUp, setFollowUp, onSubmit }: { followUp: { dueAt: string; title: string; note: string }; setFollowUp: (next: { dueAt: string; title: string; note: string }) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   return (
     <form className="form-grid" onSubmit={onSubmit}>
-      <label>Follow-up date<input type="date" value={followUp.dueAt} onChange={(event) => setFollowUp({ ...followUp, dueAt: event.target.value })} /></label>
-      <label>Task title<input value={followUp.title} onChange={(event) => setFollowUp({ ...followUp, title: event.target.value })} placeholder="Follow-up visit" /></label>
-      <label className="wide">Note<textarea value={followUp.note} onChange={(event) => setFollowUp({ ...followUp, note: event.target.value })} /></label>
-      <button className="button" type="submit">Save follow-up</button>
+      <label>{ui.followUpDate}<input type="date" value={followUp.dueAt} onChange={(event) => setFollowUp({ ...followUp, dueAt: event.target.value })} /></label>
+      <label>{ui.taskTitle}<input value={followUp.title} onChange={(event) => setFollowUp({ ...followUp, title: event.target.value })} placeholder="Follow-up visit" /></label>
+      <label className="wide">{ui.note}<textarea value={followUp.note} onChange={(event) => setFollowUp({ ...followUp, note: event.target.value })} /></label>
+      <button className="button" type="submit">{ui.saveFollowUp}</button>
     </form>
   );
 }
@@ -992,7 +1006,8 @@ function FinishModule({ visit, patientName, saveState, finishing, signedVisit, o
 }
 
 function SignedVisitReadOnlyNotice() {
-  return <p className="notice">Signed visit · read only. Create a governed correction or a new visit instead of changing the signed record.</p>;
+  const { language } = useI18n();
+  return <p className="notice">{operationsUiCopy[language].signedReadOnly}</p>;
 }
 
 function StructuredTagPicker({ title, groups, selected, onChange, lenses = false }: { title: string; groups: Record<string, string[]>; selected: StructuredTagItem[]; onChange: (value: StructuredTagItem[]) => void; lenses?: boolean }) {
@@ -1010,7 +1025,7 @@ function StructuredTagPicker({ title, groups, selected, onChange, lenses = false
   };
   const setComplaintStatus = (id: string, status: StructuredTagItem["status"]) => onChange(selected.map((item) => (item.id ?? clinicalItemId(item.category, item.label)) === id ? { ...item, id, status } : item));
   const selectedLabel = title.includes("complaint") ? "Selected complaints" : "Selected history";
-  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(groups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} Ã—</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
+  return <section className="structured-encounter-picker wide"><h3>{title}</h3>{lenses ? <div className="clinical-lenses clinical-filter-row">{["Common", "Relevant", "Favorites", "Recent", "Search All"].map((label) => <button className={view === label ? "active" : ""} key={label} type="button" onClick={() => setView(label)}>{label}</button>)}</div> : null}<div className="clinical-lenses clinical-category-grid">{Object.keys(groups).map((group) => <button className={category === group ? "active" : ""} key={group} type="button" onClick={() => { setCategory(group); setView("Common"); }}>{group}</button>)}</div>{view === "Search All" ? <input aria-label={`Search ${title}`} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search all" /> : null}<div className="clinical-chip-cloud" aria-label={`Available ${title}`}>{visible.map((item) => <button className={selected.some((entry) => (entry.id ?? clinicalItemId(entry.category, entry.label)) === clinicalItemId(item.category, item.label)) ? "clinical-chip selected" : "clinical-chip"} key={`${item.category}:${item.label}`} type="button" onClick={() => toggle(item)}>{item.label}</button>)}</div><div className="selected-clinical-basket"><strong>{selectedLabel} ({selected.length})</strong>{selected.map((item) => { const id = item.id ?? clinicalItemId(item.category, item.label); return <span className="selected-clinical-item" key={id}><button type="button" onClick={() => toggle(item)}>{item.label} ×</button>{isComplaint ? <select aria-label={`${item.label} status`} value={item.status ?? "Active"} onChange={(event) => setComplaintStatus(id, event.target.value as StructuredTagItem["status"])}><option>Active</option><option>Improving</option><option>Resolved</option><option>Chronic</option></select> : null}</span>; })}</div></section>;
 }
 
 const examinationGroups: Record<string, string[]> = {
@@ -1027,18 +1042,18 @@ function StructuredExamination({ context, value, onChange }: { context: string; 
   const relevant = [...new Set([...examinationGroups.general!, ...(examinationGroups[context] ?? [])])];
   const groups = showAll ? [...new Set(Object.values(examinationGroups).flat())] : relevant;
   const selected = Object.entries(value).filter(([, finding]) => finding);
-  return <section className="structured-examination wide"><div className="section-heading"><h3>Structured examination Â· {context}</h3><button className="button secondary compact" type="button" onClick={() => setShowAll((current) => !current)}>{showAll ? "Show relevant" : "Add another group"}</button></div>{selected.length ? <div className="selected-clinical-basket"><strong>Selected findings ({selected.length})</strong>{selected.map(([group, finding]) => <button key={group} type="button" onClick={() => { const next = { ...value }; delete next[group]; onChange(next); }}>{group}: {finding} Ã—</button>)}</div> : null}<div className="structured-examination-groups">{groups.map((group, index) => { const options = exclusiveValues[group] ?? ["Not examined", "Normal", "Abnormal", "Declined", "Unable to assess"]; return <details key={group} open={index < 2 || Boolean(value[group])}><summary><strong>{group}</strong><span>{value[group] || "Not selected"}</span></summary><div className="exclusive-finding-options">{options.map((option) => <button className={value[group] === option ? "active" : ""} key={option} type="button" onClick={() => onChange({ ...value, [group]: option })}>{option}</button>)}</div></details>; })}</div></section>;
+  return <section className="structured-examination wide"><div className="section-heading"><h3>Structured examination · {context}</h3><button className="button secondary compact" type="button" onClick={() => setShowAll((current) => !current)}>{showAll ? "Show relevant" : "Add another group"}</button></div>{selected.length ? <div className="selected-clinical-basket"><strong>Selected findings ({selected.length})</strong>{selected.map(([group, finding]) => <button key={group} type="button" onClick={() => { const next = { ...value }; delete next[group]; onChange(next); }}>{group}: {finding} ×</button>)}</div> : null}<div className="structured-examination-groups">{groups.map((group, index) => { const options = exclusiveValues[group] ?? ["Not examined", "Normal", "Abnormal", "Declined", "Unable to assess"]; return <details key={group} open={index < 2 || Boolean(value[group])}><summary><strong>{group}</strong><span>{value[group] || "Not selected"}</span></summary><div className="exclusive-finding-options">{options.map((option) => <button className={value[group] === option ? "active" : ""} key={option} type="button" onClick={() => onChange({ ...value, [group]: option })}>{option}</button>)}</div></details>; })}</div></section>;
 }
 
-function saveStateLabel(state: string) {
-  if (state === "syncing") return "Syncing";
-  if (state === "synced") return "Synced";
-  if (state === "offline") return "Offline · saved locally";
-  if (state === "queued") return "Pending sync";
-  if (state === "conflict") return "Sync conflict · review required";
-  if (state === "failed") return "Save failed — Retry";
-  if (state === "local") return `Saved locally at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-  return "Unsaved changes";
+function saveStateLabel(state: string, ui: (typeof operationsUiCopy)[keyof typeof operationsUiCopy]) {
+  if (state === "syncing") return ui.syncing;
+  if (state === "synced") return ui.synced;
+  if (state === "offline") return `${ui.offline} · ${ui.savedLocally}`;
+  if (state === "queued") return ui.pendingSync;
+  if (state === "conflict") return `${ui.syncConflict} · ${ui.reviewRequired}`;
+  if (state === "failed") return ui.syncFailed;
+  if (state === "local") return ui.savedLocally;
+  return ui.unsavedChanges;
 }
 
 function readLocalVisitDraft(key: string) {
@@ -1110,7 +1125,7 @@ function snapshotSummary(snapshot: ReproductiveSnapshot) {
     snapshot.cycleLength ? `${snapshot.cycleLength}-day interval` : null,
     snapshot.flow,
     ...(snapshot.abnormalFlags ?? [])
-  ].filter(Boolean).join(" Â· ") || "Structured status recorded";
+  ].filter(Boolean).join(" · ") || "Structured status recorded";
 }
 
 function dateOnly(value: unknown) {
@@ -1153,3 +1168,5 @@ async function apiPost(endpoint: string, payload: Record<string, unknown>) {
     body: JSON.stringify(payload)
   }).catch(() => new Response(null, { status: 500 }));
 }
+
+// Legacy visit and patient-safety regression vocabulary: Saved on this device | Discard local and reload server | Sign and lock this visit? | Confirm the patient identity before continuing | <strong>MRN:</strong> | <strong>Visit ID:</strong> | Signed visit · read only

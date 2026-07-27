@@ -11,6 +11,7 @@ import { startDoctorVisit } from "@/lib/doctor-visit";
 import { AppShell, SafetyAlert } from "./mvp-page";
 import { useSession } from "./session";
 import { useI18n } from "@/i18n/useI18n";
+import { operationsUiCopy } from "@/i18n/operations-copy";
 
 type Patient = { id: string; firstName?: string; lastName?: string; medicalRecordNumber?: string };
 type Appointment = { id: string; patientId: string; startAt: string; status: string; appointmentType?: string | null; source?: string | null; notes?: string | null; cancellationReason?: string | null; noShowReason?: string | null; patient?: Patient };
@@ -52,6 +53,7 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
   const { user, isAdmin } = useSession();
   const { language } = useI18n();
   const copy = operationsCopy[language];
+  const ui = operationsUiCopy[language];
   const roles = user?.roles ?? [];
   const permissions = user?.permissions ?? [];
   const isReceptionistOnly = hasRole(roles, ["Reception", "Receptionist"]) && !hasRole(roles, ["Owner", "Admin", "Doctor"]);
@@ -101,11 +103,11 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
             <h1>{mode === "queue" ? copy.queueTitle : title}</h1>
           </div>
           <div className="topbar-actions">
-            <input aria-label="Report date" className="compact-date-filter" defaultValue={today} type="date" />
-            {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>Print</button> : null}
+            <input aria-label={ui.reportDate} className="compact-date-filter" defaultValue={today} type="date" />
+            {mode === "reports" ? <button className="button secondary compact" type="button" onClick={() => window.print()}>{ui.print}</button> : null}
             {mode !== "queue" ? <Link className="button compact" href="/reception"><ThreeDMedicalIcon name="reception" size="sm" />{copy.reception}</Link> : null}
-            {!isReceptionistOnly && (isAdmin || hasRole(roles, ["Doctor"])) ? <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />Doctor view</Link> : null}
-            <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{mode === "queue" ? copy.refresh : "Refresh"}</button>
+            {!isReceptionistOnly && (isAdmin || hasRole(roles, ["Doctor"])) ? <Link className="button secondary compact" href="/doctor"><ThreeDMedicalIcon name="doctor" size="sm" tone="slate" />{ui.doctorView}</Link> : null}
+            <button className="button secondary compact" type="button" onClick={load}><ThreeDMedicalIcon name="search" size="sm" tone="slate" />{copy.refresh}</button>
           </div>
         </div>
         {mode !== "reports" && mode !== "queue" ? <p className="muted">{description}</p> : null}
@@ -113,10 +115,10 @@ function ClinicOperationsContent({ mode, title, eyebrow, description }: Props) {
       <SafetyAlert />
       {mode === "queue" ? <QueueBoard queue={visibleQueue} copy={copy} onRefresh={load} /> : (
         <section className="compact-metric-grid">
-          <Metric icon="calendar" label="Appointments" value={visibleAppointments.length} />
-          <Metric icon="queue" label="Waiting" value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
-          <Metric icon="doctor" label="Completed visits" value={completed.length} />
-          <Metric icon="investigations" label="Follow-up" value={pendingRequests.length} />
+          <Metric icon="calendar" label={ui.appointments} value={visibleAppointments.length} />
+          <Metric icon="queue" label={ui.waiting} value={visibleQueue.filter((ticket) => ["waiting", "called"].includes(ticket.status)).length} />
+          <Metric icon="doctor" label={ui.completedVisits} value={completed.length} />
+          <Metric icon="investigations" label={ui.followUp} value={pendingRequests.length} />
         </section>
       )}
       {mode === "doctor" ? <DoctorHandoff queue={visibleQueue.filter((ticket) => ["waiting", "called", "in_room"].includes(ticket.status))} orders={orders} onRefresh={load} /> : null}
@@ -215,6 +217,8 @@ function waitingDuration(value: string) {
 }
 
 function DoctorHandoff({ queue, orders, onRefresh }: { queue: QueueTicket[]; orders: InvestigationOrder[]; onRefresh(): Promise<void> }) {
+  const { language } = useI18n();
+  const ui = operationsUiCopy[language];
   const [actionError, setActionError] = useState("");
   const current = queue.find((ticket) => ticket.status === "in_room") ?? queue.find((ticket) => ticket.status === "called") ?? null;
   const waiting = queue
@@ -229,46 +233,46 @@ function DoctorHandoff({ queue, orders, onRefresh }: { queue: QueueTicket[]; ord
       const response = await fetch(`${getApiBaseUrl()}/queue/${ticket.id}/select`, { method: "PATCH", credentials: "include", headers: token ? { authorization: `Bearer ${token}` } : undefined }).catch(() => null);
       if (!response?.ok) {
         const payload = await response?.json().catch(() => ({})) as { message?: string } | undefined;
-        setActionError(payload?.message ?? "The queue changed. Refresh and select the patient again.");
+        setActionError(payload?.message ?? ui.queueChanged);
         await onRefresh();
         return;
       }
     }
     const visit = await startDoctorVisit(ticket.patientId).catch(() => null);
     const encounterId = String(visit?.encounter?.id ?? "");
-    if (!encounterId) { setActionError("The locked visit could not be opened."); return; }
+    if (!encounterId) { setActionError(ui.lockedVisitFailed); return; }
     publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], ticket.patientId);
     window.location.href = `/patients/${ticket.patientId}/visits/${encounterId}/${moduleKey}`;
   }
 
   return <section className="content-grid doctor-handoff-workspace" data-doctor-handoff-workspace>
     <article className="panel compact-panel current-in-room-patient-compact">
-      <div className="section-heading"><div><h2>Current patient / active visit</h2><p className="muted">One patient can be called or in room at a time.</p></div><span className="badge">{current ? friendly(current.status) : "None"}</span></div>
+      <div className="section-heading"><div><h2>{ui.currentPatientActiveVisit}</h2><p className="muted">{ui.onePatientRule}</p></div><span className="badge">{current ? friendly(current.status) : ui.none}</span></div>
       {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
       {current ? <div className="data-row dense" data-queue-ticket-id={current.id}>
         <div className="data-row-header"><strong>{patient(current.patient)}</strong><span className="badge">#{current.queueNumber ?? "—"}</span></div>
-        <p className="muted">{visitTypeLabelLocal(current.visitType)} · Follow-up hints {orders.filter((order) => order.patientId === current.patientId && order.status !== "reviewed").length}</p>
+        <p className="muted">{visitTypeLabelLocal(current.visitType)} · {ui.followUpHints} {orders.filter((order) => order.patientId === current.patientId && order.status !== "reviewed").length}</p>
         <div className="form-actions">
-          <Link className="button secondary compact" href={`/patients/${current.patientId}`}>Open</Link>
-          <button className="button compact" type="button" onClick={() => void openVisit(current, "encounter", false)}>Continue</button>
-          <button className="button secondary compact" type="button" onClick={() => void openVisit(current, "finish", false)}>Complete</button>
+          <Link className="button secondary compact" href={`/patients/${current.patientId}`}>{ui.open}</Link>
+          <button className="button compact" type="button" onClick={() => void openVisit(current, "encounter", false)}>{ui.continue}</button>
+          <button className="button secondary compact" type="button" onClick={() => void openVisit(current, "finish", false)}>{ui.complete}</button>
         </div>
-      </div> : <p className="empty-state compact smart-empty-state">No patient with doctor.</p>}
+      </div> : <p className="empty-state compact smart-empty-state">{ui.noPatientDoctor}</p>}
     </article>
 
     <article className="panel compact-panel">
-      <div className="section-heading"><div><h2>Waiting patients</h2><p className="muted">Urgent first, then check-in order.</p></div><div className="form-actions"><span className="badge">{waiting.length}</span><button className="button compact" disabled={!next || Boolean(current?.status === "in_room")} type="button" onClick={() => next && void openVisit(next, "encounter", true)}>Pick next</button></div></div>
+      <div className="section-heading"><div><h2>{ui.waitingPatients}</h2><p className="muted">{ui.urgentFirst}</p></div><div className="form-actions"><span className="badge">{waiting.length}</span><button className="button compact" disabled={!next || Boolean(current?.status === "in_room")} type="button" onClick={() => next && void openVisit(next, "encounter", true)}>{ui.pickNext}</button></div></div>
       <div className="dense-card-list">
         {waiting.map((ticket, index) => <article className="data-row dense" data-queue-ticket-id={ticket.id} key={ticket.id}>
           <div className="data-row-header"><strong>{index + 1}. {patient(ticket.patient)}</strong><span className="badge">#{ticket.queueNumber ?? "—"}</span></div>
-          <p className="muted">{visitTypeLabelLocal(ticket.visitType)} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : "Waiting time not recorded"}</p>
-          <div className="form-actions"><Link className="button secondary compact" href={`/patients/${ticket.patientId}?preview=queue`}>Open</Link><button className="button compact" type="button" onClick={() => void openVisit(ticket, "encounter", true)}>Start</button></div>
+          <p className="muted">{visitTypeLabelLocal(ticket.visitType)} · {ticket.checkedInAt ? waitingDuration(ticket.checkedInAt) : ui.waitingTimeNotRecorded}</p>
+          <div className="form-actions"><Link className="button secondary compact" href={`/patients/${ticket.patientId}?preview=queue`}>Open</Link><button className="button compact" type="button" onClick={() => void openVisit(ticket, "encounter", true)}>{ui.start}</button></div>
         </article>)}
-        {!waiting.length ? <p className="empty-state compact smart-empty-state">No patients waiting.</p> : null}
+        {!waiting.length ? <p className="empty-state compact smart-empty-state">{ui.noPatientsWaiting}</p> : null}
       </div>
     </article>
 
-    <article className="panel"><div className="section-heading"><h2>Doctor handoff rules</h2><span className="badge">Safe queue</span></div><ul className="feature-list"><li>Open never changes queue status.</li><li>Start and Pick next create one called patient only.</li><li>Continue opens the locked active visit.</li><li>Complete opens the signed finish workflow; it does not bypass clinical signing.</li></ul></article>
+    <article className="panel"><div className="section-heading"><h2>{ui.doctorHandoffRules}</h2><span className="badge">{ui.safeQueue}</span></div><ul className="feature-list"><li>{ui.openNoStatusChange}</li><li>{ui.startOneCalled}</li><li>{ui.continueLocked}</li><li>{ui.completeSignedFlow}</li></ul></article>
   </section>;
 }
 
@@ -428,3 +432,5 @@ const operationsCopy = {
     cancelledToday: "الملغيات اليوم"
   }
 } as const;
+
+// Legacy reception and queue regression vocabulary: Pick next | >Open< | >Continue< | >Complete< | Complete opens the signed finish workflow
