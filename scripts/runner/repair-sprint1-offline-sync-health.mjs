@@ -29,6 +29,12 @@ replaceOnce(
 );
 
 replaceOnce(
+  "scripts/sprint1-offline-sync-health-test.mjs",
+  'if (/sessionStorage|getItem(["\']prijClinicToken|authorization:/i.test(offline)) throw new Error("Offline queue must not persist authentication material.");',
+  'if (offline.includes("sessionStorage") || offline.includes("prijClinicToken") || offline.includes("authorization:")) throw new Error("Offline queue must not persist authentication material.");'
+);
+
+replaceOnce(
   "apps/web/components/clinic/ActiveVisitWorkspace.tsx",
   `  useEffect(() => subscribeOfflineSync(() => {
     const queued = getOfflineVisitDraft(patientId, visitId);
