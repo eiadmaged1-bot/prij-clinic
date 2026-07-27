@@ -238,7 +238,7 @@ function DoctorHandoff({ queue, orders, onRefresh }: { queue: QueueTicket[]; ord
         return;
       }
     }
-    const visit = await startDoctorVisit(ticket.patientId).catch(() => null);
+    const visit = await startDoctorVisit(ticket.patientId, ticket.id).catch(() => null);
     const encounterId = String(visit?.encounter?.id ?? "");
     if (!encounterId) { setActionError(ui.lockedVisitFailed); return; }
     publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], ticket.patientId);

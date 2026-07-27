@@ -36,8 +36,8 @@ export type DoctorVisitState = {
   warning?: string;
 };
 
-export function startDoctorVisit(patientId: string) {
-  return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/start`, { method: "POST", body: JSON.stringify({}) });
+export function startDoctorVisit(patientId: string, queueTicketId?: string) {
+  return request<DoctorVisitState>(`/patients/${encodeURIComponent(patientId)}/doctor-visit/start`, { method: "POST", body: JSON.stringify(queueTicketId ? { queueTicketId } : {}) });
 }
 
 export function getCurrentDoctorVisit(patientId: string) {

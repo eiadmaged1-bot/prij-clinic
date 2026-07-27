@@ -48,7 +48,7 @@ export default function DoctorModePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const current = queue.find((ticket) => ticket.status === "called");
+  const current = queue.find((ticket) => ticket.status === "in_room") ?? queue.find((ticket) => ticket.status === "called");
   const waiting = queue.filter((ticket) => ticket.status === "waiting");
   const todayAppointments = appointments.filter((appointment) => isToday(appointment.startAt));
   const resultsToReview = results.filter((result) => result.reviewStatus === "pending_review");
@@ -69,7 +69,7 @@ export default function DoctorModePage() {
             <>
               <Link className="button" href={nextPatientHref}>Open next patient</Link>
               <a className="button secondary" href="#doctor-patient-search">Find patient</a>
-              {current?.patientId && canStartVisit ? <ActiveVisitLauncher className="button secondary" patientId={current.patientId}>Resume active visit</ActiveVisitLauncher> : <button className="button secondary" disabled type="button">Resume active visit</button>}
+              {current?.patientId && canStartVisit ? <ActiveVisitLauncher className="button secondary" patientId={current.patientId} queueTicketId={current.id}>Resume active visit</ActiveVisitLauncher> : <button className="button secondary" disabled type="button">Resume active visit</button>}
             </>
           }
         />
@@ -94,7 +94,7 @@ export default function DoctorModePage() {
               <p className="muted">Queue {current.queueNumber ?? "—"} · Patient context opens before any clinical action.</p>
               <div className="form-actions">
                 <Link className="button compact" href={current.patientId ? `/patients/${current.patientId}` : "/queue"}>Open patient file</Link>
-                {current.patientId && canStartVisit ? <ActiveVisitLauncher className="button secondary compact" patientId={current.patientId}>Resume active visit</ActiveVisitLauncher> : null}
+                {current.patientId && canStartVisit ? <ActiveVisitLauncher className="button secondary compact" patientId={current.patientId} queueTicketId={current.id}>Resume active visit</ActiveVisitLauncher> : null}
               </div>
             </article>
           ) : <EmptyState title="No current patient in room" description="Open the waiting list when the next patient is ready." action={<Link className="button secondary compact" href="/doctor/waiting">Open waiting list</Link>} />}
@@ -104,11 +104,12 @@ export default function DoctorModePage() {
           <SectionCard title="Waiting patients" meta={<Link className="button secondary compact" href="/doctor/waiting">Open full list</Link>}>
             <div className="doctor-list">
               {waiting.slice(0, 5).map((ticket) => (
-                <Link className="doctor-row" href={ticket.patientId ? `/patients/${ticket.patientId}` : "/queue"} key={ticket.id}>
+                <article className="doctor-row" key={ticket.id}>
                   <ThreeDMedicalIcon name="queue" size="sm" />
                   <div><strong>{patientName(ticket.patient)}</strong><span>Queue {ticket.queueNumber ?? "—"} · {visitTypeLabel(ticket.visitType)}</span></div>
-                  <span className="button compact secondary">Open</span>
-                </Link>
+                  <Link className="button compact secondary" href={ticket.patientId ? `/patients/${ticket.patientId}?preview=queue` : "/queue"}>Open</Link>
+                  {ticket.patientId && canStartVisit ? <ActiveVisitLauncher className="button compact" patientId={ticket.patientId} queueTicketId={ticket.id}>Start</ActiveVisitLauncher> : null}
+                </article>
               ))}
               {!loading && waiting.length === 0 ? <EmptyState title="No patients waiting" /> : null}
             </div>

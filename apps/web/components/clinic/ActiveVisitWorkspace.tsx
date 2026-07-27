@@ -615,14 +615,14 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   );
 }
 
-export function ActiveVisitLauncher({ patientId, className = "button", children }: { patientId: string; className?: string; children?: ReactNode }) {
+export function ActiveVisitLauncher({ patientId, queueTicketId, className = "button", children }: { patientId: string; queueTicketId?: string; className?: string; children?: ReactNode }) {
   const { language } = useI18n();
   const ui = operationsUiCopy[language];
   const [busy, setBusy] = useState(false);
   async function openVisit() {
     setBusy(true);
     try {
-      const data = await startDoctorVisit(patientId);
+      const data = await startDoctorVisit(patientId, queueTicketId);
       const encounterId = String(data.encounter?.id ?? "");
       if (!encounterId) throw new Error(ui.missingVisit);
       window.location.href = `/patients/${patientId}/visits/${encounterId}/encounter`;

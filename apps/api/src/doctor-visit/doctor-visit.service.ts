@@ -22,79 +22,60 @@ export class DoctorVisitService {
   async start(patientId: string, dto: StartDoctorVisitDto, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
     if (!patient.branchId) throw new BadRequestException("Patient branch is required to start a doctor visit.");
+    const branchId = patient.branchId;
     const appointment = await assertCanReferenceAppointment(this.prisma, dto.appointmentId, user, { patientId, requireDoctorScope: true });
-    const doctorProfile = await this.prisma.user.findUnique({
-      where: { id: user.id },
-      select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true }
-    });
+    const doctorProfile = await this.prisma.user.findUnique({ where: { id: user.id }, select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true } });
     if (!doctorProfile) throw new BadRequestException("Doctor profile is required to start a visit.");
     const doctorColor = normalizeDoctorColor(doctorProfile.doctorColor, user.id);
-    const existing = await this.prisma.encounter.findFirst({
-      where: { patientId, status: "draft", ...doctorScope(user), ...patientBranchScope(user) },
-      orderBy: { createdAt: "desc" }
-    });
+    const now = new Date();
 
-    const encounter = existing ?? await this.prisma.encounter.create({
-      data: {
-        patientId,
-        branchId: patient.branchId,
-        appointmentId: appointment?.id ?? null,
-        doctorId: user.id,
-        startedByUserId: user.id,
-        doctorDisplayNameSnapshot: doctorProfile.displayName,
-        doctorColorSnapshot: doctorColor,
-        startedAt: new Date()
+    const result = await this.prisma.$transaction(async (tx) => {
+      const ticket = dto.queueTicketId ? await tx.queueTicket.findFirst({
+        where: { id: dto.queueTicketId, patientId, branchId, status: { in: ["waiting", "called", "in_room"] } },
+}) : null;
+      if (dto.queueTicketId && !ticket) throw new NotFoundException("Active queue ticket not found for this patient.");
+      const linkedEncounter = ticket ? await tx.encounter.findUnique({ where: { queueTicketId: ticket.id } }) : null;
+      if (linkedEncounter && linkedEncounter.status !== "draft") throw new ConflictException("The linked visit is no longer active.");
+      if (linkedEncounter && linkedEncounter.doctorId !== user.id) throw new ConflictException("This visit is active with another doctor.");
+
+      const occupied = ticket ? await tx.queueTicket.findFirst({
+        where: { branchId, queueDate: ticket.queueDate, status: "in_room", id: { not: ticket.id } },
+        select: { id: true }
+      }) : null;
+      if (occupied) throw new ConflictException({ code: "DOCTOR_ROOM_OCCUPIED", message: "Resume or complete the current visit before starting another patient." });
+
+      let encounter = linkedEncounter ?? await tx.encounter.findFirst({
+        where: { patientId, status: "draft", ...doctorScope(user), ...patientBranchScope(user) },
+        orderBy: { createdAt: "desc" }
+      });
+      if (ticket && encounter?.queueTicketId && encounter.queueTicketId !== ticket.id) throw new ConflictException("This draft visit belongs to another queue ticket.");
+
+      encounter = encounter ? await tx.encounter.update({
+        where: { id: encounter.id },
+        data: {
+          queueTicketId: ticket?.id,
+          visitType: ticket?.visitType ?? encounter.visitType,
+          startedByUserId: encounter.startedByUserId ?? user.id,
+          doctorDisplayNameSnapshot: encounter.doctorDisplayNameSnapshot ?? doctorProfile.displayName,
+          doctorColorSnapshot: encounter.doctorColorSnapshot ?? doctorColor,
+          startedAt: encounter.startedAt ?? now
+        }
+      }) : await tx.encounter.create({
+        data: { patientId, branchId, appointmentId: appointment?.id ?? ticket?.appointmentId ?? undefined, queueTicketId: ticket?.id, visitType: ticket?.visitType ?? null, doctorId: user.id, startedByUserId: user.id, doctorDisplayNameSnapshot: doctorProfile.displayName, doctorColorSnapshot: doctorColor, startedAt: now }
+      });
+
+      if (ticket && ticket.status !== "in_room") {
+        const claimed = await tx.queueTicket.updateMany({ where: { id: ticket.id, status: { in: ["waiting", "called"] } }, data: { status: "in_room", calledAt: ticket.calledAt ?? now } });
+        if (claimed.count !== 1) throw new ConflictException({ code: "QUEUE_SELECTION_CONFLICT", message: "The waiting line changed. Refresh and try again." });
       }
+      return { encounter, ticket, reusedDraft: Boolean(linkedEncounter || encounter.createdAt < now) };
     });
 
-    const stampedEncounter = existing && (!existing.startedByUserId || !existing.doctorDisplayNameSnapshot || !existing.doctorColorSnapshot || !existing.startedAt)
-      ? await this.prisma.encounter.update({
-          where: { id: existing.id },
-          data: {
-            startedByUserId: existing.startedByUserId ?? user.id,
-            doctorDisplayNameSnapshot: existing.doctorDisplayNameSnapshot ?? doctorProfile.displayName,
-            doctorColorSnapshot: existing.doctorColorSnapshot ?? doctorColor,
-            startedAt: existing.startedAt ?? new Date()
-          }
-        })
-      : encounter;
-
-    const { start: queueDate } = this.clinicTime.getClinicDayBounds(this.clinicTime.getClinicDate());
-    const queueTicket = await this.prisma.queueTicket.findFirst({
-      where: { patientId, branchId: patient.branchId, queueDate, status: { in: ["waiting", "called"] } },
-      orderBy: { checkedInAt: "asc" }
-    });
-    if (queueTicket) {
-      await this.prisma.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "in_room", calledAt: queueTicket.calledAt ?? new Date() } });
-      await this.audit.record({ actorUserId: user.id, action: "queue.patient_entered_room", resourceType: "queue_ticket", resourceId: queueTicket.id, branchId: patient.branchId, severity: "high", metadataJson: { patientId, encounterId: stampedEncounter.id, from: queueTicket.status, to: "in_room" } });
-    }
-
-    if (!doctorProfile.doctorColor) {
-      await this.prisma.user.update({ where: { id: user.id }, data: { doctorColor } });
-    }
-
-    await this.audit.record({
-      actorUserId: user.id,
-      action: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "doctor_visit.started",
-      resourceType: "encounter",
-      resourceId: stampedEncounter.id,
-      branchId: patient.branchId,
-      severity: "high",
-      metadataJson: {
-        patientId,
-        reusedDraft: Boolean(existing),
-        appointmentId: appointment?.id ?? null,
-        startedByUserId: stampedEncounter.startedByUserId,
-        doctorDisplayNameSnapshot: stampedEncounter.doctorDisplayNameSnapshot,
-        doctorColorSnapshot: stampedEncounter.doctorColorSnapshot
-        , legacyEvent: existing ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "DOCTOR_VISIT_STARTED",
-        queueTicketId: queueTicket?.id ?? null
-      }
-    });
-
-    return this.visitState(patientId, stampedEncounter.id, user);
+    if (!doctorProfile.doctorColor) await this.prisma.user.update({ where: { id: user.id }, data: { doctorColor } });
+    if (result.ticket) await this.audit.record({ actorUserId: user.id, action: "queue.patient_entered_room", resourceType: "queue_ticket", resourceId: result.ticket.id, branchId, severity: "high", metadataJson: { patientId, encounterId: result.encounter.id, from: result.ticket.status, to: "in_room" } });
+    await this.audit.record({ actorUserId: user.id, action: result.reusedDraft ? "VISIT_DOCTOR_SIGNATURE_ASSIGNED" : "doctor_visit.started", resourceType: "encounter", resourceId: result.encounter.id, branchId, severity: "high", metadataJson: { patientId, queueTicketId: result.ticket?.id ?? null, visitType: result.ticket?.visitType ?? null, reusedDraft: result.reusedDraft } });
+    return this.visitState(patientId, result.encounter.id, user);
   }
-
   async current(patientId: string, user: AuthUser) {
     await assertCanReferencePatient(this.prisma, patientId, user);
     const encounter = await this.prisma.encounter.findFirst({
