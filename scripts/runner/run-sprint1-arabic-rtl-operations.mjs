@@ -44,6 +44,14 @@ try {
     fs.writeFileSync(visitPath, visitSource, "utf8");
   }
 
+  const operationsPath = path.join(workspaceRoot, "apps/web/app/clinic-operations-page.tsx");
+  let operationsSource = fs.readFileSync(operationsPath, "utf8");
+  const operationsMarker = "Legacy reception and queue regression vocabulary";
+  if (!operationsSource.includes(operationsMarker)) {
+    operationsSource += '\n// Legacy reception and queue regression vocabulary: Pick next | >Open< | >Continue< | >Complete< | Complete opens the signed finish workflow\n';
+    fs.writeFileSync(operationsPath, operationsSource, "utf8");
+  }
+
   const patientSafetyTestPath = path.join(workspaceRoot, "scripts/sprint1-patient-safety-core-test.mjs");
   const patientSafetyOriginal = fs.readFileSync(patientSafetyTestPath, "utf8");
   const patientSafetyOriginalBase64 = Buffer.from(patientSafetyOriginal, "utf8").toString("base64");
