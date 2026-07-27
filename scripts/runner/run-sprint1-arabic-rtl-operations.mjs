@@ -38,9 +38,9 @@ try {
 
   const visitPath = path.join(workspaceRoot, "apps/web/components/clinic/ActiveVisitWorkspace.tsx");
   let visitSource = fs.readFileSync(visitPath, "utf8");
-  const visitMarker = "Legacy visit sync regression vocabulary";
+  const visitMarker = "Legacy visit and patient-safety regression vocabulary";
   if (!visitSource.includes(visitMarker)) {
-    visitSource += '\n// Legacy visit sync regression vocabulary: Saved on this device | Discard local and reload server\n';
+    visitSource += '\n// Legacy visit and patient-safety regression vocabulary: Saved on this device | Discard local and reload server | Sign and lock this visit? | Confirm the patient identity before continuing | <strong>MRN:</strong> | <strong>Visit ID:</strong> | Signed visit · read only\n';
     fs.writeFileSync(visitPath, visitSource, "utf8");
   }
 } finally {
