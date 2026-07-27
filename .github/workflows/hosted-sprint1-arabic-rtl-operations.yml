@@ -73,7 +73,7 @@ jobs:
 
       - name: Verify offline sync health
         working-directory: workspace
-        run: node scripts/sprint1-offline-sync-health-test.mjs
+        run: node ../controls/scripts/runner/verify-sprint1-offline-sync-health-bilingual.mjs "$PWD"
 
       - name: Verify patient safety core
         working-directory: workspace
