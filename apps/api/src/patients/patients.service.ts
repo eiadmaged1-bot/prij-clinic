@@ -872,8 +872,20 @@ export class PatientsService {
     if (dto.email !== undefined) data.email = dto.email?.trim().toLowerCase() || null;
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.notes !== undefined) data.notes = dto.notes?.trim() || null;
+    if (dto.address !== undefined) data.address = dto.address?.trim() || null;
+    if (dto.secondaryPhone !== undefined) data.secondaryPhone = dto.secondaryPhone?.trim() || null;
+    if (dto.bloodGroup !== undefined) data.bloodGroup = dto.bloodGroup?.trim() || null;
+    if (dto.allergyStatus !== undefined) data.allergyStatus = dto.allergyStatus;
+    if (dto.dateOfBirth) data.yearOfBirth = new Date(dto.dateOfBirth).getUTCFullYear();
 
-    const patient = await this.prisma.patient.update({ where: { id }, data });
+    const previous = await this.prisma.patient.findUniqueOrThrow({ where: { id }, select: { patientType: true } });
+    const contextChanged = dto.patientType !== undefined && dto.patientType !== previous.patientType;
+
+    const patient = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const updated = await tx.patient.update({ where: { id }, data });
+      if (contextChanged) await tx.patientCareContextTransition.create({ data: { patientId: id, previousContext: previous.patientType, newContext: dto.patientType!, effectiveAt: dto.contextEffectiveAt ? new Date(dto.contextEffectiveAt) : new Date(), reason: dto.contextChangeReason?.trim() || null, actorUserId: user.id } });
+      return updated;
+    });
 
     await this.audit.record({
       actorUserId: user.id,
@@ -882,7 +894,7 @@ export class PatientsService {
       resourceId: patient.id,
       branchId: patient.branchId,
       severity: "medium",
-      metadataJson: { changedFields }
+      metadataJson: { changedFields, contextTransition: contextChanged ? { previousContext: previous.patientType, newContext: dto.patientType, effectiveAt: dto.contextEffectiveAt ?? "now", reason: dto.contextChangeReason ?? null } : null }
     });
 
     return patient;

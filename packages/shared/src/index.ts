@@ -9,6 +9,7 @@ export * from "./pregnancy-dating";
 export type PatientWorkspaceSummary = {
   patient: { id: string; displayName: string; medicalRecordNumber: string; dateOfBirth: string | null; yearOfBirth: number | null; ageSummary: string | null; contactSummary: string | null; patientType: string };
   activeClinicalPhase: { phaseType: string; title: string } | null;
+  activePregnancy: { id: string; estimatedDueDate: string | null; datingMethod: string | null; datingStatus: string; datingConfirmedAt: string | null; gravida: number | null; para: number | null; abortions: number | null; living: number | null; fetusCount: number } | null;
   todayAppointment: { id: string; startAt: string; status: string; appointmentType: string | null } | null;
   currentQueueTicket: { id: string; queueNumber: number; status: string; priority: string; visitType: string } | null;
   activeVisit: { id: string; status: string; startedAt: string | null; createdAt: string } | null;

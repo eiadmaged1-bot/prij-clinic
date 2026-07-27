@@ -25,6 +25,7 @@ export class PatientLookupService {
       appointments: { where: { startAt: { gte: todayStart }, status: { in: ["booked", "rescheduled"] } }, orderBy: { startAt: "asc" }, take: 2, select: { id: true, startAt: true, status: true, appointmentType: true } },
       queueTickets: { where: { queueDate: { gte: todayStart, lt: todayEnd }, status: { in: ["waiting", "called", "in_room"] } }, orderBy: { checkedInAt: "desc" }, take: 1, select: { id: true, queueNumber: true, status: true, priority: true, visitType: true } },
       encounters: { orderBy: { createdAt: "desc" }, take: 50, select: { id: true, status: true, startedAt: true, createdAt: true, chiefComplaint: true, followUpJson: true } },
+      pregnancies: { where: { status: "active" }, orderBy: { createdAt: "desc" }, take: 1, select: { id: true, estimatedDueDate: true, datingMethod: true, datingStatus: true, datingConfirmedAt: true, gravida: true, para: true, abortions: true, living: true, fetusCount: true } },
       patientAllergies: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },
       patientMedications: { where: { status: "active" }, take: 1, select: { id: true, updatedAt: true } },
       investigationResults: { where: { reviewStatus: "pending_review" }, take: 100, select: { id: true } },
@@ -40,7 +41,7 @@ export class PatientLookupService {
     const nextAppointment = patient.appointments.find(appointment => appointment.startAt >= todayEnd) ?? null;
     return {
       patient: { id: patient.id, displayName: `${patient.firstName} ${patient.lastName}`, medicalRecordNumber: patient.medicalRecordNumber, dateOfBirth: patient.dateOfBirth, yearOfBirth: patient.yearOfBirth, ageSummary: ageSummary(patient.dateOfBirth, patient.yearOfBirth, now), contactSummary: patient.phone ? `••••${patient.phone.replace(/\D/g, "").slice(-4)}` : null, patientType: patient.patientType },
-      activeClinicalPhase: patient.clinicalPhases[0] ?? null, todayAppointment, currentQueueTicket: patient.queueTickets[0] ?? null, activeVisit: patient.encounters[0] ?? null,
+      activeClinicalPhase: patient.clinicalPhases[0] ?? null, activePregnancy: patient.pregnancies[0] ?? null, todayAppointment, currentQueueTicket: patient.queueTickets[0] ?? null, activeVisit: patient.encounters[0] ?? null,
       allergyReviewState: receptionistOnly ? undefined : patient.patientAllergies.length ? "recorded" : "review_required",
       medicationReconciliationState: receptionistOnly ? undefined : patient.patientMedications.length ? "recorded" : "review_required",
       pendingResultCount: receptionistOnly ? undefined : patient.investigationResults.length, pendingFollowUp: patient.patientTasks[0] ?? null,

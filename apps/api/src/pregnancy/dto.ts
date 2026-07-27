@@ -104,6 +104,13 @@ export class UpdatePregnancyDto {
   @MaxLength(80)
   datingMethod?: string;
 
+  @IsOptional() @IsIn(["LMP", "IVF_ET", "ULTRASOUND", "MANUAL"]) datingSource?: string;
+  @IsOptional() @IsIn(["UNCONFIRMED", "CONFIRMED"]) datingStatus?: string;
+  @IsOptional() @IsString() @MaxLength(80) cycleReliability?: string;
+  @IsOptional() @IsDateString() ivfTransferDate?: string;
+  @IsOptional() @IsInt() @IsIn([3, 5]) embryoAgeDays?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(8) fetusCount?: number;
+  @IsOptional() @IsString() @MaxLength(500) eddReplacementReason?: string;
   @IsOptional()
   @IsString()
   @MaxLength(80)

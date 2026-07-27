@@ -423,6 +423,8 @@ model Patient {
   dataVerificationState String                @default("VERIFIED")
   validationWarnings    Json?
   originalSourceMetadata Json?
+  bloodGroup            String?
+  allergyStatus         String             @default("NOT_ASSESSED")
 
   branch                      Branch?                           @relation(fields: [branchId], references: [id], onDelete: SetNull)
   createdByUser               User?                             @relation("PatientsCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -446,6 +448,7 @@ model Patient {
   patientTasks                PatientTask[]
   patientInternalNotes        PatientInternalNote[]
   pregnancies                 Pregnancy[]
+  careContextTransitions      PatientCareContextTransition[]
   gynecologyVisits            GynecologyVisit[]
   previousPregnancies         PreviousPregnancy[]
   antenatalVisits             AntenatalVisit[]
@@ -3467,6 +3470,13 @@ model Pregnancy {
   createdByUserId  String?         @db.Uuid
   createdAt        DateTime        @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+  cycleReliability String?
+  ivfTransferDate  DateTime?       @db.Date
+  embryoAgeDays    Int?
+  datingStatus     String          @default("UNCONFIRMED")
+  datingConfirmedAt DateTime?      @db.Timestamptz(3)
+  datingConfirmedByUserId String?  @db.Uuid
+  fetusCount       Int             @default(1)
 
   branch              Branch?                     @relation(fields: [branchId], references: [id], onDelete: SetNull)
   patient             Patient                     @relation(fields: [patientId], references: [id], onDelete: Restrict)
@@ -3477,12 +3487,39 @@ model Pregnancy {
   obUltrasounds       ObUltrasound[]
   calculations        PatientCalculation[]
   datingAssessments   PregnancyDatingAssessment[]
+  datingHistory       PregnancyDatingHistory[]
 
   @@index([branchId])
   @@index([patientId, createdAt])
   @@index([status])
 }
 
+model PatientCareContextTransition {
+  id              String   @id @default(uuid()) @db.Uuid
+  patientId       String   @db.Uuid
+  previousContext String
+  newContext      String
+  effectiveAt     DateTime @db.Timestamptz(3)
+  reason          String?
+  actorUserId     String   @db.Uuid
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  @@index([patientId, effectiveAt])
+}
+
+model PregnancyDatingHistory {
+  id                   String   @id @default(uuid()) @db.Uuid
+  pregnancyId          String   @db.Uuid
+  previousEdd          DateTime @db.Date
+  previousDatingMethod String?
+  replacementEdd       DateTime @db.Date
+  replacementSource    String
+  replacementReason    String
+  actorUserId          String   @db.Uuid
+  replacedAt           DateTime @default(now()) @db.Timestamptz(3)
+  pregnancy Pregnancy @relation(fields: [pregnancyId], references: [id], onDelete: Restrict)
+  @@index([pregnancyId, replacedAt])
+}
 model GynecologyVisit {
   id                        String                  @id @default(uuid()) @db.Uuid
   branchId                  String?                 @db.Uuid
