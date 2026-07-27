@@ -5,6 +5,10 @@ export class StartDoctorVisitDto {
   @IsOptional()
   @IsUUID()
   appointmentId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  queueTicketId?: string;
 }
 
 export class UpdateDoctorVisitDto {

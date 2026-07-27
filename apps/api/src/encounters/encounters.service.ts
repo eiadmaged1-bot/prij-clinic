@@ -207,7 +207,7 @@ export class EncountersService {
       const signed = await tx.encounter.findUnique({ where: { id } });
       if (!signed || signed.patientId !== patientId) throw new NotFoundException("Signed encounter could not be reloaded.");
 
-      const queueTicket = await tx.queueTicket.findFirst({ where: { patientId: signed.patientId, branchId: signed.branchId, status: "in_room" }, orderBy: { checkedInAt: "desc" } });
+      const queueTicket = signed.queueTicketId ? await tx.queueTicket.findFirst({ where: { id: signed.queueTicketId, patientId: signed.patientId, branchId: signed.branchId, status: "in_room" } }) : null;
       if (queueTicket) {
         await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });
         await tx.activeQueueTicketLock.deleteMany({ where: { queueTicketId: queueTicket.id } });

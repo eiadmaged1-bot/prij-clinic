@@ -238,10 +238,15 @@ export class QueueService {
     const tickets = await this.prisma.queueTicket.findMany({
       where: { queueDate, ...branchScope(user), patient: { dataClassification: { notIn: ["TEST", "QUARANTINED"] } } } as unknown as Prisma.QueueTicketWhereInput,
       orderBy: { queueNumber: "asc" },
-      include: { patient: true, appointment: true }
+      include: { patient: true, appointment: true, encounter: { select: { id: true, doctorId: true, status: true } } }
     });
 
-    return tickets.sort((left, right) => queueSortRank(left) - queueSortRank(right) || left.queueNumber - right.queueNumber);
+    return tickets
+      .sort((left, right) => queueSortRank(left) - queueSortRank(right) || left.queueNumber - right.queueNumber)
+      .map(({ encounter, ...ticket }) => ({
+        ...ticket,
+        activeEncounter: encounter?.status === "draft" && encounter.doctorId === user.id ? { id: encounter.id } : null
+      }));
   }
 
   async call(id: string, user: AuthUser) {
@@ -267,9 +272,13 @@ export class QueueService {
         throw new BadRequestException({ code: "QUEUE_INVALID_TRANSITION", message: "Only a waiting or called patient can be selected for the doctor." });
       }
 
-      const occupiedRoom = await tx.queueTicket.findFirst({
-        where: { queueDate, status: "in_room", id: { not: id }, ...branchScope(user) },
-        select: { id: true, patientId: true, queueNumber: true }
+      const occupiedRoom = await tx.encounter.findFirst({
+        where: {
+          doctorId: user.id,
+          status: "draft",
+          queueTicket: { is: { queueDate, status: "in_room", id: { not: id }, ...branchScope(user) } }
+        },
+        select: { id: true, patientId: true }
       });
       if (occupiedRoom) {
         throw new ConflictException({ code: "DOCTOR_ROOM_OCCUPIED", message: "Complete or sign the current visit before selecting another patient." });

@@ -18,7 +18,7 @@ export default function ReceptionCheckInPage() {
   const [status, setStatus] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [ticket, setTicket] = useState<{ queueNumber?: number; visitType?: string; queueState?: string; alreadyQueued?: boolean } | null>(null);
-  const { key: idempotencyKey } = useIdempotencyKey();
+  const { key: idempotencyKey, regenerate: regenerateIdempotencyKey } = useIdempotencyKey();
   const token = useMemo(() => typeof window === "undefined" ? "" : sessionStorage.getItem("prijClinicToken") ?? "", []);
 
   useEffect(() => {
@@ -58,6 +58,12 @@ export default function ReceptionCheckInPage() {
       setTicket(body);
       setStatus(body.alreadyQueued ? "Patient is already waiting today" : "Patient added to waiting line");
       publishClinicDataChange(["queue", "patient", "timeline", "owner-operations"], selectedPatient.id);
+      if (!body.alreadyQueued) {
+        sessionStorage.removeItem("prij:check-in:selected-patient");
+        setSelectedPatient(null);
+        setVisitType("");
+        regenerateIdempotencyKey();
+      }
     } else setStatus(formatSafeApiError(await readSafeApiError(response, "The waiting line could not be updated safely.")));
     setSubmitting(false);
   }
