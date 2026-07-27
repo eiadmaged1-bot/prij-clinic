@@ -1,0 +1,124 @@
+name: Hosted Sprint 2A Directory Context Follow-up
+
+on:
+  pull_request:
+    branches:
+      - work/sprint1-qa-repair-batch
+    paths:
+      - docs/verification/HOSTED_SPRINT2A_DIRECTORY_CONTEXT_TRIGGER.md
+      - .github/workflows/hosted-sprint2a-directory-context.yml
+      - scripts/runner/apply-sprint2a-directory-context.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hosted-sprint2a-directory-context-v1
+  cancel-in-progress: false
+
+jobs:
+  implement-verify:
+    name: Normalize patient directory base contexts
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout Sprint 2A branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Apply directory context normalization
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/runner/apply-sprint2a-directory-context.mjs
+          node scripts/runner/apply-sprint2a-directory-context.mjs
+          git diff --check
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Verify Sprint 2A patient foundation
+        run: node scripts/sprint2a-patient-foundation-test.mjs
+
+      - name: Verify patient safety and queue regressions
+        run: |
+          node scripts/sprint1-patient-safety-core-test.mjs
+          node scripts/sprint1-reception-queue-core-test.mjs
+          node scripts/v1444-reception-shell-test.mjs
+          node scripts/v148-reception-patient-queue-test.mjs
+          node scripts/v149-patient-search-queue-recovery-test.mjs
+
+      - name: Verify existing clinical feature regressions
+        run: |
+          node scripts/feature-46-refractory-complaint-test.mjs
+          node scripts/qa-calendar-history-contract-test.mjs
+          node scripts/feature-48-compact-medication-cards-test.mjs
+          node scripts/feature-49-structured-arabic-prescription-test.mjs
+          npm run test:medication-ui-clean
+          npm run test:v093:medication-ui
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Production build
+        run: npm run build
+
+      - name: Verify exact application scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          changed="$(git status --porcelain=v1 --untracked-files=all | sed -E 's/^...//')"
+          printf '%s\n' "$changed"
+          unsafe="$(printf '%s\n' "$changed" | grep -Ev '^(\.github/workflows/hosted-sprint2a-directory-context\.yml|scripts/runner/apply-sprint2a-directory-context\.mjs|docs/verification/HOSTED_SPRINT2A_DIRECTORY_CONTEXT_TRIGGER\.md|apps/web/lib/patient-labels\.ts|apps/api/src/patients/services/patient-search\.service\.ts|apps/web/app/patients/page\.tsx|scripts/sprint2a-patient-foundation-test\.mjs|docs/verification/SPRINT2A_PATIENT_FOUNDATION_RESULT\.md)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Out-of-scope Sprint 2A follow-up changes:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+
+      - name: Commit verified directory context follow-up
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            .github/workflows/hosted-sprint2a-directory-context.yml \
+            scripts/runner/apply-sprint2a-directory-context.mjs \
+            docs/verification/HOSTED_SPRINT2A_DIRECTORY_CONTEXT_TRIGGER.md
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            apps/web/lib/patient-labels.ts \
+            apps/api/src/patients/services/patient-search.service.ts \
+            apps/web/app/patients/page.tsx \
+            scripts/sprint2a-patient-foundation-test.mjs \
+            docs/verification/SPRINT2A_PATIENT_FOUNDATION_RESULT.md
+          git add -u \
+            .github/workflows/hosted-sprint2a-directory-context.yml \
+            scripts/runner/apply-sprint2a-directory-context.mjs \
+            docs/verification/HOSTED_SPRINT2A_DIRECTORY_CONTEXT_TRIGGER.md
+          git diff --cached --check
+          staged="$(git diff --cached --name-only)"
+          unsafe="$(printf '%s\n' "$staged" | grep -Ev '^(apps/web/lib/patient-labels\.ts|apps/api/src/patients/services/patient-search\.service\.ts|apps/web/app/patients/page\.tsx|scripts/sprint2a-patient-foundation-test\.mjs|docs/verification/SPRINT2A_PATIENT_FOUNDATION_RESULT\.md|\.github/workflows/hosted-sprint2a-directory-context\.yml|scripts/runner/apply-sprint2a-directory-context\.mjs|docs/verification/HOSTED_SPRINT2A_DIRECTORY_CONTEXT_TRIGGER\.md)$' || true)"
+          if [[ -n "$unsafe" ]]; then
+            echo 'Unsafe staged files:' >&2
+            printf '%s\n' "$unsafe" >&2
+            exit 1
+          fi
+          git commit -m 'Normalize patient directory base contexts'
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
