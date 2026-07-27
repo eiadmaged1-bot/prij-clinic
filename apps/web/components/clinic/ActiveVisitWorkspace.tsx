@@ -21,6 +21,7 @@ import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
 import InvestigationStationV3 from "@/components/investigations/InvestigationStationV3";
 import { getApiBaseUrl } from "@/lib/api-base-url";
 import { completeDoctorVisit, createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
+import { clearOfflineVisitDraft, enqueueOfflineVisitDraft, getOfflineVisitDraft, retryOfflineVisitDraft, subscribeOfflineSync, syncOfflineVisitDraft, type OfflineSyncOutcome } from "@/lib/offline-sync";
 import { useSession } from "@/app/session";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 import { complaintGroups, historyGroups } from "@/components/patients/ClinicalInputFoundation";
@@ -189,7 +190,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   const [voidReason, setVoidReason] = useState("");
   const [isVoiding, setIsVoiding] = useState(false);
   const [voidError, setVoidError] = useState("");
-  const [saveState, setSaveState] = useState<"synced" | "unsaved" | "local" | "syncing" | "failed" | "offline">("synced");
+  const [saveState, setSaveState] = useState<"synced" | "unsaved" | "local" | "queued" | "syncing" | "failed" | "offline" | "conflict">("synced");
   const [finishing, setFinishing] = useState(false);
   const [finishIntent, setFinishIntent] = useState<"finish" | "print" | null>(null);
   const draftKey = `prij:unsigned-visit:${patientId}:${visitId}`;
@@ -224,9 +225,10 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
         planText: String(data.encounter?.planText ?? ""),
         examinationJson: structuredInput(data.encounter?.examinationJson)
       };
-      const recovered = String(data.encounter?.status ?? "") === "draft" ? readLocalVisitDraft(draftKey) : null;
+      const queuedDraft = String(data.encounter?.status ?? "") === "draft" ? getOfflineVisitDraft(patientId, visitId) : null;
+      const recovered = queuedDraft?.payload ?? (String(data.encounter?.status ?? "") === "draft" ? readLocalVisitDraft(draftKey) : null);
       setEncounterForm(recovered ? { ...serverForm, ...recovered } : serverForm);
-      setSaveState(recovered ? "local" : "synced");
+      setSaveState(queuedDraft?.status === "conflict" ? "conflict" : queuedDraft ? (navigator.onLine ? "queued" : "offline") : recovered ? "local" : "synced");
       setError("");
       setStatus("");
     } catch {
@@ -235,18 +237,70 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
     }
   }, [draftKey, patientId, visitId]);
 
+  const syncEncounterDraft = useCallback(async (source: "auto" | "manual" = "manual"): Promise<OfflineSyncOutcome> => {
+    if (!contextReady || signedVisit) return "failed";
+    try {
+      localStorage.setItem(draftKey, JSON.stringify(encounterForm));
+      enqueueOfflineVisitDraft({ patientId, encounterId: visitId, payload: encounterForm, expectedUpdatedAt: String(encounter?.updatedAt ?? "") });
+    } catch {
+      setSaveState("failed");
+      setStatus("Local autosave failed. Keep this page open and retry.");
+      return "failed";
+    }
+    if (!navigator.onLine) {
+      setSaveState("offline");
+      setStatus("Saved on this device. It will sync when the connection returns.");
+      return "offline";
+    }
+    setSaveState("syncing");
+    const outcome = await syncOfflineVisitDraft(patientId, visitId, (item) => updateDoctorVisit(item.patientId, item.encounterId, item.payload, item.expectedUpdatedAt));
+    if (outcome === "synced") {
+      localStorage.removeItem(draftKey);
+      setSaveState("synced");
+      setStatus(source === "auto" ? "Autosaved and synced." : "Draft synced.");
+      await loadVisit();
+      window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
+      return outcome;
+    }
+    setSaveState(outcome === "queued" ? "queued" : outcome);
+    setStatus(outcome === "conflict"
+      ? "A newer server copy exists. Reload the server version or keep this local copy for review. Nothing was overwritten."
+      : outcome === "offline"
+        ? "Saved on this device. It will sync when the connection returns."
+        : "Saved locally, but server sync failed. Retry when the clinic connection is stable.");
+    return outcome;
+  }, [contextReady, draftKey, encounter?.updatedAt, encounterForm, loadVisit, patientId, signedVisit, visitId]);
+
   useEffect(() => {
     if (!contextReady || saveState !== "unsaved") return;
-    const timer = window.setTimeout(() => {
-      try {
-        localStorage.setItem(draftKey, JSON.stringify(encounterForm));
-        setSaveState(navigator.onLine ? "local" : "offline");
-      } catch {
-        setSaveState("failed");
-      }
-    }, 350);
+    const timer = window.setTimeout(() => { void syncEncounterDraft("auto"); }, 500);
     return () => window.clearTimeout(timer);
-  }, [contextReady, draftKey, encounterForm, saveState]);
+  }, [contextReady, saveState, syncEncounterDraft]);
+
+  useEffect(() => {
+    const retryOnReconnect = () => {
+      const queued = getOfflineVisitDraft(patientId, visitId);
+      if (queued && queued.status !== "conflict") {
+        retryOfflineVisitDraft(patientId, visitId);
+        void syncEncounterDraft("auto");
+      }
+    };
+    window.addEventListener("online", retryOnReconnect);
+    return () => window.removeEventListener("online", retryOnReconnect);
+  }, [patientId, syncEncounterDraft, visitId]);
+
+  useEffect(() => subscribeOfflineSync(() => {
+    const queued = getOfflineVisitDraft(patientId, visitId);
+    if (queued?.status === "conflict") setSaveState("conflict");
+    else if (queued?.status === "failed") setSaveState("failed");
+    else if (queued?.status === "syncing") setSaveState("syncing");
+    else if (queued?.status === "pending") setSaveState(navigator.onLine ? "queued" : "offline");
+    else {
+      localStorage.removeItem(draftKey);
+      setSaveState((current) => current === "unsaved" ? current : "synced");
+      void loadVisit();
+    }
+  }), [draftKey, loadVisit, patientId, visitId]);
 
   useEffect(() => {
     if (!patientId || !visitId) {
@@ -298,18 +352,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   async function saveEncounter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!contextReady) return;
-    setSaveState("syncing");
-    try {
-      await updateDoctorVisit(patientId, visitId, encounterForm, String(encounter?.updatedAt ?? ""));
-      localStorage.removeItem(draftKey);
-      setSaveState("synced");
-      setStatus("Draft synced.");
-      await loadVisit();
-      window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
-    } catch (saveError) {
-      setSaveState(navigator.onLine ? "failed" : "offline");
-      setStatus(saveError instanceof Error ? saveError.message : "Draft save failed.");
-    }
+    await syncEncounterDraft("manual");
   }
 
   function changeEncounterForm(next: Record<string, unknown>) {
@@ -319,11 +362,12 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
 
   async function finishVisit(printAfter = false) {
     if (!contextReady || finishing || signedVisit) return;
+    if (saveState !== "synced") {
+      setStatus("Sync all local changes before signing this visit.");
+      return;
+    }
     setFinishing(true);
     try {
-      if (saveState !== "synced") {
-        await updateDoctorVisit(patientId, visitId, encounterForm, String(encounter?.updatedAt ?? ""));
-      }
       await completeDoctorVisit(patientId, visitId);
       localStorage.removeItem(draftKey);
       setSaveState("synced");
@@ -342,7 +386,24 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
 
   function requestFinish(printAfter = false) {
     if (!contextReady || signedVisit || finishing) return;
+    if (saveState !== "synced") {
+      setStatus("Sync all local changes before signing this visit.");
+      return;
+    }
     setFinishIntent(printAfter ? "print" : "finish");
+  }
+
+  async function retryCurrentVisitSync() {
+    retryOfflineVisitDraft(patientId, visitId);
+    await syncEncounterDraft("manual");
+  }
+
+  async function discardLocalVisitCopy() {
+    clearOfflineVisitDraft(patientId, visitId);
+    localStorage.removeItem(draftKey);
+    setSaveState("synced");
+    setStatus("Local copy discarded. Server version reloaded.");
+    await loadVisit();
   }
 
   function addMedication(result: MedicationResult) {
@@ -440,15 +501,21 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           <div className="visit-persistent-actions no-print" aria-label="Visit actions">
             <span className={`badge visit-save-state ${saveState}`}>{saveStateLabel(saveState)}</span>
             <Link className="button secondary compact" href={`/patients/${patientId}/visits/${visitId}/finish`}>Review visit</Link>
-            <button className="button compact" disabled={finishing || signedVisit || !contextReady} type="button" onClick={() => requestFinish(false)}>Finish visit</button>
+            <button className="button compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(false)}>Finish visit</button>
             <details className="visit-more-actions">
               <summary className="button secondary compact">More</summary>
               <div>
                 <Link className="button secondary compact" href={`/patients/${patientId}`}>Save and continue later</Link>
-                <button className="button secondary compact" disabled={finishing || signedVisit || !contextReady} type="button" onClick={() => requestFinish(true)}>Finish and print</button>
+                <button className="button secondary compact" disabled={finishing || signedVisit || !contextReady || saveState !== "synced"} type="button" onClick={() => requestFinish(true)}>Finish and print</button>
               </div>
             </details>
           </div>
+          {["offline", "queued", "failed", "conflict"].includes(saveState) ? (
+            <section className={"visit-sync-recovery no-print " + saveState} aria-live="polite" data-visit-sync-recovery>
+              <div><strong>{saveState === "conflict" ? "Sync conflict" : saveState === "offline" ? "Working offline" : "Draft waiting to sync"}</strong><p>{saveState === "conflict" ? "A newer server copy exists. This device copy is preserved and will not overwrite it automatically." : "Your draft is saved on this device and remains locked to this patient and visit."}</p></div>
+              <div className="form-actions"><button className="button secondary compact" type="button" disabled={!navigator.onLine || saveState === "conflict"} onClick={() => void retryCurrentVisitSync()}>Retry sync</button>{saveState === "conflict" ? <button className="button secondary compact danger" type="button" onClick={() => void discardLocalVisitCopy()}>Discard local and reload server</button> : null}</div>
+            </section>
+          ) : null}
 
           {finishIntent && (
             <dialog open className="patient-modal" aria-label="Sign and lock visit confirmation">
@@ -464,7 +531,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
                 </div>
                 <div className="modal-actions form-actions">
                   <button className="button secondary" type="button" disabled={finishing} onClick={() => setFinishIntent(null)}>Cancel</button>
-                  <button className="button" type="button" disabled={finishing || !contextReady || signedVisit} onClick={() => { const printAfter = finishIntent === "print"; setFinishIntent(null); void finishVisit(printAfter); }}>{finishing ? "Signing..." : finishIntent === "print" ? "Confirm, sign and print" : "Confirm sign and lock"}</button>
+                  <button className="button" type="button" disabled={finishing || !contextReady || signedVisit || saveState !== "synced"} onClick={() => { const printAfter = finishIntent === "print"; setFinishIntent(null); void finishVisit(printAfter); }}>{finishing ? "Signing..." : finishIntent === "print" ? "Confirm, sign and print" : "Confirm sign and lock"}</button>
                 </div>
               </div>
             </dialog>
@@ -910,7 +977,7 @@ function FinishModule({ visit, patientName, saveState, finishing, signedVisit, o
   const recommendedMissing = [["History", encounter?.historyText], ["Examination", encounter?.examText], ["Impression", encounter?.assessmentText], ["Follow-up", (visit?.followUps ?? []).length]].filter(([, value]) => !value).map(([label]) => String(label));
   return (
     <div className="print-packet">
-      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" disabled={finishing || signedVisit || requiredMissing.length > 0} type="button" onClick={() => onRequestFinish(false)}>Finish visit</button><button className="button secondary" disabled={finishing || signedVisit || requiredMissing.length > 0} type="button" onClick={() => onRequestFinish(true)}>Finish and print</button></div>
+      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" disabled={finishing || signedVisit || requiredMissing.length > 0 || saveState !== "synced"} type="button" onClick={() => onRequestFinish(false)}>Finish visit</button><button className="button secondary" disabled={finishing || signedVisit || requiredMissing.length > 0 || saveState !== "synced"} type="button" onClick={() => onRequestFinish(true)}>Finish and print</button></div>
       <h2>{patientName}</h2>
       {signedVisit ? <p className="notice">Signed visit · read only. The clinical record is locked.</p> : null}
       {requiredMissing.length ? <p className="alert danger">Required to finish: {requiredMissing.join(", ")}.</p> : <p className="notice">Required fields complete.</p>}
@@ -966,8 +1033,10 @@ function StructuredExamination({ context, value, onChange }: { context: string; 
 function saveStateLabel(state: string) {
   if (state === "syncing") return "Syncing";
   if (state === "synced") return "Synced";
-  if (state === "offline") return "Offline";
-  if (state === "failed") return "Save failed â€” Retry";
+  if (state === "offline") return "Offline · saved locally";
+  if (state === "queued") return "Pending sync";
+  if (state === "conflict") return "Sync conflict · review required";
+  if (state === "failed") return "Save failed — Retry";
   if (state === "local") return `Saved locally at ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   return "Unsaved changes";
 }
