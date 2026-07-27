@@ -17,6 +17,18 @@ replaceOnce(
 );
 
 replaceOnce(
+  "scripts/sprint1-offline-sync-health-test.mjs",
+  '  "status === "conflict"",',
+  '  \'status === "conflict"\','
+);
+
+replaceOnce(
+  "scripts/sprint1-offline-sync-health-test.mjs",
+  '  "saveState !== "synced""',
+  '  \'saveState !== "synced"\''
+);
+
+replaceOnce(
   "apps/web/components/clinic/ActiveVisitWorkspace.tsx",
   `  useEffect(() => subscribeOfflineSync(() => {
     const queued = getOfflineVisitDraft(patientId, visitId);
