@@ -33,16 +33,26 @@ jobs:
           fetch-depth: 1
           path: workspace
 
-      - name: Capture apply output
+      - name: Capture apply and focused contract output
         id: diagnose
         working-directory: workspace
         shell: bash
         run: |
           set +e
-          node ../controls/scripts/runner/run-sprint1-arabic-rtl-operations.mjs "$PWD" > arabic-rtl-apply-diagnostic.log 2>&1
-          apply_status=$?
+          {
+            node ../controls/scripts/runner/run-sprint1-arabic-rtl-operations.mjs "$PWD"
+            apply_status=$?
+            echo "APPLY_EXIT=$apply_status"
+            if [[ $apply_status -eq 0 ]]; then
+              node scripts/sprint1-arabic-rtl-operations-test.mjs
+              contract_status=$?
+              echo "CONTRACT_EXIT=$contract_status"
+            else
+              contract_status=$apply_status
+            fi
+          } > arabic-rtl-apply-diagnostic.log 2>&1
           cat arabic-rtl-apply-diagnostic.log
-          echo "exit_code=$apply_status" >> "$GITHUB_OUTPUT"
+          echo "exit_code=${contract_status:-1}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
