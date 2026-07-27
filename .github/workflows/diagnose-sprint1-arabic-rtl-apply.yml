@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          node ../controls/scripts/runner/apply-sprint1-arabic-rtl-operations.mjs "$PWD" > arabic-rtl-apply-diagnostic.log 2>&1
+          node ../controls/scripts/runner/run-sprint1-arabic-rtl-operations.mjs "$PWD" > arabic-rtl-apply-diagnostic.log 2>&1
           apply_status=$?
           cat arabic-rtl-apply-diagnostic.log
           echo "exit_code=$apply_status" >> "$GITHUB_OUTPUT"
