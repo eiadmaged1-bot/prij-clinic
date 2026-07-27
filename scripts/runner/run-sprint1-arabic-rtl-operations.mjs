@@ -9,6 +9,14 @@ source = source.replace(
   '  if (!source.includes(before)) throw new Error(`Missing Arabic/RTL replacement in ${relativePath}: ${before}`);\n  write(relativePath, source.split(before).join(after));',
   '  if (!source.includes(before)) return;\n  write(relativePath, source.split(before).join(after));'
 );
+source = source.replace(
+  "'`Follow-up hints ${orders.filter'",
+  "'Follow-up hints {orders.filter'"
+);
+source = source.replace(
+  "'`${ui.followUpHints} ${orders.filter'",
+  "'{ui.followUpHints} {orders.filter'"
+);
 const temporaryPath = path.join(os.tmpdir(), `prij-arabic-rtl-apply-${process.pid}.mjs`);
 fs.writeFileSync(temporaryPath, source, "utf8");
 try {
