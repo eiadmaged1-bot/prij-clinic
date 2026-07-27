@@ -15,5 +15,10 @@ const copyContractAfter = `requireAll(copy, "bilingual operations copy", ["حا�
 if (!source.includes(copyContractBefore)) throw new Error("Arabic operations-copy test contract changed unexpectedly.");
 source = source.replace(copyContractBefore, copyContractAfter);
 
+const localeBefore = '  const locale = language === "ar" ? "ar-EG" : "en-US";';
+const localeAfter = '  const locale: "ar-EG" | "en-US" = language === "ar" ? "ar-EG" : "en-US";';
+if (!source.includes(localeBefore)) throw new Error("Arabic locale generation contract changed unexpectedly.");
+source = source.replace(localeBefore, localeAfter);
+
 fs.writeFileSync(target, source, "utf8");
-console.log("Arabic/RTL controller prepared: optional mojibake cleanup and correct dictionary ownership.");
+console.log("Arabic/RTL controller prepared: optional cleanup, dictionary ownership, and typed locale union.");
