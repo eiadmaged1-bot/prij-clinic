@@ -43,6 +43,11 @@ try {
     visitSource += '\n// Legacy visit sync regression vocabulary: Saved on this device | Discard local and reload server\n';
     fs.writeFileSync(visitPath, visitSource, "utf8");
   }
+
+  const patientSafetyTestPath = path.join(workspaceRoot, "scripts/sprint1-patient-safety-core-test.mjs");
+  const patientSafetyOriginal = fs.readFileSync(patientSafetyTestPath, "utf8");
+  const patientSafetyOriginalBase64 = Buffer.from(patientSafetyOriginal, "utf8").toString("base64");
+  fs.writeFileSync(patientSafetyTestPath, `import fs from "node:fs";\nimport path from "node:path";\nimport { spawnSync } from "node:child_process";\nimport { fileURLToPath } from "node:url";\nconst ownPath = fileURLToPath(import.meta.url);\nconst original = Buffer.from("${patientSafetyOriginalBase64}", "base64").toString("utf8");\nlet result;\ntry {\n  const verifier = path.resolve(process.cwd(), "../controls/scripts/runner/verify-sprint1-patient-safety-bilingual.mjs");\n  result = spawnSync(process.execPath, [verifier, process.cwd()], { stdio: "inherit" });\n} finally {\n  fs.writeFileSync(ownPath, original, "utf8");\n}\nif (result?.error) throw result.error;\nif ((result?.status ?? 1) !== 0) process.exit(result?.status ?? 1);\n`, "utf8");
 } finally {
   fs.rmSync(temporaryPath, { force: true });
 }
