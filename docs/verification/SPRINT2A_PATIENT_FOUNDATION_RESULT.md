@@ -18,6 +18,8 @@ Status: PASS
 - Age falls back safely to `yearOfBirth` when exact date of birth is not yet available.
 - Patient page and identity header preserve the returned birth year after refresh.
 - Selected patient context remains available to the clinical workspace.
+- Patient directory filters now use grouped base contexts, so legacy high-risk and postpartum records remain discoverable under Pregnancy / Obstetric without presenting them as patient types.
+- Legacy Preventive / Well-woman records are presented under the Gynecology base context until episode-level phase work is completed.
 
 ## Verification
 

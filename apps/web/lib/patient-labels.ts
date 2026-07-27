@@ -8,13 +8,10 @@ export type CanonicalPatientType =
   | "OTHER";
 
 export const patientTypeOptions: Array<{ value: CanonicalPatientType; label: string; labelAr: string }> = [
-  { value: "OBSTETRIC", label: "Obstetric / Pregnancy", labelAr: "حمل ومتابعة ولادة" },
-  { value: "HIGH_RISK_OBSTETRIC", label: "High-risk obstetric", labelAr: "حمل عالي الخطورة" },
+  { value: "OBSTETRIC", label: "Pregnancy / Obstetric", labelAr: "الحمل / التوليد" },
   { value: "GYNECOLOGY", label: "Gynecology", labelAr: "أمراض النساء" },
-  { value: "INFERTILITY", label: "Infertility / Fertility", labelAr: "تأخر الإنجاب والخصوبة" },
-  { value: "POSTPARTUM", label: "Postpartum", labelAr: "ما بعد الولادة" },
-  { value: "PREVENTIVE_WELL_WOMAN", label: "Preventive / Well-woman", labelAr: "صحة المرأة والوقاية" },
-  { value: "OTHER", label: "Other", labelAr: "أخرى" }
+  { value: "INFERTILITY", label: "Fertility", labelAr: "الخصوبة" },
+  { value: "OTHER", label: "Undetermined", labelAr: "غير محدد بعد" }
 ];
 
 export type PatientCreationContext = "OBSTETRIC" | "GYNECOLOGY" | "INFERTILITY" | "OTHER";
@@ -29,8 +26,11 @@ export const patientCreationContextOptions: Array<{ value: PatientCreationContex
 const legacyPatientTypeMap: Record<string, CanonicalPatientType> = {
   OB: "OBSTETRIC",
   PREGNANCY: "OBSTETRIC",
+  HIGH_RISK_OBSTETRIC: "OBSTETRIC",
+  POSTPARTUM: "OBSTETRIC",
   GYN: "GYNECOLOGY",
-  WOMEN_HEALTH: "PREVENTIVE_WELL_WOMAN",
+  WOMEN_HEALTH: "GYNECOLOGY",
+  PREVENTIVE_WELL_WOMAN: "GYNECOLOGY",
   FERTILITY: "INFERTILITY",
   GENERAL: "OTHER"
 };

@@ -29,7 +29,7 @@ export class PatientSearchService {
     if (directoryView === "qa_test" && !isOwnerOrAdmin(user)) throw new ForbiddenException("Only an Owner can review QA/test candidates.");
     const hygieneCandidateView = directoryView === "qa_test";
     const requestedStatus = hygieneCandidateView && isPatientStatus(options.status) ? options.status : PatientStatus.active;
-    const requestedType = isPatientType(options.patientType) ? options.patientType : undefined;
+    const requestedTypes = patientTypeFilter(options.patientType);
     const requestedBranchId = directoryView === "current_branch" ? user.branchId ?? undefined : options.branchId && (isOwnerOrAdmin(user) || options.branchId === user.branchId) ? options.branchId : undefined;
     const page = Math.max(1, Math.min(1000, Number.parseInt(options.page ?? "1", 10) || 1));
     const limit = Math.max(5, Math.min(50, Number.parseInt(options.limit ?? "20", 10) || 20));
@@ -42,7 +42,7 @@ export class PatientSearchService {
     const where: Prisma.PatientWhereInput = {
       ...(requestedBranchId ? { branchId: requestedBranchId } : {}),
       status: requestedStatus,
-      ...(requestedType ? { patientType: requestedType } : {}),
+      ...(requestedTypes?.length ? { patientType: { in: requestedTypes } } : {}),
     };
     if (directoryView !== "qa_test") (where as Prisma.PatientWhereInput & { dataClassification?: unknown }).dataClassification = { notIn: ["TEST", "QUARANTINED"] };
     if (directoryView === "today") where.AND = [{ OR: [{ encounters: { some: { createdAt: { gte: queueDate, lt: queueDateEnd } } } }, { queueTickets: { some: { queueDate: { gte: queueDate, lt: queueDateEnd } } } }] }];
@@ -139,8 +139,13 @@ function isPatientStatus(value?: string): value is PatientStatus {
   return Boolean(value && Object.values(PatientStatus).includes(value as PatientStatus));
 }
 
-function isPatientType(value?: string): value is PatientType {
-  return Boolean(value && Object.values(PatientType).includes(value as PatientType));
+function patientTypeFilter(value?: string): PatientType[] | undefined {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "OBSTETRIC") return [PatientType.OBSTETRIC, PatientType.HIGH_RISK_OBSTETRIC, PatientType.POSTPARTUM, PatientType.OB];
+  if (normalized === "GYNECOLOGY") return [PatientType.GYNECOLOGY, PatientType.GYN, PatientType.PREVENTIVE_WELL_WOMAN, PatientType.WOMEN_HEALTH];
+  if (normalized === "INFERTILITY") return [PatientType.INFERTILITY];
+  if (normalized === "OTHER") return [PatientType.OTHER, PatientType.GENERAL];
+  return undefined;
 }
 
 function patientOrderBy(sort?: string): Prisma.PatientOrderByWithRelationInput[] {
