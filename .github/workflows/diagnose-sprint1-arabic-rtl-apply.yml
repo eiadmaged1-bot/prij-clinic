@@ -1,4 +1,4 @@
-name: Diagnose Sprint 1 Arabic RTL Regressions
+name: Diagnose Sprint 1 Arabic RTL Typecheck
 
 on:
   pull_request:
@@ -11,13 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: diagnose-sprint1-arabic-rtl-regressions
+  group: diagnose-sprint1-arabic-rtl-typecheck
   cancel-in-progress: true
 
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Checkout controls
         uses: actions/checkout@v4
@@ -33,7 +33,22 @@ jobs:
           fetch-depth: 1
           path: workspace
 
-      - name: Capture prepared apply and focused regression output
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workspace/package-lock.json
+
+      - name: Install dependencies
+        working-directory: workspace
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: workspace
+        run: npm run prisma:generate
+
+      - name: Capture prepared package and typecheck output
         id: diagnose
         working-directory: workspace
         shell: bash
@@ -51,29 +66,22 @@ jobs:
             fi
             echo "APPLY_EXIT=$apply_status"
             if [[ $apply_status -eq 0 ]]; then
-              node scripts/sprint1-arabic-rtl-operations-test.mjs
-              contract_status=$?
-              echo "ARABIC_CONTRACT_EXIT=$contract_status"
+              npm run typecheck
+              typecheck_status=$?
+              echo "TYPECHECK_EXIT=$typecheck_status"
             else
-              contract_status=$apply_status
+              typecheck_status=$apply_status
             fi
-            if [[ $contract_status -eq 0 ]]; then
-              node scripts/sprint1-offline-sync-health-test.mjs
-              offline_status=$?
-              echo "OFFLINE_REGRESSION_EXIT=$offline_status"
-            else
-              offline_status=$contract_status
-            fi
-          } > arabic-rtl-regression-diagnostic.log 2>&1
-          cat arabic-rtl-regression-diagnostic.log
-          echo "exit_code=${offline_status:-1}" >> "$GITHUB_OUTPUT"
+          } > arabic-rtl-typecheck-diagnostic.log 2>&1
+          cat arabic-rtl-typecheck-diagnostic.log
+          echo "exit_code=${typecheck_status:-1}" >> "$GITHUB_OUTPUT"
           exit 0
 
       - name: Upload diagnostic
         uses: actions/upload-artifact@v4
         with:
-          name: arabic-rtl-regression-diagnostic
-          path: workspace/arabic-rtl-regression-diagnostic.log
+          name: arabic-rtl-typecheck-diagnostic
+          path: workspace/arabic-rtl-typecheck-diagnostic.log
           if-no-files-found: error
           retention-days: 3
 
