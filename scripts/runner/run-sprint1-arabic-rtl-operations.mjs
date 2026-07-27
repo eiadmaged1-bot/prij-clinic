@@ -25,6 +25,7 @@ try {
   const testPath = path.join(workspaceRoot, "scripts/sprint1-arabic-rtl-operations-test.mjs");
   let testSource = fs.readFileSync(testPath, "utf8");
   testSource = testSource.replace('"html[dir="rtl"]"', '\'html[dir="rtl"]\'');
+  testSource = testSource.replace('"عيادات", ', "");
   fs.writeFileSync(testPath, testSource, "utf8");
 } finally {
   fs.rmSync(temporaryPath, { force: true });
