@@ -107,6 +107,13 @@ export class DoctorVisitService {
     const encounter = await assertCanReferenceEncounter(this.prisma, encounterId, user, { patientId, requireDoctorScope: true });
     if (!encounter) throw new NotFoundException("Doctor visit not found.");
     if (encounter.status !== "draft") throw new BadRequestException("Only draft visits can be edited.");
+    if (dto.revision && encounter.updatedAt.toISOString() !== dto.revision) {
+      throw new ConflictException({
+        code: "ENCOUNTER_VERSION_CONFLICT",
+        message: "This encounter changed after it was loaded. Reload before saving.",
+        serverRevision: encounter.updatedAt.toISOString()
+      });
+    }
     const updated = await this.prisma.encounter.update({
       where: { id: encounterId },
       data: {
@@ -114,7 +121,8 @@ export class DoctorVisitService {
         ...(dto.historyText !== undefined ? { historyText: clean(dto.historyText) } : {}),
         ...(dto.examText !== undefined ? { examText: clean(dto.examText) } : {}),
         ...(dto.assessmentText !== undefined ? { assessmentText: clean(dto.assessmentText) } : {}),
-        ...(dto.planText !== undefined ? { planText: clean(dto.planText) } : {})
+        ...(dto.planText !== undefined ? { planText: clean(dto.planText) } : {}),
+        ...(dto.examinationJson !== undefined ? { examinationJson: stampStructuredInput(dto.examinationJson, encounterId, user.id) } : {})
       }
     });
 
@@ -125,7 +133,7 @@ export class DoctorVisitService {
       resourceId: encounterId,
       branchId: updated.branchId,
       severity: "high",
-      metadataJson: { patientId, changedFields: Object.keys(dto) }
+      metadataJson: { patientId, changedFields: Object.keys(dto).filter((key) => key !== "revision") }
     });
 
     return updated;
@@ -175,7 +183,7 @@ export class DoctorVisitService {
       resourceId: encounterId,
       branchId: state.patient.branchId,
       severity: "medium",
-      metadataJson: { patientId, prescriptionCount: state.prescriptions.length, investigationOrderCount: state.investigationOrders.length }
+      metadataJson: { patientId, prescriptionCount: state.prescriptions?.length ?? 0, investigationOrderCount: state.investigationOrders?.length ?? 0, partialResourceFailures: state.resourceErrors.length }
     });
     return {
       generatedAt: new Date().toISOString(),
@@ -186,11 +194,13 @@ export class DoctorVisitService {
 
   private async visitState(patientId: string, encounterId: string, user: AuthUser) {
     const patient = await assertCanReferencePatient(this.prisma, patientId, user);
-    const [encounter, historySheet, careAssistFindings, prescriptions, investigationOrders, followUps] = await Promise.all([
-      this.prisma.encounter.findFirst({
-        where: { id: encounterId, patientId, ...doctorScope(user), ...patientBranchScope(user) },
-        include: { doctor: { select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true } } }
-      }),
+    const encounter = await this.prisma.encounter.findFirst({
+      where: { id: encounterId, patientId, ...doctorScope(user), ...patientBranchScope(user) },
+      include: { doctor: { select: { id: true, displayName: true, doctorColor: true, doctorShortLabel: true } } }
+    });
+    if (!encounter) throw new NotFoundException("Doctor visit not found.");
+
+    const resources = await Promise.allSettled([
       this.prisma.patientHistorySheet.findFirst({ where: { patientId }, orderBy: { updatedAt: "desc" }, include: { medicationHistoryItems: true, investigationHistoryItems: true, operationHistoryItems: true } }),
       this.prisma.careAssistFinding.findMany({ where: { patientId, encounterId }, orderBy: [{ status: "asc" }, { severity: "desc" }, { createdAt: "desc" }], take: 50 }),
       this.prisma.prescription.findMany({
@@ -199,16 +209,42 @@ export class DoctorVisitService {
         orderBy: { createdAt: "desc" }
       }),
       this.prisma.investigationOrder.findMany({ where: { patientId, encounterId, ...doctorScope(user), ...patientBranchScope(user) }, include: { items: true }, orderBy: { createdAt: "desc" } }),
-      this.prisma.patientTask.findMany({ where: { patientId, taskType: "schedule_follow_up" }, orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }], take: 20 })
+      this.prisma.obUltrasound.findMany({ where: { patientId, branchId: patient.branchId }, select: { id: true, status: true, scanType: true, clinicalContext: true, performedAt: true, impressionText: true }, orderBy: { performedAt: "desc" }, take: 12 }),
+      this.prisma.patientTask.findMany({ where: { patientId, taskType: "schedule_follow_up" }, orderBy: [{ dueAt: "asc" }, { createdAt: "desc" }], take: 20 }),
+      this.prisma.encounter.findMany({
+        where: { patientId, status: "signed", id: { not: encounterId }, ...patientBranchScope(user) },
+        select: { id: true, status: true, startedAt: true, signedAt: true, createdAt: true, examinationJson: true },
+        orderBy: [{ signedAt: "desc" }, { createdAt: "desc" }],
+        take: 24
+      }),
+      this.prisma.pregnancy.findFirst({
+        where: { patientId, status: "active" },
+        include: { datingAssessments: { where: { voidedAt: null }, orderBy: { createdAt: "desc" }, take: 5 } },
+        orderBy: { createdAt: "desc" }
+      }),
+      this.prisma.infertilityEpisode.findFirst({
+        where: { patientId, status: "active" },
+        include: { cycles: { orderBy: { cycleNumber: "desc" }, take: 1, include: { monitoringVisits: { orderBy: { monitoringDate: "desc" }, take: 5 } } } },
+        orderBy: { createdAt: "desc" }
+      })
     ]);
-    if (!encounter) throw new NotFoundException("Doctor visit not found.");
+    const resourceErrors: Array<{ resource: string; message: string }> = [];
+    const historySheet = settledResource(resources[0], "history", resourceErrors);
+    const careAssistFindings = settledResource(resources[1], "care-assist", resourceErrors);
+    const prescriptions = settledResource(resources[2], "prescriptions", resourceErrors);
+    const investigationOrders = settledResource(resources[3], "investigations", resourceErrors);
+    const ultrasounds = settledResource(resources[4], "ultrasounds", resourceErrors);
+    const followUps = settledResource(resources[5], "follow-up", resourceErrors);
+    const recentEncounters = settledResource(resources[6], "recent-encounters", resourceErrors);
+    const pregnancyEpisode = settledResource(resources[7], "pregnancy", resourceErrors);
+    const infertilityEpisode = settledResource(resources[8], "fertility", resourceErrors);
     return {
       workflow: visitWorkflow(),
       patient: patientSummary(patient),
       encounter: withDoctorSignature(encounter),
       historySheet,
       careAssistFindings,
-      prescriptions: prescriptions.map((prescription) => ({
+      prescriptions: prescriptions?.map((prescription) => ({
         ...prescription,
         items: prescription.items.map((item) => ({
           id: item.id,
@@ -224,13 +260,23 @@ export class DoctorVisitService {
         }))
       })),
       investigationOrders,
-      followUps
+      ultrasounds,
+      followUps,
+      recentEncounters,
+      pregnancyEpisode,
+      infertilityEpisode,
+      resourceErrors
     };
   }
 }
 
+function settledResource<T>(result: PromiseSettledResult<T>, resource: string, errors: Array<{ resource: string; message: string }>): T | undefined {
+  if (result.status === "fulfilled") return result.value;
+  errors.push({ resource, message: `${resource} could not be loaded.` });
+  return undefined;
+}
 function visitWorkflow() {
-  return ["History", "Care Assist", "Encounter", "Prescription", "Investigations", "Follow-up", "Review and Print"];
+  return ["Patient Context", "History", "Examination", "Assessment", "Investigations", "Plan", "Review"];
 }
 
 function patientSummary(patient: { id: string; branchId: string | null; medicalRecordNumber: string; firstName: string; lastName: string; dateOfBirth: Date | null; sex: string | null; patientType: string }) {
@@ -272,6 +318,20 @@ function safetySummary(profile: {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+function stampStructuredInput(value: Record<string, unknown>, encounterId: string, userId: string): Prisma.InputJsonValue {
+  const snapshot = value.reproductiveSnapshot;
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return value as Prisma.InputJsonValue;
+  return {
+    ...value,
+    reproductiveSnapshot: {
+      ...(snapshot as Record<string, unknown>),
+      encounterId,
+      confirmedAt: new Date().toISOString(),
+      confirmedByUserId: userId
+    }
+  } as Prisma.InputJsonValue;
 }
 
 export function normalizeDoctorColor(color: string | null | undefined, userId: string) {

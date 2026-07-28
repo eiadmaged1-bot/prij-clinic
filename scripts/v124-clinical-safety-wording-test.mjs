@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const checkedFiles = [
-  "apps/web/app/patients/[id]/page.tsx",
+"apps/web/app/patients/[id]/page.tsx",
+  "apps/web/components/clinic/ActiveVisitWorkspace.tsx",
   "apps/web/components/medications/MedicationSafetyTerminal.tsx",
   "apps/web/components/care-assist/MedicationSafetyProfileSearch.tsx",
   "apps/web/components/medications/PregnancyLactationSafetyProfile.tsx",
@@ -47,7 +48,7 @@ if (/enum\s+LegacyPregnancyCategory[\s\S]*\bE\b/.test(schema)) {
   throw new Error("LegacyPregnancyCategory must not accept category E.");
 }
 
-const patientPage = readFileSync(join(root, "apps/web/app/patients/[id]/page.tsx"), "utf8");
+const patientPage = `${readFileSync(join(root, "apps/web/app/patients/[id]/page.tsx"), "utf8")}\n${readFileSync(join(root, "apps/web/components/clinic/ActiveVisitWorkspace.tsx"), "utf8")}`;
 if (!patientPage.includes("genericName")) throw new Error("Generic medication name must stay visible in prescription workflow.");
 if (!patientPage.includes("Dose, frequency, and duration are not auto-filled.")) throw new Error("Prescription flow must state no default dosing automation.");
 

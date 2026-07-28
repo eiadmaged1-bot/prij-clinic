@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, Patch, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Patch, UseGuards } from "@nestjs/common";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import type { AuthUser } from "../auth/auth.types";
@@ -7,7 +7,8 @@ import { UsersService, type UserPreferencePatch } from "./users.service";
 const allowed = {
   interfaceMode: new Set(["OPTIMIZED", "MINIMALISTIC"]),
   densityMode: new Set(["COMPACT", "COMFORTABLE", "LARGE"]),
-  mobileNavigationMode: new Set(["AUTO", "BOTTOM_NAV", "DRAWER"])
+  mobileNavigationMode: new Set(["AUTO", "BOTTOM_NAV", "DRAWER"]),
+  doctorWorkspaceMode: new Set(["CLASSIC", "COCKPIT"])
 } as const;
 const appearanceKeys = new Set(["themeId", "accent", "sidebar", "typography", "fontScale", "density", "cardRadius", "shadow", "border", "tableDensity", "iconDensity", "reducedMotion", "contrast"]);
 const themeIds = new Set(["prij-heritage", "clinic-premium", "lavender", "rose", "minimal-clean", "compact-operations", "high-contrast"]);
@@ -35,6 +36,9 @@ export class UsersController {
       if (typeof body[key] !== "string" || !allowed[key].has(body[key] as never)) {
         throw new BadRequestException(`Invalid ${key}.`);
       }
+    }
+    if ("doctorWorkspaceMode" in body && !user.roles.some((role) => role === "Doctor" || role === "Owner")) {
+      throw new ForbiddenException("Doctor workspace preferences are available to doctors and owners only.");
     }
     if ("appearanceJson" in body && !validAppearance(body.appearanceJson)) throw new BadRequestException("Invalid appearance preference.");
     return this.users.updatePreferences(user.id, body as UserPreferencePatch);

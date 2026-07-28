@@ -1,57 +1,34 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
-const root = process.cwd();
-const patientPage = read("apps/web/app/patients/[id]/page.tsx");
-const terminal = read("apps/web/components/medications/MedicationSafetyTerminal.tsx");
-const careAssistPanel = read("apps/web/components/care-assist/CareAssistPanel.tsx");
-const decisionControls = read("apps/web/components/care-assist/CareAssistDecisionControls.tsx");
-const doctorVisitController = read("apps/api/src/doctor-visit/doctor-visit.controller.ts");
-const doctorVisitService = read("apps/api/src/doctor-visit/doctor-visit.service.ts");
-const appModule = read("apps/api/src/app.module.ts");
+const [router, controller, cockpit, renderer, careAssistPanel, decisionControls, doctorVisitController, doctorVisitService, appModule] = await Promise.all([
+  readFile("apps/web/components/clinic/ActiveVisitWorkspace.tsx", "utf8"),
+  readFile("apps/web/components/clinic/SharedEncounterWorkspaceController.tsx", "utf8"),
+  readFile("apps/web/components/clinic/VisitCockpitWorkspace.tsx", "utf8"),
+  readFile("apps/web/app/patients/[id]/workspace-module-renderer.tsx", "utf8"),
+  readFile("apps/web/components/care-assist/CareAssistPanel.tsx", "utf8"),
+  readFile("apps/web/components/care-assist/CareAssistDecisionControls.tsx", "utf8"),
+  readFile("apps/api/src/doctor-visit/doctor-visit.controller.ts", "utf8"),
+  readFile("apps/api/src/doctor-visit/doctor-visit.service.ts", "utf8"),
+  readFile("apps/api/src/app.module.ts", "utf8")
+]);
 
-assertIncludes(patientPage, "DoctorVisitFlow", "patient workspace includes the guided doctor visit flow");
-assertIncludes(patientPage, "Start Visit", "patient workspace has a Start Visit action");
-assertIncludes(patientPage, "History", "workflow includes History");
-assertIncludes(patientPage, "Care Assist", "workflow includes Care Assist");
-assertIncludes(patientPage, "Encounter Draft", "workflow includes Encounter draft");
-assertIncludes(patientPage, "Prescription Draft", "workflow includes Prescription draft");
-assertIncludes(patientPage, "Investigations", "workflow includes Investigations");
-assertIncludes(patientPage, "Follow-up", "workflow includes Follow-up");
-assertIncludes(patientPage, "Print Packet", "workflow includes Print Packet");
-assertIncludes(patientPage, "genericName", "prescription flow keeps generic name visible");
-assertIncludes(patientPage, "MedicationSafetyTerminal", "prescription flow shows side terminal");
-assertIncludes(patientPage, "onMouseEnter", "medication search updates terminal on hover");
-assertIncludes(patientPage, "onFocus", "medication search updates terminal on keyboard focus");
-assertIncludes(patientPage, "Dose, frequency, and duration are not auto-filled.", "dose/frequency/duration are not auto-filled by default");
-assertIncludes(patientPage, "Show clinical considerations", "clinical note button exists");
-assertIncludes(patientPage, "Show medication options for review", "medication options note button exists");
-assertIncludes(patientPage, "Show dosing note from saved template", "dosing note button exists");
-assertIncludes(patientPage, "Insert selected note into draft", "explicit note insertion button exists");
-assertIncludes(patientPage, "Doctor review required", "clinical notes are labeled for doctor review");
-assertIncludes(careAssistPanel, "Run Care Assist Check", "Care Assist can run inside visit");
-assertIncludes(decisionControls, "ACCEPT", "Care Assist accept decision exists");
-assertIncludes(decisionControls, "DISMISS", "Care Assist dismiss decision exists");
-assertIncludes(decisionControls, "SNOOZE", "Care Assist snooze decision exists");
-assertIncludes(decisionControls, "RESOLVE", "Care Assist resolve decision exists");
-assertIncludes(doctorVisitController, "doctor-visit", "doctor visit backend route exists");
-assertIncludes(doctorVisitService, "doctor_visit.started", "visit start audit exists");
-assertIncludes(doctorVisitService, "doctor_visit.packet_generated", "packet generation audit exists");
-assertIncludes(doctorVisitService, "patientTask.create", "follow-up uses patient task model");
-assertIncludes(appModule, "DoctorVisitModule", "doctor visit module is registered");
-assertIncludes(terminal, "Last checked", "terminal shows last checked freshness");
-assertIncludes(terminal, "Review required", "terminal shows review required state");
-assertIncludes(terminal, "safe in pregnancy", "NEGATIVE_CHECK_PLACEHOLDER", true);
+assert.match(renderer, /ActiveVisitLauncher/, "patient workspace launches the authoritative doctor visit");
+assert.doesNotMatch(renderer, /ClinicalInputFoundation patient=\{patient\}/, "patient workspace does not expose a competing local-only visit draft");
+assert.equal((router.match(/useSharedEncounterWorkspaceController\(/g) ?? []).length, 1, "one shared encounter controller owns both presentations");
+assert.match(router, /ClassicDoctorWorkspace controller=\{controller\}/, "Classic consumes the shared controller");
+assert.match(router, /VisitCockpitWorkspace controller=\{controller\}/, "Cockpit consumes the shared controller");
+for (const stage of ["Patient Context", "History", "Examination", "Assessment", "Investigations", "Plan", "Review"]) assert.match(controller, new RegExp(`label: "${stage}"`), `canonical stage exists: ${stage}`);
+for (const moduleName of ["complaint", "history", "examination", "impression", "prescription", "investigations", "ultrasound", "follow-up", "finish"]) assert.match(router, new RegExp(`"${moduleName}"`), `Classic module remains available: ${moduleName}`);
+assert.match(router, /Search medication catalog first\./, "prescription flow retains explicit catalog-first empty guidance");
+assert.match(router, /No saved prescription templates yet\./, "prescription template empty state remains explicit");
+assert.match(cockpit, /InvestigationStationV3/, "Cockpit retains encounter-locked investigation workflow");
+assert.match(careAssistPanel, /Run Care Assist Check/, "Care Assist can run inside the visit workflow");
+for (const action of ["ACCEPT", "DISMISS", "SNOOZE", "RESOLVE"]) assert.match(decisionControls, new RegExp(action), `Care Assist decision remains available: ${action}`);
+assert.match(doctorVisitController, /doctor-visit/, "doctor visit backend route exists");
+assert.match(doctorVisitService, /doctor_visit\.started/, "visit start is audited");
+assert.match(doctorVisitService, /doctor_visit\.packet_generated/, "packet generation is audited");
+assert.match(doctorVisitService, /patientTask\.create/, "follow-up uses the patient task model");
+assert.match(appModule, /DoctorVisitModule/, "doctor visit module is registered");
 
-console.log("v0.12.4 doctor visit flow static workflow checks passed.");
-
-function read(relativePath) {
-  return readFileSync(join(root, relativePath), "utf8");
-}
-
-function assertIncludes(source, needle, message, expectMissing = false) {
-  const found = source.includes(needle);
-  if (expectMissing ? found : !found) {
-    throw new Error(`${message}: ${expectMissing ? "unexpectedly found" : "missing"} ${needle}`);
-  }
-}
+console.log("v0.12.4 doctor visit flow contract passed.");

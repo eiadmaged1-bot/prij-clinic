@@ -154,6 +154,7 @@ const preferenceSelect = {
   interfaceMode: true,
   densityMode: true,
   mobileNavigationMode: true,
+  doctorWorkspaceMode: true,
   appearanceJson: true,
   updatedAt: true
 } as const;
@@ -162,6 +163,7 @@ export type UserPreferencePatch = {
   interfaceMode?: "OPTIMIZED" | "MINIMALISTIC";
   densityMode?: "COMPACT" | "COMFORTABLE" | "LARGE";
   mobileNavigationMode?: "AUTO" | "BOTTOM_NAV" | "DRAWER";
+  doctorWorkspaceMode?: "CLASSIC" | "COCKPIT";
   appearanceJson?: Record<string, unknown>;
 };
 

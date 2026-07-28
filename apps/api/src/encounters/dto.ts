@@ -1,4 +1,4 @@
-import { IsBoolean, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsObject, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 import { EncounterStatus } from "@prisma/client";
 
 export class CreateEncounterDto {
@@ -142,4 +142,9 @@ export class VoidEncounterDto {
   @IsString()
   @MaxLength(1000)
   reason!: string;
+}
+
+export class SignEncounterDto {
+  @IsDateString()
+  expectedRevision!: string;
 }

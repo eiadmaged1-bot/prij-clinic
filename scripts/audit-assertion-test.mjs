@@ -10,8 +10,11 @@ async function main() {
   await apiJson("PATCH", `/patients/${ids.patientId}`, owner, { notes: "Demo audit assertion update only." });
   await apiJson("PATCH", `/appointments/${ids.appointmentId}/status`, owner, { status: "booked" });
   await apiJson("PATCH", `/queue/${ids.queueTicketId}/call`, owner);
-  await apiJson("PATCH", `/encounters/${ids.encounterId}`, owner, { planText: "Demo audit assertion plan only." });
-  await apiJson("PATCH", `/encounters/${ids.encounterId}/sign`, owner);
+  const encounterForSign = await apiJson("PATCH", `/encounters/${ids.encounterId}`, owner, {
+    planText: "Demo audit assertion plan only.",
+    examinationJson: { reproductiveSnapshot: { context: "general", changeStatus: "no_change" } }
+  });
+  await apiJson("PATCH", `/encounters/${ids.encounterId}/sign`, owner, { expectedRevision: encounterForSign.updatedAt });
   await apiJson("PATCH", `/prescriptions/${ids.prescriptionId}`, owner, {
     notes: "Demo audit assertion prescription update only.",
     items: [{ medicationName: "Demo medication placeholder" }]

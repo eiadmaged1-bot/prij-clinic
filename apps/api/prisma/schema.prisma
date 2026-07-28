@@ -174,11 +174,17 @@ enum MobileNavigationMode {
   DRAWER
 }
 
+enum DoctorWorkspaceMode {
+  CLASSIC
+  COCKPIT
+}
+
 model UserPreference {
   userId               String               @id @db.Uuid
   interfaceMode        InterfaceMode        @default(OPTIMIZED)
   densityMode          DensityMode          @default(COMFORTABLE)
   mobileNavigationMode MobileNavigationMode @default(AUTO)
+  doctorWorkspaceMode  DoctorWorkspaceMode  @default(CLASSIC)
   appearanceJson       Json?
   createdAt            DateTime             @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime             @default(now()) @updatedAt @db.Timestamptz(3)
