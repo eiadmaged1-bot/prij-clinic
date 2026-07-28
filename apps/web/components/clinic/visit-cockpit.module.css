@@ -170,3 +170,111 @@
 @media (prefers-reduced-motion: reduce) {
   .cockpit *, .cockpit *::before, .cockpit *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+.contextCollapsed {
+  grid-template-columns: minmax(0, 1fr) 190px;
+}
+
+.contextHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.contextToggle,
+.issueLink,
+.structuredReview button,
+.contextGroup li button {
+  min-height: 44px;
+  border: 1px solid var(--pc-border-strong, #d8d0c0);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--cockpit-green);
+  padding: 7px 9px;
+  font: 750 .74rem/1.25 var(--font-sans);
+  cursor: pointer;
+}
+
+.contextToggle {
+  flex: 0 0 auto;
+}
+
+.contextGroup li {
+  padding: 0;
+}
+
+.contextGroup li button {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+  border: 0;
+  text-align: start;
+}
+
+.issueLink {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+}
+
+.structuredReview {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.structuredReview h3 {
+  margin: 0;
+  color: var(--cockpit-green);
+  font-size: .86rem;
+}
+
+.structuredReview div {
+  display: grid;
+  grid-template-columns: minmax(130px, .35fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-block-start: 1px solid var(--pc-border, #e6e0d4);
+  padding-block-start: 8px;
+  font-size: .78rem;
+}
+
+.structuredReview span {
+  overflow-wrap: anywhere;
+}
+
+.contextToggle:focus-visible,
+.issueLink:focus-visible,
+.structuredReview button:focus-visible,
+.contextGroup li button:focus-visible {
+  outline: 3px solid rgb(47 111 98 / 30%);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .contextCollapsed {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .contextHeading,
+  .structuredReview div {
+    grid-template-columns: 1fr;
+  }
+
+  .contextHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .contextToggle {
+    width: 100%;
+  }
+}

@@ -11,6 +11,7 @@ import { getApiBaseUrl } from "@/lib/api-base-url";
 import { createDoctorVisitFollowUp, startDoctorVisit } from "@/lib/doctor-visit";
 import { useInterfaceMode, type DoctorWorkspaceMode } from "@/lib/interface-mode";
 import { VisitCockpitWorkspace } from "./VisitCockpitWorkspace";
+import { SharedClinicalHistoryEditor } from "./SharedClinicalHistory";
 import { stageFromModule, useSharedEncounterWorkspaceController, type EncounterWorkspaceController } from "./SharedEncounterWorkspaceController";
 import { useSession } from "@/app/session";
 import { AppActionButton } from "@/components/actions/AppActionButton";
@@ -373,7 +374,8 @@ function ClassicDoctorWorkspace({ controller, moduleKey, modeError, onModeChange
           )}
           <section className="panel">
             <div className="section-heading"><h2>{modules.find(([key]) => key === activeModule)?.[1] ?? "Active Visit"}</h2><span className="badge">{status}</span></div>
-            {activeModule === "encounter" || activeModule === "complaint" || activeModule === "history" || activeModule === "examination" || activeModule === "impression" ? (
+            {activeModule === "history" ? <SharedClinicalHistoryEditor compact controller={controller} /> : null}
+            {activeModule === "encounter" || activeModule === "complaint" || activeModule === "examination" || activeModule === "impression" ? (
               <EncounterModule activeModule={activeModule} form={encounterForm as Record<string, string>} readOnly={signedVisit} onChange={changeEncounterForm} onSubmit={saveEncounter} />
             ) : null}
             {activeModule === "prescription" ? <PrescriptionModule query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
