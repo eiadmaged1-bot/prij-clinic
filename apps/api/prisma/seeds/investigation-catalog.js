@@ -1532,7 +1532,7 @@ const ALIAS_MAP = {
   ]
 };
 
-const REQUIRED_CATALOG_CODES = [
+const REQUIRED_CATALOG_CODES = Object.freeze([
   "COMPLETE_BLOOD_COUNT_CBC",
   "COAGULATION_PROFILE",
   "PT",
@@ -1542,7 +1542,6 @@ const REQUIRED_CATALOG_CODES = [
   "SEMEN_ANALYSIS",
   "SPERM_DNA_FRAGMENTATION",
   "NON_INVASIVE_PRENATAL_TESTING_NIPT",
-  "BRCA1_BRCA2_GENETIC_TEST",
   "OBSTETRIC_DOPPLER_ULTRASOUND",
   "UMBILICAL_ARTERY_DOPPLER",
   "MIDDLE_CEREBRAL_ARTERY_DOPPLER",
@@ -1552,7 +1551,14 @@ const REQUIRED_CATALOG_CODES = [
   "ENDOMETRIAL_BIOPSY_HISTOPATHOLOGY",
   "CARDIOTOCOGRAPHY_NON_STRESS_TEST_CTG_NST",
   "ANESTHESIA_ASSESSMENT"
-];
+]);
+
+const investigationCatalogItems = Object.freeze(
+  canonicalItems.map((entry) => Object.freeze({
+    ...entry,
+    aliases: Object.freeze([...(ALIAS_MAP[entry.code] || [])])
+  }))
+);
 
 function normalizeName(value) {
   return String(value).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").trim();
@@ -1691,5 +1697,7 @@ async function seedInvestigationCatalog(prisma) {
 }
 
 module.exports = {
+  investigationCatalogItems,
+  REQUIRED_CATALOG_CODES,
   seedInvestigationCatalog
 };
