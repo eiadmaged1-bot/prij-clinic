@@ -97,7 +97,7 @@ jobs:
           npm run test:routes:auth 2>&1 | tee route-authorization.log
 
       - name: Upload route authorization diagnostics
-        if: always()
+        if: always() && hashFiles('route-authorization.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: route-authorization-diagnostics
@@ -114,7 +114,7 @@ jobs:
           npm run test:scope:records 2>&1 | tee referenced-record-scope.log
 
       - name: Upload referenced-record scope diagnostics
-        if: always()
+        if: always() && hashFiles('referenced-record-scope.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: referenced-record-scope-diagnostics
@@ -131,7 +131,7 @@ jobs:
           npm run test:audit:assertions 2>&1 | tee audit-assertions.log
 
       - name: Upload audit assertion diagnostics
-        if: always()
+        if: always() && hashFiles('audit-assertions.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: audit-assertion-diagnostics
@@ -151,7 +151,7 @@ jobs:
           node scripts/investigation-direct-order-test.mjs 2>&1 | tee investigation-direct-order.log
 
       - name: Upload investigation workflow diagnostics
-        if: always()
+        if: always() && hashFiles('investigation-direct-order.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: investigation-direct-order-diagnostics
@@ -168,7 +168,7 @@ jobs:
           node scripts/investigation-station-qa-contract-test.mjs 2>&1 | tee investigation-station-qa-contract.log
 
       - name: Upload Investigation Station QA diagnostics
-        if: always()
+        if: always() && hashFiles('investigation-station-qa-contract.log') != ''
         uses: actions/upload-artifact@v4
         with:
           name: investigation-station-qa-contract-diagnostics
