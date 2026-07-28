@@ -24,7 +24,6 @@ import {
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PatientInvestigationPanel, PatientPrescriptionPanel } from "../../../components/patients/PatientClinicalWorkflowPanels";
 import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorkspace";
-import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 
 type WorkspaceModuleProps = {
   active: TabConfig;
