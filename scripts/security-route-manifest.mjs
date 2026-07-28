@@ -494,8 +494,19 @@ export async function createRouteFixtures(ownerToken) {
   ids.refundPaymentId = refundPayment.id;
   const aiDraft = await apiJson("POST", "/ai-drafts", ownerToken, bodyFor("aiDraft", ids));
   ids.aiDraftId = aiDraft.id;
-  const protocolSearch = await apiJson("POST", "/protocol-atlas/search", ownerToken, { status: "catalog_only" });
-  const catalogProtocols = protocolSearch.protocols ?? [];
+  const catalogProtocols = await prisma.clinicalProtocol.findMany({
+    where: {
+      implementationStatus: "catalog_only"
+    },
+    orderBy: {
+      code: "asc"
+    },
+    take: 4,
+    select: {
+      id: true,
+      code: true
+    }
+  });
   if (catalogProtocols.length < 4) throw new Error("Expected catalog protocol fixtures for route authorization.");
   ids.editorProtocolId = catalogProtocols[0].id;
   ids.requestProtocolId = catalogProtocols[1].id;
