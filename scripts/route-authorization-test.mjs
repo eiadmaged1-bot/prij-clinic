@@ -1,4 +1,5 @@
 import {
+  apiJson,
   apiStatus,
   assertStatus,
   bodyFor,
@@ -35,7 +36,30 @@ async function main() {
   for (const route of routeManifest) {
     const path = substitutePath(route.path, ids);
     const label = `${route.method} ${path}`;
-    const body = route.fixtureBody ? bodyFor(route.fixtureBody, ids) : undefined;
+    let body = route.fixtureBody ? bodyFor(route.fixtureBody, ids) : undefined;
+
+    if (route.name === "PATCH /encounters/:encounterId/sign") {
+      const preparedEncounter = await apiJson("PATCH", path.replace(/\/sign$/, ""), ownerToken, {
+        chiefComplaint: "Demo encounter signing authorization check.",
+        historyText: "Demo history documented for signing authorization only.",
+        examText: "Demo examination documented for signing authorization only.",
+        assessmentText: "Demo assessment documented for signing authorization only.",
+        planText: "Demo plan documented for signing authorization only.",
+        examinationJson: {
+          reproductiveSnapshot: {
+            changeStatus: "reviewed",
+            context: "pregnancy",
+            lmp: "2026-01-01",
+            lmpCertainty: "certain",
+            edd: "2026-10-08",
+            datingMethod: "LMP",
+            datingConfirmationDate: "2026-01-01"
+          }
+        }
+      });
+      body = { expectedRevision: preparedEncounter.updatedAt };
+    }
+
     const row = {
       route: route.name,
       permission: route.requiredPermission,
