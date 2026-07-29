@@ -10,7 +10,7 @@ const password = process.env.DEMO_TEST_PASSWORD;
 if (!password) throw new Error("DEMO_TEST_PASSWORD is required.");
 
 const doctor = await login("runtime.doctor@prij.local", password);
-const owner = await login("runtime.owner@prij.local", password);
+const owner = await login(process.env.DEMO_ADMIN_LOGIN || "runtime.owner@prij.local", password);
 const reception = await login("runtime.reception@prij.local", password);
 
 const initialPreference = await json(doctor, "GET", "/users/me/preferences");
