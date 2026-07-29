@@ -557,7 +557,10 @@ export async function createRouteFixtures(ownerToken) {
   ids.guidelineDocumentId = protocolSourceDocument.id;
   const catalogProtocols = await prisma.clinicalProtocol.findMany({
     where: {
-      implementationStatus: "catalog_only"
+      implementationStatus: "catalog_only",
+      code: {
+        endsWith: "_CATALOG_V1"
+      }
     },
     orderBy: {
       code: "asc"
