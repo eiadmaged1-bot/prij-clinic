@@ -35,3 +35,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Validate doctor workspace safety contracts
+        run: |
+          node scripts/dual-doctor-workspace-test.mjs
+          node scripts/visit-cockpit-history-test.mjs
+          node scripts/v142-core-visit-workspace-test.mjs
+          node scripts/v124-clinical-safety-wording-test.mjs
