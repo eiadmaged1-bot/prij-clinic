@@ -7,10 +7,10 @@ const prisma = new PrismaClient();
 const CANONICAL_CATEGORIES = new Set([
   "Laboratory",
   "Imaging",
-  "Pathology",
-  "Cardiac and Functional Tests",
-  "Procedures and Referrals",
-  "Other"
+  "Cardiac and Functional Testing",
+  "Pathology and Molecular Diagnostics",
+  "Diagnostic Procedures",
+  "Specialist Referrals and Clearance"
 ]);
 
 if (!PASSWORD) throw new Error("Synthetic CI password is required.");
