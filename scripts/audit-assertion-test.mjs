@@ -11,8 +11,22 @@ async function main() {
   await apiJson("PATCH", `/appointments/${ids.appointmentId}/status`, owner, { status: "booked" });
   await apiJson("PATCH", `/queue/${ids.queueTicketId}/call`, owner);
   const encounterForSign = await apiJson("PATCH", `/encounters/${ids.encounterId}`, owner, {
+    chiefComplaint: "Demo audit assertion encounter sign check.",
+    historyText: "Demo history documented for audit assertion signing only.",
+    examText: "Demo examination documented for audit assertion signing only.",
+    assessmentText: "Demo assessment documented for audit assertion signing only.",
     planText: "Demo audit assertion plan only.",
-    examinationJson: { reproductiveSnapshot: { context: "general", changeStatus: "no_change" } }
+    examinationJson: {
+      reproductiveSnapshot: {
+        changeStatus: "reviewed",
+        context: "pregnancy",
+        lmp: "2026-01-01",
+        lmpCertainty: "certain",
+        edd: "2026-10-08",
+        datingMethod: "LMP",
+        datingConfirmationDate: "2026-01-01"
+      }
+    }
   });
   await apiJson("PATCH", `/encounters/${ids.encounterId}/sign`, owner, { expectedRevision: encounterForSign.updatedAt });
   await apiJson("PATCH", `/prescriptions/${ids.prescriptionId}`, owner, {
