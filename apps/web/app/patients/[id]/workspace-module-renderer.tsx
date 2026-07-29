@@ -24,7 +24,6 @@ import {
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PatientInvestigationPanel, PatientPrescriptionPanel } from "../../../components/patients/PatientClinicalWorkflowPanels";
 import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorkspace";
-import { ThreeDMedicalIcon } from "../../../components/ThreeDMedicalIcon";
 
 type WorkspaceModuleProps = {
   active: TabConfig;
@@ -67,12 +66,8 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   "case-boards": ({ patient, related }) => <CaseBoardsPanel patient={patient} related={related} />,
   history: ({ patient, related, submitPatientAction, actionStatus }) => <><SmartHistoryOptionChips patient={patient} /><details className="legacy-history-form filter-drawer"><summary>Structured history form</summary><HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} /></details></>,
   "doctor-visit": ({ patient }) => (
-    <section className="panel">
-      <div className="section-heading">
-        <h2>Doctor Visit Workspace</h2>
-        <ActiveVisitLauncher patientId={patient.id} className="button"><ThreeDMedicalIcon name="encounter" size="sm" /> Start / Resume Visit</ActiveVisitLauncher>
-      </div>
-      <p className="muted">The doctor visit workflow has been unified into a dedicated workspace to ensure context safety and provide more screen space for clinical modules.</p>
+    <section className="panel" aria-label="Current visit clinical workspace">
+      <div className="section-heading"><div><h2>Current visit</h2><p className="muted">Open the shared encounter workspace. Classic Workspace and Visit Cockpit use the same active draft.</p></div><ActiveVisitLauncher patientId={patient.id}>Open current visit</ActiveVisitLauncher></div>
     </section>
   ),
   "secretary-intake": ({ related }) => <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} />,

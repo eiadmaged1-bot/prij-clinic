@@ -6,7 +6,7 @@ function assert(condition, message) { if (!condition) throw new Error(message); 
 
 const schema = await readFile("apps/api/prisma/schema.prisma", "utf8");
 const doctorVisit = await readFile("apps/api/src/doctor-visit/doctor-visit.service.ts", "utf8");
-const patientPage = await readFile("apps/web/app/patients/[id]/page.tsx", "utf8");
+const patientPage = `${await readFile("apps/web/app/patients/[id]/patient-components.tsx", "utf8")}\n${await readFile("apps/web/app/patients/[id]/timeline-components.tsx", "utf8")}`;
 const css = await readFile("apps/web/app/globals.css", "utf8");
 
 assert(schema.includes("doctorColor") && schema.includes("doctorShortLabel"), "doctor color fields missing");

@@ -42,14 +42,15 @@ async function main() {
 
   const updatedEncounter = await apiJson("PATCH", `/encounters/${encounter.id}`, owner, {
     historyText: "Updated demo history from guided visit.",
-    planText: "Updated demo follow-up plan."
+    planText: "Updated demo follow-up plan.",
+    examinationJson: { reproductiveSnapshot: { context: "general", changeStatus: "no_change" } }
   });
   if (updatedEncounter.historyText !== "Updated demo history from guided visit.") {
     throw new Error("Guided visit update did not persist.");
   }
   record.pass("guided visit steps persisted");
 
-  await apiJson("PATCH", `/encounters/${encounter.id}/sign`, owner);
+  await apiJson("PATCH", `/encounters/${encounter.id}/sign`, owner, { expectedRevision: updatedEncounter.updatedAt });
   assertStatus(
     await apiStatus("PATCH", `/encounters/${encounter.id}`, owner, { planText: "Unsafe silent edit attempt." }),
     [400, 403],

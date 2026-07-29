@@ -137,7 +137,8 @@ async function main() {
   assert.ok(stillExists, "voided record is not hard-deleted");
 
   const signedDraft = await createEncounter(doctorToken, patient.id, appointment.id);
-  await apiJson("PATCH", `/encounters/${signedDraft.id}/sign`, doctorToken);
+  const signReadyDraft = await apiJson("PATCH", `/encounters/${signedDraft.id}`, doctorToken, { examinationJson: { reproductiveSnapshot: { context: "general", changeStatus: "no_change" } } });
+  await apiJson("PATCH", `/encounters/${signedDraft.id}/sign`, doctorToken, { expectedRevision: signReadyDraft.updatedAt });
   const signedVoid = await request(`/encounters/${signedDraft.id}/void`, doctorToken, {
     method: "PATCH",
     body: JSON.stringify({ reason: "Should not void signed encounter." })

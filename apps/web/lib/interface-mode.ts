@@ -6,9 +6,10 @@ import { getApiBaseUrl } from "./api-base-url";
 export type InterfaceMode = "OPTIMIZED" | "MINIMALISTIC";
 export type DensityMode = "COMPACT" | "COMFORTABLE" | "LARGE";
 export type MobileNavigationMode = "AUTO" | "BOTTOM_NAV" | "DRAWER";
-export type InterfacePreferences = { interfaceMode: InterfaceMode; densityMode: DensityMode; mobileNavigationMode: MobileNavigationMode };
+export type DoctorWorkspaceMode = "CLASSIC" | "COCKPIT";
+export type InterfacePreferences = { interfaceMode: InterfaceMode; densityMode: DensityMode; mobileNavigationMode: MobileNavigationMode; doctorWorkspaceMode: DoctorWorkspaceMode };
 
-export const defaultInterfacePreferences: InterfacePreferences = { interfaceMode: "OPTIMIZED", densityMode: "COMFORTABLE", mobileNavigationMode: "AUTO" };
+export const defaultInterfacePreferences: InterfacePreferences = { interfaceMode: "OPTIMIZED", densityMode: "COMFORTABLE", mobileNavigationMode: "AUTO", doctorWorkspaceMode: "CLASSIC" };
 const cacheKey = "prij:display-preferences";
 const InterfaceModeContext = createContext<(InterfacePreferences & { ready: boolean; updatePreferences: (patch: Partial<InterfacePreferences>) => Promise<void> }) | null>(null);
 
@@ -48,5 +49,5 @@ export function useInterfaceMode() {
 }
 
 function validPreferences(value: Partial<InterfacePreferences>) {
-  return ["OPTIMIZED", "MINIMALISTIC"].includes(String(value.interfaceMode)) && ["COMPACT", "COMFORTABLE", "LARGE"].includes(String(value.densityMode)) && ["AUTO", "BOTTOM_NAV", "DRAWER"].includes(String(value.mobileNavigationMode));
+  return ["OPTIMIZED", "MINIMALISTIC"].includes(String(value.interfaceMode)) && ["COMPACT", "COMFORTABLE", "LARGE"].includes(String(value.densityMode)) && ["AUTO", "BOTTOM_NAV", "DRAWER"].includes(String(value.mobileNavigationMode)) && ["CLASSIC", "COCKPIT"].includes(String(value.doctorWorkspaceMode));
 }

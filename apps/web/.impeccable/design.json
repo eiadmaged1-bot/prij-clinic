@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-28T00:00:00+03:00",
+  "title": "Design System: Prij Clinic",
+  "extensions": {
+    "colorMeta": {
+      "deep-clinic-green": {
+        "role": "primary",
+        "displayName": "Deep Clinic Green",
+        "canonical": "#16302c",
+        "tonalRamp": ["oklch(18% 0.035 170)", "oklch(28% 0.035 170)", "oklch(38% 0.034 170)", "oklch(50% 0.032 170)", "oklch(62% 0.028 170)", "oklch(74% 0.022 170)", "oklch(86% 0.014 170)", "oklch(95% 0.007 170)"]
+      },
+      "clinical-teal": {
+        "role": "primary",
+        "displayName": "Clinical Teal",
+        "canonical": "#2f6f62",
+        "tonalRamp": ["oklch(18% 0.055 170)", "oklch(28% 0.062 170)", "oklch(38% 0.065 170)", "oklch(50% 0.064 170)", "oklch(62% 0.055 170)", "oklch(74% 0.040 170)", "oklch(86% 0.024 170)", "oklch(95% 0.010 170)"]
+      },
+      "warm-ivory": {
+        "role": "neutral",
+        "displayName": "Warm Ivory",
+        "canonical": "#faf7f2",
+        "tonalRamp": ["oklch(18% 0.012 80)", "oklch(30% 0.014 80)", "oklch(42% 0.015 80)", "oklch(55% 0.016 80)", "oklch(68% 0.016 80)", "oklch(80% 0.014 80)", "oklch(90% 0.011 80)", "oklch(97% 0.007 80)"]
+      },
+      "reserved-terracotta": {
+        "role": "secondary",
+        "displayName": "Reserved Terracotta",
+        "canonical": "#c6714b",
+        "tonalRamp": ["oklch(18% 0.070 45)", "oklch(28% 0.090 45)", "oklch(38% 0.110 45)", "oklch(50% 0.125 45)", "oklch(62% 0.120 45)", "oklch(74% 0.090 45)", "oklch(86% 0.050 45)", "oklch(95% 0.020 45)"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Success Green",
+        "canonical": "#3f8f6d",
+        "tonalRamp": ["oklch(18% 0.060 155)", "oklch(28% 0.075 155)", "oklch(38% 0.085 155)", "oklch(50% 0.090 155)", "oklch(62% 0.080 155)", "oklch(74% 0.058 155)", "oklch(86% 0.032 155)", "oklch(95% 0.014 155)"]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Warning Ochre",
+        "canonical": "#c98a2c",
+        "tonalRamp": ["oklch(18% 0.075 75)", "oklch(28% 0.100 75)", "oklch(38% 0.120 75)", "oklch(50% 0.135 75)", "oklch(62% 0.125 75)", "oklch(74% 0.095 75)", "oklch(86% 0.052 75)", "oklch(95% 0.020 75)"]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Danger Red",
+        "canonical": "#b5484a",
+        "tonalRamp": ["oklch(18% 0.085 25)", "oklch(28% 0.115 25)", "oklch(38% 0.140 25)", "oklch(50% 0.155 25)", "oklch(62% 0.135 25)", "oklch(74% 0.095 25)", "oklch(86% 0.050 25)", "oklch(95% 0.020 25)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Heritage Display",
+        "purpose": "Selective heritage and entry moments only."
+      },
+      "headline": {
+        "displayName": "Operational Headline",
+        "purpose": "Page and patient-context titles."
+      },
+      "body": {
+        "displayName": "Clinical Body",
+        "purpose": "Operational, clinical, and explanatory content."
+      },
+      "label": {
+        "displayName": "Clinical Label",
+        "purpose": "Forms, controls, metadata, and status."
+      }
+    },
+    "shadows": [
+      {
+        "name": "warm-low",
+        "value": "0 1px 2px rgb(22 48 44 / 6%), 0 1px 1px rgb(22 48 44 / 4%)",
+        "purpose": "Resting operational cards and containers."
+      },
+      {
+        "name": "warm-medium",
+        "value": "0 8px 20px rgb(22 48 44 / 8%), 0 2px 6px rgb(22 48 44 / 5%)",
+        "purpose": "Menus and raised contextual surfaces."
+      },
+      {
+        "name": "warm-high",
+        "value": "0 24px 48px rgb(22 48 44 / 14%), 0 6px 16px rgb(22 48 44 / 8%)",
+        "purpose": "Modal and overlay layers only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-quick",
+        "value": "140ms ease",
+        "purpose": "Color, border, background, and focus state changes."
+      },
+      {
+        "name": "shell-standard",
+        "value": "180ms ease",
+        "purpose": "Sidebar, drawer, and shell layout transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "767px"
+      },
+      {
+        "name": "compact-shell",
+        "value": "900px"
+      },
+      {
+        "name": "drawer-shell",
+        "value": "1199px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The principal action for a safe, explicit workflow step.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Save and continue</button>",
+      "css": ".ds-btn-primary { display:inline-flex; min-height:44px; align-items:center; justify-content:center; gap:8px; border:1px solid var(--pc-teal, #2f6f62); border-radius:8px; background:var(--pc-teal, #2f6f62); color:#fff; cursor:pointer; font:800 0.95rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding:0.68rem 0.95rem; transition:background 140ms ease, border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease; } .ds-btn-primary:hover { border-color:var(--pc-ink-2, #1e3f38); background:var(--pc-ink-2, #1e3f38); transform:translateY(-1px); } .ds-btn-primary:focus-visible { outline:3px solid rgb(47 111 98 / 30%); outline-offset:2px; } .ds-btn-primary:active { transform:translateY(1px); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A clear, quiet alternative action that does not compete with the primary step.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Previous</button>",
+      "css": ".ds-btn-secondary { display:inline-flex; min-height:44px; align-items:center; justify-content:center; border:1px solid var(--pc-border, #e6e0d4); border-radius:8px; background:#fff; color:var(--pc-text, #1b2624); cursor:pointer; font:800 0.95rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding:0.68rem 0.95rem; transition:background 140ms ease, border-color 140ms ease; } .ds-btn-secondary:hover { border-color:var(--pc-border-strong, #d8d0c0); background:var(--pc-surface-2, #f3efe6); } .ds-btn-secondary:focus-visible { outline:3px solid rgb(47 111 98 / 30%); outline-offset:2px; }"
+    },
+    {
+      "name": "Clinical Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A readable labeled field with an unmistakable keyboard focus state.",
+      "html": "<label class=\"ds-field\"><span>Visit reason</span><input aria-describedby=\"ds-field-help\" placeholder=\"Enter a concise reason\" /><small id=\"ds-field-help\">Use the minimum necessary detail.</small></label>",
+      "css": ".ds-field { display:grid; gap:7px; color:var(--pc-ink-3, #295850); font:750 0.92rem/1.35 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-field input { width:100%; min-height:46px; border:1px solid var(--pc-border, #e6e0d4); border-radius:8px; background:#fff; color:var(--pc-text, #1b2624); font:400 1rem/1.5 Inter, ui-sans-serif, system-ui, sans-serif; padding:0.82rem 0.95rem; transition:border-color 140ms ease, box-shadow 140ms ease; } .ds-field input:focus-visible { border-color:var(--pc-teal, #2f6f62); outline:none; box-shadow:0 0 0 4px rgb(47 111 98 / 13%); } .ds-field small { color:var(--pc-text-muted, #6e7c77); font-weight:400; }"
+    },
+    {
+      "name": "Operational Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "A compact white work surface over Warm Ivory.",
+      "html": "<section class=\"ds-card\"><div><span>Today</span><h3>Waiting line</h3></div><strong>6 patients</strong><p>Two are ready for the doctor.</p></section>",
+      "css": ".ds-card { display:grid; gap:12px; border:1px solid var(--pc-border, #e6e0d4); border-radius:18px; background:#fff; color:var(--pc-text, #1b2624); padding:16px; box-shadow:0 1px 2px rgb(22 48 44 / 6%), 0 1px 1px rgb(22 48 44 / 4%); font-family:Inter, ui-sans-serif, system-ui, sans-serif; } .ds-card div { display:flex; align-items:baseline; justify-content:space-between; gap:12px; } .ds-card h3, .ds-card p { margin:0; } .ds-card span, .ds-card p { color:var(--pc-text-muted, #6e7c77); } .ds-card:focus-within { outline:3px solid rgb(47 111 98 / 24%); outline-offset:2px; }"
+    },
+    {
+      "name": "Active Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "A compact selected workspace section with state conveyed by more than color.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Patient sections\"><button role=\"tab\" aria-selected=\"true\">Summary <span aria-hidden=\"true\">✓</span></button><button role=\"tab\" aria-selected=\"false\">Encounters</button></div>",
+      "css": ".ds-tabs { display:flex; flex-wrap:wrap; gap:8px; font-family:Inter, ui-sans-serif, system-ui, sans-serif; } .ds-tabs button { min-height:40px; border:1px solid var(--pc-border, #e6e0d4); border-radius:8px; background:#fff; color:var(--pc-ink-3, #295850); cursor:pointer; font-weight:700; padding:8px 12px; } .ds-tabs button[aria-selected=\"true\"] { border-color:var(--pc-teal, #2f6f62); background:var(--pc-teal-light, #e4f0ec); color:var(--pc-ink-2, #1e3f38); } .ds-tabs button:hover { border-color:var(--pc-teal, #2f6f62); } .ds-tabs button:focus-visible { outline:3px solid rgb(47 111 98 / 30%); outline-offset:2px; }"
+    },
+    {
+      "name": "Review Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "A semantic status that pairs color with explicit review text.",
+      "html": "<span class=\"ds-status\" role=\"status\"><svg aria-hidden=\"true\" viewBox=\"0 0 20 20\"><path d=\"M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 4a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm1 8H9V9h2v5Z\"/></svg>Doctor review required</span>",
+      "css": ".ds-status { display:inline-flex; width:fit-content; min-height:32px; align-items:center; gap:6px; border:1px solid rgb(201 138 44 / 45%); border-radius:999px; background:#fff8e8; color:#6f430f; font:850 0.78rem/1.2 Inter, ui-sans-serif, system-ui, sans-serif; padding:6px 10px; } .ds-status svg { width:16px; height:16px; fill:currentColor; } .ds-status:focus-visible { outline:3px solid rgb(47 111 98 / 30%); outline-offset:2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Clinical Workspace",
+    "overview": "Prij Clinic feels like a composed clinical workroom: warm enough for sustained daily use, precise enough for sensitive records, and quiet enough that patient identity, workflow state, and the next safe action remain dominant. The system is warm, restrained, trustworthy, operational, and quietly premium. Its authority comes from disciplined information hierarchy and dependable role-based workflows rather than decoration.\n\nInterfaces are compact, symmetrical, task-focused, and clinically readable. The incumbent Prij Heritage language is the normative visual authority: Warm Ivory grounds the product; Deep Clinic Green structures navigation; Clinical Teal leads primary actions and active states; white surfaces organize work; Reserved Terracotta appears only as a limited semantic attention accent. Optional legacy appearance variants in the source are not the default design authority for new work.\n\nThe product must not drift toward pink women's-health clichés, bright gradients, decorative color, oversized cards, excessive shadows, or generic AI-dashboard styling. AI-assisted areas belong inside the same sober clinical system and must visibly communicate draft and review status.",
+    "keyCharacteristics": [
+      "Warm Ivory canvas with white operational surfaces",
+      "Deep Clinic Green navigation and Clinical Teal interaction hierarchy",
+      "Compact, symmetrical 12-column desktop composition",
+      "Light borders and low, ambient elevation",
+      "Role-specific navigation and patient-first context",
+      "Responsive English LTR and Arabic RTL behavior",
+      "Explicit semantic states that never depend on color alone"
+    ],
+    "rules": [
+      {
+        "name": "The Green-Led Action Rule",
+        "body": "Deep Clinic Green and Clinical Teal own routine primary actions and active states.",
+        "section": "colors"
+      },
+      {
+        "name": "The Reserved Terracotta Rule",
+        "body": "Terracotta is a limited semantic accent, never the dominant brand color and never decorative fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Redundant Safety Signal Rule",
+        "body": "A safety-critical state always pairs color with a label, message, icon, status text, or structural cue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Operational Sans Rule",
+        "body": "Patient care and clinic-day surfaces use the sans-serif hierarchy; editorial display type never reduces scan speed or competes with patient identity.",
+        "section": "typography"
+      },
+      {
+        "name": "The Patient Context Rule",
+        "body": "Patient identity and visit state remain visually locked before any clinical write or review action.",
+        "section": "layout"
+      },
+      {
+        "name": "The Compact, Not Cramped Rule",
+        "body": "Reduce empty space and repeated prose before reducing type legibility, touch size, or state clarity.",
+        "section": "layout"
+      },
+      {
+        "name": "The Ambient Depth Rule",
+        "body": "Borders and tonal surfaces establish hierarchy first; shadows clarify actual elevation rather than decorate the page.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Warm Ivory as the principal background and Clinical White as the working surface.",
+      "Do lead primary actions and active states with Deep Clinic Green and Clinical Teal.",
+      "Do keep role interfaces compact, symmetrical, task-focused, and clinically readable.",
+      "Do preserve patient identity, workflow state, authorship, review state, and the next safe action in the visual hierarchy.",
+      "Do pair semantic color with text, icons, labels, or structure.",
+      "Do verify desktop, tablet, mobile, Arabic RTL, English LTR, keyboard focus, reduced motion, and high-contrast behavior.",
+      "Do keep AI assistance inside the normal clinical component system with visible draft and doctor-review status."
+    ],
+    "donts": [
+      "Don't use Reserved Terracotta as a dominant brand color or routine primary-action color.",
+      "Don't introduce pink, bright gradients, decorative color, oversized cards, excessive shadows, glow, or generic AI-dashboard styling.",
+      "Don't use color alone to communicate critical, warning, review, selected, completed, or disabled state.",
+      "Don't expose raw JSON, endpoints, schema terms, stack traces, developer overlays, or internal permission mechanics in normal staff UI.",
+      "Don't trade touch size, readability, or state clarity for density.",
+      "Don't invent medical claims, clinical confidence, regulatory status, testimonials, or production-readiness signals."
+    ]
+  }
+}

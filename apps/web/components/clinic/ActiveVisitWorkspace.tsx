@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Action, hasAnyRolePermission } from "@prij-clinic/shared";
 import { ThreeDMedicalIcon } from "../ThreeDMedicalIcon";
 import { PatientVisitIdentityBar } from "./PatientVisitIdentityBar";
 import InvestigationStationV3 from "@/components/investigations/InvestigationStationV3";
 import { getApiBaseUrl } from "@/lib/api-base-url";
-import { completeDoctorVisit, createDoctorVisitFollowUp, getDoctorVisitPacket, getCurrentDoctorVisit, startDoctorVisit, updateDoctorVisit, type DoctorVisitState } from "@/lib/doctor-visit";
+import { createDoctorVisitFollowUp, startDoctorVisit } from "@/lib/doctor-visit";
+import { useInterfaceMode, type DoctorWorkspaceMode } from "@/lib/interface-mode";
+import { VisitCockpitWorkspace } from "./VisitCockpitWorkspace";
+import { SharedClinicalHistoryEditor } from "./SharedClinicalHistory";
+import { stageFromModule, useSharedEncounterWorkspaceController, type EncounterWorkspaceController } from "./SharedEncounterWorkspaceController";
 import { useSession } from "@/app/session";
 import { AppActionButton } from "@/components/actions/AppActionButton";
 
@@ -81,12 +85,33 @@ const investigationCategories = ["Common", "Pregnancy / Obstetric", "Gynecology"
 const scanTypes = ["Dating", "Anomaly", "Growth", "Doppler", "Follow-up"];
 
 export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patientId: string; visitId: string; moduleKey?: string }) {
+  const controller = useSharedEncounterWorkspaceController({ patientId, encounterId: visitId, initialStage: stageFromModule(moduleKey) });
+  const { doctorWorkspaceMode, ready, updatePreferences } = useInterfaceMode();
+  const [modeError, setModeError] = useState("");
+
+  async function switchMode(mode: DoctorWorkspaceMode) {
+    setModeError("");
+    if (!await controller.prepareModeSwitch()) {
+      setModeError("Resolve the unsaved or conflicting encounter state before switching workspace modes.");
+      return;
+    }
+    try {
+      await updatePreferences({ doctorWorkspaceMode: mode });
+    } catch (error) {
+      setModeError(error instanceof Error ? error.message : "Workspace mode could not be changed.");
+    }
+  }
+
+  if (!ready) return <section className="panel" aria-busy="true">Loading doctor workspace preference…</section>;
+  if (doctorWorkspaceMode === "COCKPIT") return <VisitCockpitWorkspace controller={controller} modeError={modeError} onModeChange={switchMode} />;
+  return <ClassicDoctorWorkspace controller={controller} moduleKey={moduleKey} modeError={modeError} onModeChange={switchMode} />;
+}
+
+function ClassicDoctorWorkspace({ controller, moduleKey, modeError, onModeChange }: { controller: EncounterWorkspaceController; moduleKey?: string; modeError: string; onModeChange: (mode: DoctorWorkspaceMode) => Promise<void> }) {
+  const { patientId, encounterId: visitId, visit } = controller;
   const activeModule = normalizeModule(moduleKey);
   const { user, status: sessionStatus } = useSession();
-  const [visit, setVisit] = useState<DoctorVisitState | null>(null);
-  const [status, setStatus] = useState("Loading locked visit context.");
-  const [error, setError] = useState("");
-  const [encounterForm, setEncounterForm] = useState<Record<string, string>>({});
+  const [actionStatus, setActionStatus] = useState("");
   const [medicationQuery, setMedicationQuery] = useState("");
   const [medicationResults, setMedicationResults] = useState<MedicationResult[]>([]);
   const [lines, setLines] = useState<PrescriptionLine[]>([]);
@@ -105,41 +130,16 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
 
   const roles = user?.roles ?? [];
   const canUseDoctorVisit = hasAnyRolePermission(roles, Action.VISIT_START) || roles.some((role) => ["Owner", "Admin", "Doctor"].includes(role));
-  const patient = visit?.patient as Record<string, string | null> | undefined;
-  const encounter = visit?.encounter as Record<string, string | null> | undefined;
+  const patient = controller.patient as Record<string, string | null> | null;
+  const encounter = controller.encounter as Record<string, string | null> | null;
+  const signedVisit = controller.isReadOnly;
   const contextReady = Boolean(patientId && visitId && patient?.id === patientId && encounter?.id === visitId);
-
-  const loadVisit = useCallback(async () => {
-    try {
-      const data = await getCurrentDoctorVisit(patientId);
-      if (String(data.encounter?.id ?? "") !== visitId) {
-        setError("Patient context is required before documenting this visit.");
-        setStatus("Visit does not match the locked patient context.");
-        return;
-      }
-      setVisit(data);
-      setEncounterForm({
-        chiefComplaint: String(data.encounter?.chiefComplaint ?? ""),
-        historyText: String(data.encounter?.historyText ?? ""),
-        examText: String(data.encounter?.examText ?? ""),
-        assessmentText: String(data.encounter?.assessmentText ?? ""),
-        planText: String(data.encounter?.planText ?? "")
-      });
-      setError("");
-      setStatus("Locked patient context loaded.");
-    } catch {
-      setError("Patient context is required before documenting this visit.");
-      setStatus("Could not load locked visit context.");
-    }
-  }, [patientId, visitId]);
-
-  useEffect(() => {
-    if (!patientId || !visitId) {
-      setError("Patient context is required before documenting this visit.");
-      return;
-    }
-    void loadVisit();
-  }, [loadVisit, patientId, visitId]);
+  const encounterForm = controller.draft as unknown as Record<string, unknown>;
+  const saveState = controller.saveState;
+  const finishing = controller.readinessLoading || saveState === "saving";
+  const error = controller.resourceError || "";
+  const status = actionStatus || controller.announce;
+  const loadVisit = controller.reload;
 
   useEffect(() => {
     if (activeModule !== "prescription") return;
@@ -183,9 +183,26 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   async function saveEncounter(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!contextReady) return;
-    await updateDoctorVisit(patientId, visitId, encounterForm);
-    setStatus("Encounter draft saved to locked visit.");
-    await loadVisit();
+    if (await controller.save()) {
+      setActionStatus("Draft synced.");
+      window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
+    }
+  }
+
+  function changeEncounterForm(next: Record<string, string>) {
+    controller.updateDraft(next);
+  }
+
+  async function finishVisit(printAfter = false) {
+    if (!contextReady || finishing) return;
+    if (!await controller.finish()) return;
+    window.dispatchEvent(new CustomEvent("patient-workspace:refresh"));
+    if (printAfter) {
+      await refreshPacket();
+      window.setTimeout(() => window.print(), 100);
+    } else {
+      window.location.assign(`/patients/${patientId}`);
+    }
   }
 
   function addMedication(result: MedicationResult) {
@@ -205,7 +222,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
   async function savePrescription() {
     if (!contextReady || !lines.length) return;
     const response = await apiPost("/prescriptions", { patientId, encounterId: visitId, sourceType: "manual", items: lines });
-    setStatus(response.ok ? "Prescription draft saved to locked visit." : "Could not save prescription draft.");
+    setActionStatus(response.ok ? "Prescription draft saved to locked visit." : "Could not save prescription draft.");
     if (response.ok) await loadVisit();
   }
 
@@ -223,7 +240,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
       priority: "routine",
       items: basket.map((item) => ({ title: item.name, catalogItemId: item.id, requestType: item.category, requestNote: item.note }))
     });
-    setStatus(response.ok ? "Investigation request attached to locked visit." : "Could not attach investigation request.");
+    setActionStatus(response.ok ? "Investigation request attached to locked visit." : "Could not attach investigation request.");
     if (response.ok) {
       setBasket([]);
       await loadVisit();
@@ -234,19 +251,23 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
     event.preventDefault();
     if (!contextReady) return;
     await createDoctorVisitFollowUp(patientId, visitId, followUp);
-    setStatus("Follow-up saved to locked visit.");
+    setActionStatus("Follow-up saved to locked visit.");
     await loadVisit();
   }
 
   async function refreshPacket() {
-    setVisit(await getDoctorVisitPacket(patientId, visitId));
-    setStatus("Print packet refreshed for locked visit.");
+    await controller.reload();
+    setActionStatus("Print packet refreshed for locked visit.");
   }
 
   if (sessionStatus === "loading") {
     return <section className="panel"><div className="skeleton" aria-label="Checking active visit access" /></section>;
   }
 
+  if (controller.loadState === "loading") return <section className="panel" aria-busy="true">Loading the active encounter and related clinical context...</section>;
+  if (controller.loadState === "authentication-failed") return <section className="panel safety-alert" role="alert"><h2>Session expired</h2><p>Sign in again before continuing this encounter.</p></section>;
+  if (controller.loadState === "access-denied") return <section className="panel safety-alert" role="alert"><h2>Access denied</h2><p>You do not have access to this encounter.</p></section>;
+  if (controller.loadState === "resource-failed") return <section className="panel safety-alert" role="alert"><h2>Encounter resources unavailable</h2><p>{controller.resourceError}</p><button className="button secondary" type="button" onClick={() => void controller.reload()}>Retry</button></section>;
   if (!canUseDoctorVisit) {
     return <PatientVisitIdentityBar error="Patient context is required before documenting this visit." />;
   }
@@ -261,6 +282,7 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           <details className="filter-drawer" style={{ display: "inline-block", position: "relative" }}>
             <summary className="button secondary compact"><ThreeDMedicalIcon name="settings" size="sm" /> Options</summary>
             <div className="dense-card-list" style={{ position: "absolute", zIndex: 10, background: "var(--surface)", border: "1px solid var(--border)", padding: "0.5rem", borderRadius: "0.5rem", right: "0", minWidth: "180px", marginTop: "0.25rem" }}>
+              {roles.some((role) => role === "Doctor" || role === "Owner") ? <button className="button secondary compact" type="button" onClick={() => void onModeChange("COCKPIT")} style={{ width: "100%", justifyContent: "flex-start" }}><ThreeDMedicalIcon name="doctor" size="sm" /> Open Visit Cockpit</button> : null}
               <AppActionButton actionId="encounter.void" userPermissions={user?.permissions ?? []} userRoles={roles} className="button secondary compact danger" type="button" onClick={() => {
                 setVoidModalOpen(true);
                 setVoidReason("");
@@ -272,6 +294,8 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           </details>
         }
       />
+      {modeError ? <p className="form-error" role="alert">{modeError}</p> : null}
+      {controller.resourceErrors.length ? <section className="alert warning" role="status"><strong>Some related clinical resources are unavailable.</strong> {controller.resourceErrors.map((item) => item.resource).join(", ")}. <button className="button secondary compact" type="button" onClick={() => void controller.reload()}>Retry resources</button></section> : null}
       {error ? <BlockedContext patientId={patientId} /> : null}
       {!error ? (
         <>
@@ -280,7 +304,16 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
               <Link className={activeModule === key ? "active" : ""} href={`/patients/${patientId}/visits/${visitId}/${key}`} key={key}>{label}</Link>
             ))}
           </nav>
-          <p className="notice">Documentation shortcuts only. No automatic diagnosis, treatment, or clinical action.</p>
+          <div className="visit-persistent-actions no-print" aria-label="Visit actions">
+            <span className={`badge visit-save-state ${saveState}`}>{saveStateLabel(saveState)}</span>
+            <Link className="button secondary compact" href={`/patients/${patientId}/visits/${visitId}/finish`}>Review visit</Link>
+            <details className="visit-more-actions">
+              <summary className="button secondary compact">More</summary>
+              <div>
+                <Link className="button secondary compact" href={`/patients/${patientId}`}>Save and continue later</Link>
+              </div>
+            </details>
+          </div>
 
           {voidModalOpen && (
             <dialog open className="patient-modal" aria-label="Void Encounter Confirmation">
@@ -341,14 +374,15 @@ export function ActiveVisitWorkspace({ patientId, visitId, moduleKey }: { patien
           )}
           <section className="panel">
             <div className="section-heading"><h2>{modules.find(([key]) => key === activeModule)?.[1] ?? "Active Visit"}</h2><span className="badge">{status}</span></div>
-            {activeModule === "encounter" || activeModule === "complaint" || activeModule === "history" || activeModule === "examination" || activeModule === "impression" ? (
-              <EncounterModule activeModule={activeModule} form={encounterForm} onChange={setEncounterForm} onSubmit={saveEncounter} />
+            {activeModule === "history" ? <SharedClinicalHistoryEditor compact controller={controller} /> : null}
+            {activeModule === "encounter" || activeModule === "complaint" || activeModule === "examination" || activeModule === "impression" ? (
+              <EncounterModule activeModule={activeModule} form={encounterForm as Record<string, string>} readOnly={signedVisit} onChange={changeEncounterForm} onSubmit={saveEncounter} />
             ) : null}
             {activeModule === "prescription" ? <PrescriptionModule query={medicationQuery} setQuery={setMedicationQuery} results={medicationResults} lines={lines} setLines={setLines} onAdd={addMedication} onSave={savePrescription} onSafety={runSafetyCheck} safety={safety} templates={templates} shortcuts={shortcuts} /> : null}
             {activeModule === "investigations" ? <InvestigationStationV3 lockedPatientId={patientId} lockedEncounterId={visitId} embedded onSaved={() => void loadVisit()} /> : null}
             {activeModule === "ultrasound" ? <UltrasoundModule patientType={String(patient?.patientType ?? "")} /> : null}
             {activeModule === "follow-up" ? <FollowUpModule followUp={followUp} setFollowUp={setFollowUp} onSubmit={saveFollowUp} /> : null}
-            {activeModule === "finish" ? <FinishModule visit={visit} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} /> : null}
+            {activeModule === "finish" ? <FinishModule controller={controller} patientName={String(patient?.name ?? "Patient")} onRefresh={refreshPacket} onFinish={finishVisit} /> : null}
           </section>
         </>
       ) : null}
@@ -372,7 +406,7 @@ export function ActiveVisitLauncher({ patientId, className = "button", children 
   return <button className={className} disabled={busy} type="button" onClick={() => void openVisit()}>{busy ? "Opening..." : children}</button>;
 }
 
-function EncounterModule({ activeModule, form, onChange, onSubmit }: { activeModule: string; form: Record<string, string>; onChange: (next: Record<string, string>) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function EncounterModule({ activeModule, form, readOnly, onChange, onSubmit }: { activeModule: string; form: Record<string, string>; readOnly: boolean; onChange: (next: Record<string, string>) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
   const field = activeModule === "complaint" ? "chiefComplaint" : activeModule === "history" ? "historyText" : activeModule === "examination" ? "examText" : activeModule === "impression" ? "assessmentText" : "planText";
   return (
     <form className="form-grid" onSubmit={onSubmit}>
@@ -386,7 +420,7 @@ function EncounterModule({ activeModule, form, onChange, onSubmit }: { activeMod
           <label>Impression<textarea value={form.assessmentText ?? ""} onChange={(event) => onChange({ ...form, assessmentText: event.target.value })} /></label>
         </>
       ) : null}
-      <button className="button" type="submit">Save draft</button>
+      {!readOnly ? <button className="button" type="submit">Save draft</button> : <p className="notice wide">Signed encounter · read only</p>}
     </form>
   );
 }
@@ -394,7 +428,8 @@ function EncounterModule({ activeModule, form, onChange, onSubmit }: { activeMod
 function PrescriptionModule({ query, setQuery, results, lines, setLines, onAdd, onSave, onSafety, safety, templates, shortcuts }: { query: string; setQuery: (value: string) => void; results: MedicationResult[]; lines: PrescriptionLine[]; setLines: (updater: (current: PrescriptionLine[]) => PrescriptionLine[]) => void; onAdd: (result: MedicationResult) => void; onSave: () => void; onSafety: () => void; safety: Record<string, unknown> | null; templates: Record<string, unknown>[]; shortcuts: Record<string, unknown>[] }) {
   return (
     <div className="form-grid">
-      <label className="wide">Medication search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
+<label className="wide">Medication search<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="generic, brand, class, painkiller, antibiotic, nausea, thyroid, iron" /></label>
+      <p className="notice wide">Dose, frequency, and duration are not auto-filled. The doctor must enter and review each instruction.</p>
       <div className="data-list wide">
         {results.map((result) => <MedicationCard key={`${result.type}-${result.id}`} result={result} onAdd={() => onAdd(result)} />)}
         {query.trim().length < 2 ? <p className="empty-state compact smart-empty-state">Search medication catalog first.</p> : null}
@@ -489,18 +524,36 @@ function FollowUpModule({ followUp, setFollowUp, onSubmit }: { followUp: { dueAt
   );
 }
 
-function FinishModule({ visit, patientName, onRefresh }: { visit: DoctorVisitState | null; patientName: string; onRefresh: () => void }) {
+function FinishModule({ controller, patientName, onRefresh, onFinish }: { controller: EncounterWorkspaceController; patientName: string; onRefresh: () => void; onFinish: () => Promise<void> }) {
+  const { visit, readiness, readinessLoading, saveState, isReadOnly, refreshReadiness } = controller;
+  useEffect(() => { if (!isReadOnly) void refreshReadiness(); }, [isReadOnly, refreshReadiness]);
+  const blocking = readiness?.issues.filter((issue) => issue.severity === "blocking") ?? [];
+  const warnings = readiness?.issues.filter((issue) => issue.severity === "warning") ?? [];
+  const canFinish = Boolean(readiness?.ready && saveState === "saved" && !readinessLoading && !isReadOnly);
   return (
     <div className="print-packet">
-      <div className="form-actions no-print"><button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button><button className="button" type="button" onClick={() => window.print()}>Print</button></div>
+      <div className="form-actions no-print">
+        <button className="button secondary" type="button" onClick={onRefresh}>Refresh packet</button>
+        <button className="button" disabled={!canFinish} type="button" onClick={() => void onFinish()}>Sign and finish encounter</button>
+      </div>
       <h2>{patientName}</h2>
-      <p>Doctor review required. This packet is documentation output, not autonomous diagnosis or prescribing.</p>
-      <section><h3>Encounter</h3><p>{String(visit?.encounter?.chiefComplaint ?? "No chief complaint saved.")}</p></section>
+      {isReadOnly ? <p className="notice">This completed or historical encounter is read-only.</p> : null}
+      {readinessLoading ? <p className="notice" aria-live="polite">Checking server readiness...</p> : null}
+      {blocking.length ? <section className="alert danger" role="alert"><h3>Blocking review issues</h3><ul>{blocking.map((issue) => <li key={issue.code}>{issue.message}</li>)}</ul></section> : null}
+      {warnings.length ? <section className="notice"><h3>Review warnings</h3><ul>{warnings.map((issue) => <li key={issue.code}>{issue.message}</li>)}</ul></section> : null}
+      {!blocking.length && readiness?.ready ? <p className="notice">Server readiness check passed. Review the summary before signing.</p> : null}
+      {saveState !== "saved" && !isReadOnly ? <p className="alert warning">Current state: {controller.saveMessage}. Changes must be saved before completion.</p> : null}
+      <section><h3>Encounter</h3><p>{controller.draft.chiefComplaint || "No chief complaint saved."}</p></section>
       <section><h3>Prescriptions</h3><p>{(visit?.prescriptions ?? []).length} prescription draft(s)</p></section>
       <section><h3>Requested investigations</h3><p>{(visit?.investigationOrders ?? []).length} request(s)</p></section>
       <section><h3>Follow-up</h3><p>{(visit?.followUps ?? []).length} follow-up task(s)</p></section>
     </div>
   );
+}
+
+function saveStateLabel(state: string) {
+  const labels: Record<string, string> = { loading: "Loading", saved: "Saved", dirty: "Unsaved changes", saving: "Autosaving", "waiting-sync": "Waiting to sync", failed: "Save failed - Retry", offline: "Offline", conflict: "Version conflict", completed: "Completed - read-only", "read-only": "Historical - read-only" };
+  return labels[state] ?? state;
 }
 
 function BlockedContext({ patientId }: { patientId: string }) {

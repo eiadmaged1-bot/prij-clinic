@@ -28,6 +28,7 @@ export const navigationRegistry: NavItem[] = [
   { href: "/reports", label: "Reports", icon: "reports", group: "More", roles: ["Doctor"], permissions: ["report.read"] },
   { href: "/ai-assistant", label: "AI Tools", icon: "ai", group: "More", roles: ["Doctor"], permissions: ["ai_draft.request", "ai_draft.read"] },
   { href: "/medications", label: "Medication Reference", icon: "prescription", group: "More", roles: ["Doctor"], permissions: ["medications.read", "medications.search"] },
+  { href: "/settings/doctor-workspace", label: "Doctor Workspace", icon: "settings", group: "More", roles: ["Doctor", "Owner"] },
 
   { href: "/dashboard", label: "Dashboard", icon: "dashboard", group: "Home", adminOnly: true },
   { href: "/reception", label: "Reception", icon: "reception", group: "Clinic", adminOnly: true },

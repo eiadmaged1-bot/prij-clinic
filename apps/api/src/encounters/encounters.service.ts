@@ -152,16 +152,41 @@ export class EncountersService {
     return encounter;
   }
 
-  async sign(id: string, user: AuthUser) {
+  async readiness(id: string, user: AuthUser) {
+    const existing = await this.get(id, user);
+    const pregnancyEpisode = await this.activePregnancyDating(existing.patientId);
+    return encounterReadiness(existing, pregnancyEpisode);
+  }
+
+  async sign(id: string, expectedRevision: string, user: AuthUser) {
     const existing = await this.get(id, user);
 
+    if (existing.status === "signed") {
+      return existing;
+    }
     if (existing.status !== "draft") {
       throw new BadRequestException("Only draft encounters can be signed.");
     }
 
+    const pregnancyEpisode = await this.activePregnancyDating(existing.patientId);
+    const readiness = encounterReadiness(existing, pregnancyEpisode);
+    if (existing.updatedAt.toISOString() !== expectedRevision) {
+      throw new ConflictException({ code: "ENCOUNTER_VERSION_CONFLICT", message: "This encounter changed after it was loaded. Reload before signing.", readiness });
+    }
+    if (!readiness.ready) {
+      throw new BadRequestException({ code: "ENCOUNTER_NOT_READY", message: "Review the blocking issues before signing.", readiness });
+    }
+
     const completedAt = new Date();
     const { encounter, queueTicketId } = await this.prisma.$transaction(async (tx) => {
-      const signed = await tx.encounter.update({ where: { id }, data: { status: "signed", signedAt: completedAt, signedByUserId: user.id } });
+      const claimed = await tx.encounter.updateMany({
+        where: { id, status: "draft", updatedAt: new Date(expectedRevision) },
+        data: { status: "signed", signedAt: completedAt, signedByUserId: user.id }
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException({ code: "ENCOUNTER_VERSION_CONFLICT", message: "This encounter changed while it was being signed.", readiness });
+      }
+      const signed = await tx.encounter.findUniqueOrThrow({ where: { id } });
       const queueTicket = await tx.queueTicket.findFirst({ where: { patientId: signed.patientId, branchId: signed.branchId, status: "in_room" }, orderBy: { checkedInAt: "desc" } });
       if (queueTicket) {
         await tx.queueTicket.update({ where: { id: queueTicket.id }, data: { status: "completed", completedAt } });
@@ -184,6 +209,13 @@ export class EncountersService {
     return encounter;
   }
 
+  private activePregnancyDating(patientId: string) {
+    return this.prisma.pregnancy.findFirst({
+      where: { patientId, status: "active" },
+      select: { lmpDate: true, estimatedDueDate: true, datingMethod: true },
+      orderBy: { createdAt: "desc" }
+    });
+  }
   async voidEncounter(encounterId: string, userId: string, reason: string, user?: AuthUser) {
     const trimmedReason = reason?.trim();
 
@@ -256,6 +288,146 @@ export class EncountersService {
 
 function clean(value?: string) {
   return value?.trim() || null;
+}
+
+function pregnancyDatingFromEncounter(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const snapshot = (value as Record<string, unknown>).reproductiveSnapshot;
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+  const row = snapshot as Record<string, unknown>;
+  if (String(row.context ?? "") !== "pregnancy") return null;
+  return {
+    episodeId: cleanText(row.episodeId),
+    lmp: dateText(row.lmp),
+    lmpCertainty: cleanText(row.lmpCertainty),
+    cycleLength: cleanText(row.cycleLength),
+    edd: dateText(row.edd),
+    datingMethod: cleanText(row.datingMethod),
+    datingCorrectionReason: cleanText(row.datingCorrectionReason)
+  };
+}
+
+export type EncounterReadinessIssue = {
+  code: string;
+  section: "encounter" | "history" | "examination" | "assessment" | "plan";
+  severity: "blocking" | "warning";
+  message: string;
+};
+
+function encounterReadiness(encounter: {
+  id: string;
+  status: string;
+  updatedAt: Date;
+  chiefComplaint: string | null;
+  historyText: string | null;
+  examText: string | null;
+  assessmentText: string | null;
+  planText: string | null;
+  examinationJson: Prisma.JsonValue | null;
+  patient: { patientType: string };
+}, pregnancyEpisode: { lmpDate: Date | null; estimatedDueDate: Date | null; datingMethod: string | null } | null) {
+  const issues: EncounterReadinessIssue[] = [];
+  const structured = encounter.examinationJson && typeof encounter.examinationJson === "object" && !Array.isArray(encounter.examinationJson)
+    ? encounter.examinationJson as Record<string, unknown>
+    : null;
+  const hasStructuredComplaint = Array.isArray(structured?.complaints) && structured.complaints.some((item) => {
+    return Boolean(item && typeof item === "object" && !Array.isArray(item) && String((item as Record<string, unknown>).label ?? "").trim());
+  });
+
+  if (encounter.status !== "draft") {
+    issues.push({ code: "ENCOUNTER_NOT_DRAFT", section: "encounter", severity: "blocking", message: "Only a draft encounter can be signed." });
+  }
+  if (!cleanText(encounter.chiefComplaint) && !hasStructuredComplaint) {
+    issues.push({ code: "CHIEF_COMPLAINT_REQUIRED", section: "history", severity: "blocking", message: "Document the presenting complaint before signing." });
+  }
+  const reproductive = structured?.reproductiveSnapshot && typeof structured.reproductiveSnapshot === "object" && !Array.isArray(structured.reproductiveSnapshot)
+    ? structured.reproductiveSnapshot as Record<string, unknown>
+    : null;
+  const pregnancyContext = Boolean(pregnancyEpisode) || String(encounter.patient.patientType).toLowerCase().includes("pregnan") || String(reproductive?.context ?? "").toLowerCase() === "pregnancy";
+  const savedPregnancyDatingComplete = Boolean(pregnancyEpisode?.lmpDate && pregnancyEpisode.estimatedDueDate && pregnancyEpisode.datingMethod);
+  const draftPregnancyDatingComplete = Boolean(reproductive?.lmp && reproductive.lmpCertainty && reproductive.edd && reproductive.datingMethod && reproductive.datingConfirmationDate);
+  const reproductiveStatusComplete = Boolean(reproductive?.changeStatus && (reproductive.changeStatus === "no_change" || reproductive.context));
+  if (pregnancyContext ? !savedPregnancyDatingComplete && !draftPregnancyDatingComplete : !reproductiveStatusComplete) {
+    issues.push({
+      code: pregnancyContext ? "PREGNANCY_DATING_REVIEW_REQUIRED" : "REPRODUCTIVE_STATUS_REVIEW_REQUIRED",
+      section: "history",
+      severity: "blocking",
+      message: pregnancyContext ? "Review the existing pregnancy dating fields before signing." : "Review the existing menstrual or reproductive status before signing."
+    });
+  }
+  if (!cleanText(encounter.historyText)) issues.push({ code: "HISTORY_NOT_DOCUMENTED", section: "history", severity: "warning", message: "History has not been documented." });
+  if (!cleanText(encounter.examText)) issues.push({ code: "EXAMINATION_NOT_DOCUMENTED", section: "examination", severity: "warning", message: "Examination has not been documented." });
+  if (!cleanText(encounter.assessmentText)) issues.push({ code: "ASSESSMENT_NOT_DOCUMENTED", section: "assessment", severity: "warning", message: "Assessment has not been documented." });
+  if (!cleanText(encounter.planText)) issues.push({ code: "PLAN_NOT_DOCUMENTED", section: "plan", severity: "warning", message: "Plan has not been documented." });
+
+  return {
+    encounterId: encounter.id,
+    revision: encounter.updatedAt.toISOString(),
+    status: encounter.status,
+    ready: !issues.some((issue) => issue.severity === "blocking"),
+    issues
+  };
+}
+function cleanText(value: unknown) {
+  return String(value ?? "").trim() || null;
+}
+
+function dateText(value: unknown) {
+  const text = cleanText(value);
+  return text && /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+function safeDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function dateKey(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function positiveInteger(value: string | null) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function structuredTagsFromEncounter(value: Prisma.JsonValue | null) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const row = value as Record<string, unknown>;
+  const tags: Array<{ tagCode: string; label: string; category: string; status: string; detail: Record<string, unknown> }> = [];
+  if (Array.isArray(row.complaints)) {
+    for (const value of row.complaints) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const complaint = value as Record<string, unknown>;
+      const label = String(complaint.label ?? "").trim();
+      if (!label) continue;
+      const lifecycle = String(complaint.status ?? "Active").toLowerCase();
+      tags.push({
+        tagCode: `complaint_${slugClinicalTag(String(complaint.id ?? label))}`,
+        label,
+        category: "presenting_complaint",
+        status: lifecycle === "resolved" ? "resolved" : "active",
+        detail: { structuredId: complaint.id ?? null, lifecycle, category: complaint.category ?? null }
+      });
+    }
+  }
+  const snapshot = row.reproductiveSnapshot;
+  if (snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)) {
+    const reproductive = snapshot as Record<string, unknown>;
+    for (const flag of Array.isArray(reproductive.abnormalFlags) ? reproductive.abnormalFlags : []) {
+      const label = String(flag).trim();
+      if (!label) continue;
+      tags.push({ tagCode: slugClinicalTag(label), label, category: "menstrual_reproductive", status: "active", detail: { context: reproductive.context ?? null, lmp: reproductive.lmp ?? null } });
+    }
+    if (String(reproductive.regularity ?? "").toLowerCase() === "irregular") {
+      tags.push({ tagCode: "irregular_cycle", label: "Irregular cycle", category: "menstrual_reproductive", status: "active", detail: { context: reproductive.context ?? null, lmp: reproductive.lmp ?? null } });
+    }
+  }
+  return tags;
+}
+
+function slugClinicalTag(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 96) || "structured_finding";
 }
 
 function jsonOrNull(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput {
