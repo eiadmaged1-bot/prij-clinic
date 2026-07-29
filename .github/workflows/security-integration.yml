@@ -105,6 +105,23 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Cool down login throttle before doctor workspace runtime smoke
+        run: sleep 65
+
+      - name: Test dual doctor workspace runtime
+        run: |
+          set -o pipefail
+          node scripts/dual-workspace-runtime-smoke.mjs 2>&1 | tee dual-workspace-runtime-smoke.log
+
+      - name: Upload doctor workspace runtime diagnostics
+        if: always() && hashFiles('dual-workspace-runtime-smoke.log') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-workspace-runtime-smoke-diagnostics
+          path: dual-workspace-runtime-smoke.log
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Cool down login throttle before scope suite
         run: sleep 65
 
