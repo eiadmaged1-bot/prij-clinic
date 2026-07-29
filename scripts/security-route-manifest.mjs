@@ -124,8 +124,8 @@ const routeDefinitions = [
   { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", requiredPermission: "ai_draft.review", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiReview", notes: "Review updates only AI draft artifact." },
   { method: "GET", path: "/protocol-atlas", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/protocol-atlas/groups", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
-  { method: "GET", path: "/protocol-atlas/:editorProtocolId", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
-  { method: "GET", path: "/protocol-atlas/by-code/ENDOMETRIOSIS_MANAGEMENT_V1", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/:readProtocolId", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/by-code/:readProtocolCode", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
   { method: "POST", path: "/protocol-atlas/search", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "protocolSearch" },
   { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/status", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolStatus", notes: "Owner/admin-only protocol status change; reason required." },
   { method: "GET", path: "/protocol-atlas/:editorProtocolId/editor", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor" },
@@ -316,6 +316,8 @@ export function substitutePath(path, ids) {
     .replace(":paymentId", ids.paymentId)
     .replace(":aiDraftId", ids.aiDraftId)
     .replace(":editorProtocolId", ids.editorProtocolId)
+    .replace(":readProtocolId", ids.readProtocolId)
+    .replace(":readProtocolCode", ids.readProtocolCode)
     .replace(":requestProtocolId", ids.requestProtocolId)
     .replace(":verifyProtocolId", ids.verifyProtocolId)
     .replace(":retireProtocolId", ids.retireProtocolId)
@@ -565,17 +567,56 @@ export async function createRouteFixtures(ownerToken) {
     orderBy: {
       code: "asc"
     },
-    take: 4,
+    take: 5,
     select: {
       id: true,
       code: true
     }
   });
-  if (catalogProtocols.length < 4) throw new Error("Expected catalog protocol fixtures for route authorization.");
+  if (catalogProtocols.length < 5) {
+    throw new Error("Expected five catalog protocol fixtures for route authorization.");
+  }
+
   ids.editorProtocolId = catalogProtocols[0].id;
   ids.requestProtocolId = catalogProtocols[1].id;
   ids.verifyProtocolId = catalogProtocols[2].id;
   ids.retireProtocolId = catalogProtocols[3].id;
+  ids.readProtocolId = catalogProtocols[4].id;
+  ids.readProtocolCode = catalogProtocols[4].code;
+
+  await apiJson(
+    "PATCH",
+    `/protocol-atlas/${ids.readProtocolId}/source`,
+    ownerToken,
+    bodyFor("protocolSource", ids)
+  );
+
+  await apiJson(
+    "POST",
+    `/protocol-atlas/${ids.readProtocolId}/request-verification`,
+    ownerToken,
+    bodyFor("reason", ids)
+  );
+
+  await apiJson(
+    "PATCH",
+    `/protocol-atlas/${ids.readProtocolId}/structured-content`,
+    ownerToken,
+    {
+      ...bodyFor("protocolContent", ids),
+      content: {
+        ...bodyFor("protocolContent", ids).content,
+        verifiedManagementAvailable: false
+      }
+    }
+  );
+
+  await apiJson(
+    "POST",
+    `/protocol-atlas/${ids.readProtocolId}/verify`,
+    ownerToken,
+    bodyFor("reason", ids)
+  );
   await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/source`, ownerToken, bodyFor("protocolSource", ids));
   await apiJson("POST", `/protocol-atlas/${ids.verifyProtocolId}/request-verification`, ownerToken, bodyFor("reason", ids));
   await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/structured-content`, ownerToken, {
