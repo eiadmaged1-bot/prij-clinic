@@ -107,7 +107,15 @@ const readySave = await json(doctor, "PATCH", `/patients/${patient.id}/doctor-vi
     complaints: [],
     history: [],
     examination: {},
-    reproductiveSnapshot: { context: "general", changeStatus: "initial" }
+    reproductiveSnapshot: {
+      context: "pregnancy",
+      changeStatus: "reviewed",
+      lmp: "2026-01-01",
+      lmpCertainty: "certain",
+      edd: "2026-10-08",
+      datingMethod: "LMP",
+      datingConfirmationDate: "2026-01-01"
+    }
   }
 });
 revision = readySave.updatedAt;
