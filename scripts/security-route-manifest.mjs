@@ -421,7 +421,24 @@ export function bodyFor(kind, ids) {
     ,
     protocolSearch: { query: "endometriosis", verifiedOnly: true },
     protocolStatus: { implementationStatus: "draft", reason: "Demo protocol status authorization check only." },
-    protocolSource: { sourceName: "Demo guideline source for route authorization", sourceYear: 2026, sourceVersion: "demo-route-v1", reason: "Demo protocol source authorization check only." },
+    protocolSource: {
+      sourceName: "Demo guideline source for route authorization",
+      sourceYear: 2026,
+      sourceVersion: "demo-route-v1",
+      sourceOrganization: ids.protocolSourceOrganization,
+      guidelineCode: ids.protocolGuidelineCode,
+      sourcePublicationDate: "2026-01-01",
+      provenanceNote: "Synthetic official PDF metadata created only for route authorization testing.",
+      sourceDocumentId: ids.guidelineDocumentId,
+      exactPageCitations: [
+        {
+          pageStart: 1,
+          pageEnd: 1,
+          label: "Synthetic route authorization test fixture"
+        }
+      ],
+      reason: "Demo protocol source authorization check only."
+    },
     protocolAliases: { aliases: ["Demo route protocol", "demo route protocol alias"], reason: "Demo protocol alias authorization check only." },
     protocolContent: {
       reason: "Demo structured protocol content authorization check only.",
@@ -494,6 +511,50 @@ export async function createRouteFixtures(ownerToken) {
   ids.refundPaymentId = refundPayment.id;
   const aiDraft = await apiJson("POST", "/ai-drafts", ownerToken, bodyFor("aiDraft", ids));
   ids.aiDraftId = aiDraft.id;
+
+  const guidelineSource = await apiJson(
+    "POST",
+    "/guidelines/sources",
+    ownerToken,
+    bodyFor("guidelineSource", ids)
+  );
+  ids.guidelineSourceId = guidelineSource.id;
+
+  ids.protocolSourceOrganization = "Demo Route Authorization Source";
+  ids.protocolGuidelineCode = "DEMO_ROUTE_AUTH_V1";
+
+  const protocolSourceFixtureId = crypto.randomUUID();
+
+  const protocolSourceDocument = await prisma.guidelineDocument.create({
+    data: {
+      sourceId: ids.guidelineSourceId,
+      title: "Demo route authorization source PDF",
+      specialty: "Obstetrics and Gynecology",
+      topic: "Route authorization",
+      organization: ids.protocolSourceOrganization,
+      publicationDate: new Date("2026-01-01T00:00:00.000Z"),
+      versionLabel: "demo-route-v1",
+      guidelineCode: ids.protocolGuidelineCode,
+      language: "en",
+      guidelineStatus: "ACTIVE",
+      documentType: "official_pdf",
+      localFilePath: `ci-fixtures/route-authorization-${protocolSourceFixtureId}.pdf`,
+      fileName: `route-authorization-${protocolSourceFixtureId}.pdf`,
+      fileMimeType: "application/pdf",
+      pageCount: 1,
+      fileSha256: crypto
+        .createHash("sha256")
+        .update(protocolSourceFixtureId)
+        .digest("hex"),
+      downloadsAllowed: false,
+      citationLabel: "Synthetic route authorization test fixture"
+    },
+    select: {
+      id: true
+    }
+  });
+
+  ids.guidelineDocumentId = protocolSourceDocument.id;
   const catalogProtocols = await prisma.clinicalProtocol.findMany({
     where: {
       implementationStatus: "catalog_only"
@@ -523,17 +584,7 @@ export async function createRouteFixtures(ownerToken) {
   const approvedSnapshot = await apiJson("POST", "/ai-management/snapshots", ownerToken, bodyFor("managementSnapshot", ids));
   ids.approvedSnapshotId = approvedSnapshot.id;
   await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
-  const guidelineSource = await apiJson("POST", "/guidelines/sources", ownerToken, bodyFor("guidelineSource", ids));
-  ids.guidelineSourceId = guidelineSource.id;
-  let guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
-  let guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
-  if (!guidelineDocument?.id) {
-    await apiJson("POST", "/guidelines/upload-demo-text", ownerToken, bodyFor("guidelineDemoText", ids));
-    guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
-    guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
-  }
-  if (!guidelineDocument?.id) throw new Error("Expected seeded guideline document fixture.");
-  ids.guidelineDocumentId = guidelineDocument.id;
+
   return ids;
 }
 
