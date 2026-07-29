@@ -124,8 +124,8 @@ const routeDefinitions = [
   { method: "PATCH", path: "/ai-drafts/:aiDraftId/review", category: "ai-drafts", requiredPermission: "ai_draft.review", allowedAs: "owner", denyAs: "nurse", fixtureBody: "aiReview", notes: "Review updates only AI draft artifact." },
   { method: "GET", path: "/protocol-atlas", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "owner", denyAs: "reception" },
   { method: "GET", path: "/protocol-atlas/groups", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
-  { method: "GET", path: "/protocol-atlas/:editorProtocolId", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
-  { method: "GET", path: "/protocol-atlas/by-code/ENDOMETRIOSIS_MANAGEMENT_V1", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/:readProtocolId", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
+  { method: "GET", path: "/protocol-atlas/by-code/:readProtocolCode", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant" },
   { method: "POST", path: "/protocol-atlas/search", category: "protocol-atlas", requiredPermission: "protocol_atlas.read", allowedAs: "doctor", denyAs: "accountant", fixtureBody: "protocolSearch" },
   { method: "PATCH", path: "/protocol-atlas/:editorProtocolId/status", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor", fixtureBody: "protocolStatus", notes: "Owner/admin-only protocol status change; reason required." },
   { method: "GET", path: "/protocol-atlas/:editorProtocolId/editor", category: "protocol-atlas-admin", requiredPermission: "protocol_atlas.manage", allowedAs: "owner", denyAs: "doctor" },
@@ -316,6 +316,8 @@ export function substitutePath(path, ids) {
     .replace(":paymentId", ids.paymentId)
     .replace(":aiDraftId", ids.aiDraftId)
     .replace(":editorProtocolId", ids.editorProtocolId)
+    .replace(":readProtocolId", ids.readProtocolId)
+    .replace(":readProtocolCode", ids.readProtocolCode)
     .replace(":requestProtocolId", ids.requestProtocolId)
     .replace(":verifyProtocolId", ids.verifyProtocolId)
     .replace(":retireProtocolId", ids.retireProtocolId)
@@ -421,7 +423,24 @@ export function bodyFor(kind, ids) {
     ,
     protocolSearch: { query: "endometriosis", verifiedOnly: true },
     protocolStatus: { implementationStatus: "draft", reason: "Demo protocol status authorization check only." },
-    protocolSource: { sourceName: "Demo guideline source for route authorization", sourceYear: 2026, sourceVersion: "demo-route-v1", reason: "Demo protocol source authorization check only." },
+    protocolSource: {
+      sourceName: "Demo guideline source for route authorization",
+      sourceYear: 2026,
+      sourceVersion: "demo-route-v1",
+      sourceOrganization: ids.protocolSourceOrganization,
+      guidelineCode: ids.protocolGuidelineCode,
+      sourcePublicationDate: "2026-01-01",
+      provenanceNote: "Synthetic official PDF metadata created only for route authorization testing.",
+      sourceDocumentId: ids.guidelineDocumentId,
+      exactPageCitations: [
+        {
+          pageStart: 1,
+          pageEnd: 1,
+          label: "Synthetic route authorization test fixture"
+        }
+      ],
+      reason: "Demo protocol source authorization check only."
+    },
     protocolAliases: { aliases: ["Demo route protocol", "demo route protocol alias"], reason: "Demo protocol alias authorization check only." },
     protocolContent: {
       reason: "Demo structured protocol content authorization check only.",
@@ -494,13 +513,110 @@ export async function createRouteFixtures(ownerToken) {
   ids.refundPaymentId = refundPayment.id;
   const aiDraft = await apiJson("POST", "/ai-drafts", ownerToken, bodyFor("aiDraft", ids));
   ids.aiDraftId = aiDraft.id;
-  const protocolSearch = await apiJson("POST", "/protocol-atlas/search", ownerToken, { status: "catalog_only" });
-  const catalogProtocols = protocolSearch.protocols ?? [];
-  if (catalogProtocols.length < 4) throw new Error("Expected catalog protocol fixtures for route authorization.");
+
+  const guidelineSource = await apiJson(
+    "POST",
+    "/guidelines/sources",
+    ownerToken,
+    bodyFor("guidelineSource", ids)
+  );
+  ids.guidelineSourceId = guidelineSource.id;
+
+  ids.protocolSourceOrganization = "Demo Route Authorization Source";
+  ids.protocolGuidelineCode = "DEMO_ROUTE_AUTH_V1";
+
+  const protocolSourceFixtureId = crypto.randomUUID();
+
+  const protocolSourceDocument = await prisma.guidelineDocument.create({
+    data: {
+      sourceId: ids.guidelineSourceId,
+      title: "Demo route authorization source PDF",
+      specialty: "Obstetrics and Gynecology",
+      topic: "Route authorization",
+      organization: ids.protocolSourceOrganization,
+      publicationDate: new Date("2026-01-01T00:00:00.000Z"),
+      versionLabel: "demo-route-v1",
+      guidelineCode: ids.protocolGuidelineCode,
+      language: "en",
+      guidelineStatus: "ACTIVE",
+      documentType: "official_pdf",
+      localFilePath: `ci-fixtures/route-authorization-${protocolSourceFixtureId}.pdf`,
+      fileName: `route-authorization-${protocolSourceFixtureId}.pdf`,
+      fileMimeType: "application/pdf",
+      pageCount: 1,
+      fileSha256: crypto
+        .createHash("sha256")
+        .update(protocolSourceFixtureId)
+        .digest("hex"),
+      downloadsAllowed: false,
+      citationLabel: "Synthetic route authorization test fixture"
+    },
+    select: {
+      id: true
+    }
+  });
+
+  ids.guidelineDocumentId = protocolSourceDocument.id;
+  const catalogProtocols = await prisma.clinicalProtocol.findMany({
+    where: {
+      implementationStatus: "catalog_only",
+      code: {
+        endsWith: "_CATALOG_V1"
+      }
+    },
+    orderBy: {
+      code: "asc"
+    },
+    take: 5,
+    select: {
+      id: true,
+      code: true
+    }
+  });
+  if (catalogProtocols.length < 5) {
+    throw new Error("Expected five catalog protocol fixtures for route authorization.");
+  }
+
   ids.editorProtocolId = catalogProtocols[0].id;
   ids.requestProtocolId = catalogProtocols[1].id;
   ids.verifyProtocolId = catalogProtocols[2].id;
   ids.retireProtocolId = catalogProtocols[3].id;
+  ids.readProtocolId = catalogProtocols[4].id;
+  ids.readProtocolCode = catalogProtocols[4].code;
+
+  await apiJson(
+    "PATCH",
+    `/protocol-atlas/${ids.readProtocolId}/source`,
+    ownerToken,
+    bodyFor("protocolSource", ids)
+  );
+
+  await apiJson(
+    "POST",
+    `/protocol-atlas/${ids.readProtocolId}/request-verification`,
+    ownerToken,
+    bodyFor("reason", ids)
+  );
+
+  await apiJson(
+    "PATCH",
+    `/protocol-atlas/${ids.readProtocolId}/structured-content`,
+    ownerToken,
+    {
+      ...bodyFor("protocolContent", ids),
+      content: {
+        ...bodyFor("protocolContent", ids).content,
+        verifiedManagementAvailable: false
+      }
+    }
+  );
+
+  await apiJson(
+    "POST",
+    `/protocol-atlas/${ids.readProtocolId}/verify`,
+    ownerToken,
+    bodyFor("reason", ids)
+  );
   await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/source`, ownerToken, bodyFor("protocolSource", ids));
   await apiJson("POST", `/protocol-atlas/${ids.verifyProtocolId}/request-verification`, ownerToken, bodyFor("reason", ids));
   await apiJson("PATCH", `/protocol-atlas/${ids.verifyProtocolId}/structured-content`, ownerToken, {
@@ -512,17 +628,7 @@ export async function createRouteFixtures(ownerToken) {
   const approvedSnapshot = await apiJson("POST", "/ai-management/snapshots", ownerToken, bodyFor("managementSnapshot", ids));
   ids.approvedSnapshotId = approvedSnapshot.id;
   await apiJson("POST", `/ai-management/snapshots/${ids.approvedSnapshotId}/review`, ownerToken, bodyFor("managementReview", ids));
-  const guidelineSource = await apiJson("POST", "/guidelines/sources", ownerToken, bodyFor("guidelineSource", ids));
-  ids.guidelineSourceId = guidelineSource.id;
-  let guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
-  let guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
-  if (!guidelineDocument?.id) {
-    await apiJson("POST", "/guidelines/upload-demo-text", ownerToken, bodyFor("guidelineDemoText", ids));
-    guidelineDocuments = await apiJson("GET", "/guidelines/documents", ownerToken);
-    guidelineDocument = (guidelineDocuments.documents ?? guidelineDocuments)[0];
-  }
-  if (!guidelineDocument?.id) throw new Error("Expected seeded guideline document fixture.");
-  ids.guidelineDocumentId = guidelineDocument.id;
+
   return ids;
 }
 

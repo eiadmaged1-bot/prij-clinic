@@ -7,9 +7,10 @@ const prisma = new PrismaClient();
 const expectedCategories = [
   "Laboratory",
   "Imaging",
-  "Pathology",
-  "Cardiac and Functional Tests",
-  "Procedures and Referrals"
+  "Cardiac and Functional Testing",
+  "Pathology and Molecular Diagnostics",
+  "Diagnostic Procedures",
+  "Specialist Referrals and Clearance"
 ];
 const requiredCodes = [
   "SEMEN_ANALYSIS",
