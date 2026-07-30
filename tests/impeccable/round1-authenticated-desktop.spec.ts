@@ -25,7 +25,7 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     await expectNoWholePageOverflow(page);
 
     await page.goto("/patients");
-    await expect(page.getByRole("heading", { name: /^Patient Files$/i })).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole("heading", { name: /^All Patients$/i })).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "02-patient-files-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
