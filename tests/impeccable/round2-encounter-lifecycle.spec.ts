@@ -147,7 +147,7 @@ async function openClassicVisit(page: Page, patientId: string) {
 }
 
 async function openCockpit(page: Page) {
-  const options = page.getByRole("button", { name: /Options/i });
+  const options = page.locator("summary").filter({ hasText: /^Options$/i }).first();
   await expect(options).toBeVisible();
   await options.click();
   await page.getByRole("button", { name: /Open Visit Cockpit/i }).click();
