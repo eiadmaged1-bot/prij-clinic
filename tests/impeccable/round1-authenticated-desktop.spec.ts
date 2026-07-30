@@ -43,6 +43,10 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
       return false;
     }, { timeout: 25_000, message: `Expected visible patient identity for ${patient.name}` }).toBe(true);
     await expect(page.getByRole("heading", { name: /^Patient snapshot$/i })).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole("button", { name: /^Summary$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Clinical care$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Evidence & more$/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Overview$/i })).toBeHidden();
     await capture(page, testInfo, "03-patient-file-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
@@ -102,8 +106,9 @@ async function createSyntheticPatient(page: Page) {
 }
 
 async function openActiveVisit(page: Page, patientId: string) {
-  await expect(page.getByRole("button", { name: /^Visits$/i })).toBeVisible();
-  await page.getByRole("button", { name: /^Visits$/i }).click();
+  const clinicalCare = page.getByRole("button", { name: /^Clinical care$/i });
+  await expect(clinicalCare).toBeVisible({ timeout: 25_000 });
+  await clinicalCare.click();
 
   const visitPanel = page.locator('[aria-label="Current visit clinical workspace"]');
   await expect(visitPanel).toBeVisible();
