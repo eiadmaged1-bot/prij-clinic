@@ -28,6 +28,21 @@ body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
   display: none;
 }
 
+.active-visit-tabs:has(.calm-workflow-navigation) {
+  display: block;
+  overflow: visible;
+  padding: 0;
+}
+
+.active-visit-tabs:has(.calm-workflow-navigation) > a {
+  display: none;
+}
+
+.calm-workflow-navigation {
+  display: grid;
+  gap: 0.7rem;
+}
+
 .calm-workflow-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -41,10 +56,14 @@ body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
 
 .calm-workflow-tabs a {
   min-height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   border-radius: calc(var(--radius-md) - 2px);
   background: transparent;
   font-weight: 750;
+  text-align: center;
 }
 
 .calm-workflow-tabs a.active {
@@ -53,18 +72,11 @@ body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
   box-shadow: 0 1px 2px rgb(17 33 45 / 8%);
 }
 
-.visit-workflow-toolbar {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
 .visit-section-picker {
   display: grid;
   grid-template-columns: auto minmax(12rem, 18rem);
   align-items: center;
+  justify-content: end;
   gap: 0.6rem;
   margin: 0;
 }
@@ -82,8 +94,23 @@ body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
   padding-block: 0.55rem;
 }
 
-.visit-workflow-toolbar .visit-persistent-actions {
-  margin: 0;
+body:has(.calm-workflow-navigation) .visit-persistent-actions > a[href$="/finish"] {
+  display: none;
+}
+
+body:has(.calm-workflow-navigation[data-module="encounter"]) .active-visit-shell > .panel > .section-heading h2,
+body:has(.calm-workflow-navigation[data-module="finish"]) .active-visit-shell > .panel > .section-heading h2 {
+  font-size: 0;
+}
+
+body:has(.calm-workflow-navigation[data-module="encounter"]) .active-visit-shell > .panel > .section-heading h2::after {
+  content: "Visit note";
+  font-size: 1.1rem;
+}
+
+body:has(.calm-workflow-navigation[data-module="finish"]) .active-visit-shell > .panel > .section-heading h2::after {
+  content: "Review and sign";
+  font-size: 1.1rem;
 }
 
 .active-visit-shell > .panel {
@@ -100,14 +127,8 @@ body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
     grid-template-columns: 1fr;
   }
 
-  .visit-workflow-toolbar,
   .visit-section-picker {
-    display: grid;
     grid-template-columns: 1fr;
     width: 100%;
-  }
-
-  .visit-workflow-toolbar .visit-persistent-actions {
-    justify-content: stretch;
   }
 }
