@@ -4,12 +4,14 @@ import "./globals.css";
 import "./investigation-embedded.css";
 import "./calm-navigation.css";
 import "./calm-directory.css";
+import "./calm-patient-navigation.css";
 import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme";
 import { OFFICIAL_APP_DESCRIPTION, OFFICIAL_CLINIC_NAME } from "@/lib/brand";
 import { InterfaceModeProvider } from "@/lib/interface-mode";
 import { I18nProvider } from "@/i18n/useI18n";
 import { CalmVisitNavigation } from "@/components/clinic/CalmVisitNavigation";
+import { CalmPatientNavigation } from "@/components/patients/CalmPatientNavigation";
 
 export const metadata: Metadata = {
   title: OFFICIAL_CLINIC_NAME,
@@ -27,6 +29,7 @@ export default function RootLayout({
         <I18nProvider><ThemeProvider>
           <SessionProvider><InterfaceModeProvider>
             <CalmVisitNavigation />
+            <CalmPatientNavigation />
             {children}
           </InterfaceModeProvider></SessionProvider>
         </ThemeProvider></I18nProvider>
