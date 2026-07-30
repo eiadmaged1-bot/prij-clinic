@@ -144,8 +144,8 @@ function NewPatientContent() {
       const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "Patient";
-      const formData = new FormData(event.currentTarget);
-      const saveIntent = String(formData.get("saveIntent") ?? (isDoctor ? "open" : "queue"));
+      const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+      const saveIntent = String(submitter?.value ?? (isDoctor ? "open" : "queue"));
       if (!firstName) throw new Error(copy.fullNameRequired);
       if (saveIntent === "queue" && !visitType) throw new Error(copy.visitTypeRequired);
       if (!canCreatePatient) throw new Error("Patient registration is handled by reception.");
