@@ -1,0 +1,49 @@
+name: One-shot new patient save-intent repair
+
+on:
+  push:
+    branches:
+      - "fix/new-patient-save-intent"
+
+permissions:
+  contents: write
+
+jobs:
+  apply-exact-repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/new-patient-save-intent
+          fetch-depth: 0
+
+      - name: Apply exact approved replacement
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'apps/web/app/patients/new/page.tsx';
+          const oldBlock = `      const formData = new FormData(event.currentTarget);\n      const saveIntent = String(formData.get("saveIntent") ?? (isDoctor ? "open" : "queue"));`;
+          const newBlock = `      const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;\n      const saveIntent = String(submitter?.value ?? (isDoctor ? "open" : "queue"));`;
+          const source = fs.readFileSync(path, 'utf8');
+          const matches = source.split(oldBlock).length - 1;
+          if (matches !== 1) {
+            throw new Error(`Expected exactly one approved block, found ${matches}.`);
+          }
+          fs.writeFileSync(path, source.replace(oldBlock, newBlock));
+          fs.unlinkSync('.github/workflows/one-shot-new-patient-save-intent.yml');
+          NODE
+
+      - name: Verify and push focused repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff --name-only | sort | tr '\n' ' ')" = ".github/workflows/one-shot-new-patient-save-intent.yml apps/web/app/patients/new/page.tsx "
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/app/patients/new/page.tsx .github/workflows/one-shot-new-patient-save-intent.yml
+          git diff --cached --check
+          git commit -m "fix(web): honor new patient save intent"
+          git push origin HEAD:fix/new-patient-save-intent
