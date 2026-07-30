@@ -61,7 +61,7 @@ async function signIn(page: Page) {
 }
 
 async function openOrCreateSyntheticPatient(page: Page) {
-  const firstPatientLink = page.locator('a[href^="/patients/"]').filter({ hasNot: page.locator('[href="/patients/new"]') }).first();
+  const firstPatientLink = page.locator('a[href^="/patients/"]:not([href="/patients/new"])').first();
   if (await firstPatientLink.isVisible().catch(() => false)) {
     const href = await firstPatientLink.getAttribute("href");
     await firstPatientLink.click();
