@@ -31,7 +31,14 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
 
     const patient = await createSyntheticPatient(page);
     await expect(page).toHaveURL(new RegExp(`/patients/${patient.id}(?:$|[/?#])`));
-    await expect(page.getByText(patient.name, { exact: true }).first()).toBeVisible({ timeout: 25_000 });
+    await expect.poll(async () => {
+      const matches = page.getByText(patient.name, { exact: true });
+      const count = await matches.count();
+      for (let index = 0; index < count; index += 1) {
+        if (await matches.nth(index).isVisible().catch(() => false)) return true;
+      }
+      return false;
+    }, { timeout: 25_000, message: `Expected visible patient identity for ${patient.name}` }).toBe(true);
     await capture(page, testInfo, "03-patient-file-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
