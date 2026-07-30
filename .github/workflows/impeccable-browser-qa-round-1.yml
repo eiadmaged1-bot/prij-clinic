@@ -1,0 +1,129 @@
+name: Impeccable Browser QA — Round 1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/impeccable-browser-qa-round-1.yml"
+      - "playwright.impeccable.config.ts"
+      - "tests/impeccable/**"
+      - "apps/web/**"
+      - "apps/api/**"
+
+jobs:
+  authenticated-desktop-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: prij_clinic_impeccable
+          POSTGRES_USER: prij_clinic_impeccable
+          POSTGRES_PASSWORD: prij_clinic_impeccable_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_impeccable -d prij_clinic_impeccable"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: local
+      NODE_ENV: production
+      DATABASE_URL: postgresql://prij_clinic_impeccable:prij_clinic_impeccable_password@127.0.0.1:5432/prij_clinic_impeccable
+      JWT_SECRET: impeccable-round-one-synthetic-secret
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      PRIJ_ENABLE_DEMO_DATA: "false"
+      DEMO_ADMIN_LOGIN: eyad
+      DEMO_OWNER_LOGIN: eyad
+      API_PORT: "3001"
+      API_URL: http://127.0.0.1:3001
+      API_INTERNAL_URL: http://127.0.0.1:3001
+      BACKEND_API_URL: http://127.0.0.1:3001
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+      WEB_URL: http://127.0.0.1:3000
+      APP_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Generate ephemeral synthetic QA credentials
+        shell: bash
+        run: |
+          qa_password="Impeccable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(openssl rand -hex 12)"
+          echo "::add-mask::$qa_password"
+          {
+            echo "DEMO_ADMIN_PASSWORD=$qa_password"
+            echo "DEMO_OWNER_PASSWORD=$qa_password"
+            echo "DEMO_TEST_PASSWORD=$qa_password"
+          } >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed synthetic QA data
+        run: npm run prisma:seed
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start API and web
+        run: |
+          API_PORT=3001 npm run start:api > api-impeccable-round1.log 2>&1 &
+          echo $! > api-impeccable-round1.pid
+          PORT=3000 npm run start:web > web-impeccable-round1.log 2>&1 &
+          echo $! > web-impeccable-round1.pid
+
+      - name: Wait for application
+        run: |
+          for i in {1..60}; do
+            api_ok=0
+            web_ok=0
+            curl -fsS http://127.0.0.1:3001/health >/dev/null && api_ok=1 || true
+            curl -fsS http://127.0.0.1:3000/login >/dev/null && web_ok=1 || true
+            if [ "$api_ok" = "1" ] && [ "$web_ok" = "1" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API log"
+          cat api-impeccable-round1.log || true
+          echo "Web log"
+          cat web-impeccable-round1.log || true
+          exit 1
+
+      - name: Run authenticated desktop screenshot QA
+        run: npx playwright test tests/impeccable/round1-authenticated-desktop.spec.ts --config=playwright.impeccable.config.ts
+
+      - name: Upload Impeccable Round 1 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: impeccable-browser-qa-round-1
+          path: |
+            test-results/impeccable-round-1/**
+            playwright-report/impeccable-round-1/**
+            api-impeccable-round1.log
+            web-impeccable-round1.log
+          if-no-files-found: warn
+          retention-days: 14
