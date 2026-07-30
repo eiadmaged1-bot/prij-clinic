@@ -19,12 +19,13 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     await signIn(page);
     consoleErrors.length = 0;
 
+    await expect(page.getByRole("heading", { name: /owner control center|dashboard|doctor workspace|reception/i }).first()).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "01-dashboard-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
     await page.goto("/patients");
-    await expect(page.locator("body")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Patient Files$/i })).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "02-patient-files-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
