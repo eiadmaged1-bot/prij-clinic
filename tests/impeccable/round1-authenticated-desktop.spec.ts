@@ -19,7 +19,7 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     await signIn(page);
     consoleErrors.length = 0;
 
-    await expect(page.getByRole("heading", { name: /owner control center|dashboard|doctor workspace|reception/i }).first()).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole("heading", { name: /clinic overview|owner control center|dashboard|doctor workspace|reception/i }).first()).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText(/Operational readiness/i).first()).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "01-dashboard-desktop.png");
     await expectNoCrashText(page);
@@ -42,12 +42,17 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
       }
       return false;
     }, { timeout: 25_000, message: `Expected visible patient identity for ${patient.name}` }).toBe(true);
+    await expect(page.getByRole("heading", { name: /^Patient snapshot$/i })).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "03-patient-file-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
     await openActiveVisit(page, patient.id);
-    await expect(page.locator("body")).toContainText(/Classic Workspace|Current Visit|Encounter|Visit Workspace/i);
+    await expect(page.getByRole("link", { name: /^Visit note$/i })).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole("link", { name: /^Orders & plan$/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Review$/i })).toBeVisible();
+    await expect(page.getByLabel(/^Current visit section$/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Complaint$/i })).toBeHidden();
     await capture(page, testInfo, "04-classic-workspace-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
