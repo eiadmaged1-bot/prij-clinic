@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./investigation-embedded.css";
+import "./calm-navigation.css";
 import { SessionProvider } from "./session";
 import { ThemeProvider } from "./theme";
 import { OFFICIAL_APP_DESCRIPTION, OFFICIAL_CLINIC_NAME } from "@/lib/brand";
