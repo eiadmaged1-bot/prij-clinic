@@ -39,10 +39,7 @@ jobs:
       AI_PROVIDER: disabled
       PRIJ_ENABLE_DEMO_DATA: "false"
       DEMO_ADMIN_LOGIN: eyad
-      DEMO_ADMIN_PASSWORD: LocalDev123!
       DEMO_OWNER_LOGIN: eyad
-      DEMO_OWNER_PASSWORD: LocalDev123!
-      DEMO_TEST_PASSWORD: LocalDev123!
       API_PORT: "3001"
       API_URL: http://127.0.0.1:3001
       API_INTERNAL_URL: http://127.0.0.1:3001
@@ -61,8 +58,19 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Generate ephemeral synthetic QA credentials
+        shell: bash
+        run: |
+          qa_password="Impeccable-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(openssl rand -hex 12)"
+          echo "::add-mask::$qa_password"
+          {
+            echo "DEMO_ADMIN_PASSWORD=$qa_password"
+            echo "DEMO_OWNER_PASSWORD=$qa_password"
+            echo "DEMO_TEST_PASSWORD=$qa_password"
+          } >> "$GITHUB_ENV"
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
