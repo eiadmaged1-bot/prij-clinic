@@ -48,17 +48,17 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
     await openCockpit(page);
     await expect(page.getByRole("heading", { name: patient.name })).toBeVisible({ timeout: 25_000 });
 
-    await page.getByRole("tab", { name: /^History/i }).click();
+    await page.locator("#cockpit-tab-history").click();
     await expect(page.getByLabel(/^Required complaint$/i)).toHaveValue(values.complaint);
     await expect(page.getByLabel(/^Additional History notes$/i)).toHaveValue(values.history);
 
-    await page.getByRole("tab", { name: /^Plan/i }).click();
+    await page.locator("#cockpit-tab-plan").click();
     await expect(page.getByLabel(/^Plan notes$/i)).toHaveValue(values.plan);
     await capture(page, testInfo, "02-cockpit-shared-persistence.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
-    await page.getByRole("tab", { name: /^Review/i }).click();
+    await page.locator("#cockpit-tab-review").click();
     await expect(page.getByRole("heading", { name: /^Blocking issues$/i })).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText(/menstrual or reproductive status/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /Sign and finish encounter/i })).toBeDisabled();
@@ -67,7 +67,7 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
     await setReviewedReproductiveStatus(page, patient.id, encounterId);
     await page.reload();
     await expect(page.getByRole("heading", { name: patient.name })).toBeVisible({ timeout: 25_000 });
-    await page.getByRole("tab", { name: /^Review/i }).click();
+    await page.locator("#cockpit-tab-review").click();
     const recheck = page.getByRole("button", { name: /Recheck readiness/i });
     if (await recheck.isVisible().catch(() => false)) await recheck.click();
     const sign = page.getByRole("button", { name: /Sign and finish encounter/i });
