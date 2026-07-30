@@ -45,11 +45,25 @@ export function CalmVisitNavigation() {
   useEffect(() => {
     setTarget(null);
     if (!route) return;
-    const frame = window.requestAnimationFrame(() => {
-      setTarget(document.querySelector<HTMLElement>(".active-visit-tabs"));
-    });
-    return () => window.cancelAnimationFrame(frame);
-  }, [route]);
+
+    let observer: MutationObserver | null = null;
+    const attach = () => {
+      const nextTarget = document.querySelector<HTMLElement>(".active-visit-tabs");
+      if (!nextTarget) return false;
+      setTarget(nextTarget);
+      observer?.disconnect();
+      return true;
+    };
+
+    if (!attach()) {
+      observer = new MutationObserver(() => {
+        attach();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    return () => observer?.disconnect();
+  }, [pathname, route]);
 
   if (!route || !target) return null;
 
