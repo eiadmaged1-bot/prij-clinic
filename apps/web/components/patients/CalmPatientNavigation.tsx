@@ -43,8 +43,8 @@ export function CalmPatientNavigation() {
   }, [isPatientFile, pathname]);
 
   const visibleMacros = useMemo(() => macroGroups.filter((macro) => macro.groups.some((key) => originalGroups.some((group) => group.key === key))), [originalGroups]);
-  const activeMacro = visibleMacros.find((macro) => macro.groups.includes(activeKey as never)) ?? visibleMacros[0];
-  const careGroups = originalGroups.filter((group) => macroGroups[1].groups.includes(group.key as never));
+  const activeMacro = visibleMacros.find((macro) => macro.groups.some((key) => key === activeKey)) ?? visibleMacros[0];
+  const careGroups = originalGroups.filter((group) => macroGroups[1].groups.some((key) => key === group.key));
 
   if (!target || !activeMacro) return null;
 
