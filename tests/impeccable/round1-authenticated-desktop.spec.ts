@@ -62,18 +62,20 @@ async function signIn(page: Page) {
 
 async function createSyntheticPatient(page: Page) {
   await page.goto("/patients/new");
-  await expect(page.getByRole("heading", { name: /new patient file/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^New Patient$/i })).toBeVisible();
+
   const suffix = String(Date.now()).slice(-7);
-  await page.getByLabel(/first name/i).fill("QA");
-  await page.getByLabel(/last name/i).fill(`Impeccable${suffix}`);
-  await page.getByLabel(/^phone$/i).fill(`010${suffix}`);
-  const notes = page.getByLabel(/notes/i);
-  if (await notes.isVisible().catch(() => false)) {
-    await notes.fill("Synthetic GitHub Actions browser QA patient. No real patient data.");
-  }
-  await page.getByRole("button", { name: /save and open patient file/i }).click();
-  await page.waitForURL(/\/patients\/(?!new(?:$|[/?#]))[^/?#]+(?:$|[/?#])/, { timeout: 25_000 });
-  const patientId = page.url().match(/\/patients\/(?!new(?:$|[/?#]))([^/?#]+)/)?.[1];
+  await page.getByLabel(/full name/i).fill(`QA Impeccable${suffix}`);
+  await page.getByLabel(/phone number/i).fill(`010${suffix}`);
+
+  await page.getByRole("button", { name: /save file only/i }).click();
+
+  const openProfile = page.getByRole("link", { name: /open reception profile/i });
+  await expect(openProfile).toBeVisible({ timeout: 25_000 });
+  await openProfile.click();
+
+  await page.waitForURL(/\/patients\/(?!new(?:$|[/?#])|import(?:$|[/?#]))[^/?#]+(?:$|[/?#])/, { timeout: 25_000 });
+  const patientId = page.url().match(/\/patients\/([^/?#]+)/)?.[1];
   if (!patientId || ["import", "new"].includes(patientId)) {
     throw new Error(`Patient creation did not return a canonical patient workspace: ${page.url()}`);
   }
