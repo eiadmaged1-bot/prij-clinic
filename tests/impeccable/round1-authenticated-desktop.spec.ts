@@ -17,6 +17,8 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);
+    consoleErrors.length = 0;
+
     await capture(page, testInfo, "01-dashboard-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
@@ -27,13 +29,14 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
-    const patientId = await createSyntheticPatient(page);
-    await expect(page).toHaveURL(new RegExp(`/patients/${patientId}(?:$|[/?#])`));
+    const patient = await createSyntheticPatient(page);
+    await expect(page).toHaveURL(new RegExp(`/patients/${patient.id}(?:$|[/?#])`));
+    await expect(page.getByText(patient.name, { exact: true }).first()).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "03-patient-file-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
-    await openActiveVisit(page, patientId);
+    await openActiveVisit(page, patient.id);
     await expect(page.locator("body")).toContainText(/Classic Workspace|Current Visit|Encounter|Visit Workspace/i);
     await capture(page, testInfo, "04-classic-workspace-desktop.png");
     await expectNoCrashText(page);
@@ -65,7 +68,8 @@ async function createSyntheticPatient(page: Page) {
   await expect(page.getByRole("heading", { name: /^New Patient$/i })).toBeVisible();
 
   const suffix = String(Date.now()).slice(-7);
-  await page.getByLabel(/full name/i).fill(`QA Impeccable${suffix}`);
+  const patientName = `QA Impeccable${suffix}`;
+  await page.getByLabel(/full name/i).fill(patientName);
   await page.getByLabel(/phone number/i).fill(`010${suffix}`);
 
   await page.getByRole("button", { name: /save file only/i }).click();
@@ -79,7 +83,7 @@ async function createSyntheticPatient(page: Page) {
   if (!patientId || ["import", "new"].includes(patientId)) {
     throw new Error(`Patient creation did not return a canonical patient workspace: ${page.url()}`);
   }
-  return patientId;
+  return { id: patientId, name: patientName };
 }
 
 async function openActiveVisit(page: Page, patientId: string) {
