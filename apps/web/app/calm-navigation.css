@@ -1,0 +1,113 @@
+/* PRIJ Calm Navigation Compression
+   Reduce persistent choices without removing routes or permissions. */
+
+.sidebar nav[aria-label="Patients"] .nav-subitems .nav-item:nth-child(n + 3),
+.sidebar nav[aria-label="Clinical Work"] .nav-subitems .nav-item:nth-child(n + 4),
+.sidebar nav[aria-label="Knowledge"] .nav-subitems .nav-item:nth-child(n + 3) {
+  display: none;
+}
+
+.sidebar .nav-group {
+  margin-block: 0.1rem;
+}
+
+.sidebar .nav-group-toggle,
+.sidebar .nav-parent-link {
+  min-height: 2.65rem;
+}
+
+/* During an active visit, keep the doctor oriented around the patient instead
+   of showing the whole application catalogue. Dashboard and the current group
+   remain available; global search still reaches every permitted route. */
+body:has(.active-visit-shell) .sidebar .nav-group:not(:first-of-type):not(.open) {
+  display: none;
+}
+
+body:has(.active-visit-shell) .topbar-title > div,
+body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
+  display: none;
+}
+
+.calm-workflow-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  overflow: visible;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.calm-workflow-tabs a {
+  min-height: 2.8rem;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  font-weight: 750;
+}
+
+.calm-workflow-tabs a.active {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgb(17 33 45 / 8%);
+}
+
+.visit-workflow-toolbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.visit-section-picker {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 18rem);
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.visit-section-picker span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.visit-section-picker select {
+  min-height: 2.65rem;
+  padding-block: 0.55rem;
+}
+
+.visit-workflow-toolbar .visit-persistent-actions {
+  margin: 0;
+}
+
+.active-visit-shell > .panel {
+  border-radius: var(--radius-lg);
+}
+
+.active-visit-shell > .panel > .section-heading {
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 760px) {
+  .calm-workflow-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .visit-workflow-toolbar,
+  .visit-section-picker {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .visit-workflow-toolbar .visit-persistent-actions {
+    justify-content: stretch;
+  }
+}
