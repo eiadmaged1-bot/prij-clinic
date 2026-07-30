@@ -13,6 +13,7 @@ export function MissingInformationCenter({ patientId, canUpdate }: { patientId: 
   const grouped = useMemo(() => groupFindings(findings), [findings]);
   const required = findings.filter((finding) => finding.severity === "high").length;
   const recommended = findings.filter((finding) => finding.severity === "medium").length;
+  const priorityLabels = findings.filter((finding) => finding.severity === "high").slice(0, 3).map((finding) => finding.missingItem);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,11 +39,46 @@ export function MissingInformationCenter({ patientId, canUpdate }: { patientId: 
     setStatus("Decision saved and audited.");
   }
 
-  return <section className="panel compact-panel missing-information-panel" aria-labelledby="missing-information-title">
-    <div className="section-heading"><div><h2 id="missing-information-title">Missing information</h2><p className="muted">{required} required · {recommended} recommended · {Math.max(0, findings.length - required - recommended)} low priority</p></div></div>
-    {status ? <p className="muted" role="status">{status}</p> : null}
-    {state === "loading" ? <div className="skeleton" aria-label="Loading missing information" /> : state === "error" ? <div className="typed-state error"><p>Missing-information review could not be loaded.</p><button className="button secondary compact" type="button" onClick={() => window.location.reload()}>Retry</button></div> : findings.length === 0 ? <p className="empty-state compact">No active information gaps.</p> : <div className="missing-information-groups">{grouped.map(([group, rows]) => <details key={group} open={rows.some((item) => item.severity === "high")}><summary><strong>{group}</strong><span className="badge">{rows.length}</span></summary><div className="dense-card-list">{rows.map((finding) => <article className="data-row compact" key={finding.key}><div><strong>{finding.missingItem}</strong><span className={`badge ${finding.severity === "high" ? "warning" : ""}`}>{finding.state}</span></div><p>{finding.reason}</p><div className="form-actions"><a className="button compact" href={finding.actionLink}>Record now</a>{canUpdate ? <><button type="button" onClick={() => void decide(finding, "NOT_APPLICABLE")}>Not applicable</button><button type="button" onClick={() => void decide(finding, "PATIENT_DECLINED")}>Patient declined</button><button type="button" onClick={() => void decide(finding, "AWAITING_EXTERNAL_RESULT")}>Awaiting result</button><button type="button" onClick={() => void decide(finding, "SNOOZE")}>Snooze</button>{finding.severity !== "high" ? <button type="button" onClick={() => void decide(finding, "DISMISS")}>Dismiss with reason</button> : null}</> : null}</div></article>)}</div></details>)}</div>}
-  </section>;
+  if (state === "loading") return <section className="panel compact-panel missing-information-panel"><div className="skeleton" aria-label="Loading missing information" /></section>;
+  if (state === "error") return <section className="panel compact-panel missing-information-panel"><div className="typed-state error"><p>Information-gap review could not be loaded.</p><button className="button secondary compact" type="button" onClick={() => window.location.reload()}>Retry</button></div></section>;
+  if (findings.length === 0) return null;
+
+  return <details className="panel compact-panel missing-information-panel calm-missing-information">
+    <summary>
+      <div>
+        <span className="eyebrow">Safety and completeness</span>
+        <strong>{required ? `${required} required item${required === 1 ? "" : "s"}` : `${recommended} recommended item${recommended === 1 ? "" : "s"}`}</strong>
+        <small>{priorityLabels.length ? priorityLabels.join(" · ") : "Open to review remaining information gaps"}</small>
+      </div>
+      <span className={`badge ${required ? "warning" : ""}`}>Review</span>
+    </summary>
+
+    <div className="calm-missing-information-body">
+      {status ? <p className="muted" role="status">{status}</p> : null}
+      {grouped.map(([group, rows]) => <section key={group} className="calm-missing-group">
+        <div className="calm-section-title"><h3>{group}</h3><span>{rows.length}</span></div>
+        {rows.map((finding) => <article className="calm-missing-row" key={finding.key}>
+          <div>
+            <strong>{finding.missingItem}</strong>
+            <p>{finding.reason}</p>
+          </div>
+          <div className="calm-missing-actions">
+            <a className="button compact" href={finding.actionLink}>Record</a>
+            {canUpdate ? <details>
+              <summary className="button secondary compact">Other outcome</summary>
+              <div>
+                <button type="button" onClick={() => void decide(finding, "NOT_APPLICABLE")}>Not applicable</button>
+                <button type="button" onClick={() => void decide(finding, "PATIENT_DECLINED")}>Patient declined</button>
+                <button type="button" onClick={() => void decide(finding, "AWAITING_EXTERNAL_RESULT")}>Awaiting result</button>
+                <button type="button" onClick={() => void decide(finding, "SNOOZE")}>Snooze</button>
+                {finding.severity !== "high" ? <button type="button" onClick={() => void decide(finding, "DISMISS")}>Dismiss with reason</button> : null}
+              </div>
+            </details> : null}
+          </div>
+        </article>)}
+      </section>)}
+    </div>
+  </details>;
 }
 
 function groupFindings(findings: MissingFinding[]) {
