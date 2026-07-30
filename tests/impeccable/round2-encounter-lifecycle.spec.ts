@@ -147,7 +147,7 @@ async function openClassicVisit(page: Page, patientId: string) {
 }
 
 async function openCockpit(page: Page) {
-  const options = page.getByText(/^Options$/i).first();
+  const options = page.locator(".patient-visit-identity-bar .filter-drawer > summary");
   await expect(options).toBeVisible();
   await options.click();
   await page.getByRole("button", { name: /Open Visit Cockpit/i }).click();
