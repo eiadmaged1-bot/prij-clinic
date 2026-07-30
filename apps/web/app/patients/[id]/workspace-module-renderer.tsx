@@ -6,7 +6,6 @@ import {
   CaseBoardsPanel,
   MedicationSafetyWorkspace,
   MorePatientSections,
-  Overview,
   PatientCaseFeed,
   RelatedPanel,
   SafeAiAssistantPanel,
@@ -24,6 +23,7 @@ import {
 import { PatientAllergyList, PatientMedicationList } from "../../../components/medications/MedicationComponents";
 import { PatientInvestigationPanel, PatientPrescriptionPanel } from "../../../components/patients/PatientClinicalWorkflowPanels";
 import { ActiveVisitLauncher } from "../../../components/clinic/ActiveVisitWorkspace";
+import { CalmPatientOverview } from "../../../components/patients/CalmPatientOverview";
 
 type WorkspaceModuleProps = {
   active: TabConfig;
@@ -55,7 +55,7 @@ const InvestigationsPanel = lazy(() => import("./panel-components").then((module
 const DocumentsPanel = lazy(() => import("./panel-components").then((module) => module.DocumentsPanel));
 
 export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
-  overview: ({ patient, related, timelineItems }) => <Overview patient={patient} related={related} timelineItems={timelineItems} />,
+  overview: ({ patient, related, timelineItems }) => <CalmPatientOverview patient={patient} related={related} timelineItems={timelineItems} />,
   "case-feed": ({ patient, related, timelineItems }) => <PatientCaseFeed patient={patient} related={related} timelineItems={timelineItems} />,
   timeline: ({ patient, timelineItems, timelineHasMore, loadMoreTimeline }) => <Timeline items={timelineItems} patient={patient} hasMore={timelineHasMore} onLoadMore={loadMoreTimeline} />,
   gynecology: ({ patient, related }) => <GynecologyWorkspace patient={patient} visits={related.gynecology ?? []} />,
@@ -67,7 +67,7 @@ export const workspaceComponentsRegistry: Record<string, ModuleComponent> = {
   history: ({ patient, related, submitPatientAction, actionStatus }) => <><SmartHistoryOptionChips patient={patient} /><details className="legacy-history-form filter-drawer"><summary>Structured history form</summary><HistorySheetWorkspace related={related} onSubmit={submitPatientAction} status={actionStatus} /></details></>,
   "doctor-visit": ({ patient }) => (
     <section className="panel" aria-label="Current visit clinical workspace">
-      <div className="section-heading"><div><h2>Current visit</h2><p className="muted">Open the shared encounter workspace. Classic Workspace and Visit Cockpit use the same active draft.</p></div><ActiveVisitLauncher patientId={patient.id}>Open current visit</ActiveVisitLauncher></div>
+      <div className="section-heading"><div><h2>Current visit</h2><p className="muted">Open the shared visit workspace. Both doctor views use the same active draft.</p></div><ActiveVisitLauncher patientId={patient.id}>Open current visit</ActiveVisitLauncher></div>
     </section>
   ),
   "secretary-intake": ({ related }) => <SecretaryIntakePanel rows={related["secretary-intake"] ?? []} />,

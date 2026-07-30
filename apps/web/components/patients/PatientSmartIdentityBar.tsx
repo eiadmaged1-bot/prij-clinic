@@ -18,36 +18,36 @@ export function PatientSmartIdentityBar({ patient, currentPhase, related, infert
   const allergies = related.allergies;
   const ga = gestationalAge(pregnancy);
   const cycleDay = firstValue(infertility, ["cycleDay", "currentCycleDay"]);
-  const doctor = firstValue(queue, ["doctorName", "assignedDoctorName", "doctor"]);
-  const branch = firstValue(queue, ["branchName"]) || patient.branchId;
-  const queueState = firstValue(queue, ["status"]);
   const visitType = firstValue(queue, ["visitType"]);
+  const pregnancyLabel = pregnancy
+    ? [ga ? `GA ${ga}` : "Pregnancy active", firstValue(pregnancy, ["edd", "estimatedDueDate"]) ? `EDD ${formatDate(firstValue(pregnancy, ["edd", "estimatedDueDate"]))}` : ""].filter(Boolean).join(" · ")
+    : "No active pregnancy";
 
-  return <section className={`patient-smart-identity-bar ${patientTypeSemanticClass(patient.patientType)}`} aria-label="Current patient and clinical context">
+  return <section className={`patient-smart-identity-bar calm-patient-identity ${patientTypeSemanticClass(patient.patientType)}`} aria-label="Current patient and clinical context">
     <div className="patient-smart-primary">
       <strong>{patient.firstName} {patient.lastName}</strong>
-      <span>MRN {patient.medicalRecordNumber}</span>
-      <span>{ageLabel(patient.dateOfBirth)}</span>
-      <span>{patient.phone || "Phone not recorded"}</span>
+      <span>MRN {patient.medicalRecordNumber} · {ageLabel(patient.dateOfBirth)} · {patient.phone || "Phone not recorded"}</span>
     </div>
-    <div className="patient-smart-signals">
+
+    <div className="patient-smart-signals" aria-label="Essential clinical context">
       <span className="patient-type-badge">{patientTypeLabel(patient.patientType)}</span>
-      <span>{currentPhase ? `Active phase: ${currentPhase.phaseType}` : "Active phase needs review"}</span>
-      <span>{visitType ? `Visit: ${visitType}` : "No active visit type"}</span>
-      <span>{queueState ? `Queue: ${queueState}` : "Not in today’s queue"}</span>
-      <span className={allergies === undefined ? "warning" : ""}>{allergies === undefined ? "Allergies unavailable" : allergies.length ? `Allergies: ${allergies.length} recorded` : "No recorded allergies"}</span>
-      {ga ? <span>GA {ga}</span> : null}
-      {pregnancy && firstValue(pregnancy, ["edd", "estimatedDueDate"]) ? <span>EDD {formatDate(firstValue(pregnancy, ["edd", "estimatedDueDate"]))}</span> : null}
+      <span className={!currentPhase ? "warning" : ""}>{currentPhase ? `Phase: ${currentPhase.phaseType}` : "Phase needs review"}</span>
+      <span className={allergies === undefined ? "warning" : ""}>{allergies === undefined ? "Allergies unavailable" : allergies.length ? `Allergies: ${allergies.length}` : "No recorded allergies"}</span>
+      <span>{pregnancyLabel}</span>
+      {visitType ? <span>Visit: {visitType}</span> : null}
       {cycleDay ? <span>Cycle day {cycleDay}</span> : null}
-      {patientTypeLabel(patient.patientType).startsWith("High-risk") ? <span className="risk">High-risk status recorded</span> : null}
-      <span>{doctor ? `Doctor: ${doctor}` : "Doctor not assigned"}</span>
-      <span>{branch ? `Branch: ${branch}` : "Branch unavailable"}</span>
-      <span>{autosaveStatus}</span>
+      <span className="autosave-signal">{autosaveStatus}</span>
     </div>
+
     <div className="patient-smart-actions">
       <button className="button compact" type="button" onClick={onOpenVisit}>Start / Resume visit</button>
-      <Link className="button secondary compact" href={`/patients/${patient.id}/workspace-editor`}>Edit workspace</Link>
-      <button className="button secondary compact" type="button" onClick={onOpenMore}>More</button>
+      <details className="patient-identity-more">
+        <summary className="button secondary compact">More</summary>
+        <div>
+          <Link className="button secondary compact" href={`/patients/${patient.id}/workspace-editor`}>Edit workspace</Link>
+          <button className="button secondary compact" type="button" onClick={onOpenMore}>Patient sections</button>
+        </div>
+      </details>
     </div>
   </section>;
 }

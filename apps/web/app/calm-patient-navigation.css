@@ -1,0 +1,60 @@
+/* Patient workspace macro navigation: three destinations, contextual section picker. */
+
+.hybrid-workspace-tabs:has(.calm-patient-workspace-navigation) {
+  display: block;
+  padding: 0.25rem;
+  overflow: visible;
+}
+
+.hybrid-workspace-tabs:has(.calm-patient-workspace-navigation) > button[data-tab-key] {
+  display: none;
+}
+
+.calm-patient-workspace-navigation {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.calm-patient-macro-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.calm-patient-macro-tabs button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--foreground);
+  font-weight: 750;
+}
+
+.calm-patient-macro-tabs button.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: 0 1px 2px rgb(17 33 45 / 8%);
+}
+
+.calm-patient-section-picker {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 18rem);
+  align-items: center;
+  justify-content: end;
+  gap: 0.6rem;
+}
+
+.calm-patient-section-picker span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px) {
+  .calm-patient-macro-tabs,
+  .calm-patient-section-picker {
+    grid-template-columns: 1fr;
+  }
+}

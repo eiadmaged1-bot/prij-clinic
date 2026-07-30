@@ -1,0 +1,521 @@
+/* PRIJ Calm Clinical Workspace
+   Progressive disclosure, fewer persistent choices, and one clear hierarchy. */
+
+.sidebar nav[aria-label="Patients"] .nav-subitems .nav-item:nth-child(n + 3),
+.sidebar nav[aria-label="Clinical Work"] .nav-subitems .nav-item:nth-child(n + 4),
+.sidebar nav[aria-label="Knowledge"] .nav-subitems .nav-item:nth-child(n + 3) {
+  display: none;
+}
+
+.sidebar .nav-group {
+  margin-block: 0.1rem;
+}
+
+.sidebar .nav-group-toggle,
+.sidebar .nav-parent-link {
+  min-height: 2.65rem;
+}
+
+/* During documentation the application catalogue gets out of the doctor's way. */
+body:has(.active-visit-shell) .sidebar .nav-group:not(:first-of-type):not(.open) {
+  display: none;
+}
+
+body:has(.active-visit-shell) .topbar-title > div,
+body:has(.active-visit-shell) .topbar .mobile-topbar-brand {
+  display: none;
+}
+
+/* Classic workspace: three workflow phases replace ten equal-weight tabs. */
+.active-visit-tabs:has(.calm-workflow-navigation) {
+  display: block;
+  overflow: visible;
+  padding: 0;
+}
+
+.active-visit-tabs:has(.calm-workflow-navigation) > a {
+  display: none;
+}
+
+.calm-workflow-navigation {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.calm-workflow-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  overflow: visible;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.calm-workflow-tabs a {
+  min-height: 2.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  font-weight: 750;
+  text-align: center;
+}
+
+.calm-workflow-tabs a.active {
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 1px 2px rgb(17 33 45 / 8%);
+}
+
+.visit-section-picker {
+  display: grid;
+  grid-template-columns: auto minmax(12rem, 18rem);
+  align-items: center;
+  justify-content: end;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.visit-section-picker span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.visit-section-picker select {
+  min-height: 2.55rem;
+  padding-block: 0.5rem;
+}
+
+body:has(.calm-workflow-navigation) .visit-persistent-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin: -0.15rem 0 0;
+}
+
+body:has(.calm-workflow-navigation) .visit-persistent-actions > a[href$="/finish"] {
+  display: none;
+}
+
+body:has(.calm-workflow-navigation) .visit-persistent-actions .visit-more-actions {
+  display: inline-block;
+}
+
+body:has(.calm-workflow-navigation[data-module="encounter"]) .active-visit-shell > .panel > .section-heading h2,
+body:has(.calm-workflow-navigation[data-module="finish"]) .active-visit-shell > .panel > .section-heading h2 {
+  font-size: 0;
+}
+
+body:has(.calm-workflow-navigation[data-module="encounter"]) .active-visit-shell > .panel > .section-heading h2::after {
+  content: "Visit note";
+  font-size: 1.1rem;
+}
+
+body:has(.calm-workflow-navigation[data-module="finish"]) .active-visit-shell > .panel > .section-heading h2::after {
+  content: "Review and sign";
+  font-size: 1.1rem;
+}
+
+.active-visit-shell > .panel {
+  border-radius: var(--radius-lg);
+}
+
+.active-visit-shell > .panel > .section-heading {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Patient file: remove duplicate banners and compress identity into one line of truth. */
+body:has(.calm-patient-identity) .important-patient-banner {
+  display: none;
+}
+
+.calm-patient-identity {
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(20rem, 1.8fr) auto;
+  gap: 0.8rem;
+  padding: 0.85rem 1rem;
+  align-items: center;
+}
+
+.calm-patient-identity .patient-smart-primary strong {
+  font-size: 1.1rem;
+}
+
+.calm-patient-identity .patient-smart-primary span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.calm-patient-identity .patient-smart-signals {
+  gap: 0.35rem;
+}
+
+.calm-patient-identity .patient-smart-signals span {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.calm-patient-identity .autosave-signal {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.patient-identity-more {
+  position: relative;
+}
+
+.patient-identity-more > summary {
+  list-style: none;
+}
+
+.patient-identity-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.patient-identity-more > div {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  display: grid;
+  min-width: 11rem;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Safety gaps stay visible as a concise summary; resolution controls appear on demand. */
+.calm-missing-information {
+  padding: 0;
+  overflow: visible;
+}
+
+.calm-missing-information > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calm-missing-information > summary::-webkit-details-marker {
+  display: none;
+}
+
+.calm-missing-information > summary div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.calm-missing-information > summary strong {
+  font-size: 0.95rem;
+}
+
+.calm-missing-information > summary small {
+  color: var(--muted);
+}
+
+.calm-missing-information-body {
+  display: grid;
+  gap: 0.8rem;
+  padding: 0 1rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.calm-missing-group {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.8rem;
+}
+
+.calm-missing-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.calm-missing-row p {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.calm-missing-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.calm-missing-actions details {
+  position: relative;
+}
+
+.calm-missing-actions details > summary {
+  list-style: none;
+}
+
+.calm-missing-actions details > div {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  display: grid;
+  min-width: 12rem;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.calm-missing-actions details button {
+  min-height: 2.35rem;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+/* One patient snapshot replaces five nested overview cards. */
+.calm-patient-overview {
+  padding: 0;
+  overflow: hidden;
+}
+
+.calm-patient-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.calm-patient-overview-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.8fr 1fr;
+}
+
+.calm-patient-overview-grid > section {
+  min-height: 11rem;
+  padding: 1rem 1.15rem;
+}
+
+.calm-patient-overview-grid > section + section {
+  border-left: 1px solid var(--border);
+}
+
+.calm-patient-overview-grid h3 {
+  margin-bottom: 0.7rem;
+}
+
+.calm-fact-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+
+.calm-fact-list div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.calm-fact-list dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calm-fact-list dd {
+  margin: 0;
+  font-weight: 750;
+}
+
+.calm-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.calm-section-title > strong,
+.calm-section-title > span {
+  display: inline-grid;
+  min-width: 1.7rem;
+  min-height: 1.7rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface-muted);
+}
+
+.calm-attention-list,
+.calm-activity-list {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.calm-attention-list > div,
+.calm-activity-list article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.calm-attention-list .needs-attention strong {
+  color: var(--warning);
+}
+
+.calm-activity-list article {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.calm-activity-list span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.calm-patient-note {
+  padding: 0.75rem 1.15rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+/* Owner home: four primary signals, then progressive disclosure. */
+.calm-owner-header {
+  align-items: end;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.calm-owner-header h1 {
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+}
+
+.calm-owner-controls {
+  display: grid;
+  gap: 0.6rem;
+  width: min(100%, 42rem);
+}
+
+.calm-owner-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.calm-owner-kpis .owner-kpi-card {
+  min-height: 8rem;
+}
+
+.calm-owner-operations {
+  align-items: start;
+}
+
+.calm-owner-disclosure {
+  padding: 0;
+  overflow: hidden;
+}
+
+.calm-owner-disclosure > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calm-owner-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.calm-owner-disclosure[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.calm-owner-disclosure > .owner-management-grid,
+.calm-owner-disclosure > .calm-secondary-metrics,
+.calm-owner-disclosure > .calm-owner-details-grid {
+  margin: 1rem;
+}
+
+.calm-secondary-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.calm-secondary-metrics > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.calm-secondary-metrics span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.calm-owner-details-grid .owner-service-row {
+  grid-template-columns: 1.4fr 1fr 0.8fr 0.6fr;
+}
+
+@media (max-width: 980px) {
+  .calm-patient-identity,
+  .calm-patient-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .calm-patient-overview-grid > section + section {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .calm-owner-kpis,
+  .calm-secondary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .calm-workflow-tabs,
+  .calm-owner-kpis,
+  .calm-secondary-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .visit-section-picker,
+  .calm-missing-row {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .calm-fact-list {
+    grid-template-columns: 1fr;
+  }
+}
