@@ -13,7 +13,13 @@ const doctor = await login("runtime.doctor@prij.local", password);
 const owner = await login(process.env.DEMO_ADMIN_LOGIN || "runtime.owner@prij.local", password);
 const reception = await login("runtime.reception@prij.local", password);
 
-const initialPreference = await json(doctor, "GET", "/users/me/preferences");
+const [concurrentPreference, concurrentAppearance] = await Promise.all([
+  request(doctor, "GET", "/users/me/preferences"),
+  request(doctor, "GET", "/users/me/preferences/appearance")
+]);
+assert.equal(concurrentPreference.response.status, 200, "Concurrent general preference read must succeed");
+assert.equal(concurrentAppearance.response.status, 200, "Concurrent appearance preference read must succeed");
+const initialPreference = concurrentPreference.body;
 assert.equal(initialPreference.doctorWorkspaceMode, "CLASSIC", "Classic must be the migrated default");
 
 const patientSearch = await json(doctor, "GET", "/patients?q=Demo&limit=50");
