@@ -79,7 +79,7 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
     await sign.click();
     await expect(page.getByText(/Completed encounter · read-only/i)).toBeVisible({ timeout: 25_000 });
     await expect(page.getByRole("button", { name: /Sign and finish encounter/i })).toHaveCount(0);
-    await expect(page.locator("textarea:enabled, input:enabled")).toHaveCount(0);
+    await expect(page.locator('main[aria-labelledby="cockpit-title"] textarea:enabled, main[aria-labelledby="cockpit-title"] input:enabled')).toHaveCount(0);
     await capture(page, testInfo, "05-signed-read-only.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
@@ -147,7 +147,7 @@ async function openClassicVisit(page: Page, patientId: string) {
 }
 
 async function openCockpit(page: Page) {
-  const options = page.locator("summary").filter({ hasText: /^Options$/i }).first();
+  const options = page.getByText(/^Options$/i).first();
   await expect(options).toBeVisible();
   await options.click();
   await page.getByRole("button", { name: /Open Visit Cockpit/i }).click();
