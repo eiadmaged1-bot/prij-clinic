@@ -50,10 +50,10 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
 
     await page.locator("#cockpit-tab-history").click();
     await expect(page.getByLabel(/^Required complaint$/i)).toHaveValue(values.complaint);
-    await expect(page.getByLabel(/^Additional History notes$/i)).toHaveValue(values.history);
+    await expect(page.locator("#cockpit-panel-history textarea").last()).toHaveValue(values.history);
 
     await page.locator("#cockpit-tab-plan").click();
-    await expect(page.getByLabel(/^Plan notes$/i)).toHaveValue(values.plan);
+    await expect(page.locator("#cockpit-panel-plan textarea").first()).toHaveValue(values.plan);
     await capture(page, testInfo, "02-cockpit-shared-persistence.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
