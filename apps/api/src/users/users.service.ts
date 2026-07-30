@@ -55,21 +55,46 @@ export class UsersService {
   }
 
   async getPreferences(userId: string) {
-    return (this.prisma as unknown as { userPreference: any }).userPreference.upsert({
+    const userPreference = (this.prisma as unknown as { userPreference: any }).userPreference;
+    const existing = await userPreference.findUnique({
       where: { userId },
-      create: { userId },
-      update: {},
       select: preferenceSelect
     });
+    if (existing) return existing;
+
+    try {
+      return await userPreference.create({
+        data: { userId },
+        select: preferenceSelect
+      });
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
+      const concurrent = await userPreference.findUnique({
+        where: { userId },
+        select: preferenceSelect
+      });
+      if (!concurrent) throw error;
+      return concurrent;
+    }
   }
 
   async updatePreferences(userId: string, preferences: UserPreferencePatch) {
-    return (this.prisma as unknown as { userPreference: any }).userPreference.upsert({
-      where: { userId },
-      create: { userId, ...preferences },
-      update: preferences,
-      select: preferenceSelect
-    });
+    const userPreference = (this.prisma as unknown as { userPreference: any }).userPreference;
+    try {
+      return await userPreference.upsert({
+        where: { userId },
+        create: { userId, ...preferences },
+        update: preferences,
+        select: preferenceSelect
+      });
+    } catch (error) {
+      if (!isUniqueConstraintError(error)) throw error;
+      return userPreference.update({
+        where: { userId },
+        data: preferences,
+        select: preferenceSelect
+      });
+    }
   }
 
   async resolveAppearance(user: AuthUser) {
@@ -166,6 +191,10 @@ export type UserPreferencePatch = {
   doctorWorkspaceMode?: "CLASSIC" | "COCKPIT";
   appearanceJson?: Record<string, unknown>;
 };
+
+function isUniqueConstraintError(error: unknown) {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "P2002";
+}
 
 function applyPermissionPreset(rolePermissionKeys: Set<string>, preset: string) {
   const permissions = new Set<string>();
