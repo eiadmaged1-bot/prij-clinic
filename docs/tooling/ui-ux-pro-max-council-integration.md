@@ -3,7 +3,7 @@
 Status: **APPROVED WITH GUARDRAILS**  
 Review date: **2026-07-30**  
 Upstream: `nextlevelbuilder/ui-ux-pro-max-skill`  
-Approved CLI version: **2.5.0**  
+Approved CLI version: **2.11.3**  
 Reviewed upstream commit: `4857a2c5ef989794751a0f66b8545a4a49566286`
 
 ## Council decision
@@ -46,9 +46,9 @@ The skill must never silently override a higher-authority rule.
 
 **Approved subject to existing gates.** Generated or revised UI must still pass the relevant typecheck, build, contract tests, Playwright/browser QA, Arabic RTL checks, keyboard checks, zoom checks, reduced-motion checks, and screenshot review.
 
-## Why version 2.5.0 is pinned
+## Why version 2.11.3 is pinned
 
-At the time of review, the upstream GitHub release page identified v2.5.0 as the latest stable release, while npm exposed newer 2.11.x builds with release and licensing metadata that had not yet been reconciled against the repository state. The council therefore selected the stable reviewed release instead of floating `latest`.
+The council reviewed the current verified GitHub release, its release commit, repository license, CLI installation model, generated assistant paths, and runtime boundaries. Version 2.11.3 is pinned explicitly rather than using `latest`, so future upstream releases cannot silently change PRIJ's local tooling.
 
 Upgrading the pinned version requires a focused review of:
 
