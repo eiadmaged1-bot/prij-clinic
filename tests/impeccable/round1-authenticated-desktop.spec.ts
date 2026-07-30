@@ -20,6 +20,7 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     consoleErrors.length = 0;
 
     await expect(page.getByRole("heading", { name: /owner control center|dashboard|doctor workspace|reception/i }).first()).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByText(/Operational readiness/i).first()).toBeVisible({ timeout: 25_000 });
     await capture(page, testInfo, "01-dashboard-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
