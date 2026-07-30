@@ -27,13 +27,13 @@ test.describe.serial("Impeccable Round 1 — authenticated desktop smoke", () =>
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
-    const patientId = await openOrCreateSyntheticPatient(page);
+    const patientId = await createSyntheticPatient(page);
     await expect(page).toHaveURL(new RegExp(`/patients/${patientId}(?:$|[/?#])`));
     await capture(page, testInfo, "03-patient-file-desktop.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
-    await openActiveVisit(page);
+    await openActiveVisit(page, patientId);
     await expect(page.locator("body")).toContainText(/Classic Workspace|Current Visit|Encounter|Visit Workspace/i);
     await capture(page, testInfo, "04-classic-workspace-desktop.png");
     await expectNoCrashText(page);
@@ -60,16 +60,7 @@ async function signIn(page: Page) {
   await expect(page.locator("body")).toBeVisible();
 }
 
-async function openOrCreateSyntheticPatient(page: Page) {
-  const firstPatientLink = page.locator('a[href^="/patients/"]:not([href="/patients/new"])').first();
-  if (await firstPatientLink.isVisible().catch(() => false)) {
-    const href = await firstPatientLink.getAttribute("href");
-    await firstPatientLink.click();
-    const patientId = href?.match(/^\/patients\/([^/?#]+)/)?.[1];
-    if (!patientId) throw new Error(`Could not resolve patient ID from ${href}`);
-    return patientId;
-  }
-
+async function createSyntheticPatient(page: Page) {
   await page.goto("/patients/new");
   await expect(page.getByRole("heading", { name: /new patient file/i })).toBeVisible();
   const suffix = String(Date.now()).slice(-7);
@@ -83,25 +74,24 @@ async function openOrCreateSyntheticPatient(page: Page) {
   await page.getByRole("button", { name: /save and open patient file/i }).click();
   await page.waitForURL(/\/patients\/(?!new(?:$|[/?#]))[^/?#]+(?:$|[/?#])/, { timeout: 25_000 });
   const patientId = page.url().match(/\/patients\/(?!new(?:$|[/?#]))([^/?#]+)/)?.[1];
-  if (!patientId) throw new Error(`Patient creation did not return a patient workspace: ${page.url()}`);
+  if (!patientId || ["import", "new"].includes(patientId)) {
+    throw new Error(`Patient creation did not return a canonical patient workspace: ${page.url()}`);
+  }
   return patientId;
 }
 
-async function openActiveVisit(page: Page) {
-  const action = page.getByRole("button", { name: /start visit|resume visit|open current visit/i }).first();
-  if (await action.isVisible().catch(() => false)) {
-    await action.click();
-  } else {
-    const actionLink = page.getByRole("link", { name: /start visit|resume visit|current visit|open visit/i }).first();
-    if (await actionLink.isVisible().catch(() => false)) {
-      await actionLink.click();
-    } else {
-      const visitLink = page.locator('a[href*="/visits/"]').first();
-      await expect(visitLink, "Expected a start/resume/current-visit action or an existing visit link").toBeVisible();
-      await visitLink.click();
-    }
-  }
+async function openActiveVisit(page: Page, patientId: string) {
+  await expect(page.getByRole("button", { name: /^Visits$/i })).toBeVisible();
+  await page.getByRole("button", { name: /^Visits$/i }).click();
 
+  const visitPanel = page.locator('[aria-label="Current visit clinical workspace"]');
+  await expect(visitPanel).toBeVisible();
+
+  const openVisit = visitPanel.getByRole("button", { name: /open current visit/i });
+  await expect(openVisit).toBeVisible();
+  await openVisit.click();
+
+  await page.waitForURL(new RegExp(`/patients/${patientId}/visits/[^/]+/encounter(?:$|[/?#])`), { timeout: 25_000 });
   await page.waitForLoadState("domcontentloaded");
   await expect(page.locator("body")).toBeVisible();
 }
