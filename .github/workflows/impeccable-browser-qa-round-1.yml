@@ -37,7 +37,7 @@ jobs:
       JWT_SECRET: impeccable-round-one-synthetic-secret
       AI_FEATURES_ENABLED: "false"
       AI_PROVIDER: disabled
-      PRIJ_ENABLE_DEMO_DATA: "true"
+      PRIJ_ENABLE_DEMO_DATA: "false"
       DEMO_ADMIN_LOGIN: eyad
       DEMO_ADMIN_PASSWORD: LocalDev123!
       DEMO_OWNER_LOGIN: eyad
