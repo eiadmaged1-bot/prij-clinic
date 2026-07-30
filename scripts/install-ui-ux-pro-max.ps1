@@ -9,7 +9,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$CliVersion = "2.5.0"
+$CliVersion = "2.11.3"
 $PackageSpec = "ui-ux-pro-max-cli@$CliVersion"
 $RepositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 
