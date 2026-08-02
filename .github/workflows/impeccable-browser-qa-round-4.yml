@@ -6,6 +6,7 @@ on:
     paths:
       - ".github/workflows/impeccable-browser-qa-round-4.yml"
       - "playwright.impeccable-round4.config.ts"
+      - "scripts/bootstrap-impeccable-round4-receptionist.mjs"
       - "tests/impeccable/round4-failure-conflict-security-v3.spec.ts"
       - "apps/web/**"
       - "apps/api/**"
@@ -111,6 +112,9 @@ jobs:
           echo "Web log"
           cat web-impeccable-round4.log || true
           exit 1
+
+      - name: Bootstrap synthetic receptionist fixture
+        run: node scripts/bootstrap-impeccable-round4-receptionist.mjs
 
       - name: Run recoverability and role-security screenshot QA
         run: npx playwright test tests/impeccable/round4-failure-conflict-security-v3.spec.ts --config=playwright.impeccable-round4.config.ts
