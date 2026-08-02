@@ -39,17 +39,19 @@ assert(signMethod.includes('if (existing.status === "signed")') && signMethod.in
 
 // 11-14. Review issues, resource errors, sync states, and immutable completed encounters.
 assert(cockpit.includes("Blocking issues") && cockpit.includes("issue.message") && router.includes("Blocking review issues"), "both Review presentations must render structured readiness issues");
-assert(controller.includes('"resource-failed"') && cockpit.includes("Clinical resources unavailable") && cockpit.includes("retry={controller.reload}"), "resource failure must render as a recoverable error, not an empty record list");
-assert(doctorVisitService.includes("Promise.allSettled") && doctorVisitService.includes("resourceErrors") && cockpit.includes("Retry before interpreting this as no history"), "partial related-resource failure must remain distinguishable from a true empty state");
+assert(controller.includes('"resource-failed"') && cockpit.includes("Clinical information unavailable") && cockpit.includes("retry={controller.reload}"), "resource failure must render as a recoverable error, not an empty record list");
+assert(doctorVisitService.includes("Promise.allSettled") && doctorVisitService.includes("resourceErrors") && cockpit.includes("Retry before treating it as empty"), "partial related-resource failure must remain distinguishable from a true empty state");
 for (const state of ["saving", "saved", "failed", "offline", "waiting-sync", "conflict"]) assert(controller.includes(`"${state}"`), `shared controller missing ${state} state`);
 assert(controller.includes('status !== "draft"') && controller.includes('setSaveState("completed")'), "completed encounters must become read-only");
 assert(controller.includes("editVersionRef") && controller.includes("Newer edits are still waiting to sync"), "an in-flight save must not clear newer local edits");
 assert(cockpit.includes("failedResources") && cockpit.includes('resources: ["investigations", "history"]'), "mixed longitudinal groups must surface every failed source instead of a false empty state");
 assert(encounterService.includes("Signed or voided encounters cannot be edited"), "server must keep completed encounters immutable");
 
-// 15-16. Canonical English/Arabic stage order and keyboard operation.
+// 15-16. Canonical internal stages remain intact while the visible workflow is compressed and keyboard-operable.
 for (const stage of ["Patient Context", "History", "Examination", "Assessment", "Investigations", "Plan", "Review"]) assert(controller.includes(`label: "${stage}"`), `canonical stage missing: ${stage}`);
-assert(cockpit.includes('dir={rtl ? "rtl" : "ltr"}') && cockpit.includes("stage.ar") && cockpit.includes('event.key === "ArrowRight"') && cockpit.includes('event.key === "ArrowLeft"') && cockpit.includes('event.key === "Home"') && cockpit.includes('event.key === "End"'), "stage control must support RTL and keyboard ordering");
+for (const group of ["Visit note", "Orders & plan", "Review"]) assert(cockpit.includes(`label: "${group}"`), `visible visit group missing: ${group}`);
+assert(cockpit.includes('dir={rtl ? "rtl" : "ltr"}') && cockpit.includes("group.ar") && cockpit.includes("stageLabel") && cockpit.includes('event.key === "ArrowRight"') && cockpit.includes('event.key === "ArrowLeft"') && cockpit.includes('event.key === "Home"') && cockpit.includes('event.key === "End"'), "compressed workflow must support Arabic labels, section mapping, RTL, and keyboard ordering");
+assert(cockpit.includes("const [contextExpanded, setContextExpanded] = useState(false)"), "longitudinal context must remain collapsed by default to reduce visual noise");
 
 // 17. Classic retains its established clinical modules while sharing save and finish operations.
 for (const moduleName of ["complaint", "history", "examination", "impression", "prescription", "investigations", "ultrasound", "follow-up", "finish"]) assert(router.includes(`["${moduleName}"`) || router.includes(`=== "${moduleName}"`), `Classic module missing: ${moduleName}`);
