@@ -56,8 +56,11 @@ test.describe.serial("Impeccable Round 4 — failure, conflict, session, and rol
     expect(status).toBe(403);
 
     await page.goto(visit.visitUrl);
-    await expect(page).toHaveURL(/\/reception(?:$|[/?#])/, { timeout: 25_000 });
+    await expect(page.getByRole("heading", { name: /^Access denied$/i })).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByText(/You do not have access to this (?:visit|encounter)/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: visit.patientName })).toHaveCount(0);
+    await expect(page.getByRole("tablist", { name: /Visit workflow/i })).toHaveCount(0);
+    await expect(page.locator('main textarea:enabled, main input:enabled')).toHaveCount(0);
     await captureAndCheck(page, testInfo, "07-receptionist-role-denied.png");
   });
 });
