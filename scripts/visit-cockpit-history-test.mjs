@@ -38,10 +38,10 @@ assert(shared.includes('role="group"') && shared.includes("aria-pressed"), "stru
 assert(historyCss.includes(":focus-visible") && historyCss.includes("min-height: 44px"), "History controls must have visible focus and practical touch targets");
 assert(shared.includes('onKeyDown={(event) => { if (event.key === "Enter")'), "additional concern entry must be keyboard operable");
 
-assert(cockpit.includes("This resource did not fully load") && cockpit.includes("Available rows are shown"), "partial resource failure must not appear empty");
+assert(cockpit.includes("This information did not fully load") && cockpit.includes("Retry before treating it as empty"), "partial resource failure must not appear empty");
 assert(shared.includes("Longitudinal History failed to load"), "History resource failure must not appear empty");
 assert(cockpit.includes("openContextRow") && cockpit.includes('window.open(href, "_blank"'), "longitudinal rows must open a safe resource route");
-assert(cockpit.includes("contextCollapsed") && cockpitCss.includes(".contextCollapsed"), "collapsing context must widen the editor");
+assert(cockpit.includes("contextExpanded") && cockpit.includes("useState(false)") && cockpitCss.includes(".contextDrawer"), "clinical context must be collapsed by default and expand into a focused drawer");
 
 assert(shared.includes("HistoryReadOnlyView") && shared.includes("No editing controls are available"), "signed History must render as clinical read-only content");
 assert(cockpit.includes("structuredHistory.map") && cockpit.includes("openHistorySection"), "Review must summarize structured History and link back to a section");
@@ -49,7 +49,7 @@ assert(cockpit.includes("openReviewIssue") && cockpit.includes("history-section-
 assert(shared.includes("legacyItems(root)") && shared.includes("controller.draft.historyText"), "legacy narrative and older structured arrays must remain readable");
 
 assert(guidance.includes("التاريخ الحيضي والنسائي") && shared.includes("التاريخ المرضي") && cockpit.includes("مراحل الزيارة"), "modified History scope must provide Arabic labels");
-assert(historyCss.includes("@media (max-width: 760px)") && cockpitCss.includes("@media (max-width: 620px)"), "History must retain narrow responsive behavior");
+assert(historyCss.includes("@media (max-width: 760px)") && cockpitCss.includes("@media (max-width: 760px)"), "History must retain narrow responsive behavior");
 assert(cockpit.includes('dir={rtl ? "rtl" : "ltr"}'), "Cockpit must preserve explicit RTL direction");
 
 assert(shared.includes("Loaded longitudinal record") && shared.includes("Pregnancy context") && shared.includes("Fertility context"), "existing patient and episode context must be reused");
