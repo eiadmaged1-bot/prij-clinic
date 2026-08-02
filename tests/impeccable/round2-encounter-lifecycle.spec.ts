@@ -48,6 +48,11 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
     await openCockpit(page);
     await expect(page.getByRole("heading", { name: patient.name })).toBeVisible({ timeout: 25_000 });
 
+    const workflow = page.getByRole("tablist", { name: /Visit (?:stages|workflow)/i });
+    await expect(workflow.getByRole("tab")).toHaveCount(3);
+    await expect(page.locator("aside.sidebar")).toBeHidden();
+    await expect(page.getByLabel(/^Current visit section$/i)).toBeVisible();
+
     await page.locator("#cockpit-tab-history").click();
     await expect(page.getByLabel(/^Required complaint$/i)).toHaveValue(values.complaint);
     await expect(page.locator("#cockpit-panel-history textarea").last()).toHaveValue(values.history);
@@ -151,7 +156,7 @@ async function openCockpit(page: Page) {
   await expect(options).toBeVisible();
   await options.click();
   await page.getByRole("button", { name: /Open Visit Cockpit/i }).click();
-  await expect(page.getByRole("tablist", { name: /Visit stages/i })).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByRole("tablist", { name: /Visit (?:stages|workflow)/i })).toBeVisible({ timeout: 25_000 });
 }
 
 async function setReviewedReproductiveStatus(page: Page, patientId: string, encounterId: string) {
