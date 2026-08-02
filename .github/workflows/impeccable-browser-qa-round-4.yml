@@ -6,7 +6,7 @@ on:
     paths:
       - ".github/workflows/impeccable-browser-qa-round-4.yml"
       - "playwright.impeccable-round4.config.ts"
-      - "tests/impeccable/round4-failure-conflict-security-v2.spec.ts"
+      - "tests/impeccable/round4-failure-conflict-security-v3.spec.ts"
       - "apps/web/**"
       - "apps/api/**"
 
@@ -113,7 +113,7 @@ jobs:
           exit 1
 
       - name: Run recoverability and role-security screenshot QA
-        run: npx playwright test tests/impeccable/round4-failure-conflict-security-v2.spec.ts --config=playwright.impeccable-round4.config.ts
+        run: npx playwright test tests/impeccable/round4-failure-conflict-security-v3.spec.ts --config=playwright.impeccable-round4.config.ts
 
       - name: Upload Impeccable Round 4 evidence
         if: always()
