@@ -39,6 +39,8 @@ function trackedFiles() {
 const packageJson = JSON.parse(read("package.json"));
 const stagingEnv = parseEnv(".env.staging.example");
 const apiHealth = read("apps/api/src/health/health.controller.ts");
+const stagingCompose = read("docker-compose.staging.yml");
+const stagingEnvCheck = read("scripts/staging-env-check.ps1");
 const apiEnv = read("apps/api/src/config/env.ts");
 const cors = read("apps/api/src/config/cors-origins.ts");
 const securityHeaders = read("apps/api/src/config/security-headers.ts");
@@ -56,6 +58,9 @@ assert(packageJson.scripts["test:v180:staging-smoke"] === "node scripts/v180-sta
 assert(exists(".env.staging.example"), ".env.staging.example exists");
 assert(exists("docker-compose.staging.yml"), "docker-compose.staging.yml exists");
 assert(apiHealth.includes('@Controller("health")') && apiHealth.includes('@Get("db")'), "health and DB health endpoints are configured");
+assert(apiHealth.includes('return { status: "up" }') && apiHealth.includes('return { status: "ok", database: "connected" }'), "liveness and readiness contracts remain distinct");
+assert(stagingCompose.includes("${STAGING_ENV_FILE:-.env.staging}"), "validated staging env file is also loaded by API and web containers");
+assert(stagingEnvCheck.includes('"PRIJ_ENABLE_DEMO_DATA"') && stagingEnvCheck.includes('PRIJ_ENABLE_DEMO_DATA must be false'), "actual demo seed flag is disabled by staging validation");
 assert(docs.includes("/health/db") && docs.includes("database"), "DB health path is documented");
 
 for (const route of [

@@ -52,6 +52,7 @@ function Require-Key([string]$Name) {
   "PATIENT_FILE_STORAGE_MODE",
   "BACKUP_DIR",
   "SEED_DEMO_DATA",
+  "PRIJ_ENABLE_DEMO_DATA",
   "SEED_DEMO_OWNER",
   "DEMO_OWNER_EMAIL",
   "DEMO_OWNER_PASSWORD",
@@ -88,6 +89,10 @@ if ($values["PATIENT_FILE_STORAGE_MODE"] -ne "metadata_only") {
 
 if ($values["SEED_DEMO_DATA"] -ne "false") {
   $errors.Add("SEED_DEMO_DATA must be false for the committed staging example.")
+}
+
+if ($values["PRIJ_ENABLE_DEMO_DATA"] -ne "false") {
+  $errors.Add("PRIJ_ENABLE_DEMO_DATA must be false. Fake-data seeding requires a separate explicit operator action.")
 }
 
 if ($values["SEED_DEMO_OWNER"] -ne "false") {

@@ -76,8 +76,8 @@ function Assert-WebPage {
 
 Write-Step "health"
 $health = Invoke-Json -Uri "$ApiBaseUrl/health"
-if ($health.status -ne "ok") {
-  throw "GET /health did not return ok."
+if ($health.status -ne "up") {
+  throw "GET /health did not return up."
 }
 
 Write-Step "health/db"

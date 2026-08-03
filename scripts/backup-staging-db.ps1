@@ -11,7 +11,7 @@ if ($env:CI -eq "true") {
 }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$envPath = Join-Path $repoRoot $EnvFile
+$envPath = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $EnvFile))
 
 if (-not (Test-Path -LiteralPath $envPath)) {
   throw "Staging env file was not found. Create it locally from .env.staging.example and do not commit it."
@@ -54,11 +54,22 @@ if ($appEnv -ne "staging") {
   throw "Refusing backup because APP_ENV is not staging."
 }
 
+if ($ComposeProject -notmatch '^prij-clinic-staging(?:-[a-z0-9-]+)?$') {
+  throw "ComposeProject must be explicitly staging-scoped."
+}
+
 if (-not $dbName -or -not $dbUser) {
   throw "POSTGRES_DB and POSTGRES_USER are required in the staging env file."
 }
 
-$backupDir = Join-Path $repoRoot $OutputDirectory
+$allowedBackupRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot "backups\staging"))
+$backupDir = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $OutputDirectory))
+$allowedBackupPrefix = $allowedBackupRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+if ($backupDir -ne $allowedBackupRoot -and -not $backupDir.StartsWith($allowedBackupPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+  throw "OutputDirectory must remain inside the ignored backups/staging directory."
+}
+
+$env:STAGING_ENV_FILE = $envPath
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $backupPath = Join-Path $backupDir "prij-clinic-staging-$timestamp.sql"
 
@@ -89,7 +100,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $dump | Set-Content -LiteralPath $backupPath -Encoding utf8
+$backupHash = (Get-FileHash -LiteralPath $backupPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$backupHash | Set-Content -LiteralPath "$backupPath.sha256" -Encoding ascii
 
 Write-Host "Staging database backup created:"
 Write-Host $backupPath
+Write-Host "SHA-256 integrity file created beside the backup."
 Write-Host "Backups are ignored by git. Encrypt before moving off the machine and do not commit backup files."

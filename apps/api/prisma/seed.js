@@ -2112,6 +2112,7 @@ async function main() {
       });
     }
 
+    const protectedSeedUserIds = [...new Set([localAdmin.id, demoOwner?.id].filter(Boolean))];
     const seededDemoUsers = await prisma.user.findMany({
       where: {
         OR: [
@@ -2120,7 +2121,7 @@ async function main() {
           { displayName: { contains: "Test User" } },
           { displayName: { contains: "Training User" } }
         ],
-        NOT: { id: localAdmin.id }
+        NOT: { id: { in: protectedSeedUserIds } }
       },
       select: { id: true }
     });
@@ -2141,6 +2142,54 @@ async function main() {
       await prisma.userPermissionOverride.deleteMany({ where: { userId: { in: ids } } });
       await prisma.userRole.deleteMany({ where: { userId: { in: ids } } });
       await prisma.user.deleteMany({ where: { id: { in: ids }, protectedAccount: false } });
+    }
+
+    if (seedDemoData) {
+      const demoTestPassword = process.env.DEMO_TEST_PASSWORD;
+      if (!demoTestPassword) {
+        throw new Error("DEMO_TEST_PASSWORD is required when demo staging users are enabled.");
+      }
+
+      const demoReception = await prisma.user.upsert({
+        where: { email: "demo.reception@prij.local" },
+        update: {
+          displayName: "Demo Reception",
+          status: "active",
+          branchId: mainBranch.id,
+          permissionPreset: "simple",
+          protectedAccount: false,
+          passwordHash: await hashPassword(demoTestPassword),
+          failedLoginCount: 0,
+          lockedUntil: null
+        },
+        create: {
+          email: "demo.reception@prij.local",
+          displayName: "Demo Reception",
+          status: "active",
+          branchId: mainBranch.id,
+          permissionPreset: "simple",
+          protectedAccount: false,
+          createdByUserId: demoOwner?.id,
+          passwordHash: await hashPassword(demoTestPassword)
+        }
+      });
+
+      await prisma.userRole.upsert({
+        where: {
+          userId_roleId_branchId: {
+            userId: demoReception.id,
+            roleId: roleByName.get("Receptionist").id,
+            branchId: mainBranch.id
+          }
+        },
+        update: {},
+        create: {
+          userId: demoReception.id,
+          roleId: roleByName.get("Receptionist").id,
+          branchId: mainBranch.id,
+          createdByUserId: demoOwner?.id
+        }
+      });
     }
 
   }

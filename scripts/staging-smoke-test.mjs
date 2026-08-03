@@ -15,7 +15,7 @@ const staffPassword = process.env.STAGING_DEMO_TEST_PASSWORD || process.env.DEMO
 const ownerPassword =
   process.env.STAGING_DEMO_OWNER_PASSWORD ||
   process.env.STAGING_OWNER_PASSWORD ||
-  (ownerEmail === "demo.owner@prij.local" ? staffPassword : process.env.DEMO_OWNER_PASSWORD);
+  process.env.DEMO_OWNER_PASSWORD;
 const runId = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
 const checks = [];
@@ -60,22 +60,22 @@ async function main() {
   }
 
   await expectReachable(`${WEB_URL}/login`, "web login page");
-  await expectJson(`${API_URL}/health`, "API health", (body) => body.status === "ok");
+  await expectJson(`${API_URL}/health`, "API health", (body) => body.status === "up");
   await expectJson(`${API_URL}/health/db`, "API database health", (body) =>
     ["connected", "ok"].includes(body?.database)
   );
 
-  const ownerToken = await login(ownerEmail, ownerPassword, "demo owner");
+  const ownerSession = await login(ownerEmail, ownerPassword, "demo owner");
   checks.push("demo owner login");
 
-  const receptionToken = await login("demo.reception@prij.local", staffPassword, "demo reception");
-  const denied = await apiRequest("GET", "/admin/settings/appearance", receptionToken);
+  const receptionSession = await login("demo.reception@prij.local", staffPassword, "demo reception");
+  const denied = await apiRequest("GET", "/admin/settings/appearance", receptionSession);
   if (![403, 404].includes(denied.status)) {
     throw new Error(`non-admin admin denial expected 403/404 but received ${denied.status}`);
   }
   checks.push("non-admin admin denial");
 
-  const patient = await apiJson("POST", "/patients", ownerToken, {
+  const patient = await apiJson("POST", "/patients", ownerSession, {
     medicalRecordNumber: `STAGE-SMOKE-${runId}`,
     firstName: "Demo",
     lastName: "Staging",
@@ -84,7 +84,7 @@ async function main() {
   if (!patient.id) throw new Error("fake patient creation did not return an id.");
   checks.push("fake patient creation");
 
-  await apiJson("GET", `/patients/${patient.id}`, ownerToken);
+  await apiJson("GET", `/patients/${patient.id}`, ownerSession);
   checks.push("fake patient file read");
 
   await expectReachable(`${WEB_URL}/doctor`, "doctor mode page");
@@ -114,22 +114,30 @@ async function expectJson(url, label, predicate) {
 }
 
 async function login(email, password, label) {
-  const body = await apiJson("POST", "/auth/login", null, { email, password });
-  if (!body.token) throw new Error(`${label} did not return a token.`);
-  return body.token;
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+  const body = await parseBody(response);
+  if (!response.ok) throw new Error(`${label} login returned ${response.status}: ${JSON.stringify(body)}`);
+  const cookie = (response.headers.getSetCookie?.() ?? []).map((value) => value.split(";", 1)[0]).join("; ");
+  if (!cookie.includes("prij_clinic_session=")) throw new Error(`${label} did not establish a session cookie.`);
+  return { cookie, csrfToken: body?.csrfToken };
 }
 
-async function apiJson(method, path, token, body) {
-  const response = await apiRequest(method, path, token, body);
+async function apiJson(method, path, session, body) {
+  const response = await apiRequest(method, path, session, body);
   if (!response.ok) {
     throw new Error(`${method} ${path} returned ${response.status}: ${JSON.stringify(response.body)}`);
   }
   return response.body;
 }
 
-async function apiRequest(method, path, token, body) {
+async function apiRequest(method, path, session, body) {
   const headers = { Accept: "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (session?.cookie) headers.Cookie = session.cookie;
+  if (session?.csrfToken) headers["x-csrf-token"] = session.csrfToken;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const response = await fetch(`${API_URL}${path}`, {

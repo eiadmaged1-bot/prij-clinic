@@ -497,6 +497,7 @@
     "backup:verify": "powershell -ExecutionPolicy Bypass -File scripts/backup-verify.ps1",
     "backup:readiness": "powershell -ExecutionPolicy Bypass -File scripts/backup-readiness.ps1",
     "backup:staging": "powershell -ExecutionPolicy Bypass -File scripts/backup-staging-db.ps1",
+    "restore:staging:drill": "powershell -ExecutionPolicy Bypass -File scripts/staging-restore-drill.ps1",
     "restore:local": "powershell -ExecutionPolicy Bypass -File scripts/restore-local-db.ps1"
   },
   "engines": {

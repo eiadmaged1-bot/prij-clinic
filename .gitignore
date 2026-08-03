@@ -39,6 +39,8 @@ incoming/
 *.sql.gz
 *.bak
 backups/
+prij-clinic-staging-*.sql
+prij-clinic-staging-*.sql.sha256
 
 # Uploaded or sensitive local files
 uploads/
