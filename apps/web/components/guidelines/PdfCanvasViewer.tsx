@@ -44,7 +44,7 @@ export function PdfCanvasViewer({ url, page, zoom, rotation, fit, search, token,
       canvas.width = Math.ceil(viewport.width * window.devicePixelRatio); canvas.height = Math.ceil(viewport.height * window.devicePixelRatio);
       canvas.style.width = `${viewport.width}px`; canvas.style.height = `${viewport.height}px`;
       const context = canvas.getContext("2d"); if (!context) throw new Error("canvas_unavailable");
-      renderTask = pdfPage.render({ canvas, canvasContext: context, viewport, transform: window.devicePixelRatio === 1 ? undefined : [window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0] });
+      renderTask = pdfPage.render({ canvasContext: context, viewport, transform: window.devicePixelRatio === 1 ? undefined : [window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0] });
       await renderTask.promise;
       if (!cancelled) await renderSelectableText(pdfPage, viewport, layerRef.current!, search);
     }).catch((error) => { if (!(error instanceof Error && error.name === "RenderingCancelledException")) onErrorRef.current(error instanceof Error ? error.message : "pdf_render_failed"); });
@@ -87,7 +87,7 @@ async function renderSelectableText(pdfPage: PDFPageProxy, viewport: ReturnType<
 
 function PdfThumbnail({ pdf, page, active, onSelect }: { pdf: PDFDocumentProxy; page: number; active: boolean; onSelect: (page: number) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => { let cancelled = false; let task: { cancel: () => void; promise: Promise<unknown> } | null = null; void pdf.getPage(page).then((pdfPage) => { if (cancelled || !ref.current) return; const viewport = pdfPage.getViewport({ scale: 0.18 }); const canvas = ref.current; canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height); const context = canvas.getContext("2d"); if (!context) return; task = pdfPage.render({ canvas, canvasContext: context, viewport }); return task.promise; }).catch(() => undefined); return () => { cancelled = true; task?.cancel(); }; }, [page, pdf]);
+  useEffect(() => { let cancelled = false; let task: { cancel: () => void; promise: Promise<unknown> } | null = null; void pdf.getPage(page).then((pdfPage) => { if (cancelled || !ref.current) return; const viewport = pdfPage.getViewport({ scale: 0.18 }); const canvas = ref.current; canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height); const context = canvas.getContext("2d"); if (!context) return; task = pdfPage.render({ canvasContext: context, viewport }); return task.promise; }).catch(() => undefined); return () => { cancelled = true; task?.cancel(); }; }, [page, pdf]);
   return <button className={active ? "active" : ""} type="button" onClick={() => onSelect(page)}><canvas ref={ref} aria-hidden="true" /><span>Page {page}</span></button>;
 }
 

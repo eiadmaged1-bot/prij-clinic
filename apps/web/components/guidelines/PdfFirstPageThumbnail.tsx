@@ -25,7 +25,7 @@ export function PdfFirstPageThumbnail({ documentId, title }: { documentId: strin
       const base = page.getViewport({ scale: 1 }); const viewport = page.getViewport({ scale: 420 / base.width });
       const canvas = canvasRef.current; canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
       const context = canvas.getContext("2d"); if (!context) throw new Error("canvas unavailable");
-      await page.render({ canvas, canvasContext: context, viewport }).promise; if (!cancelled) setState("ready");
+      await page.render({ canvasContext: context, viewport }).promise; if (!cancelled) setState("ready");
     })().catch(() => { if (!cancelled) setState("failed"); });
     return () => { cancelled = true; release?.(); };
   }, [documentId, state]);
