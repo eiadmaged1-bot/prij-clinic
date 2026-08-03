@@ -1,0 +1,133 @@
+name: Impeccable Browser QA — Round 4
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/impeccable-browser-qa-round-4.yml"
+      - "playwright.impeccable-round4.config.ts"
+      - "scripts/bootstrap-impeccable-round4-receptionist.mjs"
+      - "tests/impeccable/round4-failure-conflict-security-v3.spec.ts"
+      - "apps/web/**"
+      - "apps/api/**"
+
+jobs:
+  failure-conflict-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: prij_clinic_impeccable_round4
+          POSTGRES_USER: prij_clinic_impeccable_round4
+          POSTGRES_PASSWORD: prij_clinic_impeccable_round4_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prij_clinic_impeccable_round4 -d prij_clinic_impeccable_round4"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      APP_ENV: local
+      NODE_ENV: production
+      DATABASE_URL: postgresql://prij_clinic_impeccable_round4:prij_clinic_impeccable_round4_password@127.0.0.1:5432/prij_clinic_impeccable_round4
+      JWT_SECRET: impeccable-round-four-synthetic-secret
+      AI_FEATURES_ENABLED: "false"
+      AI_PROVIDER: disabled
+      PRIJ_ENABLE_DEMO_DATA: "false"
+      DEMO_ADMIN_LOGIN: eyad
+      DEMO_OWNER_LOGIN: eyad
+      API_PORT: "3001"
+      API_URL: http://127.0.0.1:3001
+      API_INTERNAL_URL: http://127.0.0.1:3001
+      BACKEND_API_URL: http://127.0.0.1:3001
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:3001
+      WEB_URL: http://127.0.0.1:3000
+      APP_URL: http://127.0.0.1:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Generate ephemeral synthetic QA credentials
+        shell: bash
+        run: |
+          qa_password="Impeccable-R4-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(openssl rand -hex 12)"
+          echo "::add-mask::$qa_password"
+          {
+            echo "DEMO_ADMIN_PASSWORD=$qa_password"
+            echo "DEMO_OWNER_PASSWORD=$qa_password"
+            echo "DEMO_TEST_PASSWORD=$qa_password"
+          } >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Apply database migrations
+        run: npm run prisma:migrate:deploy
+
+      - name: Seed synthetic QA data
+        run: npm run prisma:seed
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start API and web
+        run: |
+          API_PORT=3001 npm run start:api > api-impeccable-round4.log 2>&1 &
+          echo $! > api-impeccable-round4.pid
+          PORT=3000 npm run start:web > web-impeccable-round4.log 2>&1 &
+          echo $! > web-impeccable-round4.pid
+
+      - name: Wait for application
+        run: |
+          for i in {1..60}; do
+            api_ok=0
+            web_ok=0
+            curl -fsS http://127.0.0.1:3001/health >/dev/null && api_ok=1 || true
+            curl -fsS http://127.0.0.1:3000/login >/dev/null && web_ok=1 || true
+            if [ "$api_ok" = "1" ] && [ "$web_ok" = "1" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API log"
+          cat api-impeccable-round4.log || true
+          echo "Web log"
+          cat web-impeccable-round4.log || true
+          exit 1
+
+      - name: Bootstrap synthetic receptionist fixture
+        run: node scripts/bootstrap-impeccable-round4-receptionist.mjs
+
+      - name: Run recoverability and role-security screenshot QA
+        run: npx playwright test tests/impeccable/round4-failure-conflict-security-v3.spec.ts --config=playwright.impeccable-round4.config.ts
+
+      - name: Upload Impeccable Round 4 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: impeccable-browser-qa-round-4
+          path: |
+            test-results/impeccable-round-4/**
+            playwright-report/impeccable-round-4/**
+            api-impeccable-round4.log
+            web-impeccable-round4.log
+          if-no-files-found: warn
+          retention-days: 14
