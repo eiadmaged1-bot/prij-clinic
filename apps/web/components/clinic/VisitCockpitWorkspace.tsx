@@ -77,6 +77,7 @@ export function VisitCockpitWorkspace({
   const activeGroupIndex = visitGroups.findIndex((group) => group.stages.includes(activeStage));
   const activeGroup = visitGroups[Math.max(0, activeGroupIndex)]!;
   const activeSections = activeGroup.stages;
+  const activeStageIndex = encounterStages.findIndex((stage) => stage.key === activeStage);
   const dateOfBirth = String(patient.dateOfBirth ?? "");
   const age = dateOfBirth ? ageFromDate(dateOfBirth) : null;
   const pregnancy = record(controller.visit?.pregnancyEpisode);
@@ -132,8 +133,15 @@ export function VisitCockpitWorkspace({
         <button className={styles.secondaryButton} type="button" onClick={() => setContextExpanded((current) => !current)} aria-expanded={contextExpanded}>
           {contextExpanded ? (rtl ? "إخفاء السياق" : "Hide context") : (rtl ? "السياق السريري" : "Clinical context")}
         </button>
-        <button className={styles.secondaryButton} type="button" onClick={() => void onModeChange("CLASSIC")}>
-          {rtl ? "العرض القياسي" : "Standard view"}
+        <button
+          aria-label={rtl ? "الخروج من قمرة الزيارة إلى مساحة العمل القياسية مع الحفاظ على نفس الزيارة المحفوظة" : "Exit Cockpit to Standard view with the same saved visit"}
+          className={`${styles.secondaryButton} ${styles.exitButton}`}
+          title={rtl ? "يتم التبديل فقط بعد حفظ الزيارة بأمان" : "Switches workspace only after the visit is safely saved"}
+          type="button"
+          onClick={() => void onModeChange("CLASSIC")}
+        >
+          <span>{rtl ? "الخروج إلى العرض القياسي" : "Exit to Standard view"}</span>
+          <small>{rtl ? "نفس الزيارة المحفوظة" : "Same saved visit"}</small>
         </button>
       </div>
     </header>
@@ -169,6 +177,23 @@ export function VisitCockpitWorkspace({
       })}
     </nav>
 
+    <nav className={styles.stageRail} aria-label={rtl ? "المراحل السبع للزيارة" : "All seven visit stages"}>
+      {encounterStages.map((stage, index) => {
+        const active = stage.key === activeStage;
+        const visited = activeStageIndex > index || controller.isReadOnly;
+        return <button
+          aria-current={active ? "step" : undefined}
+          className={`${styles.stageStep} ${active ? styles.activeStageStep : ""} ${visited ? styles.visitedStageStep : ""}`}
+          key={stage.key}
+          onClick={() => controller.setActiveStage(stage.key)}
+          type="button"
+        >
+          <span aria-hidden="true">{index + 1}</span>
+          <strong>{rtl ? stage.ar : stage.label}</strong>
+        </button>;
+      })}
+    </nav>
+
     <div className={styles.sectionToolbar}>
       <div>
         <p className={styles.eyebrow}>{rtl ? "القسم الحالي" : "Current section"}</p>
@@ -186,7 +211,7 @@ export function VisitCockpitWorkspace({
       </label> : null}
     </div>
 
-    <div className={styles.workspace}>
+    <div className={`${styles.workspace} ${contextExpanded ? styles.workspaceWithContext : ""}`}>
       <section
         className={styles.editor}
         aria-labelledby={activeGroup.tabId}
@@ -306,6 +331,7 @@ function ContextPane({ controller }: { controller: EncounterWorkspaceController 
     <div className={styles.contextGroups}>
       {groups.map((group) => <ContextGroup ar={ar} controller={controller} failed={group.resources.some((resource) => failedResources.has(resource))} key={group.title} kind={group.kind} title={ar ? group.titleAr : group.title} rows={group.rows} />)}
     </div>
+    <VisitContextActions ar={ar} controller={controller} headingId="context-pane-actions-heading" />
   </div>;
 }
 
@@ -384,12 +410,39 @@ function PatientContext({ controller }: { controller: EncounterWorkspaceControll
   const ar = language === "ar";
   const pregnancy = record(controller.visit?.pregnancyEpisode);
   const infertility = record(controller.visit?.infertilityEpisode);
-  return <dl className={styles.contextFacts}>
-    <div><dt>{ar ? "حالة الزيارة" : "Visit status"}</dt><dd>{visitStatusLabel(String(controller.encounter?.status ?? "draft"), ar)}</dd></div>
-    <div><dt>{ar ? "نوع المريضة" : "Patient type"}</dt><dd>{humanize(String(controller.patient?.patientType ?? "general"))}</dd></div>
-    <div><dt>{ar ? "الحمل" : "Pregnancy"}</dt><dd>{pregnancy ? pregnancyContext(pregnancy) : (ar ? "لا توجد حلقة نشطة" : "No active episode returned")}</dd></div>
-    <div><dt>{ar ? "الخصوبة" : "Fertility"}</dt><dd>{infertility ? String(infertility.status ?? (ar ? "نشط" : "Active")) : (ar ? "لا توجد حلقة نشطة" : "No active episode returned")}</dd></div>
-  </dl>;
+  return <>
+    <dl className={styles.contextFacts}>
+      <div><dt>{ar ? "حالة الزيارة" : "Visit status"}</dt><dd>{visitStatusLabel(String(controller.encounter?.status ?? "draft"), ar)}</dd></div>
+      <div><dt>{ar ? "نوع المريضة" : "Patient type"}</dt><dd>{humanize(String(controller.patient?.patientType ?? "general"))}</dd></div>
+      <div><dt>{ar ? "الحمل" : "Pregnancy"}</dt><dd>{pregnancy ? pregnancyContext(pregnancy) : (ar ? "لا توجد حلقة نشطة" : "No active episode returned")}</dd></div>
+      <div><dt>{ar ? "الخصوبة" : "Fertility"}</dt><dd>{infertility ? String(infertility.status ?? (ar ? "نشط" : "Active")) : (ar ? "لا توجد حلقة نشطة" : "No active episode returned")}</dd></div>
+    </dl>
+    <VisitContextActions ar={ar} controller={controller} headingId="patient-context-actions-heading" />
+  </>;
+}
+
+function VisitContextActions({ controller, ar, headingId }: { controller: EncounterWorkspaceController; ar: boolean; headingId: string }) {
+  const patientId = encodeURIComponent(controller.patientId);
+  const encounterId = encodeURIComponent(controller.encounterId);
+  return <section className={styles.patientActions} aria-labelledby={headingId}>
+      <div className={styles.patientActionsHeading}>
+        <div>
+          <p className={styles.eyebrow}>{ar ? "إجراءات الزيارة" : "Visit actions"}</p>
+          <h3 id={headingId}>{ar ? "العمل ضمن السياق المؤكد" : "Work in verified patient context"}</h3>
+        </div>
+        <p>{ar ? "تحمل الروابط هوية المريضة والزيارة الحالية." : "Every action carries this verified patient and visit identity."}</p>
+      </div>
+      <div className={styles.patientActionGrid}>
+        {controller.isReadOnly
+          ? <span aria-disabled="true" className={styles.disabledPatientAction}><strong>{ar ? "الوصفة" : "Prescription"}</strong><small>{ar ? "الزيارة موقعة" : "Signed visit"}</small></span>
+          : <Link href={`/prescriptions?patientId=${patientId}&encounterId=${encounterId}`}><strong>{ar ? "الوصفة" : "Prescription"}</strong><small>{ar ? "إنشاء ضمن الزيارة" : "Create in this visit"}</small></Link>}
+        <Link href={`/patients/${patientId}?module=medication-safety&encounterId=${encounterId}`}><strong>{ar ? "سلامة الدواء" : "Medication Safety"}</strong><small>{ar ? "مراجعة بسياق المريضة" : "Patient-aware review"}</small></Link>
+        {controller.isReadOnly
+          ? <span aria-disabled="true" className={styles.disabledPatientAction}><strong>{ar ? "الموجات فوق الصوتية" : "Ultrasound"}</strong><small>{ar ? "الزيارة موقعة" : "Signed visit"}</small></span>
+          : <Link href={`/patients/${patientId}/ultrasounds/new?encounterId=${encounterId}`}><strong>{ar ? "الموجات فوق الصوتية" : "Ultrasound"}</strong><small>{ar ? "إنشاء سجل مرتبط" : "Create linked record"}</small></Link>}
+        <button type="button" onClick={() => controller.setActiveStage("plan")}><strong>{ar ? "المتابعة" : "Follow-up"}</strong><small>{ar ? "إلى خطة الزيارة" : "Open visit plan"}</small></button>
+      </div>
+    </section>;
 }
 
 function LinkedCounts({ controller, ar }: { controller: EncounterWorkspaceController; ar: boolean }) {

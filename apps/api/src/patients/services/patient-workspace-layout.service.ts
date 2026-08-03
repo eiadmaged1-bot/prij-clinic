@@ -9,7 +9,7 @@ const MANDATORY_PANELS = new Set(["overview"]);
 const PANEL_SIZES = new Set(["SMALL", "MEDIUM", "WIDE", "FULL"]);
 
 const PRESETS: Record<string, string[]> = {
-  MINIMAL_VISIT: ["overview", "allergies", "doctor-visit", "timeline"],
+  MINIMAL_VISIT: ["overview", "allergies", "doctor-visit", "investigations", "prescriptions", "medications", "timeline"],
   GENERAL_WOMENS_HEALTH: ["overview", "allergies", "history", "doctor-visit", "investigations", "prescriptions", "timeline"],
   GYNECOLOGY: ["overview", "allergies", "history", "doctor-visit", "pregnancy", "ultrasound", "investigations", "prescriptions", "timeline"],
   AUB_FIBROID: ["overview", "allergies", "history", "doctor-visit", "ultrasound", "investigations", "medications", "tasks", "timeline"],

@@ -29,7 +29,12 @@ test.describe.serial("Impeccable Round 4 — failure, conflict, session, and rol
     await partialResource(page, testInfo, stateVisit);
     await packetFailure(page, testInfo, stateVisit, 503, "Clinical information unavailable", "04-resource-unavailable.png");
     await packetFailure(page, testInfo, stateVisit, 401, "Session expired", "05-session-expired.png");
-    await packetFailure(page, testInfo, stateVisit, 403, "Access denied", "06-access-denied.png");
+    await expectAuthenticatedRole(page, "Owner");
+    testInfo.annotations.push({
+      type: "qa-fixture",
+      description: "Synthetic 403 response under the authenticated Owner session; this capture validates the error UI, not an Owner RBAC denial."
+    });
+    await packetFailure(page, testInfo, stateVisit, 403, "Access denied", "06-synthetic-403-owner-ui-state.png");
 
     roleBoundaryVisit = stateVisit;
     expect(pageErrors, pageErrors.join("\n")).toEqual([]);
@@ -61,6 +66,11 @@ test.describe.serial("Impeccable Round 4 — failure, conflict, session, and rol
     await expect(page.getByRole("heading", { name: visit.patientName })).toHaveCount(0);
     await expect(page.getByRole("tablist", { name: /Visit workflow/i })).toHaveCount(0);
     await expect(page.locator('[aria-label="Current visit clinical workspace"] textarea:enabled, [aria-label="Current visit clinical workspace"] input:enabled')).toHaveCount(0);
+    await expectAuthenticatedRole(page, "Receptionist");
+    testInfo.annotations.push({
+      type: "rbac-evidence",
+      description: "Unmocked backend 403 under the authenticated Runtime Receptionist session; clinical visit content and controls remain hidden."
+    });
     await captureAndCheck(page, testInfo, "07-receptionist-role-denied.png");
   });
 });
@@ -161,11 +171,36 @@ async function packetFailure(
   await page.reload();
   await expect(page.getByRole("heading", { name: new RegExp(`^${escapeRegex(heading)}$`, "i") })).toBeVisible({ timeout: 25_000 });
   if (status === 503) await expect(page.getByRole("button", { name: /^Retry$/i })).toBeVisible();
+  if (status === 403) await addSyntheticQaBanner(page, "QA simulation: mocked 403 under Owner session — not an Owner permission failure.");
   await captureAndCheck(page, testInfo, screenshot);
 
   await page.unroute(pattern, handler);
   await page.reload();
   await expectFocusedVisit(page, visit.patientName);
+}
+
+async function addSyntheticQaBanner(page: Page, message: string) {
+  await page.evaluate((text) => {
+    const banner = document.createElement("div");
+    banner.setAttribute("data-qa-synthetic-state", "true");
+    banner.setAttribute("role", "note");
+    banner.textContent = text;
+    Object.assign(banner.style, {
+      background: "#fff8e8",
+      border: "1px solid #c98a2c",
+      borderRadius: "8px",
+      color: "#5f4314",
+      fontWeight: "800",
+      insetBlockEnd: "16px",
+      insetInlineEnd: "16px",
+      margin: "0",
+      maxWidth: "360px",
+      padding: "12px 16px",
+      position: "fixed",
+      zIndex: "10"
+    });
+    document.querySelector("main")?.prepend(banner);
+  }, message);
 }
 
 async function createInitialCockpitVisit(page: Page, marker: string): Promise<VisitRef> {
@@ -239,6 +274,26 @@ async function signInFresh(page: Page, identifier: string, passwordValue: string
   await page.getByLabel(/password/i).fill(passwordValue);
   await page.getByRole("button", { name: /^sign in$/i }).click();
   await page.waitForURL(/\/(dashboard|owner-control|doctor|reception)(?:$|[/?#])/, { timeout: 25_000 });
+}
+
+async function expectAuthenticatedRole(page: Page, expectedRole: "Owner" | "Receptionist") {
+  const session = await page.evaluate(async () => {
+    const response = await fetch("/api/backend/auth/me", { credentials: "include" });
+    return {
+      status: response.status,
+      body: await response.json().catch(() => null) as { user?: { roles?: string[] } } | null
+    };
+  });
+
+  expect(session.status).toBe(200);
+  expect(session.body?.user?.roles).toContain(expectedRole);
+
+  const account = page.locator('[aria-label="Current account"]');
+  await expect(account).toBeVisible();
+  await expect(account.locator(".account-summary-copy").getByText(new RegExp(`^${expectedRole}$`, "i"))).toBeVisible();
+  // Cockpit intentionally hides the shell sidebar, so verify its role text is
+  // still correct without requiring that hidden navigation to be visible.
+  await expect(page.locator("aside.sidebar .brand").getByText(new RegExp(`^${expectedRole}$`, "i"))).toHaveText(expectedRole);
 }
 
 async function expectFocusedVisit(page: Page, patientName: string) {

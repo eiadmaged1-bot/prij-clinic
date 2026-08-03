@@ -60,6 +60,13 @@ test.describe.serial("Impeccable Round 2 — shared encounter lifecycle", () => 
     await page.locator("#cockpit-tab-plan").click();
     await expect(page.locator("#cockpit-panel-plan textarea").first()).toHaveValue(values.plan);
     await capture(page, testInfo, "02-cockpit-shared-persistence.png");
+
+    await page.getByRole("button", { name: /^Clinical context$/i }).click();
+    await expect(page.getByRole("link", { name: /Prescription Create in this visit/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Medication Safety Patient-aware review/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Ultrasound Create linked record/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Follow-up Open visit plan/i })).toBeVisible();
+    await capture(page, testInfo, "02b-cockpit-context-actions.png");
     await expectNoCrashText(page);
     await expectNoWholePageOverflow(page);
 
