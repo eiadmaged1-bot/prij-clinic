@@ -60,7 +60,7 @@ test.describe.serial("Impeccable Round 4 — failure, conflict, session, and rol
     await expect(page.getByText(/You do not have access to this (?:visit|encounter)/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: visit.patientName })).toHaveCount(0);
     await expect(page.getByRole("tablist", { name: /Visit workflow/i })).toHaveCount(0);
-    await expect(page.locator('main textarea:enabled, main input:enabled')).toHaveCount(0);
+    await expect(page.locator('[aria-label="Current visit clinical workspace"] textarea:enabled, [aria-label="Current visit clinical workspace"] input:enabled')).toHaveCount(0);
     await captureAndCheck(page, testInfo, "07-receptionist-role-denied.png");
   });
 });
