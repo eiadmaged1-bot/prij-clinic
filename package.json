@@ -48,7 +48,7 @@
     "test:gyn:starter": "node scripts/general-gynecology-starter-test.mjs",
     "test:obgyn:core": "node scripts/obgyn-core-depth-test.mjs",
     "test:visual:qa": "node scripts/visual-qa-sweep.mjs",
-    "test:impeccable:cockpit": "node .agents/skills/impeccable/scripts/detect.mjs --no-advisory --no-design-system apps/web/components/clinic/VisitCockpitWorkspace.tsx apps/web/components/clinic/visit-cockpit.module.css",
+    "test:impeccable:cockpit": "node .agents/skills/impeccable/scripts/detect.mjs apps/web/components/clinic/VisitCockpitWorkspace.tsx apps/web/components/clinic/visit-cockpit.module.css",
     "test:premium:workflow": "node scripts/premium-workflow-test.mjs",
     "test:smart-search": "node scripts/smart-search-shortcuts-test.mjs",
     "test:staging:smoke": "node scripts/staging-smoke-test.mjs",

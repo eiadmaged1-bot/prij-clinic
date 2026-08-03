@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -98,7 +98,7 @@ jobs:
 
       - name: Upload route authorization diagnostics
         if: always() && hashFiles('route-authorization.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: route-authorization-diagnostics
           path: route-authorization.log
@@ -115,7 +115,7 @@ jobs:
 
       - name: Upload doctor workspace runtime diagnostics
         if: always() && hashFiles('dual-workspace-runtime-smoke.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dual-workspace-runtime-smoke-diagnostics
           path: dual-workspace-runtime-smoke.log
@@ -132,7 +132,7 @@ jobs:
 
       - name: Upload referenced-record scope diagnostics
         if: always() && hashFiles('referenced-record-scope.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: referenced-record-scope-diagnostics
           path: referenced-record-scope.log
@@ -149,7 +149,7 @@ jobs:
 
       - name: Upload audit assertion diagnostics
         if: always() && hashFiles('audit-assertions.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: audit-assertion-diagnostics
           path: audit-assertions.log
@@ -169,7 +169,7 @@ jobs:
 
       - name: Upload investigation workflow diagnostics
         if: always() && hashFiles('investigation-direct-order.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: investigation-direct-order-diagnostics
           path: investigation-direct-order.log
@@ -186,7 +186,7 @@ jobs:
 
       - name: Upload Investigation Station QA diagnostics
         if: always() && hashFiles('investigation-station-qa-contract.log') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: investigation-station-qa-contract-diagnostics
           path: investigation-station-qa-contract.log

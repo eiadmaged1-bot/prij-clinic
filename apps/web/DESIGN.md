@@ -18,6 +18,25 @@ colors:
   success: "#3f8f6d"
   warning: "#c98a2c"
   danger: "#b5484a"
+  cockpit-terracotta-soft: "#e4b69f"
+  cockpit-terracotta-ink: "#7a3925"
+  cockpit-teal-deep: "#19685f"
+  cockpit-border-muted: "#dfe6e4"
+  cockpit-teal-border: "#b9d9d2"
+  cockpit-success-strong: "#21815e"
+  cockpit-neutral: "#83918d"
+  cockpit-danger-strong: "#b13a2d"
+  cockpit-warning-strong: "#a26a1e"
+  cockpit-surface-soft: "#f7faf9"
+  cockpit-surface-subtle: "#f8faf9"
+  cockpit-terracotta-bright: "#c45c35"
+  cockpit-warning-border: "#bd8a2c"
+  cockpit-warning-surface: "#fff8e8"
+  cockpit-warning-ink: "#725019"
+  cockpit-teal-alt: "#195f55"
+  cockpit-success-deep: "#1e7557"
+  cockpit-danger-deep: "#a23b2c"
+  cockpit-warning-deep: "#94641d"
 typography:
   display:
     fontFamily: "Fraunces, Georgia, 'Times New Roman', serif"
@@ -40,6 +59,24 @@ typography:
     lineHeight: 1.35
   mono:
     fontFamily: "'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace"
+  cockpit-display:
+    fontSize: "clamp(1.45rem, 1.8vw, 1.8rem)"
+  cockpit-title-lg:
+    fontSize: "1.5rem"
+  cockpit-title-sm:
+    fontSize: "1.12rem"
+  cockpit-body-sm:
+    fontSize: "0.875rem"
+  cockpit-label-md:
+    fontSize: "0.84rem"
+  cockpit-label:
+    fontSize: "0.82rem"
+  cockpit-meta-lg:
+    fontSize: "0.8125rem"
+  cockpit-meta:
+    fontSize: "0.8rem"
+  cockpit-micro:
+    fontSize: "0.75rem"
 rounded:
   sm: "8px"
   md: "12px"
@@ -150,6 +187,10 @@ The palette is warm-neutral and green-led. Green and teal express structure, act
 
 **The Redundant Safety Signal Rule.** A safety-critical state always pairs color with a label, message, icon, status text, or structural cue.
 
+### Cockpit Semantic Extension
+
+The improved Doctor Cockpit uses documented, narrowly scoped tonal variants for compact status, warning, safety, and contextual surfaces. These variants extend the same green-led Prij Heritage theme; they do not replace Classic colors or create a second brand.
+
 ## Typography
 
 **Display Font:** Fraunces (with Georgia and Times New Roman fallbacks)
@@ -171,6 +212,8 @@ The palette is warm-neutral and green-led. Green and teal express structure, act
 **The Operational Sans Rule.** Patient care and clinic-day surfaces use the sans-serif hierarchy; editorial display type never reduces scan speed or competes with patient identity.
 
 **The Plain Clinical Language Rule.** Labels describe the user's task or record state, never internal endpoints, schemas, raw JSON, or developer terminology.
+
+**The Cockpit Compact Type Rule.** The improved Doctor Cockpit may use the documented compact metadata and label steps to keep dense clinical context readable. Classic typography remains unchanged.
 
 ## Layout
 
