@@ -868,7 +868,8 @@ const doctorNav = new Set([
   "/encounters",
   "/reports",
   "/ai-assistant",
-  "/medications"
+  "/medications",
+  "/settings/doctor-workspace"
 ]);
 
 function buildShellNavGroups(input: {
@@ -890,9 +891,9 @@ function buildShellNavGroups(input: {
       { title: "Dashboard", href: "/dashboard", icon: "dashboard" },
       { title: "Clinic", icon: "reception", links: compact([link("/reception", "Reception", "reception"), link("/queue", "Queue", "queue"), link("/calendar", "Calendar", "calendar"), link("/doctor/waiting", "Doctor Waiting", "doctor")]) },
       { title: "Patients", icon: "patients", links: compact([link("/patients", "Patient Files", "patients"), link("/patients/new", "New Patient", "patients"), link("/doctor/case-library", "Case Library", "timeline"), link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files")]) },
-      { title: "Clinical Work", icon: "encounter", links: compact([link("/encounters", "Encounters", "encounter"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/reports", "Reports", "reports")]) },
+      { title: "Clinical Work", icon: "encounter", links: compact([link("/encounters", "Encounters", "encounter"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/reports", "Reports", "reports"), link("/billing", "Billing", "billing")]) },
       { title: "Knowledge", icon: "reports", links: compact([link("/guidelines", "Guidelines", "reports"), link("/protocol-atlas", "Protocol Atlas", "ai"), link("/medications", "Pharmacology / Medication Reference", "prescription"), link("/ai-assistant", "AI Tools", "ai")]) },
-      { title: "Admin", icon: "admin", links: compact([link("/admin/accounts", "Users & Roles", "reception"), link("/admin/services", "Services", "billing"), link("/admin/investigations", "Investigation Catalog", "investigations"), link("/admin/drug-market/import", "Medication Data", "prescription"), link("/admin/settings", "Clinic Settings", "settings"), link("/admin/security-readiness", "Security", "settings"), link("/admin/appearance", "Appearance", "settings"), link("/admin/audit", "Audit", "timeline")]) },
+      { title: "Admin", icon: "admin", links: compact([link("/admin/accounts", "Users & Roles", "reception"), link("/admin/services", "Services", "billing"), link("/admin/investigations", "Investigation Catalog", "investigations"), link("/admin/drug-market/import", "Medication Data", "prescription"), link("/admin/settings", "Clinic Settings", "settings"), ...(hasRole(roles, ["Owner"]) ? [link("/settings/doctor-workspace", "Doctor Workspace", "settings")] : []), link("/admin/security-readiness", "Security", "settings"), link("/admin/appearance", "Appearance", "settings"), link("/admin/audit", "Audit", "timeline")]) },
       ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : [])
     ];
   }
@@ -904,7 +905,7 @@ function buildShellNavGroups(input: {
       { title: "Case Library", href: "/doctor/case-library", icon: "timeline" },
       ...(canUseStaffChat ? [{ title: "Messages", href: "/staff-chat", icon: "files" as IconName }] : []),
       { title: "Guidelines", href: "/guidelines", icon: "reports" },
-      { title: "More", icon: "settings", links: compact([link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription")]) }
+      { title: "More", icon: "settings", links: compact([link("/clinical-tags", "Smart Clinical Search", "search"), link("/external-intake", "External Intake Inbox", "files"), link("/prescriptions", "Prescriptions", "prescription"), link("/investigations", "Investigations", "investigations"), link("/ultrasound", "Ultrasound", "ultrasound"), link("/encounters", "Encounters", "encounter"), link("/reports", "Reports", "reports"), link("/ai-assistant", "AI Tools", "ai"), link("/medications", "Pharmacology", "prescription"), link("/settings/doctor-workspace", "Doctor Workspace", "settings")]) }
     ];
   }
 

@@ -72,6 +72,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=dev
 
+      # DESIGN.md's generated sidecar is tracked separately; this gate blocks
+      # generic UI anti-patterns until that stale design context is refreshed.
+      - name: Run Impeccable Cockpit detector (generic rules)
+        run: npm run test:impeccable:cockpit
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
