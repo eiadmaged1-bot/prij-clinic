@@ -13,7 +13,7 @@ export default function AiAssistantPage() {
             <h1>Assistant draft workspace</h1>
           </div>
           <div className="topbar-actions">
-            <span className="badge warning">Draft only · Doctor approval required · Local/private</span>
+            <span className="badge warning">Draft only · Doctor review required · External AI disabled</span>
           </div>
         </div>
       </section>

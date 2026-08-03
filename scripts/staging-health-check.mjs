@@ -3,7 +3,7 @@ const webUrl = (process.env.STAGING_BASE_URL || process.env.APP_URL || "http://l
 
 const checks = [
   { label: "web login", url: `${webUrl}/login`, accept: (response) => response.ok },
-  { label: "API health", url: `${apiUrl}/health`, accept: async (response) => response.ok && (await response.text()).includes("ok") },
+  { label: "API health", url: `${apiUrl}/health`, accept: async (response) => response.ok && (await response.text()).includes("up") },
   { label: "API DB health", url: `${apiUrl}/health/db`, accept: async (response) => response.ok && (await response.text()).includes("connected") }
 ];
 

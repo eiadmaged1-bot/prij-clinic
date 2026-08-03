@@ -20,7 +20,7 @@ services:
       dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     env_file:
-      - .env.staging
+      - ${STAGING_ENV_FILE:-.env.staging}
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?Set NEXT_PUBLIC_API_URL in the staging environment}
     restart: unless-stopped
     env_file:
-      - .env.staging
+      - ${STAGING_ENV_FILE:-.env.staging}
     depends_on:
       api:
         condition: service_healthy

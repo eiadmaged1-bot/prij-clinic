@@ -40,3 +40,15 @@ This trial used fake/demo data only. No real patient data, PHI uploads, real ext
 - Add encrypted off-host backup storage and a restore-test environment before any pilot planning.
 - Confirm no demo credentials or demo data path can be enabled for production.
 - Complete legal, privacy, monitoring, incident-response, and operational sign-off before real patient use.
+
+## 2026-08-03 Revalidation
+
+- Revalidated from canonical reconciliation commit `9a4c3165e5e91321fcaea4263b2be16b14eb5988` on branch `leap/staging-deployment-trial-v2`.
+- Started with an empty, fake-data-only project named `prij-clinic-staging-trial`; external AI remained disabled. Demo seed flags stayed disabled in the environment file, and one explicit one-time fake-data seed was used only for authenticated smoke testing.
+- Standardized `/health` and `/health/live` as liveness (`status: up`) and `/health/db` and `/health/ready` as database readiness (`status: ok`, `database: connected`).
+- Restored the visible AI draft, doctor-review, and external-AI-disabled safety label.
+- Updated all PDF.js canvas renders to the installed type contract; API and Web production Docker builds passed.
+- Staging start now fails honestly when environment validation, Docker build, or startup fails, and the same resolved environment file is used for validation, Compose interpolation, API, and Web.
+- Start, stop, backup, and restore commands require an explicitly staging-scoped Compose project name; stop also revalidates `APP_ENV=staging` and never removes volumes.
+- PostgreSQL, API, Web, `/login`, `/health`, and `/health/db` passed locally.
+- An ignored fake-data staging SQL backup and SHA-256 sidecar were created inside the confined backup path. The guarded disposable-database restore drill verified integrity, migration count, public-table count, and core User/Patient/Branch/AuditLog row counts without modifying the source staging database, then confirmed cleanup before reporting success.

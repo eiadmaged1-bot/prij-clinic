@@ -28,4 +28,9 @@ export class HealthController {
       );
     }
   }
+
+  @Get("db")
+  databaseHealthAlias() {
+    return this.databaseHealth();
+  }
 }
