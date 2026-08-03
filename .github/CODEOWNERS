@@ -1,0 +1,10 @@
+# Repository owner approval is required for all paths.
+* @eiadmaged1-bot
+
+# Security-sensitive areas.
+/.github/ @eiadmaged1-bot
+/apps/api/ @eiadmaged1-bot
+/apps/web/ @eiadmaged1-bot
+/packages/ @eiadmaged1-bot
+/prisma/ @eiadmaged1-bot
+/scripts/ @eiadmaged1-bot
