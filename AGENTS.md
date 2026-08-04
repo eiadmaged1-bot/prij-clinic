@@ -24,6 +24,16 @@ We are building a Clinic Management System for OB/GYN and women’s health.
 ## MVP focus
 Patients, appointments, queue, doctor calendar, patient profile, encounters, prescriptions, investigations, reports, billing, payments, roles, permissions, audit logs, backups, and security.
 
+## Token-efficient behavior
+- Use `.agents/skills/token-efficiency/SKILL.md` for every coding task.
+- Search before reading whole files.
+- Load only the smallest relevant file ranges.
+- Reuse prior findings instead of reopening the same files.
+- Change the minimum number of files.
+- Run the narrowest relevant test first.
+- Stop when the requested acceptance criteria pass.
+- Never load or send `.env`, secrets, patient data, database dumps, generated output, or unrelated large files.
+
 ## Behavior
 Before editing files, explain the plan.
 After editing files, summarize exactly what changed.
