@@ -30,3 +30,14 @@ After editing files, summarize exactly what changed.
 When possible, run tests or type checks.
 Do not install large dependencies without asking.
 Do not use dangerous/full-access mode.
+
+## Token budget
+- Apply the `context-budget` skill at the start of every task.
+- Apply `targeted-retrieval` before opening source files.
+- Apply `compact-handoff` when pausing or transferring work.
+- Start with at most 8 relevant source files and expand only with evidence.
+- Prefer symbol search, focused ranges, `git diff --stat`, and one representative error per root cause.
+- Never paste full logs, entire large files, generated output, backups, `.env`, credentials, or patient data.
+- Use `scripts/ai-context-pack.ps1` for compact repository context.
+- Use `scripts/ai-log-summary.ps1` before sharing large error logs.
+- Token reduction never overrides clinical safety, RBAC, privacy, auditability, migration safety, or owner-approved Classic/Cockpit behavior.
