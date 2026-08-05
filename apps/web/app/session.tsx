@@ -101,10 +101,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState("");
 
   const clearSession = useCallback((nextMessage?: string) => {
-    // Remove tokens left by pre-cookie releases; browser auth is cookie-only.
     localStorage.removeItem(tokenKey);
     sessionStorage.removeItem(tokenKey);
-    // Also remove csrf token
     document.cookie = "csrf-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     if (nextMessage) {
       sessionStorage.setItem(sessionMessageKey, nextMessage);
@@ -169,7 +167,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setMessage(sessionStorage.getItem(sessionMessageKey) ?? "");
     void refresh();
 
-    // Patch fetch to automatically append x-csrf-token for mutations
     if (typeof window !== "undefined") {
       const originalFetch = window.fetch;
       window.fetch = async (...args) => {
@@ -216,8 +213,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     if (response.status === 401) {
-      const msg = await parseErrorEnvelope(response, invalidLoginMessage());
-      throw new Error(msg);
+      // Never expose a raw backend envelope for credential rejection. This keeps
+      // the message stable and avoids leaking whether an account exists.
+      throw new Error(invalidLoginMessage());
     }
 
     if (authRequestFailed(response)) {

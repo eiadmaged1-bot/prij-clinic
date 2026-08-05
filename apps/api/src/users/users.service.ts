@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import type { AuthUser } from "../auth/auth.types";
 
@@ -26,32 +26,206 @@ const userProfileInclude = {
 
 const reservedSystemOwnerPermissions = new Set(["system_owner.manage", "developer_owner.manage"]);
 
+type CompatibilityUserRow = {
+  id?: unknown;
+  email?: unknown;
+  loginId?: unknown;
+  displayName?: unknown;
+  status?: unknown;
+  passwordHash?: unknown;
+  branchId?: unknown;
+  permissionPreset?: unknown;
+  protectedAccount?: unknown;
+  failedLoginCount?: unknown;
+  lockedUntil?: unknown;
+  lastLoginAt?: unknown;
+  [key: string]: unknown;
+};
+
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+  private compatibilityWarningEmitted = false;
+
   constructor(private readonly prisma: PrismaService) {}
 
-  findByEmailForAuth(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email: email.toLowerCase() },
-      include: userProfileInclude
-    });
+  private isSchemaCompatibilityError(error: unknown): boolean {
+    const code =
+      typeof error === "object" && error !== null && "code" in error
+        ? String((error as { code?: unknown }).code ?? "")
+        : "";
+    const message = error instanceof Error ? error.message : String(error);
+
+    return (
+      code === "P2021" ||
+      code === "P2022" ||
+      /(?:table|relation|column).*?(?:does not exist|not found)/i.test(message) ||
+      /Unknown (?:argument|field).*?(?:loginId|permissionOverrides|failedLoginCount|lockedUntil|lastLoginAt)/i.test(message)
+    );
   }
 
-  findByIdentifierForAuth(identifier: string) {
+  private canUseLocalCompatibility(error: unknown): boolean {
+    return process.env.NODE_ENV !== "production" && this.isSchemaCompatibilityError(error);
+  }
+
+  private announceCompatibility(error: unknown): void {
+    if (this.compatibilityWarningEmitted) return;
+    this.compatibilityWarningEmitted = true;
+    const message = error instanceof Error ? error.message : String(error);
+    this.logger.warn(
+      "The local database schema is older than the selected code version. " +
+        "Using a limited local authentication lookup until pending migrations are applied. " +
+        `Original database error: ${message}`
+    );
+  }
+
+  private normalizeCompatibilityRow(raw: CompatibilityUserRow) {
+    if (typeof raw.id !== "string" || typeof raw.email !== "string") {
+      return null;
+    }
+
+    const parseDate = (value: unknown): Date | null => {
+      if (value instanceof Date) return value;
+      if (typeof value !== "string" || !value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    };
+
+    return {
+      ...raw,
+      id: raw.id,
+      email: raw.email,
+      loginId: typeof raw.loginId === "string" ? raw.loginId : null,
+      displayName: typeof raw.displayName === "string" ? raw.displayName : raw.email,
+      status: typeof raw.status === "string" ? raw.status : "active",
+      passwordHash: typeof raw.passwordHash === "string" ? raw.passwordHash : null,
+      branchId: typeof raw.branchId === "string" ? raw.branchId : null,
+      permissionPreset:
+        typeof raw.permissionPreset === "string" ? raw.permissionPreset : "advanced",
+      protectedAccount: raw.protectedAccount === true,
+      failedLoginCount:
+        typeof raw.failedLoginCount === "number" ? raw.failedLoginCount : 0,
+      lockedUntil: parseDate(raw.lockedUntil),
+      lastLoginAt: parseDate(raw.lastLoginAt),
+      branch: null as { name: string } | null,
+      userRoles: [] as any[],
+      permissionOverrides: [] as any[]
+    };
+  }
+
+  private async enrichCompatibilityProfile(user: any) {
+    const prisma = this.prisma as unknown as {
+      branch?: any;
+      userRole?: any;
+      userPermissionOverride?: any;
+    };
+
+    if (user.branchId && prisma.branch) {
+      try {
+        user.branch = await prisma.branch.findUnique({
+          where: { id: user.branchId },
+          select: { name: true }
+        });
+      } catch (error) {
+        if (!this.canUseLocalCompatibility(error)) throw error;
+      }
+    }
+
+    if (prisma.userRole) {
+      try {
+        user.userRoles = await prisma.userRole.findMany({
+          where: { userId: user.id },
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: { permission: true }
+                }
+              }
+            }
+          }
+        });
+      } catch (error) {
+        if (!this.canUseLocalCompatibility(error)) throw error;
+        user.userRoles = [];
+      }
+    }
+
+    if (prisma.userPermissionOverride) {
+      try {
+        user.permissionOverrides = await prisma.userPermissionOverride.findMany({
+          where: { userId: user.id },
+          include: { permission: true }
+        });
+      } catch (error) {
+        if (!this.canUseLocalCompatibility(error)) throw error;
+        user.permissionOverrides = [];
+      }
+    }
+
+    return user;
+  }
+
+  private async compatibilityLookup(
+    mode: "identifier" | "email" | "id",
+    value: string
+  ) {
+    const normalized = value.trim().toLowerCase();
+    const predicate =
+      mode === "id"
+        ? `to_jsonb(u)->>'id' = $1`
+        : mode === "email"
+          ? `lower(COALESCE(to_jsonb(u)->>'email', '')) = $1`
+          : `(lower(COALESCE(to_jsonb(u)->>'email', '')) = $1 OR lower(COALESCE(to_jsonb(u)->>'loginId', '')) = $1)`;
+
+    const rows = await this.prisma.$queryRawUnsafe<Array<{ user: CompatibilityUserRow }>>(
+      `SELECT to_jsonb(u) AS "user" FROM "User" u WHERE ${predicate} LIMIT 1`,
+      mode === "id" ? value : normalized
+    );
+    const user = rows[0]?.user ? this.normalizeCompatibilityRow(rows[0].user) : null;
+    return user ? this.enrichCompatibilityProfile(user) : null;
+  }
+
+  async findByEmailForAuth(email: string): Promise<any> {
+    try {
+      return await this.prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+        include: userProfileInclude
+      });
+    } catch (error) {
+      if (!this.canUseLocalCompatibility(error)) throw error;
+      this.announceCompatibility(error);
+      return this.compatibilityLookup("email", email);
+    }
+  }
+
+  async findByIdentifierForAuth(identifier: string): Promise<any> {
     const normalized = identifier.trim().toLowerCase();
-    return this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: normalized }, { loginId: normalized }]
-      },
-      include: userProfileInclude
-    });
+    try {
+      return await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: normalized }, { loginId: normalized }]
+        },
+        include: userProfileInclude
+      });
+    } catch (error) {
+      if (!this.canUseLocalCompatibility(error)) throw error;
+      this.announceCompatibility(error);
+      return this.compatibilityLookup("identifier", normalized);
+    }
   }
 
-  findByIdForAuth(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: userProfileInclude
-    });
+  async findByIdForAuth(id: string): Promise<any> {
+    try {
+      return await this.prisma.user.findUnique({
+        where: { id },
+        include: userProfileInclude
+      });
+    } catch (error) {
+      if (!this.canUseLocalCompatibility(error)) throw error;
+      this.announceCompatibility(error);
+      return this.compatibilityLookup("id", id);
+    }
   }
 
   async getPreferences(userId: string) {
@@ -116,7 +290,7 @@ export class UsersService {
     return users.map((user) => this.toSafeUser(user));
   }
 
-  toSafeUser(user: Awaited<ReturnType<UsersService["findByIdForAuth"]>>): AuthUser {
+  toSafeUser(user: any): AuthUser {
     if (!user) {
       throw new Error("Cannot map empty user.");
     }
@@ -124,18 +298,25 @@ export class UsersService {
     const roleNames = new Set<string>();
     const rolePermissionKeys = new Set<string>();
 
-    for (const userRole of user.userRoles) {
+    for (const userRole of user.userRoles ?? []) {
+      if (!userRole?.role?.name) continue;
       roleNames.add(userRole.role.name);
 
-      for (const rolePermission of userRole.role.rolePermissions) {
-        rolePermissionKeys.add(rolePermission.permission.key);
+      for (const rolePermission of userRole.role.rolePermissions ?? []) {
+        if (rolePermission?.permission?.key) {
+          rolePermissionKeys.add(rolePermission.permission.key);
+        }
       }
     }
 
-    const permissionKeys = applyPermissionPreset(rolePermissionKeys, user.permissionPreset);
+    const permissionKeys = applyPermissionPreset(
+      rolePermissionKeys,
+      typeof user.permissionPreset === "string" ? user.permissionPreset : "advanced"
+    );
 
-    for (const override of user.permissionOverrides) {
-      const key = override.permission.key;
+    for (const override of user.permissionOverrides ?? []) {
+      const key = override?.permission?.key;
+      if (!key) continue;
       const isReserved = reservedSystemOwnerPermissions.has(key);
       const canUseReserved = user.loginId === "eyad" && user.protectedAccount;
 
@@ -157,16 +338,16 @@ export class UsersService {
     return {
       id: user.id,
       email: user.email,
-      loginId: user.loginId,
+      loginId: user.loginId ?? null,
       displayName: user.displayName,
       status: user.status,
-      branchId: user.branchId,
+      branchId: user.branchId ?? null,
       branchName: user.branch?.name ?? null,
-      permissionPreset: user.permissionPreset,
-      protectedAccount: user.protectedAccount,
+      permissionPreset: user.permissionPreset ?? "advanced",
+      protectedAccount: Boolean(user.protectedAccount),
       isSystemOwner:
         user.loginId === "eyad" &&
-        user.protectedAccount &&
+        Boolean(user.protectedAccount) &&
         reservedSystemOwnerPermissions.has("system_owner.manage") &&
         permissions.includes("system_owner.manage"),
       roles: [...roleNames].sort(),
