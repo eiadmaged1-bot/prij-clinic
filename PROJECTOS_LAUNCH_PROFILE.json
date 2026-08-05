@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "prij-clinic-safe",
+  "displayName": "Prij Clinic — Safe Version",
+  "workingDirectory": "C:\\Newfolder\\prij-clinic",
+  "startScript": "scripts\\Start-Prij-Clinic-Safe.ps1",
+  "stopScript": "scripts\\Stop-Prij-Clinic-Safe.ps1",
+  "loginUrl": "http://localhost:3000/login",
+  "ports": {
+    "web": 3000,
+    "api": 3001
+  },
+  "docker": {
+    "service": "postgres",
+    "containerName": "prij-clinic-postgres",
+    "startCommand": "docker compose up -d postgres",
+    "stopCommand": "docker compose stop postgres"
+  },
+  "git": {
+    "expectedWorkingBranch": "current/known-good-pre-impeccable",
+    "immutableSafeBranch": "stable/known-good-pre-impeccable-20260805",
+    "immutableSafeTag": "known-good-pre-impeccable-20260805",
+    "autoCheckout": false,
+    "autoPull": false,
+    "autoReset": false
+  },
+  "normalLaunchPolicy": {
+    "openDockerDesktopFirst": true,
+    "keepBackendWindowOpen": true,
+    "keepWebWindowOpen": true,
+    "runDependencyInstall": false,
+    "runGitOperations": false,
+    "runDatabaseRestore": false,
+    "runMigrations": false,
+    "runSeed": false,
+    "runPrismaRepair": false,
+    "useManagedVersionCopy": false
+  }
+}
