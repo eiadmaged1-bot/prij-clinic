@@ -125,8 +125,8 @@ export class SessionService {
 
   /**
    * Creates a new AuthSession and returns the raw session token.
-   * Development-only compatibility: when the AuthSession migration has not yet
-   * been applied, use a process-local session without weakening credential checks.
+   * Local-development compatibility only: when the AuthSession migration has not
+   * yet been applied, use a process-local session without weakening credential checks.
    */
   async createSession(userId: string, metadata: SessionMetadata = {}): Promise<string> {
     const rawToken = crypto.randomBytes(32).toString("base64url");
@@ -285,7 +285,7 @@ export class SessionService {
     }
 
     for (const [tokenHash, session] of this.memorySessions.entries()) {
-      const oldRevocation = session.revokedAt && session.revokedAt < thirtyDaysAgo;
+      const oldRevocation = session.revokedAt !== null && session.revokedAt < thirtyDaysAgo;
       const oldExpiration = session.expiresAt < thirtyDaysAgo;
       if (oldRevocation || oldExpiration) {
         this.memorySessions.delete(tokenHash);
