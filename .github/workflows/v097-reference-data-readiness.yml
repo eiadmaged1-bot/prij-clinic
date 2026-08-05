@@ -43,8 +43,8 @@ jobs:
       AI_FEATURES_ENABLED: "false"
       GUIDELINE_VAULT_ENCRYPTION_KEY_ID: ci-demo-key
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
