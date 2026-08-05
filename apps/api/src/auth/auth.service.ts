@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { AuditService } from "../audit/audit.service";
+import { AuditService, type AuditEventInput } from "../audit/audit.service";
 import { UsersService } from "../users/users.service";
 import { AppJwtService } from "./jwt.service";
 import { PasswordService } from "./password.service";
@@ -14,6 +14,8 @@ type RequestMetadata = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly users: UsersService,
@@ -23,13 +25,48 @@ export class AuthService {
     private readonly sessionService: SessionService
   ) {}
 
+  private async recordDeniedLoginSafely(event: AuditEventInput) {
+    try {
+      await this.audit.record(event);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[${event.requestId ?? "unknown"}] Failed to record denied login audit event: ${message}`,
+        error instanceof Error ? error.stack : undefined
+      );
+    }
+  }
+
+  private async trackFailedLoginSafely(
+    userId: string,
+    failedLoginCount: number,
+    lockedUntil: Date | null,
+    requestId?: string | null
+  ) {
+    try {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          failedLoginCount,
+          lockedUntil
+        } as unknown as never
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[${requestId ?? "unknown"}] Failed to persist denied login state: ${message}`,
+        error instanceof Error ? error.stack : undefined
+      );
+    }
+  }
+
   async login(identifier: string, password: string, metadata: RequestMetadata) {
     const normalizedIdentifier = identifier.trim().toLowerCase();
     const user = await this.users.findByIdentifierForAuth(normalizedIdentifier);
     const now = new Date();
 
     if (!user || user.status !== "active") {
-      await this.audit.record({
+      await this.recordDeniedLoginSafely({
         action: "auth.login_failure",
         resourceType: "session",
         severity: "medium",
@@ -47,7 +84,7 @@ export class AuthService {
     };
 
     if (lockState.lockedUntil && lockState.lockedUntil > now) {
-      await this.audit.record({
+      await this.recordDeniedLoginSafely({
         actorUserId: user.id,
         action: "auth.login_failure",
         resourceType: "session",
@@ -68,14 +105,13 @@ export class AuthService {
       const lockedUntil =
         failedLoginCount >= 10 ? new Date(Date.now() + 15 * 60 * 1000) : null;
 
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          failedLoginCount,
-          lockedUntil
-        } as unknown as never
-      });
-      await this.audit.record({
+      await this.trackFailedLoginSafely(
+        user.id,
+        failedLoginCount,
+        lockedUntil,
+        metadata.requestId
+      );
+      await this.recordDeniedLoginSafely({
         actorUserId: user.id,
         action: "auth.login_failure",
         resourceType: "session",
@@ -100,7 +136,8 @@ export class AuthService {
     const updatedUser = await this.users.findByIdForAuth(user.id);
     const safeUser = this.users.toSafeUser(updatedUser);
 
-    // Create opaque server-side session
+    // Successful authentication remains strict: session creation and success auditing
+    // must complete before access is granted.
     const sessionToken = await this.sessionService.createSession(user.id, metadata);
 
     await this.audit.record({
