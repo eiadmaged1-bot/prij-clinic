@@ -1,10 +1,13 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "id": "prij-clinic-safe",
   "displayName": "Prij Clinic — Safe Version",
   "workingDirectory": "C:\\Newfolder\\prij-clinic",
+  "activationScript": "scripts\\Activate-Prij-Safe-Version.ps1",
   "startScript": "scripts\\Start-Prij-Clinic-Safe.ps1",
   "stopScript": "scripts\\Stop-Prij-Clinic-Safe.ps1",
+  "statusScript": "scripts\\Prij-Safe-Status.ps1",
+  "projectMap": "PROJECT_MAP.md",
   "loginUrl": "http://localhost:3000/login",
   "ports": {
     "web": 3000,
@@ -17,12 +20,17 @@
     "stopCommand": "docker compose stop postgres"
   },
   "git": {
+    "remote": "origin",
     "expectedWorkingBranch": "current/known-good-pre-impeccable",
     "immutableSafeBranch": "stable/known-good-pre-impeccable-20260805",
     "immutableSafeTag": "known-good-pre-impeccable-20260805",
+    "fetchExactBranchWhenRefspecRestricted": true,
+    "fastForwardOnly": true,
     "autoCheckout": false,
     "autoPull": false,
-    "autoReset": false
+    "autoReset": false,
+    "autoClean": false,
+    "forceOperations": false
   },
   "normalLaunchPolicy": {
     "openDockerDesktopFirst": true,
@@ -35,5 +43,15 @@
     "runSeed": false,
     "runPrismaRepair": false,
     "useManagedVersionCopy": false
+  },
+  "statusPolicy": {
+    "readOnly": true,
+    "showGitBranch": true,
+    "showGitCommit": true,
+    "showWorkingTreeState": true,
+    "showDockerHealth": true,
+    "showPorts": true,
+    "showDatabaseIdentity": true,
+    "showRecordCounts": true
   }
 }
