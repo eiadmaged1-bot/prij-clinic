@@ -1,0 +1,137 @@
+name: CID v0.32 Portable Windows Validation
+
+on:
+  push:
+    branches: [cid-v032-portable-validation]
+    paths:
+      - 'cid_portable_validation/**'
+      - '.github/workflows/cid-portable-v032.yml'
+  workflow_dispatch:
+
+jobs:
+  validate-portable-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup build Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Decode and execute native launcher
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'cid_portable_validation'
+          $b64 = (Get-Content -Raw (Join-Path $root 'RUN_PORTABLE.exe.b64')).Trim()
+          [IO.File]::WriteAllBytes((Join-Path $root 'RUN_PORTABLE.exe'), [Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash -Algorithm SHA256 (Join-Path $root 'RUN_PORTABLE.exe')).Hash.ToLowerInvariant()
+          if ($hash -ne '3ea1e45ea0240b7b13be5ef5c6c0a975c9a863dc02dd9dbd8360bb4ba6af71bd') { throw "Launcher hash mismatch: $hash" }
+          Push-Location $root
+          & .\RUN_PORTABLE.exe --self-test
+          if ($LASTEXITCODE -ne 0) { throw "RUN_PORTABLE.exe --self-test exit $LASTEXITCODE" }
+          if (-not (Test-Path .\portable_launcher_selftest.ok)) { throw 'Native launcher self-test marker missing' }
+          Remove-Item .\portable_normal_launch.ok -ErrorAction SilentlyContinue
+          & .\RUN_PORTABLE.exe
+          Start-Sleep -Seconds 3
+          if (-not (Test-Path .\portable_normal_launch.ok)) { throw 'Normal EXE -> RUN_APP.bat ShellExecute marker missing' }
+          Pop-Location
+          'NATIVE_LAUNCHER_PASS' | Set-Content (Join-Path $root 'native_launcher_result.txt')
+
+      - name: Build self-contained embedded Python runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'cid_portable_validation'
+          $runtime = Join-Path $root 'runtime\python'
+          $wheelhouse = Join-Path $root 'wheelhouse'
+          New-Item -ItemType Directory -Force -Path $runtime,$wheelhouse | Out-Null
+          $pyver='3.13.14'
+          $zipname="python-$pyver-embed-amd64.zip"
+          $zip=Join-Path $root $zipname
+          Invoke-WebRequest "https://www.python.org/ftp/python/$pyver/$zipname" -OutFile $zip
+          $hash=(Get-FileHash -Algorithm SHA256 $zip).Hash.ToLowerInvariant()
+          if ($hash -ne '90b4e5b9898b72d744650524bff92377c367f44bd5fbd09e3148656c080ad907') { throw "Python archive hash mismatch: $hash" }
+          Expand-Archive -LiteralPath $zip -DestinationPath $runtime -Force
+          python -m pip download --only-binary=:all: --dest $wheelhouse `
+            PySide6_Essentials==6.11.1 shiboken6==6.11.1 `
+            SQLAlchemy==2.0.51 greenlet==3.5.4 `
+            alembic==1.19.1 Mako==1.3.12 MarkupSafe==3.0.3 typing_extensions==4.16.0
+          if ($LASTEXITCODE -ne 0) { throw 'pip download failed' }
+          $site = Join-Path $runtime 'Lib\site-packages'
+          New-Item -ItemType Directory -Force -Path $site | Out-Null
+          @'
+          import glob, zipfile, os
+          wheelhouse = os.environ['CID_WHEELHOUSE']
+          site = os.environ['CID_SITE']
+          for wheel in glob.glob(os.path.join(wheelhouse, '*.whl')):
+              with zipfile.ZipFile(wheel) as z:
+                  z.extractall(site)
+              print('EXTRACTED', os.path.basename(wheel))
+          '@ | Set-Content -Encoding UTF8 (Join-Path $root 'extract_wheels.py')
+          $env:CID_WHEELHOUSE=$wheelhouse
+          $env:CID_SITE=$site
+          python (Join-Path $root 'extract_wheels.py')
+          @('python313.zip','.','Lib\site-packages','import site') | Set-Content -Encoding ASCII (Join-Path $runtime 'python313._pth')
+          $embedded = Join-Path $runtime 'python.exe'
+          & $embedded -c "from PySide6 import QtCore,QtGui,QtWidgets; import sqlalchemy,alembic,greenlet,mako,markupsafe,typing_extensions; print('PORTABLE_IMPORTS_PASS')"
+          if ($LASTEXITCODE -ne 0) { throw 'Embedded runtime imports failed' }
+
+          $wheelManifest = Get-ChildItem $wheelhouse -Filter *.whl | Sort-Object Name | ForEach-Object {
+            [ordered]@{ filename=$_.Name; sha256=(Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant() }
+          }
+          $ready=[ordered]@{
+            runtime_contract='CID_PORTABLE_RUNTIME_V1'
+            python_version=$pyver
+            python_archive=$zipname
+            python_sha256=$hash
+            build_os='windows-latest'
+            generated_at=(Get-Date).ToUniversalTime().ToString('o')
+            wheels=$wheelManifest
+            imports='PASS'
+          }
+          $ready | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 (Join-Path $root 'runtime\RUNTIME_READY.json')
+
+      - name: Execute Qt GUI runtime smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $root=Join-Path $PWD 'cid_portable_validation'
+          $runtime=Join-Path $root 'runtime\python'
+          $smoke=Join-Path $root 'qt_runtime_smoke.py'
+          @'
+          import os
+          os.environ['QT_QPA_PLATFORM']='offscreen'
+          from PySide6.QtWidgets import QApplication, QMainWindow, QLabel
+          from PySide6.QtCore import QTimer
+          app=QApplication([])
+          w=QMainWindow(); w.setCentralWidget(QLabel('CID portable Qt smoke')); w.show(); app.processEvents()
+          assert w.isVisible()
+          QTimer.singleShot(100, app.quit)
+          app.exec()
+          print('QT_GUI_RUNTIME_SMOKE_PASS')
+          '@ | Set-Content -Encoding UTF8 $smoke
+          & (Join-Path $runtime 'python.exe') $smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Qt runtime smoke failed' }
+          'WINDOWS_RUNTIME_PASS' | Set-Content (Join-Path $root 'runtime\WINDOWS_RUNTIME_PASS.txt')
+
+      - name: Package verified portable runtime
+        shell: pwsh
+        run: |
+          $root=Join-Path $PWD 'cid_portable_validation'
+          Compress-Archive -Path (Join-Path $root 'runtime\*') -DestinationPath (Join-Path $root 'CID_v0.32_verified_runtime.zip') -Force
+          Get-FileHash -Algorithm SHA256 (Join-Path $root 'CID_v0.32_verified_runtime.zip') | Format-List
+
+      - name: Upload verified runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: CID-v0.32-verified-windows-runtime
+          path: |
+            cid_portable_validation/CID_v0.32_verified_runtime.zip
+            cid_portable_validation/native_launcher_result.txt
+            cid_portable_validation/portable_launcher_selftest.ok
+            cid_portable_validation/portable_normal_launch.ok
+          if-no-files-found: error
+          retention-days: 7
